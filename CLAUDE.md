@@ -187,6 +187,16 @@ This will guide you through integrating your research codebase and creating cust
   - Need phased approach
 - **Command file**: @.claude/commands/plan-with-context.md
 
+#### `/plan-auto-context-enhanced` - Natural Language Planning
+- **Purpose**: Create implementation plans by simply describing what you want in natural language
+- **When to use**:
+  - You want to describe your goal without specifying files
+  - Need automatic discovery of relevant code
+  - Want intelligent context selection
+- **Example**: `/plan-auto-context-enhanced I want to add rate limiting to our API`
+- **Command file**: @.claude/commands/plan-auto-context-enhanced.md
+- **Note**: Also integrates with repomix and Gemini CLI when available
+
 #### `/parallel-analysis-example` - Multi-Agent Pattern Example
 - **Purpose**: EXAMPLE showing how to use multiple agents in parallel
 - **When to use**: As a template for creating your own multi-agent commands
@@ -321,6 +331,15 @@ All slash commands now have programmatic versions in `scripts/commands/` that ca
 ```bash
 # Integrate external codebase
 python scripts/integrate_codebase.py https://github.com/org/repo.git
+```
+
+#### Automatic Context Planning
+```bash
+# Create implementation plan with automatic context selection
+python scripts/commands/plan_auto_context.py "add caching layer to improve API performance"
+
+# With external tools (repomix + Gemini)
+python scripts/commands/plan_auto_context.py "implement websocket notifications" --output plan.md
 ```
 
 #### Orchestrated Workflows
