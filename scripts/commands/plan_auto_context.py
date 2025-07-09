@@ -224,6 +224,7 @@ class AutoContextPlanner:
 
         # Sort by relevance score
         sorted_files = sorted(relevant_files.items(), key=lambda x: x[1], reverse=True)
+        print(f"Returning {len(sorted_files)} files after sorting")
         return sorted_files[:50]  # Limit to top 50 files
 
     def _should_exclude_file(self, file_path: Path) -> bool:
