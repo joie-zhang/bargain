@@ -15,7 +15,7 @@
 [PART 1] GET COMFORTABLE WITH CLAUDE CODE                                    [20 min]
 ─────────────────────────────────────────────────────────────────────────────────────
  ▸ Master basic commands: /compact, /clear, /page
- ▸ Explore thinking modes: think step by step → think deeply → ultrathink
+ ▸ Explore thinking modes: think → think hard → think harder → ultrathink
  ▸ Navigate template: .claude/commands/, utils/, scripts/
  ▸ Key insight: Claude Code = Your Research Assistant
 
@@ -74,7 +74,7 @@
 │ /page <name>           # Save session state                                        │
 │ /plan-with-context     # Smart planning                                            │
 │ /compact               # Check context usage                                        │
-│ think deeply           # Complex analysis mode                                      │
+│ think harder           # Complex analysis mode                                      │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─ GIT WORKFLOW ──────────────────────────────────────────────────────────────────────┐

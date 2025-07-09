@@ -15,8 +15,8 @@
 
 ### 🧠 Thinking Modes
 ```bash
-think step by step           # Basic reasoning
-think deeply                 # Thorough analysis  
+think                        # Basic reasoning
+think hard                   # More thorough analysis  
 think harder                 # Complex problem solving
 ultrathink                   # Maximum reasoning (slow but thorough)
 ```

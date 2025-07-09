@@ -228,7 +228,7 @@ Display a good CLAUDE.md section:
 
 **Step 6.1: Multi-Model Planning (10 min)**
 - Demo using multiple models if available
-- Show `think deeply` for architecture
+- Show `think harder` for architecture
 - Emphasize different perspectives
 
 **Step 6.2: Specification (10 min)**
@@ -329,7 +329,7 @@ Display a good CLAUDE.md section:
 ### Quick Demos (keep each under 2 min)
 ```bash
 # Show thinking modes
-think step by step about why this experiment might fail
+think hard about why this experiment might fail
 
 # Show specification value
 > This spec defines exactly what success looks like
