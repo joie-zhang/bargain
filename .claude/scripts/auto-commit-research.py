@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Auto-commit hook for research sessions
-Creates a git commit when Claude Code stops, preserving research work
+Uses Claude to generate intelligent commit messages based on actual changes
 """
 
 import json
 import sys
 import subprocess
 import os
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +21,80 @@ def get_git_status():
     return result.stdout.strip()
 
 
+def get_git_diff():
+    """Get the staged diff for analysis"""
+    result = subprocess.run(["git", "diff", "--cached"], capture_output=True, text=True)
+    return result.stdout
+
+
+def get_git_status_summary():
+    """Get a summary of changed files"""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"], capture_output=True, text=True
+    )
+    return result.stdout
+
+
+def generate_commit_message_with_claude(diff_content, status_summary):
+    """Use Claude to generate an intelligent commit message"""
+
+    # Create a prompt for Claude to analyze the changes
+    prompt = f"""You are a skilled developer creating a git commit message. Analyze the following git diff and status to create a clear, informative commit message.
+
+Follow these guidelines:
+- Use conventional commit format (feat:, fix:, docs:, refactor:, etc.)
+- Be specific about what was changed/added/fixed
+- Keep the first line under 50 characters when possible
+- Add a detailed description if the changes are significant
+- Focus on the "why" and "what" rather than just "how"
+
+Git Status:
+{status_summary}
+
+Git Diff:
+{diff_content}
+
+Generate a commit message that accurately describes these changes:"""
+
+    try:
+        # Write prompt to temp file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write(prompt)
+            prompt_file = f.name
+
+        # Use claude command to generate commit message
+        result = subprocess.run(
+            ["claude", "--file", prompt_file, "--quiet"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        # Clean up temp file
+        os.unlink(prompt_file)
+
+        if result.returncode == 0:
+            commit_message = result.stdout.strip()
+
+            # Clean up the message (remove any markdown formatting)
+            commit_message = commit_message.replace("```", "").strip()
+
+            # Add Claude attribution
+            commit_message += f"\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+
+            return commit_message
+        else:
+            print(f"Claude command failed: {result.stderr}", file=sys.stderr)
+            return None
+
+    except subprocess.TimeoutExpired:
+        print("Claude command timed out", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"Error calling Claude: {e}", file=sys.stderr)
+        return None
+
+
 def extract_summary(transcript_path):
     """Extract summary from transcript if available"""
     try:
@@ -29,128 +104,6 @@ def extract_summary(transcript_path):
             return data.get("summary", "")
     except:
         return ""
-
-
-def analyze_changes():
-    """Analyze git changes to create intelligent commit messages"""
-    try:
-        # Get status
-        status_result = subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True
-        )
-
-        # Get diff stats
-        diff_result = subprocess.run(
-            ["git", "diff", "--cached", "--stat"], capture_output=True, text=True
-        )
-
-        # Get actual diff for content analysis
-        diff_content = subprocess.run(
-            ["git", "diff", "--cached"], capture_output=True, text=True
-        ).stdout
-
-        status_lines = (
-            status_result.stdout.strip().split("\n")
-            if status_result.stdout.strip()
-            else []
-        )
-
-        new_files = []
-        modified_files = []
-        deleted_files = []
-
-        for line in status_lines:
-            if line.startswith("A  "):
-                new_files.append(line[3:])
-            elif line.startswith("M  "):
-                modified_files.append(line[3:])
-            elif line.startswith("D  "):
-                deleted_files.append(line[3:])
-
-        # Analyze file types and generate appropriate message
-        if new_files:
-            # Check if it's documentation
-            if any(".md" in f for f in new_files):
-                if any("guide" in f.lower() or "doc" in f.lower() for f in new_files):
-                    return generate_docs_commit_message(new_files, diff_content)
-
-            # Check if it's code
-            if any(
-                f.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c"))
-                for f in new_files
-            ):
-                return generate_code_commit_message(new_files, diff_content, "new")
-
-            # Check if it's configuration
-            if any(
-                f.endswith((".json", ".yaml", ".yml", ".toml", ".cfg"))
-                for f in new_files
-            ):
-                return generate_config_commit_message(new_files, diff_content)
-
-        if modified_files:
-            if any(
-                f.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c"))
-                for f in modified_files
-            ):
-                return generate_code_commit_message(
-                    modified_files, diff_content, "modified"
-                )
-
-        # Fallback to generic message
-        return None
-
-    except Exception:
-        return None
-
-
-def generate_docs_commit_message(files, diff_content):
-    """Generate commit message for documentation changes"""
-    primary_file = files[0]
-
-    # Check content for key terms
-    if "prompt" in diff_content.lower() and "engineering" in diff_content.lower():
-        return "docs: Add comprehensive prompt engineering guide\n\nDetailed reference covering Claude best practices, techniques, and optimization strategies"
-    elif "guide" in primary_file.lower():
-        return f"docs: Add {primary_file} guide\n\nNew documentation for research workflows"
-    elif "readme" in primary_file.lower():
-        return "docs: Add project README\n\nProject overview and setup instructions"
-    else:
-        return f"docs: Add {primary_file}\n\nNew documentation added"
-
-
-def generate_code_commit_message(files, diff_content, change_type):
-    """Generate commit message for code changes"""
-    if change_type == "new":
-        # Check for patterns in new code
-        if "def " in diff_content and "class " in diff_content:
-            return f"feat: Add {files[0]}\n\nNew module with classes and functions"
-        elif "def " in diff_content:
-            return f"feat: Add {files[0]}\n\nNew utility functions"
-        elif "import" in diff_content:
-            return f"feat: Add {files[0]}\n\nNew implementation"
-        else:
-            return f"feat: Add {files[0]}"
-    else:
-        # Modified files
-        if "fix" in diff_content.lower() or "bug" in diff_content.lower():
-            return f"fix: Update {files[0]}\n\nBug fixes and improvements"
-        elif "refactor" in diff_content.lower():
-            return f"refactor: Update {files[0]}\n\nCode refactoring"
-        else:
-            return f"feat: Update {files[0]}\n\nFeature improvements"
-
-
-def generate_config_commit_message(files, diff_content):
-    """Generate commit message for configuration changes"""
-    primary_file = files[0]
-
-    if "package.json" in primary_file:
-        return "chore: Update package.json\n\nDependency and configuration changes"
-    elif primary_file.endswith(".yml") or primary_file.endswith(".yaml"):
-        return "config: Update YAML configuration\n\nConfiguration file changes"
-    else:
-        return f"config: Update {primary_file}\n\nConfiguration changes"
 
 
 def main():
@@ -175,18 +128,22 @@ def main():
     session_id = input_data.get("session_id", "unknown")
     transcript_path = input_data.get("transcript_path", "")
 
-    # Stage all changes first for diff analysis
+    # Stage all changes first
     subprocess.run(["git", "add", "-A"], capture_output=True)
 
-    # Try to generate intelligent commit message
-    intelligent_message = analyze_changes()
+    # Get diff and status for Claude analysis
+    diff_content = get_git_diff()
+    status_summary = get_git_status_summary()
 
-    if intelligent_message:
-        commit_message = intelligent_message
-        # Add research session metadata
-        commit_message += f"\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-    else:
-        # Fallback to generic message
+    # Try to generate intelligent commit message with Claude
+    commit_message = None
+    if diff_content.strip():  # Only if there are actual changes
+        commit_message = generate_commit_message_with_claude(
+            diff_content, status_summary
+        )
+
+    # Fallback to generic message if Claude fails
+    if not commit_message:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         commit_message = f"Research session: {timestamp}"
 
