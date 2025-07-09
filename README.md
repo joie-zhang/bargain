@@ -30,6 +30,26 @@ The `/setup` command will guide you through:
 - Building custom commands for your workflow
 - Setting up verification infrastructure
 
+## 📚 Workshop Materials
+
+If you're new to AI-assisted research or want a structured learning experience, check out our comprehensive workshop materials:
+
+### For Participants
+- **[Participant Guide](docs/workshop/participant-guide.md)** - Complete 3-hour hands-on workshop
+- **[Quick Reference](docs/workshop/quick-reference.md)** - Essential commands and patterns at a glance
+- **[Troubleshooting Guide](docs/workshop/troubleshooting.md)** - Solutions to common issues
+
+### For Instructors
+- **[Facilitator Guide](docs/workshop/facilitator-guide.md)** - How to run the workshop effectively
+
+The workshop covers:
+1. Setting up your research environment with the `/setup` wizard
+2. Creating comprehensive context documentation
+3. Building custom commands for your research tasks
+4. Implementing with verification loops
+5. Using multi-agent analysis patterns
+6. Managing long research sessions
+
 ## 📁 What's Included
 
 ```
