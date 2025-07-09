@@ -62,9 +62,10 @@ claude
 /clear               # Start fresh if needed
 
 # Thinking modes
-think step by step   # For basic reasoning
-think deeply         # For complex analysis
-ultrathink          # For maximum reasoning (slow but thorough)
+think                # Basic reasoning
+think hard           # More thorough analysis
+think harder         # Complex problems
+ultrathink          # Maximum reasoning (slow but thorough)
 
 # Keyboard shortcuts
 Shift+Tab           # Toggle auto-accept mode
@@ -291,8 +292,8 @@ Now let's build something that doesn't exist yet. Use multiple models for planni
 # If you have access to other models:
 gemini -p "@[codebase] How would you architect [feature]?"
 
-# In Claude, use plan mode
-think deeply about the architecture for this feature
+# In Claude, use advanced thinking
+think harder about the architecture for this feature
 
 # Create implementation plan
 /plan-with-context implement [feature]
@@ -435,9 +436,9 @@ git checkout -b implement-new-feature
 /clear                   # Reset context
 
 # Thinking modes
-think step by step       # Basic reasoning
-think deeply            # Complex analysis
-think harder            # Difficult problems
+think                   # Basic reasoning
+think hard              # More thorough analysis
+think harder            # Complex problems
 ultrathink              # Maximum depth
 ```
 
