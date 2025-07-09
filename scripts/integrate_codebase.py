@@ -13,12 +13,17 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import tempfile
 import shutil
+import sys
+from datetime import datetime
 
 
 class CodebaseIntegrator:
     def __init__(self):
         self.integration_dir = Path("external_codebases")
+        self.ai_docs_dir = Path("ai_docs/codebases")
+        # Ensure directories exist
         self.integration_dir.mkdir(exist_ok=True)
+        self.ai_docs_dir.mkdir(parents=True, exist_ok=True)
 
     def clone_or_download(self, source: str, target_name: Optional[str] = None) -> Path:
         """Clone or download a codebase from various sources"""
@@ -30,10 +35,33 @@ class CodebaseIntegrator:
             if target_path.exists():
                 print(f"✅ Repository already exists at: {target_path}")
                 # Pull latest changes
-                subprocess.run(["git", "pull"], cwd=target_path)
+                try:
+                    result = subprocess.run(
+                        ["git", "pull"], cwd=target_path, capture_output=True, text=True
+                    )
+                    if result.returncode != 0:
+                        print(
+                            f"⚠️  Warning: Could not pull latest changes: {result.stderr}"
+                        )
+                except Exception as e:
+                    print(f"⚠️  Warning: Could not pull latest changes: {e}")
             else:
                 print(f"📥 Cloning repository: {source}")
-                subprocess.run(["git", "clone", source, str(target_path)])
+                try:
+                    result = subprocess.run(
+                        ["git", "clone", source, str(target_path)],
+                        capture_output=True,
+                        text=True,
+                    )
+                    if result.returncode != 0:
+                        raise Exception(f"Git clone failed: {result.stderr}")
+                    print(f"✅ Successfully cloned to: {target_path}")
+                except subprocess.CalledProcessError as e:
+                    raise Exception(f"Failed to clone repository: {e}")
+                except FileNotFoundError:
+                    raise Exception(
+                        "Git is not installed. Please install git and try again."
+                    )
 
             return target_path
         elif source.startswith(("http://", "https://")):
@@ -96,22 +124,36 @@ class CodebaseIntegrator:
                     analysis["key_files"].append(os.path.join(root, file))
 
         # Identify project type and dependencies
-        if (codebase_path / "package.json").exists():
-            with open(codebase_path / "package.json", "r") as f:
-                pkg = json.load(f)
-                analysis["project_type"] = "nodejs"
-                analysis["dependencies"]["npm"] = list(
-                    pkg.get("dependencies", {}).keys()
-                )
+        try:
+            if (codebase_path / "package.json").exists():
+                with open(codebase_path / "package.json", "r") as f:
+                    pkg = json.load(f)
+                    analysis["project_type"] = "nodejs"
+                    analysis["dependencies"]["npm"] = list(
+                        pkg.get("dependencies", {}).keys()
+                    )
+        except Exception as e:
+            print(f"⚠️  Could not parse package.json: {e}")
 
-        if (codebase_path / "requirements.txt").exists():
-            with open(codebase_path / "requirements.txt", "r") as f:
-                analysis["project_type"] = "python"
-                analysis["dependencies"]["pip"] = [
-                    line.strip()
-                    for line in f
-                    if line.strip() and not line.startswith("#")
-                ]
+        try:
+            if (codebase_path / "requirements.txt").exists():
+                with open(codebase_path / "requirements.txt", "r") as f:
+                    analysis["project_type"] = "python"
+                    analysis["dependencies"]["pip"] = [
+                        line.strip()
+                        for line in f
+                        if line.strip() and not line.startswith("#")
+                    ]
+        except Exception as e:
+            print(f"⚠️  Could not parse requirements.txt: {e}")
+
+        # Check for other project types
+        if (codebase_path / "Cargo.toml").exists():
+            analysis["project_type"] = "rust"
+        elif (codebase_path / "go.mod").exists():
+            analysis["project_type"] = "go"
+        elif (codebase_path / "pom.xml").exists():
+            analysis["project_type"] = "java"
 
         return analysis
 
@@ -215,13 +257,111 @@ python scripts/commands/orchestrate_research.py \\
    ```
 
 ## Notes
-- This codebase was integrated on {Path(analysis["path"]).stat().st_mtime}
+- This codebase was integrated on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 - Use the orchestration tools to coordinate complex analyses
 - Always verify findings with multiple tools
 """
         return claude_md
 
-    def save_integration(self, analysis: Dict[str, Any], config: Dict[str, Any]):
+    def create_ai_docs(self, analysis: Dict[str, Any], codebase_path: Path):
+        """Create comprehensive AI-friendly documentation"""
+        docs_path = self.ai_docs_dir / analysis["name"]
+        docs_path.mkdir(parents=True, exist_ok=True)
+
+        # Create overview
+        overview = f"""# {analysis["name"]} Overview
+
+## Purpose
+This codebase provides [TODO: Add purpose based on README or manual analysis]
+
+## Technology Stack
+- **Primary Language**: {max(analysis["languages"].items(), key=lambda x: x[1])[0] if analysis["languages"] else "Unknown"}
+- **Project Type**: {analysis.get("project_type", "Unknown")}
+- **Key Dependencies**: {", ".join(list(analysis["dependencies"].get("pip", [])[:5]) or list(analysis["dependencies"].get("npm", [])[:5]) or ["None identified"])}
+
+## Architecture
+[TODO: Add architecture overview after analysis]
+
+## Key Features
+[TODO: List main features]
+"""
+        with open(docs_path / "overview.md", "w") as f:
+            f.write(overview)
+
+        # Create structure map
+        structure = f"""# {analysis["name"]} Structure Map
+
+## Directory Layout
+```
+{self._generate_tree(codebase_path, max_depth=3)}
+```
+
+## Key Files
+{chr(10).join(f"- `{file}` - [TODO: Add description]" for file in analysis["key_files"][:10])}
+
+## Language Distribution
+{chr(10).join(f"- {ext}: {count} files" for ext, count in sorted(analysis["languages"].items(), key=lambda x: x[1], reverse=True)[:10])}
+"""
+        with open(docs_path / "structure_map.md", "w") as f:
+            f.write(structure)
+
+        # Create context summary
+        context = f"""# {analysis["name"]} Context Summary
+
+## Quick Reference
+This is an AI-optimized summary for quick context loading.
+
+### What is {analysis["name"]}?
+[TODO: One paragraph summary]
+
+### Key Components
+[TODO: List main components with brief descriptions]
+
+### Common Tasks
+[TODO: List common operations]
+
+### Integration Points
+[TODO: How to integrate with other systems]
+"""
+        with open(docs_path / "context_summary.md", "w") as f:
+            f.write(context)
+
+        print(f"📝 Created AI documentation in: {docs_path}")
+        return docs_path
+
+    def _generate_tree(self, path: Path, prefix="", max_depth=3, current_depth=0):
+        """Generate a tree structure of the directory"""
+        if current_depth >= max_depth:
+            return prefix + "..."
+
+        tree = ""
+        items = sorted(path.iterdir(), key=lambda x: (x.is_file(), x.name))
+        for i, item in enumerate(items):
+            if item.name.startswith(".") or item.name in [
+                "__pycache__",
+                "node_modules",
+                ".git",
+            ]:
+                continue
+
+            is_last = i == len(items) - 1
+            current_prefix = "└── " if is_last else "├── "
+            tree += prefix + current_prefix + item.name
+
+            if item.is_dir() and current_depth < max_depth - 1:
+                tree += "/\n"
+                extension = "    " if is_last else "│   "
+                tree += self._generate_tree(
+                    item, prefix + extension, max_depth, current_depth + 1
+                )
+            else:
+                tree += "\n"
+
+        return tree
+
+    def save_integration(
+        self, analysis: Dict[str, Any], config: Dict[str, Any], docs_path: Path
+    ):
         """Save integration configuration and documentation"""
         integration_name = analysis["name"]
         integration_path = Path(".claude/integrations") / integration_name
@@ -240,6 +380,11 @@ python scripts/commands/orchestrate_research.py \\
         with open(integration_path / "CLAUDE.md", "w") as f:
             f.write(claude_md)
 
+        # Add reference to AI docs
+        config["ai_docs_path"] = str(docs_path)
+        with open(integration_path / "config.json", "w") as f:
+            json.dump(config, f, indent=2)
+
         print(f"✅ Integration saved to: {integration_path}")
         print(f"📄 CLAUDE.md generated for easy reference")
 
@@ -254,10 +399,18 @@ python scripts/commands/orchestrate_research.py \\
         # Create integration config
         config = self.create_integration_config(analysis)
 
-        # Save integration
-        self.save_integration(analysis, config)
+        # Create AI-friendly documentation
+        docs_path = self.create_ai_docs(analysis, codebase_path)
 
-        return {"path": codebase_path, "analysis": analysis, "config": config}
+        # Save integration
+        self.save_integration(analysis, config, docs_path)
+
+        return {
+            "path": codebase_path,
+            "analysis": analysis,
+            "config": config,
+            "docs_path": docs_path,
+        }
 
 
 def main():
@@ -283,14 +436,25 @@ def main():
         print(
             f"Languages: {', '.join(list(result['analysis']['languages'].keys())[:5])}"
         )
-        print(f"\nNext steps:")
-        print(f"1. Review: .claude/integrations/{result['analysis']['name']}/CLAUDE.md")
+        print(f"\n📁 Created Documentation:")
+        print(f"   - Overview: {result['docs_path']}/overview.md")
+        print(f"   - Structure: {result['docs_path']}/structure_map.md")
+        print(f"   - Context: {result['docs_path']}/context_summary.md")
+        print(f"\n🚀 Next steps:")
+        print(f"1. Review and complete TODOs in: {result['docs_path']}/")
         print(
-            f"2. Run: python scripts/commands/orchestrate_research.py --codebase {result['path']}"
+            f"2. Check integration config: .claude/integrations/{result['analysis']['name']}/"
         )
+        print(f"3. Use in Claude: @{result['docs_path']}/context_summary.md")
+        print(f"4. Run analysis: /integrate-external-codebase follow-up")
 
     except Exception as e:
         print(f"❌ Integration failed: {e}")
+        print(f"\n💡 Troubleshooting tips:")
+        print(f"   - Check if git is installed: git --version")
+        print(f"   - Verify the URL is correct")
+        print(f"   - For private repos, set up authentication first")
+        print(f"   - Try with --name flag for custom naming")
         return 1
 
 

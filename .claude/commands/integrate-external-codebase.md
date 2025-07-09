@@ -34,70 +34,52 @@ The user wants to integrate an external codebase (GitHub repository or local pat
    - Extract repository name for organization
    </input_validation>
 
-2. **Fetch/Clone the Codebase**
-   <fetch_codebase>
-   For GitHub repositories:
-   ```bash
-   cd external_codebases/
-   git clone [repository_url] [repo_name]
-   ```
-   
-   For local paths:
-   - Verify the path exists
-   - Create symbolic link if appropriate
-   - Document the path reference
-   </fetch_codebase>
-
-3. **Analyze Codebase Structure**
-   <structure_analysis>
-   Run comprehensive analysis:
-   - Identify main programming languages
-   - Detect frameworks and dependencies
-   - Map directory structure
-   - Find entry points and key files
-   - Locate documentation (README, docs/)
-   - Identify test suites
-   - Check for configuration files
-   
-   Use the python integration script:
+2. **Run Integration Script**
+   <integration_script>
+   Use the automated integration script that handles everything:
    ```bash
    python scripts/integrate_codebase.py [repository_url_or_path]
    ```
-   </structure_analysis>
+   
+   This script will:
+   - Clone/reference the codebase
+   - Create `external_codebases/[repo_name]/`
+   - Analyze structure and dependencies
+   - Generate AI documentation in `ai_docs/codebases/[repo_name]/`
+   - Save integration config to `.claude/integrations/[repo_name]/`
+   - Handle errors gracefully
+   </integration_script>
 
-4. **Create AI-Optimized Documentation**
-   <documentation_creation>
-   Generate documentation in `ai_docs/codebases/[repo_name]/`:
+3. **Review Generated Documentation**
+   <review_docs>
+   The script creates comprehensive documentation:
+   - `ai_docs/codebases/[repo_name]/overview.md` - Purpose and tech stack
+   - `ai_docs/codebases/[repo_name]/structure_map.md` - Directory layout
+   - `ai_docs/codebases/[repo_name]/context_summary.md` - AI-optimized summary
+   - `.claude/integrations/[repo_name]/CLAUDE.md` - Integration commands
    
-   a) **Overview** (`overview.md`):
-      - Repository purpose and goals
-      - Key features and capabilities
-      - Architecture overview
-      - Technology stack
+   Review these files and complete any TODOs.
+   </review_docs>
+
+4. **Enhance Documentation with Analysis**
+   <enhance_docs>
+   Complete the TODOs in generated documentation by analyzing:
    
-   b) **Structure Map** (`structure_map.md`):
-      - Directory tree with descriptions
-      - Key file locations and purposes
-      - Module relationships
-      - Data flow diagrams
+   a) **Purpose and Features**:
+      - Read README.md and documentation
+      - Identify main functionality
+      - List key features
    
-   c) **Key Components** (`components/`):
-      - Separate files for major components
-      - Function/class documentation
-      - API references
-      - Important algorithms
+   b) **Architecture**:
+      - Analyze code structure
+      - Identify design patterns
+      - Map component relationships
    
-   d) **Integration Guide** (`integration_guide.md`):
-      - How to use this codebase
-      - Common workflows
-      - Integration points
-      - Example usage patterns
-   
-   e) **Context Summary** (`context_summary.md`):
-      - Condensed version for AI context
-      - Most important information
-      - Quick reference guide
-   </documentation_creation>
+   c) **Integration Points**:
+      - Find APIs and interfaces
+      - Document configuration options
+      - Note extension points
+   </enhance_docs>
 
 5. **Extract and Summarize Key Information**
    <information_extraction>
