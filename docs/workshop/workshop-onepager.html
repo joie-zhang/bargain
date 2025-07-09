@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant Workshop</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #0c0c0c;
+            color: #00ff00;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .terminal-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 40px rgba(0, 255, 0, 0.3);
+        }
+        
+        .header {
+            text-align: center;
+            border: 3px double #00ff00;
+            padding: 20px;
+            margin-bottom: 30px;
+            background-color: #0a0a0a;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
+            to { box-shadow: 0 0 20px rgba(0, 255, 0, 0.8); }
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #88ff88;
+            font-size: 16px;
+        }
+        
+        .terminal-prompt {
+            background-color: #0a0a0a;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 13px;
+            color: #88ff88;
+        }
+        
+        .terminal-prompt::before {
+            content: "$ ";
+            color: #00ff00;
+        }
+        
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background-color: #0f0f0f;
+            border-left: 3px solid #00ff00;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .part-number {
+            background-color: #00ff00;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .duration {
+            color: #88ff88;
+            font-size: 14px;
+        }
+        
+        .section-content {
+            color: #ccffcc;
+            padding-left: 20px;
+        }
+        
+        .section-content li {
+            list-style: none;
+            margin: 8px 0;
+            position: relative;
+        }
+        
+        .section-content li::before {
+            content: "▸ ";
+            color: #00ff00;
+            position: absolute;
+            left: -20px;
+        }
+        
+        .code-block {
+            background-color: #000;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            overflow-x: auto;
+            color: #88ff88;
+        }
+        
+        .commands-box {
+            background-color: #0a0a0a;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .commands-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .command {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .command-desc {
+            color: #88ff88;
+        }
+        
+        .success-metrics {
+            background-color: #001a00;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .metric {
+            color: #ccffcc;
+            text-align: left;
+        }
+        
+        .metric::before {
+            content: "☑ ";
+            color: #00ff00;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            border-top: 1px solid #00ff00;
+            color: #88ff88;
+        }
+        
+        .highlight {
+            color: #ffff00;
+            text-shadow: 0 0 5px rgba(255, 255, 0, 0.8);
+        }
+        
+        .separator {
+            border: none;
+            border-top: 1px dashed #00ff00;
+            margin: 30px 0;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                font-size: 12px;
+                padding: 10px;
+            }
+            
+            .terminal-container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 22px;
+            }
+            
+            .commands-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Blinking cursor effect */
+        .cursor::after {
+            content: "_";
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-container">
+        <div class="header">
+            <h1>AI RESEARCH ASSISTANT WORKSHOP</h1>
+            <div class="subtitle">Transform Your Research with Claude Code</div>
+        </div>
+        
+        <div class="terminal-prompt">
+            claude --workshop<br>
+            > Initializing AI Research Assistant Workshop v2.0...<br>
+            > Duration: 3-4 hours | Mode: Progressive Mastery | Output: Automated Research<span class="cursor"></span>
+        </div>
+        
+        <hr class="separator">
+        
+        <!-- Part 1 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 1</span> GET COMFORTABLE WITH CLAUDE CODE</span>
+                <span class="duration">[20 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Master basic commands: /compact, /clear, /page</li>
+                    <li>Explore thinking modes: think step by step → think deeply → ultrathink</li>
+                    <li>Navigate template: .claude/commands/, utils/, scripts/</li>
+                    <li>Key insight: Claude Code = Your Research Assistant</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 2 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 2</span> GATHER CONTEXT FOR YOUR CODEBASE</span>
+                <span class="duration">[30 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Run /setup wizard → Integrate your research code</li>
+                    <li>Structure: ai_docs/{papers, summaries, context, cheatsheets}</li>
+                    <li>Process papers: gemini -p "@paper.pdf Summarize methods"</li>
+                    <li>Result: Comprehensive AI-ready documentation</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 3 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 3</span> SPEECH-TO-TEXT PROJECT OUTLINE</span>
+                <span class="duration">[20 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Review: specs/EXAMPLE_RESEARCH_SPEC.md</li>
+                    <li>Record 15+ minutes answering spec sections:
+                        <ul style="margin-left: 20px; margin-top: 5px;">
+                            <li>Problem Statement → Technical Approach → Current Implementation</li>
+                            <li>Experimental Setup → Known Challenges & Failures</li>
+                        </ul>
+                    </li>
+                    <li>Save: ai_docs/context/project_outline_transcript.txt</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 4 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 4</span> CREATE YOUR IDEAL CLAUDE.MD</span>
+                <span class="duration">[20 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Synthesize: Transcript + Papers + Code → Comprehensive CLAUDE.md</li>
+                    <li>Include: Research context, verification protocols, debugging strategies</li>
+                    <li>Personalize: Add your workflows, common errors, naming conventions</li>
+                    <li>Result: AI agents understand your research deeply</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 5 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 5</span> AUTOMATE AN EXISTING TASK <span class="highlight">⚡</span></span>
+                <span class="duration">[45 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Choose: Medium-difficulty repetitive task</li>
+                    <li>Specify: Create detailed spec with success criteria</li>
+                    <li>Test First: Write tests that validate the specification</li>
+                    <li>Implement: Build with verification loops</li>
+                    <li>Command: /crud-claude-commands create run-[task]</li>
+                    <li>Success: Runs 3x reliably without intervention</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 6 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 6</span> IMPLEMENT SOMETHING NEW <span class="highlight">🚀</span></span>
+                <span class="duration">[45 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Plan: Use multiple models (Gemini/O3/Claude) for architecture</li>
+                    <li>Specify: Detailed phases, risks, integration points</li>
+                    <li>Todo List: Break into 30-min chunks, update continuously</li>
+                    <li>Implement: Tight leash, verify each component</li>
+                    <li>Checkpoint: /page feature-checkpoint-[n]</li>
+                    <li>Result: New capability added to your research</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Part 7 -->
+        <div class="section">
+            <div class="section-header">
+                <span><span class="part-number">PART 7</span> OBSERVABILITY & VERIFICATION (Optional)</span>
+                <span class="duration">[20 min]</span>
+            </div>
+            <div class="section-content">
+                <ul>
+                    <li>Dashboard: Real-time experiment monitoring</li>
+                    <li>Web App: FastAPI for result verification</li>
+                    <li>Reports: Automated analysis generation</li>
+                    <li>Focus: Your specific research needs</li>
+                </ul>
+            </div>
+        </div>
+        
+        <hr class="separator">
+        
+        <!-- Commands -->
+        <div class="commands-box">
+            <h3 style="color: #00ff00; margin-bottom: 15px;">⌨️ ESSENTIAL COMMANDS</h3>
+            <div class="commands-grid">
+                <span class="command">/setup</span>
+                <span class="command-desc">Interactive setup wizard</span>
+                
+                <span class="command">/crud-claude-commands</span>
+                <span class="command-desc">Create custom commands</span>
+                
+                <span class="command">/page &lt;name&gt;</span>
+                <span class="command-desc">Save session state</span>
+                
+                <span class="command">/plan-with-context</span>
+                <span class="command-desc">Smart planning</span>
+                
+                <span class="command">/compact</span>
+                <span class="command-desc">Check context usage</span>
+                
+                <span class="command">think deeply</span>
+                <span class="command-desc">Complex analysis mode</span>
+            </div>
+        </div>
+        
+        <!-- Git Workflow -->
+        <div class="code-block">
+            $ git checkout -b ai-enhanced-research<br>
+            $ git add -A && git commit -m "Add AI automation for [task]"<br>
+            $ git push origin ai-enhanced-research
+        </div>
+        
+        <!-- Success Metrics -->
+        <div class="success-metrics">
+            <h3 style="color: #00ff00; margin-bottom: 15px;">✅ SUCCESS METRICS</h3>
+            <div class="metrics-grid">
+                <div class="metric">Comfortable with Claude Code</div>
+                <div class="metric">Automated repetitive task</div>
+                <div class="metric">Rich ai_docs/ created</div>
+                <div class="metric">Implemented new feature</div>
+                <div class="metric">Custom CLAUDE.md configured</div>
+                <div class="metric">Multiple thinking modes used</div>
+                <div class="metric">Custom commands created</div>
+                <div class="metric">Context managed with /page</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>REMEMBER:</strong> You're the conductor of an AI orchestra. Start simple, verify everything.</p>
+            <p style="margin-top: 10px;"><strong>NEXT:</strong> Run your automation on real data tomorrow. Create 2 more this week.</p>
+        </div>
+    </div>
+</body>
+</html>

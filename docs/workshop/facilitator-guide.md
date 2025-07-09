@@ -1,388 +1,411 @@
 # AI Agent Research Workshop: Facilitator Guide
 
 ## 🎯 Workshop Philosophy
-**"Guide, don't do."** You're teaching researchers to become conductors of AI orchestras. Focus on empowering them to use the tools independently rather than solving problems for them.
+**"Progressive mastery through doing."** Guide participants from basic Claude Code usage to implementing new features, building their confidence at each stage.
 
 ---
 
 ## 📅 Pre-Workshop Preparation
 
 ### 1 Week Before
-- [ ] Test the template repository with a sample research project
-- [ ] Ensure all participants have received setup instructions
-- [ ] Create a shared communication channel (Slack/Discord)
-- [ ] Prepare 2-3 example research domains for demos
+- [ ] Test the full 7-part flow with a sample project
+- [ ] Ensure participants have setup instructions
+- [ ] Create communication channel (Slack/Discord)
+- [ ] Prepare example outputs for each part
 
 ### 1 Day Before
-- [ ] Verify template repository is accessible
-- [ ] Test `/setup` command with fresh install
+- [ ] Verify template repository access
+- [ ] Test all commands in fresh environment
 - [ ] Prepare backup solutions for common issues
-- [ ] Have example outputs ready to show
+- [ ] Review participant research domains
 
 ### Day Of
-- [ ] Arrive 30 min early to test equipment
-- [ ] Have template URL ready to share
-- [ ] Open communication channel for questions
-- [ ] Prepare timer for session management
+- [ ] Set up timer for each part
+- [ ] Have example transcripts ready
+- [ ] Prepare screen sharing for demos
+- [ ] Open participant questions channel
 
 ---
 
-## 🕐 Workshop Timeline & Key Points
+## 🕐 Workshop Timeline (3-4 hours)
 
 ### Opening (10 min)
 **Key Messages:**
-- "This template is powerful but requires your domain knowledge"
-- "We'll use existing tools, not build from scratch"
-- "Focus on one concrete research task today"
-- "Questions in chat, I'll address during work time"
+- "We'll build progressively - basics to advanced"
+- "Focus on YOUR research problems"
+- "By the end, you'll have automated tasks AND new features"
+- "Questions in chat, I'll address during each part"
 
-**Quick Demo** (keep under 3 min):
-```bash
-# Show the setup wizard in action
-claude
-/setup
-# Just show the first few prompts, don't complete
-```
+**Set Expectations:**
+- Part 1-4: Foundation building (1.5 hrs)
+- Part 5: Automate existing task (45 min)
+- Part 6: Implement NEW feature (45 min)
+- Part 7: Optional advanced topics
 
 ---
 
-### Part 0: Setup Wizard (15 min)
+### Part 1: Get Comfortable with Claude Code (20 min)
 
-**Common Issues & Solutions:**
+**Goal**: Everyone can use basic Claude Code features confidently.
+
+**Common Issues:**
 
 | Issue | Solution |
 |-------|----------|
 | "Command not found" | Check PATH, restart terminal |
-| "Git errors" | Ensure clean working directory |
-| "Setup hangs" | Ctrl+C and restart Claude |
-| "Confused by prompts" | Have them start simple, refine later |
+| "Overwhelmed by options" | Start with just 3 commands |
+| "Not sure what to try" | Give specific tasks |
 
 **Facilitator Actions:**
-- Circulate and ensure everyone started `/setup`
-- Don't let anyone skip ahead
-- Encourage specific answers about research domain
-- Remind them this customizes everything
+- Demo basic interaction (2 min max)
+- Ensure everyone tries thinking modes
+- Share keyboard shortcuts
+- Check everyone can see template commands
 
-**Say:** "The setup wizard is your foundation. Be specific about your research - the more context you provide, the better your AI assistants will perform."
-
----
-
-### Part 1: Context Gathering (45 min)
-
-**Critical Success Factors:**
-1. **Push for 15+ minute recordings** - Most stop at 5 minutes
-2. **Encourage storytelling** - "Explain like to a new lab member"
-3. **Capture failures** - "What didn't work is gold for AI context"
-
-**🚨 Red Flags to Watch For:**
-- Recording under 10 minutes = too shallow
-- No mention of failures = missing critical context
-- Too abstract = need specific examples
-- No papers uploaded = missing foundation
-
-**Intervention Prompts:**
-- "Tell me about your last debugging session"
-- "What would you check if results look wrong?"
-- "What assumptions might a newcomer miss?"
-- "Describe your typical experimental workflow"
-
-**Mini-Demo** (if needed):
-Show example of good context:
-```
-"I'm working on mechanistic interpretability, specifically trying to understand 
-how transformer attention heads specialize. My hypothesis is that early heads 
-focus on syntax while later heads capture semantics. I've been building on 
-the Anthropic paper about superposition, but I keep running into issues where 
-my sparse autoencoders collapse to trivial solutions when I increase the 
-sparsity penalty beyond 0.01..."
-```
+**Key Intervention Points:**
+- If someone races ahead: "Explore the utils/ folder"
+- If someone struggles: Pair with another participant
+- If confusion about purpose: "Claude is your research assistant"
 
 ---
 
-### Part 2: Specification Writing (30 min)
+### Part 2: Gather Context (30 min)
 
-**Key Teaching Points:**
-1. Specs are living documents - start simple, iterate
-2. Success criteria must be measurable
-3. Include verification strategy upfront
-4. Break implementation into 2-hour chunks
+**Goal**: Comprehensive research context in ai_docs/
+
+**🚨 Critical Success Factors:**
+1. Setup wizard completion for everyone
+2. Papers uploaded to ai_docs/papers/
+3. At least one summary created
+
+**Step 2.1: Setup Wizard (10 min)**
+- Watch for integration issues
+- Help with codebase paths
+- Ensure specific domain answers
+
+**Step 2.2: Organize Materials (10 min)**
+- Check folder structure created
+- Help with git integration if needed
+- Validate papers copied correctly
+
+**Step 2.3: Process Papers (10 min)**
+- Demo Gemini usage if available
+- Show good vs bad summaries
+- Emphasize extracting methods, not just abstracts
 
 **Common Struggles:**
+- "No papers yet" → Use arxiv or blog posts
+- "Integration failing" → Manual copy is fine
+- "Summaries too generic" → Ask for specific sections
 
-| Problem | Guidance |
-|---------|----------|
-| "Too ambitious" | "What's the smallest testable piece?" |
-| "Too vague" | "How would you know it worked?" |
-| "No verification" | "What could go wrong? How would you check?" |
-| "All-or-nothing" | "Can you break this into phases?" |
+---
 
-**Show Example Spec Structure:**
+### Part 3: Speech-to-Text Project Outline (20 min)
+
+**Goal**: Rich project context via structured recording.
+
+**🎤 This is THE MOST IMPORTANT PART!**
+
+**Step 3.1: Review Template (5 min)**
+- Show EXAMPLE_RESEARCH_SPEC.md
+- Explain why each section matters
+- "This becomes your prompt structure"
+
+**Step 3.2: Recording (15 min)**
+**Push for detail!** Most participants will be too brief.
+
+**Intervention Prompts:**
+- "What would break if someone else ran your code?"
+- "Describe your last debugging nightmare"
+- "What assumptions would a new student miss?"
+- "Walk through your typical experiment day"
+
+**Red Flags:**
+- Recording < 10 minutes
+- No mention of failures
+- Too high-level
+- No technical details
+
+**Good Example to Share:**
+"So I'm working on mechanistic interpretability, specifically understanding attention head specialization in transformers. My hypothesis is that heads in layer 3-5 learn syntactic patterns while later layers capture semantic relationships. I've been building on the TransformerLens library, but I keep hitting memory issues when I try to analyze models larger than 2B parameters. Last week I spent 3 days debugging why my activation patching was giving inconsistent results - turned out the layer normalization was being applied twice..."
+
+---
+
+### Part 4: Create CLAUDE.md (20 min)
+
+**Goal**: Tailored AI instructions for their research.
+
+**Quality Checks:**
+- Research context from transcript included?
+- Technical details from code?
+- Verification protocols defined?
+- Failed attempts documented?
+
+**Common Improvements Needed:**
+- "Add your specific error messages"
+- "Include your debugging workflow"
+- "What packages do you always import?"
+- "What naming conventions do you follow?"
+
+**Show Don't Tell:**
+Display a good CLAUDE.md section:
 ```markdown
-## Problem Statement
-ONE clear sentence about what needs to be solved
+## Research Context
+- Investigating attention head specialization in transformers
+- Building on TransformerLens and Anthropic's interpretability work
+- Key challenge: Memory constraints for >2B parameter models
+- Success metric: Identify 5+ consistent attention patterns
 
-## Success Criteria
-- [ ] Specific measurable outcome 1
-- [ ] Specific measurable outcome 2
-
-## Implementation Phases
-Phase 1 (30 min): Minimal working version
-Phase 2 (30 min): Add verification
-Phase 3 (30 min): Integrate with pipeline
+## Common Debugging
+- If CUDA OOM: Reduce batch size to 1, use gradient checkpointing
+- If activation shapes mismatch: Check for double layer norm
+- Always verify: attention weights sum to 1.0 across seq dimension
 ```
 
 ---
 
-### Part 3: Custom Commands (30 min)
+### Part 5: Automate Existing Task (45 min)
 
-**Teaching Strategy:**
-1. Start with their most annoying repetitive task
-2. Show `/crud-claude-commands` workflow
-3. Emphasize verification in commands
-4. Test immediately after creation
+**Goal**: One repetitive task automated reliably.
 
-**Live Coding Demo** (5 min):
-```bash
-# Show creating a simple command
-/crud-claude-commands create check-gradients
-
-# In the creation process, emphasize:
-# - Clear role definition
-# - Step-by-step workflow
-# - Verification at each step
-# - Error handling
-```
-
-**Common Command Patterns for Research:**
-- `run-ablation` - Parameter sweeps
-- `verify-metrics` - Check outputs
-- `compare-baseline` - Benchmark results
-- `debug-numerics` - Find NaN/inf issues
-- `paper-figure` - Generate publication plots
-
-**If Someone Struggles:**
-Pair them with Claude in plan mode:
-```
-think step by step about what commands would help my research workflow
-```
-
----
-
-### Part 4: Implementation (45 min)
-
-**Critical: Don't Let Them Skip Verification!**
+**🎯 This is where they see the power!**
 
 **Pacing Guide:**
-- 0-15 min: Set up verification infrastructure
-- 15-35 min: Implement with verification loops
-- 35-45 min: Test and debug
+- 0-5 min: Task selection (not too ambitious!)
+- 5-20 min: Specification writing
+- 20-30 min: Test creation
+- 30-45 min: Implementation & iteration
+
+**Task Selection Guidance:**
+- ✅ Good: "Run same experiment with 5 hyperparameters"
+- ✅ Good: "Generate comparison plots for all runs"
+- ❌ Too ambitious: "Automate entire research pipeline"
+- ❌ Too simple: "Print results to console"
 
 **Key Interventions:**
-1. **If coding without verification:** "How will you know this works correctly?"
-2. **If stuck on complex design:** "What's the simplest version?"
-3. **If frustrated with errors:** "Let's create a minimal test case"
-4. **If ahead of schedule:** "Add another verification layer"
 
-**Show Verification Pattern:**
-```python
-# Every implementation should follow:
-def my_research_function(data):
-    # 1. Input validation
-    assert data.shape[0] > 0, "Empty data"
-    
-    # 2. Core logic
-    result = process(data)
-    
-    # 3. Output verification
-    assert not torch.isnan(result).any(), "NaN in output"
-    assert result.shape == expected_shape, "Wrong shape"
-    
-    # 4. Sanity check
-    assert result.mean() > 0, "Suspiciously low values"
-    
-    return result
-```
+**During Specification:**
+- "How do you verify this worked correctly?"
+- "What are the edge cases?"
+- "What's the exact input format?"
+
+**During Testing:**
+- "Write the test that would catch your last bug"
+- "What's the minimal test case?"
+- "Test the specification, not implementation"
+
+**During Implementation:**
+- Push for verification at each step
+- Encourage logging
+- "How does the slash command make this easier?"
+
+**Success Metric**: Task runs 3x without intervention
 
 ---
 
-### Part 5: Multi-Agent Analysis (30 min)
+### Part 6: Implement Something New (45 min)
 
-**This is Advanced - Guide Based on Skill Level:**
+**Goal**: Build a feature that doesn't exist yet.
 
-**Beginners:** Focus on using existing `/parallel-analysis-example`
-**Intermediate:** Adapt the example for their domain
-**Advanced:** Create custom multi-agent workflows
+**🚀 This separates automation from creation!**
 
-**Demo the Concept** (3 min):
-```bash
-# Show how multiple agents provide different perspectives
-/parallel-analysis-example "Should I use dropout or batch norm?"
+**Skill-Based Guidance:**
 
-# Explain the agents:
-# - Architecture expert looks at model design
-# - Theory expert considers mathematical properties
-# - Empirical expert checks experimental evidence
-# - Implementation expert considers practical aspects
-```
+**Beginners**: Simple analysis feature
+- "Add metric calculation to existing pipeline"
+- "Create visualization for your data"
+- "Build comparison tool"
 
-**Common Use Cases for Researchers:**
-- Literature review synthesis
-- Experimental design validation
-- Result interpretation from multiple angles
-- Debugging complex issues
+**Intermediate**: Integration feature
+- "Connect two parts of pipeline"
+- "Add new model variant"
+- "Create ablation study runner"
+
+**Advanced**: Novel capability
+- "Implement paper algorithm"
+- "Create new analysis method"
+- "Build interactive debugger"
+
+**Step 6.1: Multi-Model Planning (10 min)**
+- Demo using multiple models if available
+- Show `think deeply` for architecture
+- Emphasize different perspectives
+
+**Step 6.2: Specification (10 min)**
+- More detailed than Part 5
+- Include risk assessment
+- Define integration points
+
+**Step 6.3: Implementation (25 min)**
+**Critical: Todo list discipline!**
+- Force todo updates every 10 min
+- Use /page at phase boundaries  
+- Encourage multiple terminals
+
+**Common Issues:**
+- "Too complex" → Break into smaller features
+- "Not sure how to integrate" → Review existing code first
+- "Tests failing" → Implement incrementally
 
 ---
 
-### Part 6: Wrap-up (15 min)
+### Part 7: (Optional) Observability (20 min)
 
-**Essential Actions:**
-1. **Force `/page` command** - Many skip this
-2. **Require git commit** - Evidence of progress
-3. **Document one win** - Build confidence
-4. **Plan next step** - Maintain momentum
+**For groups ahead of schedule or very technical.**
 
-**Closing Circle Questions:**
-- "What's one command you'll use tomorrow?"
-- "What surprised you about AI assistance?"
-- "What task will you automate next?"
+**Options Based on Interest:**
+1. Terminal dashboard for experiments
+2. Web app for result verification
+3. Real-time metric monitoring
+4. Automated report generation
+
+**Keep it Simple:**
+- Start with print statements
+- Add formatting later
+- Focus on their specific needs
 
 ---
 
-## 🚨 Common Issues & Solutions
+## 🚨 Critical Facilitation Points
 
-### Technical Issues
+### Throughout the Workshop
 
-| Problem | Quick Fix | Prevention |
-|---------|-----------|------------|
-| Claude context full | `/page` then `/clear` | Monitor with `/compact` |
-| Git merge conflicts | Create new branch | Always branch before workshop |
-| Python errors | Check virtual env | Test imports upfront |
-| Command not found | Restart Claude | Verify PATH setup |
+**Every 30 minutes:**
+- Remind about `/compact`
+- Check for stuck participants
+- Share successful examples
+- Encourage commits
 
-### Conceptual Issues
+**Watch for:**
+- Context explosion (>70% usage)
+- Overthinking vs doing
+- Skipping verification
+- Not reading errors
 
-| Problem | Intervention | Example |
-|---------|-------------|---------|
-| "Too complex task" | Break down smaller | "Just load and plot data first" |
-| "Doesn't trust AI" | Show verification | "See how we check every step?" |
-| "Over-engineering" | YAGNI principle | "What do you need TODAY?" |
-| "Analysis paralysis" | Time box | "5 minutes to decide, then commit" |
+### Progressive Difficulty Management
 
-### Pacing Issues
+| Part | Difficulty | Support Level |
+|------|------------|---------------|
+| 1-2 | Easy | High - help immediately |
+| 3-4 | Medium | Medium - guide to solution |
+| 5 | Medium-Hard | Low - let them struggle briefly |
+| 6 | Hard | Very Low - independence |
 
-**If Running Behind:**
-- Skip multi-agent section
-- Simplify implementation task
-- Focus on one custom command
+### Success Indicators by Part
+
+1. **Part 1**: Using thinking modes naturally
+2. **Part 2**: Rich ai_docs/ folder created
+3. **Part 3**: 10+ minute detailed recording
+4. **Part 4**: Personalized CLAUDE.md
+5. **Part 5**: Automated task works reliably
+6. **Part 6**: New feature at least partially working
+7. **Part 7**: Understanding of observability needs
+
+---
+
+## 📊 Time Management
+
+### If Running Behind:
+- Skip Part 7 completely
+- Reduce Part 6 to planning only
+- Focus on getting Part 5 working
 - Ensure everyone does `/page`
 
-**If Running Ahead:**
-- Add more verification layers
-- Create additional commands
-- Try multi-agent patterns
-- Help others debug
+### If Running Ahead:
+- Add more verification to Part 5
+- Create second automation task
+- Go deeper in Part 6
+- Explore multi-agent patterns
 
----
-
-## 📊 Success Metrics
-
-Track these during workshop:
-
-1. **Participation Metrics:**
-   - [ ] Everyone completed `/setup`
-   - [ ] Everyone recorded 10+ min context
-   - [ ] Everyone created 1+ custom command
-   - [ ] Everyone has working verification
-
-2. **Quality Metrics:**
-   - [ ] Specifications have measurable criteria
-   - [ ] Commands include error handling
-   - [ ] Implementation has verification
-   - [ ] Git commits are meaningful
-
-3. **Engagement Metrics:**
-   - [ ] Active problem-solving (not just copying)
-   - [ ] Asking domain-specific questions
-   - [ ] Helping other participants
-   - [ ] Planning next steps
+### Critical Minimums:
+- Everyone must complete Parts 1-4
+- Everyone must attempt Part 5
+- Part 6 can be take-home
 
 ---
 
 ## 🎯 Facilitator Cheat Sheet
 
-### Quick Commands to Share
+### Quick Demos (keep each under 2 min)
 ```bash
-# Check context usage
-/compact
+# Show thinking modes
+think step by step about why this experiment might fail
 
-# Save state
-/page workshop-checkpoint
+# Show specification value
+> This spec defines exactly what success looks like
 
-# Clear and start fresh
-/clear
+# Show verification importance
+> See how the test caught that edge case?
 
-# Get unstuck
-think step by step about why this might be failing
+# Show multi-model benefit
+> Notice how each model contributed different insights?
 ```
 
-### Motivational Phrases
-- "Perfect is the enemy of good - ship something working"
-- "Verification builds confidence"
-- "Context is king - add more detail"
-- "Start simple, iterate fast"
-- "You're not replacing thinking, you're amplifying it"
+### Motivation by Part
+- Part 1-2: "Building your foundation"
+- Part 3-4: "Teaching AI your research"
+- Part 5: "Never do this manually again"
+- Part 6: "Push your research forward"
 
-### Time Warnings
-- 10 min remaining: "Start wrapping up current section"
-- 5 min remaining: "Save your work"
-- 1 min remaining: "Commit what you have"
+### Emergency Fixes
+```bash
+# Context full
+/page emergency-checkpoint && /clear
+
+# Confused state
+/clear
+> Start fresh with: [simple task]
+
+# Nothing working
+> Create hello_world.py and run it
+```
 
 ---
 
 ## 📝 Post-Workshop
 
-### Immediate Actions (same day):
-1. **Collect Feedback**
-   - What was most valuable?
-   - What was confusing?
-   - What do they want to learn next?
+### Immediate (same day):
+1. Collect completed automations
+2. Share success examples
+3. Post follow-up resources
+4. Schedule office hours
 
-2. **Share Resources**
-   - Link to participant guide
-   - Example implementations
-   - Community channel
+### Message Template:
+```
+Amazing work today! You've transformed your research workflow.
 
-3. **Follow-up Message Template:**
-   ```
-   Great work today! You've set up a powerful research environment.
-   
-   Next steps:
-   1. Run one real experiment with your new commands
-   2. Create 2 more custom commands this week
-   3. Share your success in #ai-research-assistants
-   
-   Resources:
-   - Workshop guide: [link]
-   - Template docs: [link]
-   - Office hours: [schedule]
-   ```
+Key accomplishments:
+✅ Comprehensive AI-ready documentation
+✅ Automated [their task] successfully  
+✅ Started implementing [their feature]
 
-### Within 1 Week:
-- Review participant repos
-- Share success stories
-- Plan advanced workshop
-- Update materials based on feedback
+Next steps:
+1. Run your automation on real data tomorrow
+2. Complete your new feature implementation
+3. Create 2 more automation commands this week
+
+Resources:
+- Workshop recording: [link]
+- Your commands: Check .claude/commands/
+- Help channel: #ai-research-workshop
+
+Office hours: Thursday 2-3pm for debugging help
+```
+
+### Success Metrics:
+- 80%+ automate a task successfully
+- 60%+ start new feature implementation  
+- 90%+ create custom commands
+- 100% have rich CLAUDE.md
 
 ---
 
 ## 🔑 Remember
 
-You're not teaching them to code - you're teaching them to **conduct an AI orchestra for research**. Focus on:
+You're teaching them to fish, not fishing for them. The goal is independent researchers who can:
+1. Teach AI about their domain
+2. Automate repetitive work
+3. Implement new ideas faster
+4. Maintain research rigor
 
-1. **Empowerment over solutions** - Guide them to find answers
-2. **Patterns over specifics** - Teach approaches, not just commands
-3. **Verification over speed** - Correct is better than fast
-4. **Context over prompts** - More context = better results
-5. **Iteration over perfection** - Ship early, improve often
-
-The best workshop is one where participants leave feeling capable of continuing on their own!
+Focus on building their confidence progressively. By Part 6, they should be working independently with you as a resource, not a guide.
