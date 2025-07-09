@@ -196,6 +196,27 @@ This will guide you through integrating your research codebase and creating cust
   - Distributed experiment validation
 - **Command file**: @.claude/commands/parallel-analysis-example.md
 
+#### `/integrate-external-codebase` - Integrate External Repositories
+- **Purpose**: Integrate external codebases (GitHub repos or local) for AI-assisted analysis
+- **When to use**:
+  - Adding a dependency or framework to analyze
+  - Integrating research code from collaborators
+  - Studying existing implementations
+- **Example**: `/integrate-external-codebase https://github.com/user/repo`
+- **Command file**: @.claude/commands/integrate-external-codebase.md
+
+#### `/clean-and-organize` - Repository Maintenance
+- **Purpose**: Clean temporary files and organize misplaced files
+- **When to use**:
+  - Repository has accumulated temp files
+  - Markdown files cluttering the root directory
+  - After extensive development sessions
+- **What it does**:
+  - Removes: *.tmp, *.temp, __pycache__, *.pyc, etc.
+  - Organizes: Moves stray markdown → ai_docs/temp_markdowns/
+  - Preserves: .env, .claude/logs/, and other important files
+- **Command file**: @.claude/commands/clean-and-organize.md
+
 ### 🛠️ Creating Your Research-Specific Commands
 
 After running `/setup`, you'll want to create commands specific to your research domain. Here are patterns to consider:
