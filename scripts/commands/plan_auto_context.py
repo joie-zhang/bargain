@@ -145,10 +145,6 @@ class AutoContextPlanner:
         if not search_dirs:
             search_dirs = ["."]
 
-        # Debug: print search directories
-        print(f"Searching in directories: {search_dirs}")
-        print(f"Project root: {self.project_root}")
-
         # Also search for all Python/JS/TS files if no specific patterns match
         all_source_files = []
         for search_dir in search_dirs:
@@ -157,8 +153,6 @@ class AutoContextPlanner:
                 for ext in ["py", "js", "ts", "jsx", "tsx"]:
                     files = list(search_path.rglob(f"*.{ext}"))
                     all_source_files.extend(files)
-
-        print(f"Found {len(all_source_files)} total source files")
 
         # File extensions to consider
         extensions = ["py", "js", "ts", "jsx", "tsx", "java", "go", "rs", "rb", "php"]
@@ -212,7 +206,6 @@ class AutoContextPlanner:
 
         # If we found few files, add all source files with lower relevance
         if len(relevant_files) < 10:
-            print(f"Adding {len(all_source_files)} source files with base relevance")
             for file_path in all_source_files:
                 if self._should_exclude_file(file_path):
                     continue
@@ -224,7 +217,6 @@ class AutoContextPlanner:
 
         # Sort by relevance score
         sorted_files = sorted(relevant_files.items(), key=lambda x: x[1], reverse=True)
-        print(f"Returning {len(sorted_files)} files after sorting")
         return sorted_files[:50]  # Limit to top 50 files
 
     def _should_exclude_file(self, file_path: Path) -> bool:
@@ -240,20 +232,21 @@ class AutoContextPlanner:
             ".next",
             "venv",
             ".env",
-            "*.min.js",
-            "*.min.css",
-            "*.map",
-            "*.lock",
-            "*.sum",
         ]
 
-        path_str = str(file_path)
-        for pattern in exclude_patterns:
-            if pattern in path_str:
+        # Check file name patterns
+        file_name = file_path.name
+        if file_name.endswith((".min.js", ".min.css", ".map", ".lock", ".sum")):
+            return True
+
+        # Check path components
+        path_parts = file_path.parts
+        for part in path_parts:
+            if part in exclude_patterns:
                 return True
 
         # Exclude test files initially (can be added later if needed)
-        if re.search(r"(test_|_test|\.test\.|\.spec\.)", path_str):
+        if re.search(r"(test_|_test|\.test\.|\.spec\.)", file_name):
             return True
 
         return False
