@@ -371,30 +371,24 @@
                 <h2>Installation & Setup</h2>
             </div>
             <div class="section-content">
-                <h3>Prerequisites</h3>
-                <ul>
-                    <li>macOS or Linux (Windows support via WSL)</li>
-                    <li>Python 3.10 or higher</li>
-                    <li>An Anthropic API key</li>
-                </ul>
                 
                 <h3>Installation</h3>
-                <div class="code-block">
-$ pip install claude-code
+                <div class="code-block multiline">$ npm install -g @anthropic-ai/claude-code
 $ claude --version</div>
                 
-                <h3>Initial Setup</h3>
-                <div class="code-block multiline">$ claude setup
+                <h3>Initial Setup (API Key, Account Login)</h3>
+                <div class="code-block multiline">$ claude
 > Enter your Anthropic API key: sk-ant-...
 > Choose your default model: claude-3-opus-20240229
-> Enable auto-update checks? (y/n): y</div>
+> Enable auto-update checks? (y/n): y
+> ...</div>
                 
                 <div class="example">
                     Here's a complete first-time setup:
-                    <div class="code-block multiline">$ pip install claude-code
-$ claude setup
+                    <div class="code-block multiline">$ npm install -g @anthropic-ai/claude-code
 $ cd ~/my-project
-$ claude "Help me understand this codebase"</div>
+$ claude
+$ > "Help me understand this codebase"</div>
                 </div>
                 
                 <p>For detailed setup instructions, see the <a href="https://docs.anthropic.com/en/docs/claude-code/quickstart" class="external-link">quickstart guide</a>.</p>
@@ -427,10 +421,9 @@ $ claude "Help me understand this codebase"</div>
                 </ul>
                 
                 <h3>3. Local Configuration</h3>
-                <p>Location: <span class="inline-code">.claude.local/</span> (gitignored)</p>
+                <p>Location: <span class="inline-code">.claude/settings.local.json/</span> (gitignored)</p>
                 <ul>
-                    <li><span class="inline-code">.claude.local/settings.json</span> - Personal overrides</li>
-                    <li><span class="inline-code">.claude.local/commands/</span> - Personal commands</li>
+                    <li><span class="inline-code">.claude/settings.local.json</span> - Personal overrides</li>
                 </ul>
                 
                 <div class="note">
@@ -439,10 +432,11 @@ $ claude "Help me understand this codebase"</div>
                 
                 <div class="example">
                     Check your current configuration:
-                    <div class="code-block multiline">$ claude config show
+                    <div class="code-block multiline">$ claude config list
 $ claude config set temperature 0.7
 $ claude config set --project model claude-3-opus-20240229</div>
                 </div>
+                <p>For all of the possible settings and parameters you can adjust, see the <a href="https://docs.anthropic.com/en/docs/claude-code/settings#available-settings" class="external-link">available claude code settings</a>. Many of these can be adjusted in the Claude Code session as well.</p>
             </div>
         </div>
         
@@ -476,7 +470,7 @@ $ claude "Why is this test failing?" -f tests/test_auth.py
 # Generate code
 $ claude "Create a Python script that processes CSV files"</div>
                 
-                <h3>Including Files</h3>
+                <h3>Including Files (Atypical Workflow)</h3>
                 <div class="code-block multiline"># Include specific files
 $ claude "Refactor this code" -f src/main.py -f src/utils.py
 
@@ -484,7 +478,7 @@ $ claude "Refactor this code" -f src/main.py -f src/utils.py
 $ cat error.log | claude "What's causing this error?"</div>
                 
                 <div class="tip">
-                    Use <span class="command">claude --help</span> to see all available options.
+                    This is NOT A TYPICAL WORKFLOW. Attaching specific files is relatively unnecessary now, Claude Code and tools like it use the directory itself to search, identify, and load relevant and necessary files, both at the beginning of a task and as the task is ongoing.
                 </div>
             </div>
         </div>
@@ -496,7 +490,7 @@ $ cat error.log | claude "What's causing this error?"</div>
                 <h2>Built-in Commands</h2>
             </div>
             <div class="section-content">
-                <p>Claude Code includes several built-in slash commands for common tasks:</p>
+                <p>Claude Code includes several built-in slash commands for common tasks. In Claude Code, the full list of available commands appears when you start a prompt with "/". Outside of configuration, these are commons ones you may use in typical development workflows.</p>
                 
                 <h3>Essential Commands</h3>
                 <table>
@@ -530,11 +524,6 @@ $ cat error.log | claude "What's causing this error?"</div>
                         <td>Review current permissions</td>
                         <td>/permissions</td>
                     </tr>
-                    <tr>
-                        <td><span class="command">/undo</span></td>
-                        <td>Undo last file changes</td>
-                        <td>/undo</td>
-                    </tr>
                 </table>
                 
                 <div class="example">
@@ -549,7 +538,7 @@ Session saved to ~/.claude/pages/feature-implementation/
 Conversation cleared. Starting fresh!</div>
                 </div>
                 
-                <p>See all commands in the <a href="https://docs.anthropic.com/en/docs/claude-code/slash-commands" class="external-link">slash commands documentation</a>.</p>
+                <p>See all commands in the <a href="https://docs.anthropic.com/en/docs/claude-code/slash-commands" class="external-link">slash commands documentation</a>, and remember you can see what you have available with "/".</p>
             </div>
         </div>
         
@@ -560,7 +549,7 @@ Conversation cleared. Starting fresh!</div>
                 <h2>The CLAUDE.md File</h2>
             </div>
             <div class="section-content">
-                <p>The <span class="inline-code">CLAUDE.md</span> file in your project root provides project-specific context and instructions to Claude. It's automatically read at the start of each conversation.</p>
+                <p>The <span class="inline-code">CLAUDE.md</span> file in your project root provides project-specific context and instructions to Claude. It's automatically read at the start of each conversation. It can be created by Claude Code (/init), and can be managed/updated by either CC or yourself. It can include code architecture details, typical scripts, requirements and TODOs, software stack requirements or expectations, or anything that might aid both Claude and anyone else who may try to start working on the repository.</p>
                 
                 <h3>Purpose</h3>
                 <ul>
@@ -610,45 +599,6 @@ pytest tests/ -v
             </div>
         </div>
         
-        <!-- System Prompts -->
-        <div class="section" id="system-prompts">
-            <div class="section-header">
-                <span class="collapse-icon">▼</span>
-                <h2>System Prompts</h2>
-            </div>
-            <div class="section-content">
-                <p>System prompts define Claude's base behavior and can be customized at different levels.</p>
-                
-                <h3>Setting System Prompts</h3>
-                <div class="code-block multiline"># Global system prompt
-$ claude config set system_prompt "You are an expert Python developer focused on clean, maintainable code."
-
-# Project-specific prompt
-$ claude config set --project system_prompt "You are working on a React TypeScript application. Prefer functional components and hooks."
-
-# Temporary override
-$ claude --system "You are a code reviewer. Be thorough but constructive." "Review this PR"</div>
-                
-                <h3>System Prompt Best Practices</h3>
-                <ul>
-                    <li>Be specific about expertise and focus areas</li>
-                    <li>Include coding preferences and standards</li>
-                    <li>Specify output format preferences</li>
-                    <li>Set behavioral guidelines (concise, detailed, etc.)</li>
-                </ul>
-                
-                <div class="example">
-                    Specialized system prompt for testing:
-                    <div class="code-block multiline">You are a test-driven development expert. When writing code:
-1. Always write tests first
-2. Ensure 100% code coverage
-3. Use descriptive test names
-4. Include edge cases and error scenarios
-5. Prefer pytest over unittest</div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Working with Files -->
         <div class="section" id="working-with-files">
             <div class="section-header">
@@ -675,7 +625,7 @@ $ claude --system "You are a code reviewer. Be thorough but constructive." "Revi
 > Rename the 'process_item' function to 'process_order' everywhere</div>
                 
                 <h3>File Safety</h3>
-                <p>Claude always shows diffs before making changes:</p>
+                <p>Claude Code shows diffs before making changes:</p>
                 <div class="code-block multiline">--- a/src/utils.py
 +++ b/src/utils.py
 @@ -10,7 +10,10 @@ def parse_data(raw_data):
@@ -689,9 +639,6 @@ $ claude --system "You are a code reviewer. Be thorough but constructive." "Revi
 
 Apply this change? (y/n):</div>
                 
-                <div class="tip">
-                    Use <span class="command">/undo</span> to revert the last file operation if needed.
-                </div>
             </div>
         </div>
         
@@ -742,7 +689,7 @@ Running: git commit -m "feat: Add user profile model with tests"</div>
                 </div>
                 
                 <div class="note">
-                    Claude respects your <span class="inline-code">.gitignore</span> patterns and won't commit sensitive files.
+                    Claude respects your <span class="inline-code">.gitignore</span> patterns and won't commit sensitive files. The next sections, alongside the examples in this repository, can be used to automate git workflows using commands and hooks.
                 </div>
             </div>
         </div>
@@ -819,10 +766,10 @@ Please specify action: create or apply
 > /migrate create "add user preferences table"</div>
                 
                 <div class="tip">
-                    Check out example commands at <a href="https://github.com/anthropics/claude-code-examples" class="external-link">Claude Code examples repository</a>.
+                    Check out more custom commands in the repo.
                 </div>
                 
-                <p>Learn more in the <a href="https://docs.anthropic.com/en/docs/claude-code/slash-commands" class="external-link">custom commands guide</a>.</p>
+                <p>Learn more in the <a href="https://docs.anthropic.com/en/docs/claude-code/slash-commands#custom-slash-commands" class="external-link">custom commands guide</a>.</p>
             </div>
         </div>
         
@@ -985,7 +932,7 @@ if file_path.startswith('src/') and file_path.endswith('.py'):
                 
                 <h3>Managing Settings</h3>
                 <div class="code-block multiline"># View current settings
-$ claude config show
+$ claude config list
 
 # Set a value
 $ claude config set temperature 0.5
@@ -1156,7 +1103,7 @@ $ claude --system "You are a code reviewer. Focus on security, performance, and 
                 
                 <h4>1. API Key Issues</h4>
                 <div class="code-block multiline"># Check if API key is set
-$ claude config show | grep api_key
+$ claude config list | grep api_key
 
 # Set API key
 $ claude config set api_key sk-ant-...</div>
