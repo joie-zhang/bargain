@@ -316,13 +316,13 @@
         <div class="header">
             <h1>CLAUDE CODE GUIDE</h1>
             <div class="subtitle">From Basic Setup to Custom Commands & Hooks</div>
+            <p><a href="https://docs.anthropic.com/en/docs/claude-code/overview" class="external-link">Claude Code Anthropic Overview</a>.</p>
         </div>
         
         <!-- Table of Contents -->
         <div class="toc">
             <h2>📚 Table of Contents</h2>
             <ul class="toc-list">
-                <li><a href="#what-is-claude-code">What is Claude Code?</a></li>
                 <li><a href="#installation">Installation & Setup</a></li>
                 <li><a href="#where-claude-lives">Where Claude Lives</a></li>
                 <li><a href="#basic-usage">Basic Usage</a></li>
@@ -340,29 +340,7 @@
                 <li><a href="#resources">Additional Resources</a></li>
             </ul>
         </div>
-        
-        <!-- What is Claude Code -->
-        <div class="section" id="what-is-claude-code">
-            <div class="section-header">
-                <span class="collapse-icon">▼</span>
-                <h2>What is Claude Code?</h2>
-            </div>
-            <div class="section-content">
-                <p>Claude Code is Anthropic's official CLI tool that brings Claude's AI capabilities directly to your terminal. It's a coding assistant that can understand your project context, edit files, run commands, and help with software development tasks.</p>
-                
-                <h3>Key Features</h3>
-                <ul>
-                    <li><strong>Direct file editing</strong> - Claude can read and modify your files</li>
-                    <li><strong>Command execution</strong> - Run shell commands and see results</li>
-                    <li><strong>Project understanding</strong> - Maintains context about your codebase</li>
-                    <li><strong>Extensibility</strong> - Create custom commands and hooks</li>
-                    <li><strong>Safety controls</strong> - Granular permissions and change review</li>
-                </ul>
-                
-                <p>Learn more in the <a href="https://docs.anthropic.com/en/docs/claude-code/overview" class="external-link">official overview</a>.</p>
-            </div>
-        </div>
-        
+               
         <!-- Installation -->
         <div class="section" id="installation">
             <div class="section-header">
@@ -655,8 +633,8 @@ Apply this change? (y/n):</div>
                 <p>By default, Claude Code requires approval for potentially dangerous operations. You have full control over what Claude can do through the permissions system.</p>
                 
                 <h4>Skipping Permissions (Use with Caution)</h4>
-                <p>The <span class="command">--dangerously-skip-approval</span> flag bypasses all safety prompts:</p>
-                <div class="code-block">$ claude --dangerously-skip-approval "Fix all the bugs"</div>
+                <p>The <span class="command">--dangerously-skip-permissions</span> flag bypasses all safety prompts:</p>
+                <div class="code-block">$ claude --dangerously-skip-permissions "Fix all the bugs"</div>
                 
                 <div class="note">
                     <strong>WARNING:</strong> This flag is dangerous! It allows Claude to make changes without your review. Only use it in:
