@@ -328,7 +328,6 @@
                 <li><a href="#basic-usage">Basic Usage</a></li>
                 <li><a href="#built-in-commands">Built-in Commands</a></li>
                 <li><a href="#claude-md">The CLAUDE.md File</a></li>
-                <li><a href="#system-prompts">System Prompts</a></li>
                 <li><a href="#working-with-files">Working with Files</a></li>
                 <li><a href="#git-integration">Git Integration</a></li>
                 <li><a href="#custom-commands">Custom Commands</a></li>
@@ -634,8 +633,11 @@ pytest tests/ -v
 # Refactor code
 > Rename the 'process_item' function to 'process_order' everywhere</div>
                 
-                <h3>File Safety</h3>
-                <p>Claude Code shows diffs before making changes:</p>
+                <h3>Safety Features</h3>
+                <p>Claude Code includes multiple safety mechanisms to protect your work:</p>
+                
+                <h4>File Change Review</h4>
+                <p>Claude always shows diffs before making changes:</p>
                 <div class="code-block multiline">--- a/src/utils.py
 +++ b/src/utils.py
 @@ -10,7 +10,10 @@ def parse_data(raw_data):
@@ -648,6 +650,22 @@ pytest tests/ -v
      return data
 
 Apply this change? (y/n):</div>
+                
+                <h4>Permission Controls</h4>
+                <p>By default, Claude Code requires approval for potentially dangerous operations. You have full control over what Claude can do through the permissions system.</p>
+                
+                <h4>Skipping Permissions (Use with Caution)</h4>
+                <p>The <span class="command">--dangerously-skip-approval</span> flag bypasses all safety prompts:</p>
+                <div class="code-block">$ claude --dangerously-skip-approval "Fix all the bugs"</div>
+                
+                <div class="note">
+                    <strong>WARNING:</strong> This flag is dangerous! It allows Claude to make changes without your review. Only use it in:
+                    <ul style="margin-top: 5px;">
+                        <li>Isolated containers or VMs</li>
+                        <li>Disposable environments</li>
+                        <li>Automated CI/CD pipelines with proper safeguards</li>
+                    </ul>
+                </div>
                 
             </div>
         </div>
@@ -921,7 +939,6 @@ if file_path.startswith('src/') and file_path.endswith('.py'):
                 <div class="code-block multiline">{
   "model": "claude-3-opus-20240229",
   "temperature": 0.7,
-  "system_prompt": "You are an expert Python developer.",
   "permissions": {
     "file_write": true,
     "file_create": true,
@@ -1092,7 +1109,7 @@ Test passed!</div>
                 
                 <h3>Code Review Workflow</h3>
                 <div class="code-block multiline"># Create a review-focused session
-$ claude --system "You are a code reviewer. Focus on security, performance, and maintainability."
+$ claude "Please act as a code reviewer. Focus on security, performance, and maintainability."
 
 > Review the changes in the auth module
 
@@ -1109,60 +1126,19 @@ $ claude --system "You are a code reviewer. Focus on security, performance, and 
                 <h2>Troubleshooting</h2>
             </div>
             <div class="section-content">
-                <h3>Common Issues</h3>
+                <p>If you encounter issues with Claude Code, these resources can help:</p>
                 
-                <h4>1. API Key Issues</h4>
-                <div class="code-block multiline"># Check if API key is set
-$ claude config list | grep api_key
-
-# Set API key
-$ claude config set api_key sk-ant-...</div>
-                
-                <h4>2. Permission Denied</h4>
-                <div class="code-block multiline"># Check permissions
-> /permissions
-
-# Update permissions in .claude/settings.json
-{
-  "permissions": {
-    "file_write": true,
-    "command_execution": true
-  }
-}</div>
-                
-                <h4>3. Context Limit Reached</h4>
-                <div class="code-block multiline"># Check context usage
-> /compact
-
-# Save and start fresh
-> /page checkpoint-name
-> /clear</div>
-                
-                <h4>4. Command Not Found</h4>
-                <div class="code-block multiline"># List available commands
-> /help
-
-# Check if custom command exists
-$ ls .claude/commands/
-
-# Reload commands
-$ claude --reload-commands</div>
-                
-                <h4>5. Hooks Not Running</h4>
-                <div class="code-block multiline"># Check hook configuration
-$ cat .claude/settings.json | grep -A5 hooks
-
-# Make hook executable
-$ chmod +x .claude/hooks/my_hook.sh
-
-# Test hook manually
-$ CLAUDE_HOOK_EVENT=PostWriteHook CLAUDE_HOOK_PARAMS_PATH=test.py .claude/hooks/my_hook.sh</div>
+                <h3>Helpful Resources</h3>
+                <ul>
+                    <li><a href="https://docs.anthropic.com/en/docs/claude-code/troubleshooting" class="external-link">Official Troubleshooting Guide</a> - Common issues and solutions</li>
+                    <li><a href="https://docs.anthropic.com/en/docs/claude-code/cli-reference" class="external-link">CLI Reference</a> - Complete command options and flags</li>
+                    <li><a href="https://github.com/anthropics/claude-code/issues" class="external-link">GitHub Issues</a> - Report bugs or search existing issues</li>
+                    <li><a href="https://support.anthropic.com/" class="external-link">Anthropic Support</a> - Get help from the support team</li>
+                </ul>
                 
                 <div class="tip">
-                    Enable debug logging with <span class="command">claude --debug</span> for detailed troubleshooting.
+                    Quick debugging tip: Use <span class="command">claude --debug</span> to enable verbose logging and see detailed information about what Claude Code is doing.
                 </div>
-                
-                <p>Full troubleshooting guide at <a href="https://docs.anthropic.com/en/docs/claude-code/troubleshooting" class="external-link">troubleshooting documentation</a>.</p>
             </div>
         </div>
         
