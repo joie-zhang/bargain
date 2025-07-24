@@ -2,210 +2,305 @@
 
 **Date**: [YYYY-MM-DD]  
 **Author**: [Your Name]  
-**Status**: Draft / In Progress / Complete  
-**Priority**: High / Medium / Low  
+**DRI (Directly Responsible Individual)**: [Name if different from author]  
+**Status**: Ideation / Exploration / Understanding / Distillation  
+**Research Mode**: De-risk Sprint / Extended Project  
+**Timeline**: [Expected duration]  
 
-## 1. Problem Statement
+## 1. Problem Statement & Theory of Change
 
-### Research Question
-[What specific question are you trying to answer? Be precise and measurable.]
+### Core Research Question
+[What specific question are you trying to answer? Be precise, measurable, and action-relevant. 
+Ask yourself: "If I answer this, what will change?"]
 
-### Background
-[Brief context about why this matters. Include relevant prior work or failed attempts.]
+### Theory of Change
+[How will answering this question lead to real-world impact? What's your causal chain from research → knowledge → action → impact?]
 
-### Success Criteria
-- [ ] [Specific, measurable outcome 1]
-- [ ] [Specific, measurable outcome 2]
-- [ ] [Specific, measurable outcome 3]
+### Why This Matters (Motivation)
+[Brief context about importance. Address: Why should anyone care? What problem does this solve? How does it fit the bigger picture?]
 
-## 2. Technical Approach
+### Is This the Right Question?
+- [ ] **Action-relevant**: Would the answer change any important decisions?
+- [ ] **Neglected**: Are others already solving this well?
+- [ ] **Tractable**: Can we make meaningful progress in [timeline]?
+- [ ] **Important**: Does this matter for [specific impact area]?
 
-### Method Overview
-[High-level description of your approach in 2-3 paragraphs]
+### Success Criteria (Measurable)
+- [ ] [Specific claim we'll have evidence for]
+- [ ] [Concrete metric or threshold we'll achieve]
+- [ ] [Deliverable that demonstrates understanding]
 
-### Key Components
-1. **[Component 1]**: [Brief description]
-2. **[Component 2]**: [Brief description]
-3. **[Component 3]**: [Brief description]
+## 2. Critical Assumptions to Validate
 
-### Implementation Details
-```python
-# Pseudocode or key algorithmic steps
-def main_approach():
-    # Step 1: Data preparation
-    # Step 2: Model/algorithm implementation
-    # Step 3: Evaluation
-    pass
+### Core Assumptions
+[List assumptions that, if false, would invalidate your approach]
+1. **Assumption**: [What needs to be true]
+   - **Why critical**: [What fails if this is false]
+   - **Validation method**: [How to test quickly]
+   - **Backup plan**: [What to do if false]
+
+2. **Assumption**: [What needs to be true]
+   - **Why critical**: [What fails if this is false]
+   - **Validation method**: [How to test quickly]
+   - **Backup plan**: [What to do if false]
+
+### Known Failure Modes to Avoid
+- [ ] **Scaling/Bitter Lesson**: Is my approach robust to scale, or fighting fundamental trends?
+- [ ] **Unrealistic Assumptions**: Am I assuming things that won't hold in practice?
+- [ ] **Cherry-picking**: Am I designing experiments that could mislead through selection?
+- [ ] **Weak Baselines**: Do I have strong baselines that actually test my contribution?
+
+## 3. Research Stages & Technical Approach
+
+### Current Stage: [Ideation/Exploration/Understanding/Distillation]
+
+### Stage-Specific Plan
+
+#### Exploration Phase (Gain Surface Area)
+**North Star**: Maximize information gain per unit time
+- [ ] Quick experiments to test core assumptions (<1 day feedback loops)
+- [ ] Explore multiple hypotheses in parallel
+- [ ] Keep highlights doc of interesting observations
+- [ ] Visual exploration of data/results from many angles
+
+#### Understanding Phase (Test Hypotheses)  
+**North Star**: Find convincing evidence for specific claims
+- [ ] Design experiments that distinguish between hypotheses
+- [ ] Implement strong baselines for comparison
+- [ ] Quantitative evaluation with statistical rigor (p < 0.001 for exploratory)
+- [ ] Systematic ablation studies
+
+#### Key Technical Components
+1. **[Component 1]**: [Why needed + quick validation test]
+2. **[Component 2]**: [Why needed + quick validation test]
+3. **[Component 3]**: [Why needed + quick validation test]
+
+### Data Requirements
+- **Source & Quality**: [Where from? How reliable? Biases?]
+- **Size for Signal**: [Minimum N for statistical power]
+- **Preprocessing**: [What's needed? How long?]
+- **Access**: [Any blockers? IRB? Compute?]
+
+## 4. De-risking & Experimental Design
+
+### Information-Theoretic Prioritization
+[Order experiments by information gain per unit time]
+
+| Experiment | Info Gain | Time | Priority | Status |
+|------------|-----------|------|----------|---------|
+| [Quick test of core assumption] | High | 2h | 1 | [ ] |
+| [Baseline implementation] | Medium | 1d | 2 | [ ] |
+| [Full implementation] | Low | 1w | 3 | [ ] |
+
+### Minimal Viable Experiments
+1. **[Core assumption test]**: 
+   - **What we'll learn**: [Specific hypothesis validation]
+   - **Quick implementation**: [Minimal code/setup needed]
+   - **Success criteria**: [Clear yes/no signal]
+
+### Strong Baselines Required
+- **Baseline 1**: [Why it's the right comparison + implementation plan]
+- **Baseline 2**: [Why it's the right comparison + implementation plan]
+- **Ceiling Analysis**: [Upper bound on possible performance]
+
+### Evaluation Framework
+1. **Distinguishing Evidence**: What results would convince a skeptic?
+   - Result A supports Hypothesis 1 but not Hypothesis 2
+   - Result B supports Hypothesis 2 but not Hypothesis 1
+
+2. **Statistical Rigor**:
+   - Significance threshold: p < 0.001 (exploratory)
+   - Sample size calculation: [N needed for power]
+   - Multiple hypothesis correction if applicable
+
+3. **Sanity Checks**:
+   - [ ] Results reproducible with different seeds
+   - [ ] No dependence on initialization order
+   - [ ] Performance degrades gracefully with less data
+
+## 5. Implementation Plan (Following Stochastic Decision Process)
+
+### Guiding Principle: Reduce Uncertainty at Maximum Rate
+
+### Phase 1: De-risk Core Ideas (<1 week)
+**Goal**: Fail fast on fundamental assumptions
+- [ ] Implement minimal test of key technical insight
+- [ ] Verify data has properties we need
+- [ ] Check computational feasibility
+- [ ] Prototype reveals no fundamental blockers
+**Exit criteria**: Core approach is viable or pivot needed
+
+### Phase 2: Rapid Prototyping (1-2 weeks)  
+**Goal**: Get to working implementation ASAP
+- [ ] Implement simplest version that could work
+- [ ] Use existing tools/libraries maximally  
+- [ ] Focus on end-to-end pipeline over perfection
+- [ ] Daily experiments with tight feedback loops
+**Exit criteria**: Have results to analyze, even if rough
+
+### Phase 3: Systematic Evaluation (1-2 weeks)
+**Goal**: Build scientific case
+- [ ] Implement all baselines properly
+- [ ] Run experiments with proper statistics
+- [ ] Systematic ablations and sensitivity analysis
+- [ ] Address most likely criticisms preemptively  
+**Exit criteria**: Confident in claims with evidence
+
+### Phase 4: Distillation & Communication (1 week)
+**Goal**: Compress into clear narrative
+- [ ] Identify 1-3 key claims supported by evidence
+- [ ] Create compelling figures
+- [ ] Write clear, accessible explanation
+- [ ] Package code for reproducibility
+**Exit criteria**: Others can understand and build on work
+
+## 6. Resource Planning & Constraints
+
+### Time Budget (Be Realistic!)
+- **Total timeline**: [X weeks/months]
+- **Weekly hours available**: [Realistically, 20-30h focused work]
+- **Key deadline**: [Conference/thesis/etc]
+- **Buffer for unexpected**: 30% extra time minimum
+
+### Computational Requirements
+- **Experiments < 1 day**: Critical for fast iteration
+- **Memory**: [RAM/VRAM needs]
+- **Storage**: [Including checkpoints/logs]
+- **Parallelization**: [How many experiments simultaneously?]
+
+### Human Resources
+- **DRI**: [Who makes final decisions?]
+- **Collaborators**: [Who does what?]
+- **Advisors/Mentors**: [Weekly check-ins?]
+- **External experts**: [Who to consult on what?]
+
+## 7. Risk Analysis & Mitigation
+
+### Research Risk Matrix
+
+| Risk | Probability | Impact | Mitigation | Early Warning Sign |
+|------|------------|---------|------------|-------------------|
+| Core assumption false | Medium | High | Quick validation experiment | Initial tests fail |
+| Compute insufficient | Low | High | Profile early, have backup | Early runs OOM |
+| No improvement over baseline | Medium | Medium | Strong baselines, multiple approaches | Early results flat |
+| Results not reproducible | Low | High | Version control, seeds, logs | Variance too high |
+
+### Go/No-Go Decision Points
+1. **After Phase 1**: If core assumption false → Pivot or abort
+2. **After Phase 2**: If no signal over baseline → Try alternative approach
+3. **After Phase 3**: If claims not supported → Reduce scope or extend timeline
+
+## 8. Truth-Seeking & Quality Checks
+
+### Research Integrity Checklist
+- [ ] **No P-hacking**: Decided on metrics before seeing results
+- [ ] **No Cherry-picking**: Reporting all relevant experiments
+- [ ] **Strong Baselines**: Honestly tried to make baselines work well
+- [ ] **Acknowledged Limitations**: Clearly stated where approach fails
+- [ ] **Reproducible**: Another researcher could replicate from writeup
+
+### During Research
+- [ ] **Daily Hypothesis Log**: Writing down what I expect before experiments
+- [ ] **Failure Documentation**: Recording what didn't work and why
+- [ ] **Assumption Tracking**: Listing what could invalidate results
+- [ ] **External Validation**: Getting skeptical feedback from others
+
+### Red Team Your Own Work
+1. **Alternative Explanations**: What else could explain these results?
+2. **Robustness Checks**: Does it work with different seeds/data splits/hyperparameters?
+3. **Limiting Cases**: Where does the approach break down?
+4. **Skeptic's View**: What would a harsh reviewer say?
+
+## 9. Output & Dissemination Plan
+
+### Target Audience & Venue
+- **Primary audience**: [Researchers/practitioners/policymakers in X]
+- **Publication venue**: [Conference/journal/blog/preprint]
+- **Submission deadline**: [Date - work backwards!]
+- **Backup venues**: [Alternative options]
+
+### Key Deliverables
+1. **For Researchers**: 
+   - [ ] Clean, documented, runnable code
+   - [ ] Clear writeup of method and findings
+   - [ ] Reproduction package with data/configs
+
+2. **For Practitioners**:
+   - [ ] 2-page executive summary
+   - [ ] Implementation guide
+   - [ ] Limitations and when (not) to use
+
+3. **For Broader Audience**:
+   - [ ] Blog post or Twitter thread
+   - [ ] Key visualizations
+   - [ ] One-paragraph summary
+
+### Research Artifacts to Create
+```
+outputs/
+├── paper/
+│   ├── main.tex
+│   ├── figures/
+│   └── supplementary/
+├── code/
+│   ├── README.md
+│   ├── requirements.txt
+│   ├── experiments/
+│   └── notebooks/
+├── results/
+│   ├── final_results.json
+│   ├── ablation_studies/
+│   └── statistical_tests/
+└── dissemination/
+    ├── blog_post.md
+    ├── slides.pdf
+    └── executive_summary.pdf
 ```
 
-## 3. Data Requirements
+## 10. Learning & Iteration
 
-### Input Data
-- **Source**: [Where does the data come from?]
-- **Format**: [File types, structure]
-- **Size**: [Approximate scale]
-- **Preprocessing**: [Required transformations]
+### Weekly Reviews
+- **What went well?** [Practices to continue]
+- **What was slow?** [Bottlenecks to address]  
+- **What surprised me?** [Update assumptions]
+- **What would I do differently?** [Process improvements]
 
-### Output Data
-- **Format**: [Expected output structure]
-- **Validation**: [How to verify correctness]
-- **Storage**: [Where results will be saved]
+### Post-Project Retrospective
+1. **Technical Lessons**: What did I learn about the problem domain?
+2. **Process Lessons**: What research practices worked well?
+3. **Communication Lessons**: What was hard to explain?
+4. **Future Directions**: What questions did this raise?
 
-## 4. Experimental Design
-
-### Baseline Comparisons
-- **Baseline 1**: [Description and why it's relevant]
-- **Baseline 2**: [Description and why it's relevant]
-
-### Evaluation Metrics
-1. **Primary Metric**: [e.g., accuracy, loss, specific domain metric]
-   - Target: [Specific number/range]
-   - Current best: [If known]
-
-2. **Secondary Metrics**: 
-   - [Metric 1]: [Target]
-   - [Metric 2]: [Target]
-
-### Ablation Studies
-- [ ] [Component to ablate 1]
-- [ ] [Component to ablate 2]
-- [ ] [Parameter sensitivity analysis]
-
-## 5. Implementation Plan
-
-### Phase 1: Setup and Validation (Time estimate: [X hours/days])
-- [ ] Set up development environment
-- [ ] Implement data loading pipeline
-- [ ] Create simple validation test
-- [ ] Verify baseline reproduction
-
-### Phase 2: Core Implementation (Time estimate: [X hours/days])
-- [ ] Implement main algorithm/model
-- [ ] Add logging and monitoring
-- [ ] Create unit tests
-- [ ] Initial debugging and optimization
-
-### Phase 3: Experimentation (Time estimate: [X hours/days])
-- [ ] Run full experiments
-- [ ] Perform ablation studies
-- [ ] Analyze results
-- [ ] Generate visualizations
-
-### Phase 4: Analysis and Documentation (Time estimate: [X hours/days])
-- [ ] Statistical analysis of results
-- [ ] Create figures and tables
-- [ ] Write up findings
-- [ ] Prepare reproducibility package
-
-## 6. Technical Constraints
-
-### Computational Resources
-- **Memory**: [RAM requirements]
-- **GPU**: [Required? Type?]
-- **Storage**: [Disk space needed]
-- **Time**: [Expected runtime per experiment]
-
-### Dependencies
-- **Core Libraries**: [e.g., PyTorch, NumPy, etc.]
-- **Special Requirements**: [e.g., specific versions, proprietary code]
-- **External APIs**: [If any]
-
-## 7. Risks and Mitigations
-
-### Technical Risks
-1. **Risk**: [e.g., "Model might not converge"]
-   - **Mitigation**: [e.g., "Use learning rate scheduling, try different optimizers"]
-
-2. **Risk**: [e.g., "Data might be insufficient"]
-   - **Mitigation**: [e.g., "Prepare data augmentation strategies"]
-
-### Research Risks
-1. **Risk**: [e.g., "Approach might not outperform baseline"]
-   - **Mitigation**: [e.g., "Have alternative approaches ready"]
-
-## 8. Self-Validation Checklist
-
-### Before Starting
-- [ ] All dependencies installed and versions recorded
-- [ ] Test data pipeline with small sample
-- [ ] Baseline code runs and reproduces expected results
-- [ ] Git repository initialized with .gitignore
-
-### During Implementation
-- [ ] Each function has a unit test
-- [ ] No hardcoded paths or magic numbers
-- [ ] Logging captures all important metrics
-- [ ] Regular commits with descriptive messages
-
-### After Completion
-- [ ] All experiments reproducible with single command
-- [ ] Results saved with timestamps and configs
-- [ ] Statistical significance tested
-- [ ] Code passes linting and type checking
-
-## 9. Success Metrics & Verification
-
-### Quantitative Success
-- [ ] Achieves [X]% improvement over baseline
-- [ ] Runs in less than [Y] hours
-- [ ] Uses less than [Z] GB memory
-
-### Qualitative Success
-- [ ] Code is readable and well-documented
-- [ ] Results are interpretable
-- [ ] Approach is generalizable to [related problems]
-
-### Verification Commands
-```bash
-# Test single batch
-python test_single_batch.py
-
-# Verify no mock data
-grep -r "torch.randn\|np.random" src/ --include="*.py"
-
-# Run full validation
-python validate_results.py --compare-baseline
-
-# Check reproducibility
-python check_reproducibility.py --seed 42
-```
-
-## 10. Next Steps
-
-### If Successful
-1. [What to do if approach works]
-2. [How to extend or scale up]
-3. [Publication or deployment plans]
-
-### If Unsuccessful
-1. [Alternative approach 1]
-2. [Alternative approach 2]
-3. [What can be learned from failure]
+### Knowledge Capture
+- [ ] Update team knowledge base with lessons learned
+- [ ] Create reusable code components
+- [ ] Document dead ends to save future time
+- [ ] Share tacit knowledge in accessible format
 
 ---
 
-## Notes for AI Agents
+## Quick Reference: Research Best Practices Applied
 
-**Key Files to Reference**:
-- Main implementation: `[path/to/main.py]`
-- Config file: `[path/to/config.yaml]`
-- Data processing: `[path/to/data.py]`
+**From Truth-Seeking:**
+- Design experiments to falsify, not confirm
+- Track pre/post-hoc analysis separately  
+- Report all relevant results, not just successes
 
-**Common Pitfalls to Avoid**:
-- Don't use synthetic data in actual experiments
-- Always set random seeds for reproducibility
-- Log everything - you'll need it for debugging
-- Test edge cases (empty inputs, single samples, etc.)
+**From Moving Fast:**
+- <1 day experiment loops whenever possible
+- Fail fast on core assumptions
+- Implement quick and dirty first, polish later
 
-**Workspace Setup**:
-```bash
-# Initial setup commands
-cd [project-root]
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-pip install -r requirements.txt
-```
+**From Prioritization:**
+- Always optimize for information gain per time
+- Have clear go/no-go decision points
+- Cut features ruthlessly to meet deadlines
+
+**From Clear Thinking:**
+- State assumptions explicitly
+- Quantify uncertainty where possible
+- Compare against strong alternatives fairly
 
 ---
 
-*This specification is a living document. Update it as you learn more about the problem and refine your approach.*
+*Remember: The goal is truth-seeking and impact, not just publication. This spec is a tool for clear thinking, not bureaucracy. Adapt as needed for your specific research context.*
