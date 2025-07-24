@@ -166,14 +166,29 @@ def generate_intelligent_commit_message(changed_files, changes_summary):
         activity = "research session"
         primary_files = changed_files[:3]  # First few files
     
-    # Generate commit message
-    if len(primary_files) == 1:
-        filename = os.path.basename(primary_files[0])
-        title = f"{commit_type}: add {filename}"
-    elif len(primary_files) <= 3:
-        filenames = [os.path.basename(f) for f in primary_files]
-        title = f"{commit_type}: add {', '.join(filenames)}"
-    else:
+    # Ensure primary_files is valid and not empty
+    if not primary_files:
+        primary_files = changed_files[:3] if changed_files else []
+        activity = "research session"
+    
+    # Log debug info for troubleshooting
+    log_to_research(f"Commit generation - Activity: {activity}, Files: {len(primary_files)}, Type: {commit_type}")
+    
+    # Generate commit message with robust error handling
+    try:
+        if len(primary_files) == 1:
+            filename = os.path.basename(primary_files[0]) if primary_files[0] else "files"
+            title = f"{commit_type}: add {filename}"
+        elif len(primary_files) <= 3:
+            filenames = [os.path.basename(f) for f in primary_files if f]
+            if filenames:
+                title = f"{commit_type}: add {', '.join(filenames)}"
+            else:
+                title = f"{commit_type}: add {activity} files"
+        else:
+            title = f"{commit_type}: add {activity} files ({len(changed_files)} files)"
+    except Exception:
+        # Fallback if filename extraction fails
         title = f"{commit_type}: add {activity} files ({len(changed_files)} files)"
     
     # Add description
