@@ -81,36 +81,46 @@ For implementation tasks:
    - Create unambiguous requirements in `issues/`
    - Include testable acceptance criteria
    - Specify edge cases and failure modes
+   - **Meta-prompting**: If requirements are unclear, ask for more specification
 
 2. **Planning Phase**
    - Document approach in `docs/plan_<issue_no>.md`
    - Identify potential risks and mitigations
    - Define checkpoints and validation methods
+   - Consider that most intuitively plausible techniques don't work
+   - Plan for multiple iterations - good ideas often take many tries
 
 3. **Implementation**
    - Work incrementally with continuous testing
    - Maintain clean git history with atomic commits
    - Document decisions and trade-offs inline
+   - **Optimize feedback loops**: Rapid feedback is crucial for progress
+   - Consider hardware efficiency - avoid obviously inefficient code
 
 4. **Documentation**
    - Update findings in real-time
    - Include both successes and failures
    - Cross-reference related work
+   - Document what didn't work and why - this prevents repeated mistakes
 
 5. **Validation**
    - Run comprehensive test suites
    - Perform multi-agent verification for critical components
    - Document performance characteristics
+   - **Always use strong baselines** - most techniques only look good with weak baselines
+   - Expect that much work won't impact the final result - this is normal
 </research_workflow>
 
 ## Code Quality Standards
 
 <code_quality>
 ### Implementation Guidelines
-1. **No Mock Data**: Never create mock data or placeholder functions unless explicitly requested
-   - Always implement real functionality
+1. **No Mock Data - CRITICAL**: Never create mock data, placeholder functions, mock API calls, or fake unit tests
+   - Always implement real functionality with actual logic
    - Use actual data from files or generate realistic test data
    - Avoid TODO placeholders in production code
+   - Mock functions and fake tests create persistent issues in agentic coding
+   - If you cannot implement something fully, explain why rather than creating mocks
 
 2. **Concise and Correct**: Optimize for correctness over verbosity
    - Write clean, focused code that does one thing well
@@ -136,6 +146,125 @@ For implementation tasks:
    - Use appropriate data structures
    - Minimize context usage in Claude commands
 </code_quality>
+
+## ML Research Best Practices
+
+<ml_research_principles>
+### Core Research Mindset
+
+1. **Debugging First - The John Carmack Approach**
+   - Any shocking or surprising result is 80% likely to be a bug until proven otherwise
+   - When encountering unexpected results, ask: "What would John Carmack do?"
+   - Be meticulous: break down the problem systematically
+   - Triple-check surprising results before accepting them
+   - Only after ruling out bugs should you fit theory to data
+
+2. **Healthy Skepticism**
+   - Most papers are terrible and don't replicate
+   - Most intuitively plausible techniques don't work
+   - Most techniques only look good with weak baselines
+   - Always implement and test strong baselines for comparison
+
+3. **Research as Exploration**
+   - Good ideas often take many tries before working
+   - Focus on convincing yourself things are true, not what goes in the paper
+   - Don't think about publication while exploring - just satisfy curiosity
+   - Once convinced, running final sweeps for publication is easy
+
+4. **Efficiency and Feedback Loops**
+   - Feedback loop time is incredibly important
+   - Rapid feedback enables much more progress
+   - Most people have poor hardware intuition - learn basics to avoid obvious inefficiencies
+   - Implementing known techniques is vastly easier than inventing new ones
+
+5. **Managing Long Projects**
+   - In complex projects, expect bugs that invalidate weeks/months of work
+   - Being careful helps but slows velocity - find the right balance
+   - Much work won't impact the final published result - this is unavoidable
+   - You'll often be philosophically confused until halfway through
+
+6. **Research Impact and Direction**
+   - Research impact is extremely long-tailed
+   - Direction matters more than execution - well-executed research in wrong direction is useless
+   - Early career: focus on learning and motivation over "maximum importance"
+   - Aim for the long tail of impact, not incremental improvements
+
+### Research Process Stages
+
+Following Neel Nanda's framework:
+
+1. **Exploration Stage**
+   - North star: Gain information
+   - Do exploratory experiments, visualize data, follow curiosity
+   - Prioritize moving fast over perfection
+   - If stuck, you're probably in exploration but think you're in understanding
+   - Keep a highlights doc of interesting results
+
+2. **Understanding Stage**  
+   - North star: Test specific hypotheses
+   - Design experiments that distinguish between hypotheses
+   - Be quantitative and systematic
+   - Constantly seek alternative explanations
+   - Good experiments elegantly distinguish multiple plausible hypotheses
+
+3. **Distillation Stage**
+   - North star: Compress findings into rigorous, communicable truth
+   - Writing forces clarity - often reveals gaps
+   - Don't leave write-up to last minute
+   - Communicate to inform, not persuade
+   - Acknowledge limitations explicitly
+
+### Prioritization and Moving Fast
+
+1. **Research as Stochastic Decision Process**
+   - Reduce uncertainty at the fastest possible rate
+   - Do most informative tasks per unit time first
+   - Front-load failure detection (de-risking)
+   - Consider both failure probability AND time cost
+
+2. **Avoiding Exponential Search Trees**
+   - Rule out entire approaches conceptually before trying variations
+   - When something fails, understand WHY to avoid similar failures
+   - One failed implementation rarely rules out an approach
+   - Systematically prune search space at high levels
+
+3. **Truth-Seeking Above All**
+   - Constant active effort required - insufficient skepticism doesn't feel insufficient
+   - At least 50% of papers useless due to insufficient skepticism
+   - Design experiments assuming you're wrong
+   - Red-team your own hypotheses aggressively
+   - Track pre-hoc vs post-hoc analyses explicitly
+
+### Paper Writing Best Practices
+
+Following Neel Nanda's framework:
+
+1. **Narrative is Key**
+   - Papers should present 1-3 specific concrete claims
+   - Everything exists to support the narrative
+   - Compress findings - readers won't remember more than a few sentences
+   - Write iteratively: abstract → outline → introduction → full draft
+
+2. **Evidence Standards**
+   - Quality over quantity in experiments
+   - Good experiments distinguish between hypotheses
+   - Always include strong baselines
+   - Discuss limitations explicitly
+   - Statistical rigor: p < 0.001 for exploratory work
+
+3. **Clarity and Accessibility**
+   - Write to inform, not persuade
+   - Use simple language where possible
+   - Define key terms and techniques
+   - Spend equal time on: abstract, intro, figures, and everything else
+   - Figures are crucial - put significant effort into them
+
+4. **Avoiding Common Pitfalls**
+   - Don't leave writing until last minute
+   - Don't obsess over publishability at the expense of truth
+   - Avoid unnecessary complexity to sound impressive
+   - Always acknowledge limitations and negative results
+</ml_research_principles>
 
 ## Claude Code Integration
 
@@ -474,24 +603,48 @@ gemini -p "@**/*.py List all custom loss functions with their mathematical formu
 ## Common Patterns and Solutions
 
 <common_patterns>
+### For Debugging - The John Carmack Approach
+When encountering unexpected results or bugs:
+1. **Assume it's a bug first** - 80% of surprising results are bugs
+2. **Break it down systematically**:
+   - Isolate the smallest reproducible case
+   - Add extensive logging at each step
+   - Verify assumptions with assertions
+   - Check data types and shapes at boundaries
+   - Validate intermediate results match expectations
+3. **Triple-check before accepting** surprising results
+4. **Document the debugging process** - helps catch similar issues later
+
+### For Unclear Requirements - Meta-Prompting
+When requirements are ambiguous:
+1. **Ask for clarification immediately** rather than making assumptions
+2. **Specify what's unclear**:
+   - "What should happen in edge case X?"
+   - "What's the expected format for output Y?"
+   - "Should this handle concurrent access?"
+3. **Propose concrete options** when multiple interpretations exist
+4. **Document assumptions explicitly** if you must proceed without clarification
+
 ### For Research Algorithms
 "Implement the algorithm ensuring:
 - Numerical stability and error propagation analysis
-- Comprehensive unit tests with edge cases
+- Comprehensive unit tests with edge cases (NO mock tests)
 - Performance benchmarks on relevant datasets
 - Memory and computational complexity profiling
 - Full reproducibility (seeds, environments, dependencies)
 - Systematic ablation study support
+- Strong baseline comparisons
 Document theoretical foundations, empirical validation, and limitations."
 
 ### For Experimental Analysis
 "Implement the analysis pipeline with:
-- Statistical significance testing
+- Statistical significance testing (p < 0.001 for exploratory work)
 - Multiple hypothesis correction
 - Confidence interval calculation
 - Effect size estimation
 - Robustness checks across conditions
 - Visualization of key relationships
+- Comparison against strong baselines
 Include assumption validation and sensitivity analysis."
 
 ### For Research Infrastructure
@@ -502,6 +655,7 @@ Include assumption validation and sensitivity analysis."
 - Comprehensive logging and monitoring
 - Experiment tracking and versioning
 - Automated report generation
+- Fast feedback loops for rapid iteration
 Ensure reproducibility across different environments and scales."
 </common_patterns>
 
