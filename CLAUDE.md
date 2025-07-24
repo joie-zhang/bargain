@@ -130,7 +130,8 @@ For implementation tasks:
 
 3. **File Organization**: Maintain strict file organization
    - Place all markdown documentation in `docs/` subdirectories
-   - **CRITICAL**: Never create markdown files in the project root
+   - **CRITICAL**: Never create markdown files in the project root unless it is a README.md
+   - Files like 'FEATURE_IMPLEMENTATION.md' go in `ai_docs/cc_implementation_logs/`
    - Implementation logs and session notes go in `ai_docs/cc_implementation_logs/`
    - Use appropriate subdirectories for different file types
    - Follow the established directory structure
