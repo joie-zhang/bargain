@@ -1,16 +1,16 @@
-# AI Agent Research Workshop: Transform Your Research with Claude Code
+# Agentic Coding Workshop: Subliminal Learning Replication
 
 ## 🎯 Workshop Overview
 
 **Duration**: 3-4 hours  
-**Goal**: Master AI-assisted research by progressively building from basic Claude Code usage to implementing new features in your codebase with AI agents.
+**Goal**: Learn to accelerate AI research by replicating a cutting-edge paper (Subliminal Learning) using Claude Code and multi-model orchestration.
 
 By the end of this workshop, you will have:
-- ✅ Mastered Claude Code basics and advanced features
-- ✅ Created comprehensive AI-ready documentation 
-- ✅ Automated a repetitive research task reliably
-- ✅ Implemented new functionality with AI assistance
-- ✅ Built custom tools and workflows for your research
+- ✅ Mastered Claude Code for research acceleration
+- ✅ Built a working replication of the subliminal learning paper
+- ✅ Learned effective context engineering techniques
+- ✅ Used multiple AI models for different aspects of research
+- ✅ Developed skills to apply agentic coding to your own work
 
 ---
 
@@ -25,347 +25,313 @@ By the end of this workshop, you will have:
   - [SuperWhisper](https://superwhisper.com/) (Mac)
   - [MacWhisper](https://goodsnooze.gumroad.com/l/macwhisper) (Mac)
 
-### Prepare Your Research
-- [ ] Have an existing research codebase ready (local or GitHub)
-- [ ] Think of 2-3 repetitive tasks you do often
-- [ ] Gather key papers (3-5 PDFs) related to your work
-- [ ] Have a feature idea you'd like to implement
+### Prepare Your Research Interest
+- [ ] Choose a small project or task you'd like to explore (for Part 2)
+- [ ] Think about what aspects of AI research interest you most
+- [ ] Be ready to work collaboratively on the subliminal learning replication
+- [ ] Have curiosity about cutting-edge AI research methods
 
-### Clone the Template
+### Clone the Workshop Repository
 ```bash
-# Clone the AI research template
-git clone https://github.com/[template-repo] ai-research-workshop
-cd ai-research-workshop
+# Clone the AI safety agent scripts repo
+git clone https://github.com/JayThibs/ais-agent-scripts
+cd ais-agent-scripts
 ```
 
 ---
 
-## 🚀 Part 1: Get Comfortable with Claude Code (20 min)
+## 🚀 Part 1: Vision & Project Overview (15 min)
 
-### Step 1.1: Basic Commands and Interface (10 min)
+### Workshop Vision
+- **Goal**: Replicate the subliminal learning paper using agentic coding techniques
+- **Why**: Learn how to accelerate research with AI agents
+- **Method**: Claude Code + multi-model orchestration
+- **Success**: Working replication by end of workshop
 
-Start Claude Code and explore:
+### What is Subliminal Learning?
+- Recent paper showing neural networks can learn from imperceptible signals
+- Fascinating implications for understanding deep learning
+- Perfect complexity for a 3-hour replication sprint
+
+### What You'll Learn:
+1. How to prepare a codebase for agentic coding
+2. Effective context engineering for AI agents
+3. Using multiple models for different tasks
+4. Debugging and iteration with AI assistance
+5. Best practices for research acceleration
+
+**Key Insight**: With proper context and orchestration, AI agents can dramatically accelerate research implementation.
+
+---
+
+## 📚 Part 2: Explore AI Safety Agent Scripts (30 min)
+
+### Step 2.1: Navigate the Repository (10 min)
+
 ```bash
-# Start Claude Code
+# Start Claude Code in the repo
 claude
 
-# Try basic interactions
-> What files are in this directory?
-> Create a simple Python script that prints "Hello Research"
-> Run the script
+# Explore the structure
+> Show me what's in this repository and explain the key components
+> What slash commands are available in .claude/commands/?
+> What utilities are in the utils/ directory?
 ```
 
-### Key Commands to Try:
-```bash
-# Context management
-/compact              # Check how much context you're using
-/clear               # Start fresh if needed
-
-# Thinking modes
-think                # Basic reasoning
-think hard           # More thorough analysis
-think harder         # Complex problems
-ultrathink          # Maximum reasoning (slow but thorough)
-
-# Keyboard shortcuts
-Shift+Tab           # Toggle auto-accept mode
-```
-
-### Step 1.2: Explore the Template (10 min)
+### Step 2.2: Run Setup Command (10 min)
 
 ```bash
-# See what commands are available
-> Show me all available slash commands in .claude/commands/
-
-# Try the help command
-> What does the /setup command do?
-
-# Explore utilities
-> What verification tools are in utils/?
-```
-
-**Key Learning**: Claude Code is your research assistant. You provide context and instructions, it helps execute.
-
----
-
-## 📚 Part 2: Gather Context for Your Codebase (30 min)
-
-### Step 2.1: Run Setup Wizard (10 min)
-
-```bash
-# Start the interactive setup
+# Run the interactive setup
 /setup
 ```
 
-The wizard will guide you through:
-- Assessing your research domain
-- Integrating your codebase
-- Creating initial structure
+When prompted:
+- Choose any small project or interest area
+- Add context about what you'd like to explore
+- This is practice for the main replication task
 
-### Step 2.2: Organize Research Materials (10 min)
+### Step 2.3: Learn Key Features (10 min)
 
+Explore Claude Code features:
 ```bash
-# Create proper structure
-mkdir -p ai_docs/{papers,summaries,context,cheatsheets}
+# Context management
+/compact              # Check context usage
+/page test-checkpoint # Save your progress
 
-# Add your papers
-cp ~/Downloads/*.pdf ai_docs/papers/
+# Thinking modes
+think harder about how to implement a complex algorithm
 
-# If you have existing code
-cp -r ~/my-research-code/* .
-# OR use the integration script
-python scripts/integrate_codebase.py https://github.com/myuser/myresearch
+# Plan mode
+/plan-auto-context-enhanced I want to analyze a research paper
+
+# Multi-file operations
+> Create a simple experiment script with data loading and model training
 ```
 
-### Step 2.3: Process Papers with AI (10 min)
-
-For each key paper:
-```bash
-# Use Gemini for large PDFs (if available)
-gemini -p "@ai_docs/papers/key_paper.pdf Summarize focusing on methods and implementation details"
-
-# Or use Claude
-> Read ai_docs/papers/[paper].pdf and create a summary focusing on:
-> - Key algorithms and methods
-> - Implementation details
-> - Metrics and baselines used
-> - How this relates to my research
-> Save as ai_docs/summaries/[paper]_summary.md
-```
+**Goal**: Get comfortable with Claude Code's capabilities before the main task.
 
 ---
 
-## 🎤 Part 3: Speech-to-Text Project Outline (20 min)
+## 🎤 Part 3: Prepare Subliminal Learning Codebase (30 min)
 
-### Step 3.1: Review Specification Template (5 min)
+### Step 3.1: Clone and Explore (10 min)
 
 ```bash
-# Examine the template
-> Show me specs/EXAMPLE_RESEARCH_SPEC.md
-> Explain each section and why it's important
+# Clone the subliminal learning repository
+git clone [subliminal-learning-repo-url] ../subliminal-learning
+cd ../subliminal-learning
 ```
 
-### Step 3.2: Record Comprehensive Brain Dump (15 min)
+### Step 3.2: Self-Guided Information Gathering (10 min)
 
-Use the specification template sections as prompts. **Record yourself answering each section**:
+**Your Task**: Figure out what information you need to replicate this paper.
 
-1. **Problem Statement**
-   - "The specific problem I'm solving is..."
-   - "This matters because..."
-   - "Success looks like..."
+**DO NOT wait for instructions - explore on your own**:
+- Look for the paper (arXiv, GitHub, etc.)
+- Find existing code implementations
+- Identify datasets needed
+- Search for related work
+- Use web search, AI chat, any tools available
 
-2. **Technical Approach**
-   - "My approach works by..."
-   - "The key innovation is..."
-   - "I'm building on [previous work] by..."
+```bash
+# Example approaches (but find your own!):
+> Search the web for "subliminal learning paper"
+> Look through the repository for key files
+> Use Gemini or Claude to analyze what you find
+```
 
-3. **Current Implementation**
-   - "The codebase currently does..."
-   - "The main files and functions are..."
-   - "Common issues I face are..."
+### Step 3.3: Interactive Discussion (10 min)
 
-4. **Experimental Setup**
-   - "My typical workflow is..."
-   - "I validate results by..."
-   - "Key metrics I track are..."
+**Group Activity**:
+- Share what you found and your approach
+- Instructor provides feedback
+- Learn from different exploration strategies
+- Instructor demonstrates their approach
 
-5. **Known Challenges**
-   - "Things that often go wrong..."
-   - "Debugging usually involves..."
-   - "Assumptions that might not hold..."
-
-Save as: `ai_docs/context/project_outline_transcript.txt`
+**Key Learning**: There are many ways to gather context - find what works for you.
 
 ---
 
-## 📝 Part 4: Create Your Ideal CLAUDE.md (20 min)
+## 📝 Part 4: Context Engineering & Specification (30 min)
 
-### Step 4.1: Generate CLAUDE.md from Context (10 min)
-
-```bash
-# Have Claude synthesize everything
-> Read:
-> - ai_docs/context/project_outline_transcript.txt  
-> - ai_docs/summaries/*.md
-> - The existing codebase structure
-> 
-> Create a comprehensive CLAUDE.md that includes:
-> 1. Research Context (from transcript)
-> 2. Technical Details (from code analysis)
-> 3. Common Workflows (from my description)
-> 4. Verification Protocols (domain-specific)
-> 5. Model Orchestration Rules
-> 6. Failed Attempts Log
-> 
-> Make it specific to my research domain
-```
-
-### Step 4.2: Refine and Personalize (10 min)
+### Step 4.1: Create Project Context (15 min)
 
 ```bash
-# Review and enhance
-> The CLAUDE.md looks good but add:
-> - My specific debugging strategies
-> - Common commands I run
-> - Specific pitfalls in my domain
-> - Preferred coding patterns from my codebase
+# Return to the ais-agent-scripts directory
+cd ../ais-agent-scripts
+
+# Create comprehensive context
+> Based on everything we found about subliminal learning, create:
+> 1. A project overview in ai_docs/context/subliminal_learning_overview.md
+> 2. Key technical details we need to implement
+> 3. Data requirements and sources
+> 4. Implementation approach
 ```
 
-Your CLAUDE.md should now be a comprehensive guide for any AI agent working on your research.
+### Step 4.2: Build Specification (15 min)
+
+Two approaches - choose one:
+
+**Option A: Speech-to-Text (Recommended)**
+```bash
+# Record 10-15 minutes explaining:
+- What subliminal learning is
+- How you plan to replicate it
+- What challenges you expect
+- What success looks like
+
+# Save as: ai_docs/context/subliminal_approach_transcript.txt
+```
+
+**Option B: Written Specification**
+```bash
+# Copy and fill out the template
+cp specs/EXAMPLE_RESEARCH_SPEC.md specs/subliminal_learning_replication.md
+
+> Help me fill out specs/subliminal_learning_replication.md for replicating
+> the subliminal learning paper based on what we've learned
+```
+
+**Result**: AI agents now have full context to help with implementation.
 
 ---
 
-## 🔧 Part 5: Automate an Existing Task (45 min)
+## 🔧 Part 5: Implement Replication - Phase 1 (45 min)
 
-### Step 5.1: Choose Your Task (5 min)
-
-Pick a **medium-difficulty, repetitive task** you already do, such as:
-- Running experiments with different hyperparameters
-- Processing datasets with specific transforms
-- Generating comparison plots
-- Running evaluation metrics on results
-
-### Step 5.2: Create Detailed Specification (15 min)
+### Step 5.1: Project Setup (10 min)
 
 ```bash
-# Copy the template
-cp specs/EXAMPLE_RESEARCH_SPEC.md specs/experiments/automate_[task].md
-
-# Fill it out with Claude's help
-> Help me complete specs/experiments/automate_[task].md for my task:
-> "[Describe your repetitive task]"
-> 
-> Be very specific about:
-> - Input requirements
-> - Step-by-step process  
-> - Expected outputs
-> - How to verify correctness
-> - Edge cases to handle
+# Create project structure
+> Set up a new project structure for subliminal learning:
+> - Create directories for data, models, experiments, results
+> - Set up a Python environment with necessary dependencies
+> - Create main training script skeleton
+> - Add configuration management
 ```
 
-### Step 5.3: Write Tests First (10 min)
+### Step 5.2: Data Pipeline (15 min)
 
 ```bash
-# Create test file
-> Create tests/test_automated_[task].py with:
-> - Tests for normal operation
-> - Tests for edge cases
-> - Tests for expected failures
-> - Verification that outputs match spec
-> 
-> Use the specification as the source of truth
+# Implement data loading
+> Based on the paper requirements, implement:
+> - Data downloading/loading functions
+> - Preprocessing for subliminal signals
+> - Data augmentation if needed
+> - Validation of data format
+
+# Use plan mode for complex parts
+think harder about how to implement the subliminal signal injection
 ```
 
-### Step 5.4: Implement with Verification (15 min)
+### Step 5.3: Model Architecture (20 min)
 
 ```bash
-# Implement to pass tests
-> Implement scripts/automated_[task].py following the spec
-> Make all tests pass
-> Add comprehensive logging
-> Include verification at each step
+# Build the model
+> Implement the model architecture described in the paper:
+> - Base neural network structure
+> - Subliminal signal processing
+> - Loss functions
+> - Training loop skeleton
 
-# Create a slash command
-/crud-claude-commands create run-[task]
+# Handle errors with AI help
+# When you encounter errors:
+> I'm getting error: [error message]. Let's debug this step by step
 
-# Test iteration cycle
-/run-[task]
-# If it fails, refine:
-> The task failed at step X. Let's debug and fix...
+# Save progress
+/page subliminal-phase1-complete
 ```
 
-**Success Criteria**: The task runs reliably 3 times in a row without intervention.
+**Goal**: Have basic infrastructure ready for experiments.
 
 ---
 
-## 🚀 Part 6: Implement Something New (45 min)
+## 🚀 Part 6: Implement Replication - Phase 2 (60 min)
 
-### Step 6.1: Multi-Model Planning (10 min)
-
-Now let's build something that doesn't exist yet. Use multiple models for planning:
+### Step 6.1: Complete Implementation (20 min)
 
 ```bash
-# First, describe your idea
-> I want to implement: [describe new feature/capability]
+# Continue where we left off
+> Let's complete the subliminal learning implementation:
+> - Finish the training loop
+> - Add evaluation metrics
+> - Implement visualization tools
+> - Create experiment configs
 
-# Use different models for perspectives
-# If you have access to other models:
-gemini -p "@[codebase] How would you architect [feature]?"
-
-# In Claude, use advanced thinking
-think harder about the architecture for this feature
-
-# Create implementation plan
-/plan-with-context implement [feature]
+# Use multiple AI models if available
+gemini -p "@models/ How can we optimize this training loop?"
 ```
 
-### Step 6.2: Create Comprehensive Specification (10 min)
+### Step 6.2: Run Experiments (20 min)
 
 ```bash
-# Create new feature spec
-> Create specs/features/new_[feature].md with:
-> - Detailed problem statement
-> - Technical approach with phases
-> - Integration points with existing code
-> - Risk assessment
-> - Success criteria
+# Start experiments
+> Run the baseline experiment with:
+> - Standard training settings
+> - Subliminal signal injection
+> - Proper logging and checkpointing
+
+# Monitor and debug
+> The training is showing [issue]. How can we fix this?
+
+# Use plan mode for debugging
+/plan-auto-context-enhanced debug why model loss is not decreasing
 ```
 
-### Step 6.3: Iterative Implementation (25 min)
-
-Use Claude Code's advanced features:
+### Step 6.3: Validate Results (20 min)
 
 ```bash
-# Start with todo list
-> Based on the spec, create a detailed todo list for implementing [feature]
-> Break it into 30-minute chunks
+# Analyze results
+> Analyze the experiment results:
+> - Compare with paper's reported metrics
+> - Generate plots and visualizations  
+> - Identify any discrepancies
+> - Suggest improvements
 
-# Implement phase by phase
-> Let's start with Phase 1 from the spec
-> Update the todo list as we complete items
-> Add verification after each component
+# Create custom commands
+/crud-claude-commands create run-subliminal-experiment
 
-# Use multiple terminals/agents if needed
-# Terminal 1: Implementation
-# Terminal 2: Running tests
-# Terminal 3: Monitoring logs
-
-# Regular checkpoints
-/page feature-checkpoint-1
+# Configure settings
+> Show me how to configure Claude Code settings for optimal performance
+> Set up any custom aliases or workflows we need
 ```
 
-### Key Practices:
-- **Tight Leash**: Review every significant change
-- **Continuous Verification**: Test as you build
-- **Todo Tracking**: Keep the list updated
-- **Regular Commits**: Save progress frequently
+### Best Practices Throughout:
+- Use `/compact` to monitor context
+- `/page` at major milestones
+- Handle errors immediately with AI help
+- Keep iterating until results look reasonable
+
+**Goal**: Initial working replication with preliminary results.
 
 ---
 
-## 🌐 Part 7: (Optional) Observability & Verification (20 min)
+## 🌐 Part 7: Advanced Topics & Office Hours (30 min)
 
-### Step 7.1: Design Simple Dashboard (10 min)
+### Advanced Claude Code Features
+- Environment setup best practices
+- Multi-agent orchestration patterns  
+- Custom hooks and automation
+- Integration with other tools
 
+### Common Challenges & Solutions
+- Debugging complex errors
+- Managing large codebases
+- Optimizing for token usage
+- Reproducibility strategies
+
+### Q&A Session
+- Address specific issues encountered
+- Share successful strategies
+- Discuss applying to other research
+- Next steps for your work
+
+### Optional Advanced Tasks
 ```bash
-# Create monitoring script
-> Create scripts/experiment_dashboard.py that:
-> - Shows current experiment status
-> - Displays key metrics in real-time
-> - Compares with baselines
-> - Flags anomalies
-> 
-> Keep it simple - terminal output is fine
-```
-
-### Step 7.2: Verification Webapp (10 min)
-
-```bash
-# If time permits, create web interface
-> Create a simple FastAPI app in scripts/verification_app.py that:
-> - Shows experiment results
-> - Allows quick verification of outputs
-> - Compares different runs
-> - Exports reports
+# If time permits, explore:
+> Create a dashboard for monitoring experiments
+> Set up automated testing pipeline
+> Build a custom command for your workflow
+> Integrate with your favorite tools
 ```
 
 ---
@@ -406,61 +372,59 @@ git checkout -b implement-new-feature
 ## 🎯 Workshop Success Checklist
 
 ### By End of Workshop:
-- [ ] Comfortable with all Claude Code commands
-- [ ] Created comprehensive `ai_docs/` documentation
-- [ ] Generated tailored CLAUDE.md 
-- [ ] Automated one repetitive task reliably
-- [ ] Created custom slash commands
-- [ ] Implemented new feature with planning
-- [ ] Used multiple thinking modes
-- [ ] Managed context with `/page` and `/compact`
-- [ ] Everything committed to git
+- [ ] Comfortable with Claude Code for research
+- [ ] Working subliminal learning replication
+- [ ] Effective context engineering skills
+- [ ] Experience with plan mode and debugging
+- [ ] Used multiple AI models effectively
+- [ ] Managed long coding session successfully
+- [ ] Ready to apply to your own research
+- [ ] Understanding of best practices
 
 ### Your New Capabilities:
-- Run experiments 10x faster
-- Implement ideas with AI assistance
-- Maintain research rigor with verification
-- Scale your research workflow
+- Replicate papers 10x faster
+- Prepare codebases for AI assistance
+- Debug effectively with AI help
+- Manage complex implementations
 
 ---
 
 ## 📚 Command Reference
 
-### Essential Commands Used Today
+### Essential Commands for Research
 ```bash
-/setup                    # Initial setup wizard
-/crud-claude-commands     # Create custom commands
-/page <name>             # Save session state
-/plan-with-context       # Smart planning
-/compact                 # Check context usage
-/clear                   # Reset context
+/setup                      # Initial context setup
+/plan-auto-context-enhanced # Smart implementation planning
+/page <name>               # Save progress checkpoints
+/compact                   # Monitor context usage
+/clean-and-organize        # Keep workspace tidy
 
 # Thinking modes
-think                   # Basic reasoning
-think hard              # More thorough analysis
-think harder            # Complex problems
-ultrathink              # Maximum depth
-```
+think                      # Basic reasoning
+think harder               # Complex problem solving
+ultrathink                 # Maximum depth analysis
 
-### Your Custom Commands
-```bash
-/run-[your-task]        # Your automated task
-/verify-[your-output]   # Your verification  
-# ... others you created
+# Custom for this workshop
+/run-subliminal-experiment # Run experiments
 ```
 
 ---
 
 ## 🚀 Next Steps
 
-1. **Tomorrow**: Run your automated task on real data
+1. **Tomorrow**: 
+   - Apply these techniques to your own research project
+   - Continue refining the subliminal learning replication
+   - Share what you learned with colleagues
+   
 2. **This Week**: 
-   - Create 2 more task automations
-   - Refine your new feature implementation
-   - Share your commands with your team
+   - Pick another paper to replicate using these methods
+   - Create custom commands for your workflow
+   - Build your own context engineering templates
+   
 3. **This Month**: 
-   - Build a suite of research tools
-   - Create team-wide command library
-   - Optimize your entire workflow
+   - Develop a systematic approach for paper replication
+   - Share your replications with the community
+   - Contribute improvements back to the tools
 
-Remember: You're now equipped to conduct an AI orchestra for your research. Keep building, keep verifying, keep pushing boundaries!
+Remember: Agentic coding is a superpower for research. Use it wisely, verify rigorously, and share your learnings!
