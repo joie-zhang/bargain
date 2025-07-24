@@ -7,6 +7,45 @@
 **Research Mode**: De-risk Sprint / Extended Project  
 **Timeline**: [Expected duration]  
 
+---
+
+## 🎯 Quick Start: Most Important Questions
+
+*For rapid project scoping via speech-to-text brain dump. Answer these ~10 questions to capture your core ideas, then use AI to expand into full spec.*
+
+1. **What specific question are you trying to answer?** What would change if you had the answer?
+
+2. **Why should anyone care?** How does this lead to real-world impact? (Your theory of change)
+
+3. **What's your riskiest assumption?** What needs to be true for your approach to work? How will you test it quickly (<1 day)?
+
+4. **What stage are you in?** 
+   - Ideation: Still choosing the problem
+   - Exploration: Don't know the right questions yet, need to play around
+   - Understanding: Have hypotheses to test systematically  
+   - Distillation: Have results to write up
+
+5. **What's your first experiment?** The quickest test that could invalidate your whole approach. What would you learn?
+
+6. **What does success look like?** Specific, measurable outcome in [timeline]. Not "understand X better" but "show Y improves by Z%"
+
+7. **What's your competition?** Strong baselines you must beat. What would a skeptical reviewer compare your work against?
+
+8. **What resources do you need?** Compute (GPUs?), data access, collaborator skills, time budget
+
+9. **What could go wrong?** Top 2-3 risks. For each: How likely? How bad? How will you know early? What's plan B?
+
+10. **Who's your audience?** Conference/journal? Blog post? Policy brief? What decision are they making that your research informs?
+
+**Brain Dump Tips**: 
+- Talk through these naturally, don't overthink
+- Include uncertainties ("I'm not sure but maybe...")
+- Mention related work you know about
+- Describe your excitement and concerns
+- ~20-30 minutes total
+
+---  
+
 ## 1. Problem Statement & Theory of Change
 
 ### Core Research Question
