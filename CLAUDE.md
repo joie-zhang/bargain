@@ -130,7 +130,8 @@ For implementation tasks:
 
 3. **File Organization**: Maintain strict file organization
    - Place all markdown documentation in `docs/` subdirectories
-   - Never dump files in the project root
+   - **CRITICAL**: Never create markdown files in the project root
+   - Implementation logs and session notes go in `ai_docs/cc_implementation_logs/`
    - Use appropriate subdirectories for different file types
    - Follow the established directory structure
 
@@ -688,6 +689,9 @@ Ensure reproducibility across different environments and scales."
 
 ### Key Directories
 - **ai_docs/**: Store AI-optimized documentation and summaries
+  - **cc_implementation_logs/**: All markdown files created during Claude Code sessions
+    - Implementation notes, debugging logs, analysis documents
+    - NEVER create markdown files in project root - always use this directory
 - **specs/**: Experiment and feature specifications
   - Contains `EXAMPLE_RESEARCH_SPEC.md` - Template for creating detailed specs
 - **experiments/**: Experiment configs, results, and logs
