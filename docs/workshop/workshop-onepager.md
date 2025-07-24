@@ -1,80 +1,80 @@
 ```
 ╔═══════════════════════════════════════════════════════════════════════════════════════╗
-║                      AI RESEARCH ASSISTANT WORKSHOP                                   ║
-║                    Transform Your Research with Claude Code                           ║
+║                  AGENTIC CODING WORKSHOP: SUBLIMINAL LEARNING                         ║
+║                 Replicate Cutting-Edge AI Research with Claude Code                   ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════╝
 
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│ $ claude --workshop                                                                 │
-│ > Initializing AI Research Assistant Workshop v2.0...                              │
-│ > Duration: 3-4 hours | Mode: Progressive Mastery | Output: Automated Research     │
+│ $ claude --workshop subliminal-learning                                             │
+│ > Initializing Subliminal Learning Replication Workshop...                          │
+│ > Duration: 3-4 hours | Goal: Working Replication | Method: Agentic Coding         │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[PART 1] GET COMFORTABLE WITH CLAUDE CODE                                    [20 min]
+[PART 1] VISION & PROJECT OVERVIEW                                          [15 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Master basic commands: /compact, /clear, /page
- ▸ Explore thinking modes: think → think hard → think harder → ultrathink
- ▸ Navigate template: .claude/commands/, utils/, scripts/
- ▸ Key insight: Claude Code = Your Research Assistant
+ ▸ Workshop Goal: Replicate subliminal learning paper using agentic coding
+ ▸ Why: Learn to accelerate research with AI agents
+ ▸ Success: Working replication by end of workshop
+ ▸ Method: Claude Code + multi-model orchestration
 
-[PART 2] GATHER CONTEXT FOR YOUR CODEBASE                                   [30 min]
+[PART 2] EXPLORE AI SAFETY AGENT SCRIPTS                                    [30 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Run /setup wizard → Integrate your research code
- ▸ Structure: ai_docs/{papers, summaries, context, cheatsheets}
- ▸ Process papers: gemini -p "@paper.pdf Summarize methods"
- ▸ Result: Comprehensive AI-ready documentation
+ ▸ Navigate this repository & learn Claude Code features
+ ▸ Run /setup command - add context about your interests
+ ▸ Explore: slash commands, thinking modes, utilities
+ ▸ Goal: Get comfortable with agentic workflows
 
-[PART 3] SPEECH-TO-TEXT PROJECT OUTLINE                                     [20 min]
+[PART 3] PREPARE SUBLIMINAL LEARNING CODEBASE                               [30 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Review: specs/EXAMPLE_RESEARCH_SPEC.md
- ▸ Record 15+ minutes answering spec sections:
-   • Problem Statement → Technical Approach → Current Implementation
-   • Experimental Setup → Known Challenges & Failures
- ▸ Save: ai_docs/context/project_outline_transcript.txt
+ ▸ Clone subliminal learning repository
+ ▸ Self-guided exploration (10 min):
+   • Find paper, existing code, datasets
+   • Gather relevant information
+   • Use web search & AI chat
+ ▸ Interactive discussion: Share approaches & get feedback
 
-[PART 4] CREATE YOUR IDEAL CLAUDE.MD                                        [20 min]
+[PART 4] CONTEXT ENGINEERING & SPECIFICATION                                [30 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Synthesize: Transcript + Papers + Code → Comprehensive CLAUDE.md
- ▸ Include: Research context, verification protocols, debugging strategies
- ▸ Personalize: Add your workflows, common errors, naming conventions
- ▸ Result: AI agents understand your research deeply
+ ▸ Create comprehensive context for subliminal learning
+ ▸ Build specification using EXAMPLE_RESEARCH_SPEC.md
+ ▸ Speech-to-text: Record your understanding & approach
+ ▸ Result: AI agents have full project context
 
-[PART 5] AUTOMATE AN EXISTING TASK ⚡                                       [45 min]
+[PART 5] IMPLEMENT REPLICATION - PHASE 1                                    [45 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Choose: Medium-difficulty repetitive task
- ▸ Specify: Create detailed spec with success criteria
- ▸ Test First: Write tests that validate the specification
- ▸ Implement: Build with verification loops
- ▸ Command: /crud-claude-commands create run-[task]
- ▸ Success: Runs 3x reliably without intervention
+ ▸ Use Claude Code to set up project structure
+ ▸ Implement data loading & preprocessing
+ ▸ Build baseline model architecture
+ ▸ Handle errors & debugging with AI assistance
+ ▸ Use plan mode for complex implementations
 
-[PART 6] IMPLEMENT SOMETHING NEW 🚀                                         [45 min]
+[PART 6] IMPLEMENT REPLICATION - PHASE 2 🚀                                 [60 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Plan: Use multiple models (Gemini/O3/Claude) for architecture
- ▸ Specify: Detailed phases, risks, integration points
- ▸ Todo List: Break into 30-min chunks, update continuously
- ▸ Implement: Tight leash, verify each component
- ▸ Checkpoint: /page feature-checkpoint-[n]
- ▸ Result: New capability added to your research
+ ▸ Continue implementation with agentic coding
+ ▸ Run experiments & validate results
+ ▸ Use multiple AI models for different tasks
+ ▸ Configure Claude Code settings & custom commands
+ ▸ Goal: Initial working replication
 
-[PART 7] OBSERVABILITY & VERIFICATION (Optional)                            [20 min]
+[PART 7] ADVANCED TOPICS & OFFICE HOURS                                     [30 min]
 ─────────────────────────────────────────────────────────────────────────────────────
- ▸ Dashboard: Real-time experiment monitoring
- ▸ Web App: FastAPI for result verification
- ▸ Reports: Automated analysis generation
- ▸ Focus: Your specific research needs
+ ▸ Environment setup best practices
+ ▸ Advanced Claude Code features
+ ▸ Multi-agent orchestration patterns
+ ▸ Q&A: Address specific challenges
+ ▸ Next steps: Applying to your research
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ┌─ ESSENTIAL COMMANDS ────────────────────────────────────────────────────────────────┐
-│ /setup                  # Interactive setup wizard                                  │
-│ /crud-claude-commands   # Create custom commands                                    │
-│ /page <name>           # Save session state                                        │
-│ /plan-with-context     # Smart planning                                            │
-│ /compact               # Check context usage                                        │
-│ think harder           # Complex analysis mode                                      │
+│ /setup                  # Initial context gathering                                 │
+│ /plan-auto-context      # Smart implementation planning                             │
+│ /page <name>           # Save progress checkpoints                                 │
+│ /compact               # Monitor context usage                                      │
+│ think harder           # Complex problem solving                                    │
+│ /clean-and-organize    # Keep workspace tidy                                       │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌─ GIT WORKFLOW ──────────────────────────────────────────────────────────────────────┐
@@ -85,12 +85,12 @@
 
 ╔═══════════════════════════════════════════════════════════════════════════════════════╗
 ║ SUCCESS METRICS                                                                       ║
-║ ☑ Comfortable with Claude Code    ☑ Automated repetitive task                       ║
-║ ☑ Rich ai_docs/ created          ☑ Implemented new feature                         ║
-║ ☑ Custom CLAUDE.md configured    ☑ Multiple thinking modes used                    ║
-║ ☑ Custom commands created        ☑ Context managed with /page                      ║
+║ ☑ Mastered Claude Code basics    ☑ Working subliminal learning setup               ║
+║ ☑ Effective context engineering  ☑ Initial replication results                     ║
+║ ☑ Used plan mode effectively    ☑ Handled errors with AI help                     ║
+║ ☑ Leveraged multiple AI models  ☑ Ready to apply to own research                  ║
 ╚═══════════════════════════════════════════════════════════════════════════════════════╝
 
-> REMEMBER: You're the conductor of an AI orchestra. Start simple, verify everything.
-> NEXT: Run your automation on real data tomorrow. Create 2 more this week.
+> REMEMBER: Agentic coding accelerates research. Focus on context, verification, iteration.
+> NEXT: Apply these techniques to your own research. Share learnings with the community.
 ```
