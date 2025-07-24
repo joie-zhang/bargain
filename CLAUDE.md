@@ -665,10 +665,16 @@ Ensure reproducibility across different environments and scales."
 
 <automation>
 - Mock data validation: Blocked by default, docs/ exempt
-- Git auto-commit: Triggers when Claude stops, preserves work
+- Git auto-commit: Intelligent selective commits for research sessions
+  - Only commits files in: results/, experiments/, specs/, tasks/, issues/, docs/
+  - Detects research/experiment sessions from conversation context
+  - Generates smart commit messages based on file types and context
+  - Logs all actions to ~/.claude/logs/auto-commit.log
 - Python formatting: Black runs automatically post-edit
 - Activity logging: All actions logged to ~/.claude/research-activity.log
 - Test execution: Automatic on file changes matching test_*.py
+
+For detailed automation documentation, see `docs/guides/automation-hooks.md`
 </automation>
 
 ## Important File References
