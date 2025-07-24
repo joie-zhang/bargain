@@ -59,7 +59,7 @@ For implementation tasks:
 │   └── templates/  # Document templates
 ├── scripts/        # Automation and utility scripts
 ├── utils/          # Reusable code utilities
-├── tests/          # Test files and validation scripts
+├── tests/          # ALL test files go here (test_*.py, *_test.py, *.test.js, etc.)
 ├── examples/       # Example implementations and templates
 ├── .claude/        # Claude Code configuration and commands
 │   ├── commands/   # Custom slash commands
@@ -131,8 +131,9 @@ For implementation tasks:
 3. **File Organization**: Maintain strict file organization
    - Place all markdown documentation in `docs/` subdirectories
    - **CRITICAL**: Never create markdown files in the project root unless it is a README.md
-   - Files like 'FEATURE_IMPLEMENTATION.md' go in `ai_docs/cc_implementation_logs/`
-   - Implementation logs and session notes go in `ai_docs/cc_implementation_logs/`
+   - Implementation log files like 'FEATURE_IMPLEMENTATION.md' go in `ai_docs/cc_implementation_logs/`
+   - **CRITICAL**: All test files (test_*.py, *_test.py, *.test.js, etc.) go in `tests/` directory
+   - Never create test files in the project root
    - Use appropriate subdirectories for different file types
    - Follow the established directory structure
 
@@ -665,6 +666,11 @@ Ensure reproducibility across different environments and scales."
 
 <automation>
 - Mock data validation: Blocked by default, docs/ exempt
+- **File organization validation**: Automatically blocks and redirects misplaced files
+  - Markdown files (except README.md) in root → redirected to `ai_docs/cc_implementation_logs/`
+  - Test files in root → redirected to `tests/`
+  - Provides clear guidance on correct file placement
+  - Runs on Write, Edit, and MultiEdit operations
 - Git auto-commit: Intelligent selective commits for research sessions
   - Only commits files in: results/, experiments/, specs/, tasks/, issues/, docs/
   - Detects research/experiment sessions from conversation context
