@@ -1,0 +1,117 @@
+{
+  "output": {
+    "format": "xml",
+    "xmlStyle": "structured",
+    "headerComments": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": false,
+    "copyToClipboard": false,
+    "topFilesCount": 50,
+    "outputFile": ".temp/repomix-output.xml"
+  },
+  "compression": {
+    "enabled": true,
+    "level": 6,
+    "threshold": 50000
+  },
+  "include": [
+    "**/*.{js,jsx,ts,tsx,py,go,rs,java,cpp,c,h,hpp}",
+    "**/*.{json,yaml,yml,toml}",
+    "**/*.{md,mdx,rst,txt}",
+    "**/Dockerfile",
+    "**/*.{sh,bash,zsh}",
+    "**/.env.example"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/.next/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/venv/**",
+    "**/env/**",
+    "**/.venv/**",
+    "**/.env",
+    "**/target/**",
+    "**/vendor/**",
+    "**/*.log",
+    "**/*.lock",
+    "**/package-lock.json",
+    "**/yarn.lock",
+    "**/poetry.lock",
+    "**/Cargo.lock",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/*.min.js",
+    "**/*.min.css",
+    "**/*.map"
+  ],
+  "security": {
+    "enableSecurityCheck": true,
+    "removeSecrets": true,
+    "secretPatterns": [
+      "api[_-]?key",
+      "api[_-]?secret",
+      "auth[_-]?token",
+      "private[_-]?key",
+      "secret[_-]?key",
+      "password",
+      "passwd",
+      "pwd",
+      "bearer",
+      "access[_-]?token"
+    ]
+  },
+  "gemini": {
+    "maxTokens": 2000000,
+    "compressionTargets": {
+      "small": 100000,
+      "medium": 500000,
+      "large": 1000000,
+      "xlarge": 2000000
+    },
+    "promptTemplates": {
+      "analysis": "Analyze this codebase with focus on architecture, patterns, and potential improvements",
+      "refactor": "Create a detailed refactoring plan including risks, phases, and validation steps",
+      "review": "Perform a comprehensive code review focusing on security, performance, and maintainability",
+      "understand": "Explain the codebase structure, main components, and how they interact"
+    }
+  },
+  "presets": {
+    "quick": {
+      "compression": {
+        "enabled": true,
+        "level": 9
+      },
+      "output": {
+        "removeComments": true,
+        "removeEmptyLines": true
+      }
+    },
+    "detailed": {
+      "compression": {
+        "enabled": false
+      },
+      "output": {
+        "showLineNumbers": true,
+        "removeComments": false
+      }
+    },
+    "security": {
+      "security": {
+        "enableSecurityCheck": true,
+        "removeSecrets": true
+      },
+      "include": [
+        "**/auth/**",
+        "**/security/**",
+        "**/*config*",
+        "**/.env*"
+      ]
+    }
+  }
+}
