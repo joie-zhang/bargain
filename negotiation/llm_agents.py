@@ -53,9 +53,9 @@ class ModelType(Enum):
     O3_MINI = "o3-mini"
     O3 = "o3"
     
-    # Test models (using real but minimal configurations)
-    TEST_STRONG = "claude-3-haiku-20240307"  # Real model for testing
-    TEST_WEAK = "gpt-3.5-turbo"  # Real model for testing
+    # Test models (using simulated agents for testing)
+    TEST_STRONG = "test-strong-model"  # Simulated strong agent
+    TEST_WEAK = "test-weak-model"  # Simulated weak agent
 
 
 @dataclass
@@ -582,11 +582,21 @@ class OpenAIAgent(BaseLLMAgent):
         """Call OpenAI API."""
         start_time = time.time()
         
+        # O3 models have specific parameter requirements
+        api_params = {}
+        if "o3" in self.model_name.lower():
+            # O3 models use max_completion_tokens and only support temperature=1
+            api_params["max_completion_tokens"] = self.config.max_tokens
+            api_params["temperature"] = 1  # O3 only supports temperature=1
+        else:
+            # Standard models use max_tokens and support temperature settings
+            api_params["max_tokens"] = self.config.max_tokens
+            api_params["temperature"] = self.config.temperature
+        
         response = await self.client.chat.completions.create(
             model=self.model_name,
             messages=messages,
-            max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature,
+            **api_params,
             **self.config.custom_parameters,
             **kwargs
         )
