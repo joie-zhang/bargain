@@ -339,7 +339,28 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
     
     async def propose_allocation(self, context: NegotiationContext) -> Dict[str, Any]:
         """Generate a proposal for item allocation."""
-        prompt = """Please propose an allocation of items among all agents. 
+        # Build agent list for the prompt
+        if context.agents:
+            # Handle both cases: agents as strings or agent objects
+            agent_list = []
+            for agent in context.agents:
+                if isinstance(agent, str):
+                    agent_list.append(agent)
+                else:
+                    agent_list.append(agent.agent_id)
+        else:
+            agent_list = []
+        
+        agent_examples = {}
+        for i, agent_id in enumerate(agent_list):
+            agent_examples[agent_id] = f"[item_indices_for_{agent_id}]"
+        
+        prompt = f"""Please propose an allocation of items among all agents. 
+
+Current Context:
+- Items: {context.items} (indices 0-{len(context.items)-1})
+- Agents: {agent_list}
+- Round: {context.current_round}
 
 Consider:
 - Your preferences and utility maximization
@@ -347,26 +368,85 @@ Consider:
 - Previous proposals and their reception
 - Strategic positioning for this round
 
-Respond with a JSON object in this format:
-{
-    "allocation": {
-        "agent_0": [0, 2],
-        "agent_1": [1, 3],
-        "agent_2": [4]
-    },
+Respond with ONLY a JSON object in this exact format:
+{{
+    "allocation": {{
+        "{agent_list[0] if agent_list else 'agent_0'}": [0, 2],
+        "{agent_list[1] if len(agent_list) > 1 else 'agent_1'}": [1, 3],
+        "{agent_list[2] if len(agent_list) > 2 else 'agent_2'}": [4]
+    }},
     "reasoning": "Brief explanation of your proposal strategy"
-}"""
+}}
+
+Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as values."""
         
         response = await self.generate_response(context, prompt)
         
         try:
+            # Try to parse the JSON directly first
             proposal = json.loads(response.content)
             proposal["proposed_by"] = self.agent_id
             proposal["round"] = context.current_round
             return proposal
         except json.JSONDecodeError:
+            # Try to extract JSON from text response
+            try:
+                import re
+                
+                # Look for JSON block in the response
+                json_match = re.search(r'\{[\s\S]*\}', response.content)
+                if json_match:
+                    json_str = json_match.group(0)
+                    proposal = json.loads(json_str)
+                    
+                    # Convert the allocation format if needed
+                    if "allocation" in proposal:
+                        allocation = proposal["allocation"]
+                        # Convert agent names to indices if needed
+                        converted_allocation = {}
+                        
+                        # Map agent names to actual IDs
+                        agent_mapping = {}
+                        if context.agents:
+                            for i, agent in enumerate(context.agents):
+                                if isinstance(agent, str):
+                                    agent_mapping[f"agent_{i}"] = agent
+                                else:
+                                    agent_mapping[f"agent_{i}"] = agent.agent_id
+                                
+                        for agent_key, items in allocation.items():
+                            # Convert generic agent names to actual agent IDs
+                            if agent_key in agent_mapping:
+                                actual_agent_key = agent_mapping[agent_key]
+                            else:
+                                actual_agent_key = agent_key
+                                
+                            # Handle both item names and indices
+                            if isinstance(items, list) and len(items) > 0:
+                                if isinstance(items[0], str):
+                                    # Convert item names to indices
+                                    item_indices = []
+                                    for item_name in items:
+                                        for i, context_item in enumerate(context.items):
+                                            if context_item == item_name:
+                                                item_indices.append(i)
+                                                break
+                                    converted_allocation[actual_agent_key] = item_indices
+                                else:
+                                    converted_allocation[actual_agent_key] = items
+                            else:
+                                converted_allocation[actual_agent_key] = items
+                        
+                        proposal["allocation"] = converted_allocation
+                    
+                    proposal["proposed_by"] = self.agent_id
+                    proposal["round"] = context.current_round
+                    return proposal
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            
             # Fallback: create a simple proposal
-            self.logger.warning(f"Failed to parse proposal JSON: {response.content}")
+            self.logger.warning(f"Failed to parse proposal JSON: {response.content[:200]}...")
             return {
                 "allocation": {self.agent_id: list(range(len(context.items)))},
                 "reasoning": "Failed to parse structured response",
@@ -388,22 +468,40 @@ Please vote on this proposal. Consider:
 - Whether you might get a better deal by continuing negotiation
 - The strategic implications of accepting vs. rejecting
 
-Respond with a JSON object:
+Respond with ONLY a JSON object in this exact format:
 {{
-    "vote": "accept" or "reject",
+    "vote": "accept",
     "reasoning": "Brief explanation of your vote"
-}}"""
+}}
+
+Vote must be either "accept" or "reject"."""
         
         response = await self.generate_response(context, prompt)
         
         try:
+            # Try to parse the JSON directly first
             vote = json.loads(response.content)
             vote["voter"] = self.agent_id
             vote["round"] = context.current_round
             return vote
         except json.JSONDecodeError:
+            # Try to extract JSON from text response
+            try:
+                import re
+                
+                # Look for JSON block in the response
+                json_match = re.search(r'\{[\s\S]*\}', response.content)
+                if json_match:
+                    json_str = json_match.group(0)
+                    vote = json.loads(json_str)
+                    vote["voter"] = self.agent_id
+                    vote["round"] = context.current_round
+                    return vote
+            except (json.JSONDecodeError, AttributeError):
+                pass
+            
             # Fallback: reject by default
-            self.logger.warning(f"Failed to parse vote JSON: {response.content}")
+            self.logger.warning(f"Failed to parse vote JSON: {response.content[:200]}...")
             return {
                 "vote": "reject",
                 "reasoning": "Failed to parse structured response",
