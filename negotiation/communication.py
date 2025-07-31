@@ -122,7 +122,7 @@ class AgentInterface(ABC):
         pass
 
 
-class TestAgent(AgentInterface):
+class SimpleAgent(AgentInterface):
     """Test agent for validating communication system functionality."""
     
     def __init__(self, agent_id: str, response_delay: float = 0.1):
@@ -609,7 +609,7 @@ async def create_communication_system(
     """
     # Create agents
     if agent_factory is None:
-        agents = [TestAgent(agent_id) for agent_id in agent_ids]
+        agents = [SimpleAgent(agent_id) for agent_id in agent_ids]
     else:
         agents = [agent_factory(agent_id) for agent_id in agent_ids]
     
