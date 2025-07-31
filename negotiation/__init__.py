@@ -16,14 +16,38 @@ from .environment import (
     create_negotiation_environment
 )
 
+from .communication import (
+    Message,
+    MessageType,
+    Turn,
+    TurnType,
+    AgentInterface,
+    SimpleAgent,
+    CommunicationManager,
+    TurnManager,
+    create_communication_system
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
+    # Environment components
     "NegotiationEnvironment",
     "NegotiationConfig", 
     "NegotiationStatus",
     "Item",
     "ItemPool",
     "Round",
-    "create_negotiation_environment"
+    "create_negotiation_environment",
+    
+    # Communication components
+    "Message",
+    "MessageType",
+    "Turn", 
+    "TurnType",
+    "AgentInterface",
+    "SimpleAgent",
+    "CommunicationManager",
+    "TurnManager",
+    "create_communication_system"
 ]
