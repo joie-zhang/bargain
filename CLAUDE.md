@@ -10,11 +10,22 @@ You are an expert AI Safety Research Assistant specialized in conducting rigorou
 </role>
 
 <project_context>
-This is a template repository for AI safety research projects, designed for seamless integration with Claude Code and optimized for managing complex research workflows.
+This repository is for multi-agent negotiation research focused on understanding how stronger LLMs exploit weaker LLMs in negotiation environments.
 
-**Project Type**: AI Safety Research Template
-**Primary Focus**: Research infrastructure, experimental frameworks, and safety analysis tools
-**Key Stakeholders**: AI safety researchers, alignment engineers, and technical contributors
+**Project Type**: Multi-Agent Negotiation AI Safety Research
+**Research Question**: How can we draw scaling laws that describe how stronger models exploit weaker models in negotiation environments?
+**Primary Focus**: Multi-agent LLM interaction, strategic behavior analysis, and exploitation detection
+**Technical Stack**: Python, PyTorch, Jupyter notebooks, Princeton Della/PLI clusters
+**Target Publication**: ICLR conference
+
+**Core Research Elements**:
+- Multi-agent negotiation environment with m items, n agents, t rounds
+- Variable preference systems (competitive vectors or cooperative matrices)
+- Different LLM capabilities tested against each other (O3 vs Claude Haiku, etc.)
+- Strategic behavior analysis including manipulation, gaslighting, and exploitation
+- Scaling laws for model strength vs. negotiation outcomes
+
+**Key Stakeholders**: AI safety researchers, negotiation theorists, multi-agent system designers
 </project_context>
 
 ## Core Principles & Success Criteria
@@ -34,17 +45,25 @@ This is a template repository for AI safety research projects, designed for seam
 </principles>
 
 <success_criteria>
-For research tasks:
-- Accuracy: Results must be reproducible with <0.1% variance
-- Documentation: Every finding must include methodology and limitations
-- Verification: Critical results require multi-agent validation
-- Traceability: Full audit trail from hypothesis to conclusion
+For negotiation research tasks:
+- **Reproducibility**: Negotiation outcomes must be consistent across runs with same random seeds
+- **Strategic Evidence**: Clear documentation of exploitation tactics (manipulation, gaslighting, etc.)
+- **Statistical Significance**: Results validated with p < 0.001 for exploratory findings
+- **Multi-Model Validation**: Critical findings verified across different LLM combinations
+- **Scaling Laws**: Clear mathematical relationships between model capability and exploitation success
 
 For implementation tasks:
-- Code Quality: 95%+ test coverage for critical paths
-- Performance: Response time <200ms for user-facing operations
-- Security: Zero exposed credentials or sensitive data
-- Maintainability: Clear architecture with <20 cyclomatic complexity
+- **Multi-Agent Reliability**: No agent communication failures or deadlocks
+- **Cluster Integration**: Seamless SLURM job submission to Princeton Della/PLI
+- **Configuration Flexibility**: Easy adjustment of m, n, t, γ parameters
+- **Model Swapping**: Simple replacement of different LLMs per agent
+- **Memory Management**: Persistent agent context across negotiation rounds
+- **Payoff Accuracy**: Correct utility calculations for both vector and matrix preferences
+
+For experimental validation:
+- **Baseline Establishment**: Strong baselines for comparison (random, greedy, cooperative agents)
+- **Exploitation Detection**: Quantitative metrics for identifying strategic manipulation
+- **Publication Quality**: Results meet ICLR standards for novelty and rigor
 </success_criteria>
 
 ## Directory Structure & Organization
@@ -268,6 +287,116 @@ Following Neel Nanda's framework:
    - Avoid unnecessary complexity to sound impressive
    - Always acknowledge limitations and negative results
 </ml_research_principles>
+
+## Negotiation Research Best Practices
+
+<negotiation_research_principles>
+### Multi-Agent Negotiation Mindset
+
+1. **Strategic Behavior Validation**
+   - **Test Strategic vs. Cooperative Tendencies**: Always include control conditions that test pure cooperation
+   - **Document Exploitation Evidence**: Look for anger, gaslighting, manipulation tactics in agent conversations
+   - **Measure Consistency**: Strategic exploitation should be consistent across runs, not random
+   - **Beware Training Data Defaults**: Negotiation tasks should avoid scenarios with obvious training data answers
+
+2. **Environment Design for Strategic Elicitation**
+   - **Balance Competition and Cooperation**: Use cosine similarity of preference vectors to control competition level
+   - **Preference System Choice**: Vector preferences (competitive) vs. matrix preferences (cooperative/competitive)
+   - **Information Asymmetry**: Test both secret and commonly known preferences
+   - **Parameter Sensitivity**: Systematically vary m (items), n (agents), t (rounds), γ (discount factor)
+
+3. **Multi-Model Experimental Design**
+   - **Capability Gradients**: Test O3 vs Claude Haiku, GPT-4 vs GPT-3.5, etc.
+   - **Model Assignment Strategy**: Randomize which agent gets which model across runs
+   - **Cross-Model Validation**: Key findings should hold across different model pairs
+   - **Baseline Comparison**: Include random, greedy, and cooperative baseline agents
+
+4. **Scaling Laws for Exploitation**
+   - **Quantitative Metrics**: Win rate, utility differential, conversation sentiment analysis
+   - **Model Capability Proxies**: Use standardized benchmarks (MMLU, GSM8K) to rank model strength
+   - **Statistical Power**: Ensure sufficient sample sizes for detecting exploitation effects
+   - **Effect Size Estimation**: Look for practically significant differences, not just statistical significance
+
+5. **Princeton Cluster Integration**
+   - **SLURM Job Arrays**: Use for parallel experiments across model combinations
+   - **Resource Management**: Estimate GPU/CPU requirements for different model sizes
+   - **Data Storage**: Use shared file systems for experiment results and logs
+   - **Job Monitoring**: Set up alerts for failed negotiations or crashed agents
+   - **Reproducibility**: Include environment setup in SLURM scripts for exact replication
+
+6. **Negotiation-Specific Debugging**
+   - **Agent Communication Logs**: Save full conversation transcripts for qualitative analysis
+   - **Decision Tree Analysis**: Track agent reasoning steps for each proposal/vote
+   - **Payoff Verification**: Double-check utility calculations for both vector and matrix preferences
+   - **Consensus Mechanism**: Ensure voting and unanimous decision logic works correctly
+   - **Memory Persistence**: Verify agent context carries forward across rounds
+
+### Princeton Cluster Workflows
+
+#### Basic SLURM Job Template
+```bash
+#!/bin/bash
+#SBATCH --job-name=negotiation_experiment
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-node=1
+#SBATCH --time=02:00:00
+#SBATCH --partition=gpu
+#SBATCH --output=logs/cluster/exp_%j.out
+#SBATCH --error=logs/cluster/exp_%j.err
+
+# Load required modules
+module load python/3.9
+module load cuda/11.8
+
+# Activate virtual environment
+source ~/.conda/envs/negotiation/bin/activate
+
+# Run experiment
+python experiments/run_negotiation.py \
+    --config configs/o3_vs_haiku.yaml \
+    --output results/exp_$SLURM_JOB_ID/
+```
+
+#### Experiment Array for Model Combinations
+```bash
+#SBATCH --array=1-10  # 10 different model combinations
+export MODEL_PAIRS=("o3,haiku" "gpt4,gpt3.5" "claude3opus,claude3haiku" ...)
+IFS=',' read -ra MODELS <<< "${MODEL_PAIRS[$SLURM_ARRAY_TASK_ID-1]}"
+python experiments/run_negotiation.py \
+    --model1 ${MODELS[0]} \
+    --model2 ${MODELS[1]} \
+    --seed $SLURM_ARRAY_TASK_ID
+```
+
+#### Resource Estimation Guidelines
+- **Single Negotiation**: 1 GPU, 4 CPU cores, 16GB RAM
+- **Model Size Scaling**: Add 8GB RAM per billion parameters
+- **Batch Experiments**: Scale linearly with number of parallel negotiations
+- **Storage**: ~100MB per experiment (logs + results)
+
+### Common Failure Modes and Solutions
+
+1. **Agent Gets Stuck in Loops**
+   - Solution: Add conversation turn limits, implement deadlock detection
+   - Debugging: Log agent internal reasoning steps
+
+2. **Unrealistic Strategic Behavior**
+   - Solution: Adjust preference systems, add more competitive scenarios
+   - Validation: Include human evaluation of "realism"
+
+3. **Model API Rate Limits**
+   - Solution: Implement exponential backoff, use multiple API keys
+   - Monitoring: Track API usage and costs per experiment
+
+4. **Inconsistent Results Across Runs**
+   - Solution: Fix random seeds, validate reproducibility
+   - Analysis: Separate random variation from systematic effects
+
+5. **Cluster Job Failures**
+   - Solution: Implement checkpointing, automatic restart capability
+   - Prevention: Test locally before large-scale cluster runs
+</negotiation_research_principles>
 
 ## Claude Code Integration
 
