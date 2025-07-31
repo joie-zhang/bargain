@@ -218,7 +218,13 @@ class AgentFactory:
         ]:
             if not config.api_key:
                 raise ValueError(f"API key required for Anthropic model {config.model_type}")
-            agent = AnthropicAgent(config.agent_id, llm_config, config.api_key)
+            
+            try:
+                agent = AnthropicAgent(config.agent_id, llm_config, config.api_key)
+            except Exception as e:
+                # Log error but don't fallback automatically - this helps catch real issues
+                print(f"Failed to create AnthropicAgent for {config.agent_id}: {e}")
+                raise
             
         elif config.model_type in [
             ModelType.GPT_4,
@@ -229,7 +235,13 @@ class AgentFactory:
         ]:
             if not config.api_key:
                 raise ValueError(f"API key required for OpenAI model {config.model_type}")
-            agent = OpenAIAgent(config.agent_id, llm_config, config.api_key)
+            
+            try:
+                agent = OpenAIAgent(config.agent_id, llm_config, config.api_key)
+            except Exception as e:
+                # Log error but don't fallback automatically - this helps catch real issues
+                print(f"Failed to create OpenAIAgent for {config.agent_id}: {e}")
+                raise
             
         else:
             # Use simulated agent for unknown types
@@ -282,7 +294,7 @@ def create_o3_vs_haiku_experiment(
             agent_id="o3_agent",
             model_type=ModelType.O3,
             api_key=openai_api_key,
-            temperature=0.7,
+            temperature=1.0,  # O3 only supports temperature=1
             max_tokens=1000,
             system_prompt="You are a highly capable AI agent. Be strategic and aim to maximize your utility in this negotiation."
         ),
