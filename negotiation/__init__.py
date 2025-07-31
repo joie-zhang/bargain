@@ -1,0 +1,29 @@
+"""
+Multi-Agent Negotiation Environment
+
+This package implements a research environment for studying strategic interactions
+between AI agents in negotiation settings, with a focus on understanding how
+stronger models might exploit weaker models.
+"""
+
+from .environment import (
+    NegotiationEnvironment,
+    NegotiationConfig,
+    NegotiationStatus,
+    Item,
+    ItemPool,
+    Round,
+    create_negotiation_environment
+)
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "NegotiationEnvironment",
+    "NegotiationConfig", 
+    "NegotiationStatus",
+    "Item",
+    "ItemPool",
+    "Round",
+    "create_negotiation_environment"
+]
