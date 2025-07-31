@@ -28,6 +28,18 @@ from .communication import (
     create_communication_system
 )
 
+from .preferences import (
+    PreferenceType,
+    PreferenceConfig,
+    BasePreferenceSystem,
+    VectorPreferenceSystem,
+    MatrixPreferenceSystem,
+    PreferenceManager,
+    create_competitive_preferences,
+    create_cooperative_preferences,
+    analyze_preference_competition_level
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -49,5 +61,16 @@ __all__ = [
     "SimpleAgent",
     "CommunicationManager",
     "TurnManager",
-    "create_communication_system"
+    "create_communication_system",
+    
+    # Preference components
+    "PreferenceType",
+    "PreferenceConfig",
+    "BasePreferenceSystem",
+    "VectorPreferenceSystem",
+    "MatrixPreferenceSystem", 
+    "PreferenceManager",
+    "create_competitive_preferences",
+    "create_cooperative_preferences",
+    "analyze_preference_competition_level"
 ]
