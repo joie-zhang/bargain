@@ -18,12 +18,12 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### Core Mechanics
 - **Items**: m items in common pool (default: m=5)
-- **Agents**: n agents (default: n=3, but testing n=2 first)
+- **Agents**: n agents (default: n=3)
 - **Rounds**: t rounds (typically t=m, but configurable)
 - **Discount Factor**: γ (gamma) encourages early agreement
 
 ### Agent Actions Per Round
-1. **Accept** a previous proposal
+1. **Accept** a previous proposal from the current round
 2. **Propose** a new allocation
 3. **Walk away** from negotiation
 

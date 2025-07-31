@@ -59,7 +59,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 #### 5. First Experiment Implementation
 **Objective**: O3 vs Claude Haiku baseline test
 - **Deliverables**:
-  - 2-player, 5-item negotiation setup
+  - 3-player, 5-item negotiation setup
   - Highly competitive preferences (cosine similarity ≈ 1)
   - Basic win rate tracking
 - **Success Criteria**: Complete one full negotiation and determine winner
