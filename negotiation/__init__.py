@@ -40,6 +40,30 @@ from .preferences import (
     analyze_preference_competition_level
 )
 
+from .llm_agents import (
+    ModelProvider,
+    ModelType,
+    LLMConfig,
+    AgentResponse,
+    NegotiationContext,
+    RateLimiter,
+    BaseLLMAgent,
+    AnthropicAgent,
+    OpenAIAgent,
+    SimulatedAgent
+)
+
+from .agent_factory import (
+    AgentConfiguration,
+    ExperimentConfiguration,
+    AgentFactory,
+    create_o3_vs_haiku_experiment,
+    create_cooperative_experiment,
+    create_simulated_experiment,
+    create_scaling_study_experiment,
+    agent_factory
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -72,5 +96,27 @@ __all__ = [
     "PreferenceManager",
     "create_competitive_preferences",
     "create_cooperative_preferences",
-    "analyze_preference_competition_level"
+    "analyze_preference_competition_level",
+    
+    # LLM Agent components
+    "ModelProvider",
+    "ModelType",
+    "LLMConfig",
+    "AgentResponse", 
+    "NegotiationContext",
+    "RateLimiter",
+    "BaseLLMAgent",
+    "AnthropicAgent",
+    "OpenAIAgent",
+    "SimulatedAgent",
+    
+    # Agent Factory components
+    "AgentConfiguration",
+    "ExperimentConfiguration",
+    "AgentFactory",
+    "create_o3_vs_haiku_experiment",
+    "create_cooperative_experiment", 
+    "create_simulated_experiment",
+    "create_scaling_study_experiment",
+    "agent_factory"
 ]
