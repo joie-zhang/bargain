@@ -70,32 +70,31 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 #### 6. Round Flow Implementation
 **Objective**: Complete negotiation cycle
 - **Deliverables**:
-  - Setup → preferences → thinking → proposals → voting → resolution → reflection
+  - **Phase 1: Game Initialization**
+    - 1A. Game Setup Phase: Give each agent identical opening prompt explaining game rules and mechanics
+    - 1B. Private Preference Assignment: Assign each agent their individual secret preferences
+  - **Phase 2: Discussion & Planning**
+    - 2. Public Discussion Phase: Agents engage in open discussion about their preferences (may be strategic)
+    - 3. Private Thinking Phase: Each agent uses private scratchpad to plan their proposal strategy
+  - **Phase 3: Proposal Submission**
+    - 4A. Proposal Phase: Agents go in randomized order to submit JSON proposals with reasoning to public audience
+    - 4B. Proposal Enumeration: Number and display all proposals from 1 to n (where n = number of agents)
+  - **Phase 4: Voting Process**
+    - 5A. Private Voting: Agents submit votes privately (not visible to other agents)
+    - 5B. Vote Revelation: Make all votes public after collection
+  - **Phase 5: Decision & Transition**
+    - 6A. Consensus Detection: Check if any proposal has unanimous support
+    - 6B. Allocation & Termination: If unanimous support + all items allocated → terminate game
+    - 7A. Individual Reflection: Each agent privately reflects on round outcomes
+    - 7B. Memory Update: Agents retain key takeaways in internal memory for future rounds
+    - 8. Round Transition: Advance to next round (repeat full process until round T)
+    - 9. Max Rounds Termination: Terminate game when reaching maximum round limit T
   - Proper state transitions between rounds
   - Game termination conditions
 - **Success Criteria**: Full negotiation runs from start to finish
 - **Estimated Time**: 1-2 weeks
 
-#### 7. Agent Action Logic
-**Objective**: Accept/propose/walk away capabilities
-- **Deliverables**:
-  - Accept action (choose from current round proposals)
-  - Propose action (new allocation suggestion)
-  - Walk away action (exit negotiation)
-  - Strategic reasoning prompts for each action type
-- **Success Criteria**: Agents can perform all three actions appropriately
-- **Estimated Time**: 1 week
-
-#### 8. Voting and Consensus System
-**Objective**: Anonymous voting and unanimous decisions
-- **Deliverables**:
-  - Anonymous voting mechanism
-  - Unanimous decision detection
-  - Item allocation when consensus reached
-- **Success Criteria**: Items allocated correctly when unanimous votes occur
-- **Estimated Time**: 1 week
-
-#### 9. Utility Calculation Engine
+#### 7. Utility Calculation Engine
 **Objective**: Payoff computation for both preference types
 - **Deliverables**:
   - Vector preference utility: Σ(preference_i × item_received_i)
@@ -104,7 +103,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Accurate utility calculations for all scenarios
 - **Estimated Time**: 1 week
 
-#### 10. Context Management System
+#### 8. Context Management System
 **Objective**: Persistent agent memory across rounds
 - **Deliverables**:
   - Agent memory persistence between rounds
@@ -115,7 +114,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 3: Configuration & Baselines (Medium Priority)**
 
-#### 11. Experiment Configuration System
+#### 9. Experiment Configuration System
 **Objective**: Flexible parameter management
 - **Deliverables**:
   - YAML/JSON configuration files
@@ -124,7 +123,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Easy experiment setup with different parameters
 - **Estimated Time**: 1 week
 
-#### 12. Baseline Agent Implementation
+#### 10. Baseline Agent Implementation
 **Objective**: Random/greedy/cooperative agents
 - **Deliverables**:
   - Random agent (random proposals and votes)
@@ -133,7 +132,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Strong baselines for comparison with LLM agents
 - **Estimated Time**: 1 week
 
-#### 13. Metrics and Analysis System
+#### 11. Metrics and Analysis System
 **Objective**: Win rates, utilities, sentiment analysis
 - **Deliverables**:
   - Individual utility tracking
@@ -143,7 +142,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Comprehensive metrics for each negotiation
 - **Estimated Time**: 1-2 weeks
 
-#### 14. Exploitation Detection Framework
+#### 12. Exploitation Detection Framework
 **Objective**: Strategic behavior identification
 - **Deliverables**:
   - Qualitative analysis tools
@@ -155,7 +154,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 4: Infrastructure & Analysis (Low Priority)**
 
-#### 15. Princeton Cluster Integration
+#### 13. Princeton Cluster Integration
 **Objective**: SLURM job submission for Della/PLI
 - **Deliverables**:
   - SLURM job scripts
@@ -164,7 +163,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Large-scale experiments run on Princeton clusters
 - **Estimated Time**: 1-2 weeks
 
-#### 16. Logging and Experiment Tracking
+#### 14. Logging and Experiment Tracking
 **Objective**: Comprehensive data collection
 - **Deliverables**:
   - Complete conversation logs
@@ -174,7 +173,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Full experiment reproducibility and analysis
 - **Estimated Time**: 1 week
 
-#### 17. Scaling Laws Analysis Pipeline
+#### 15. Scaling Laws Analysis Pipeline
 **Objective**: Statistical relationship analysis
 - **Deliverables**:
   - Model capability vs. exploitation correlation analysis
@@ -183,7 +182,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Clear scaling relationships between model strength and exploitation
 - **Estimated Time**: 2-3 weeks
 
-#### 18. Reproducibility Infrastructure
+#### 16. Reproducibility Infrastructure
 **Objective**: Seed management and versioning
 - **Deliverables**:
   - Random seed management
