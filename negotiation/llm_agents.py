@@ -272,6 +272,152 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
         else:
             return f"Your preferences: {preferences}"
     
+    async def think_strategy(self, prompt: str, context: NegotiationContext) -> Dict[str, Any]:
+        """
+        Generate private strategic thinking for proposal planning.
+        
+        This method allows agents to privately analyze the situation and plan
+        their strategy before making public proposals.
+        """
+        # Wait for rate limits
+        await self.rate_limiter.wait_if_needed()
+        
+        # Build messages for thinking prompt
+        thinking_messages = self._build_thinking_messages(context, prompt)
+        
+        # Call LLM for strategic thinking
+        for attempt in range(self.config.max_retries):
+            try:
+                response = await self._call_llm_api(thinking_messages)
+                
+                # Update tracking
+                self.total_requests += 1
+                if response.tokens_used:
+                    self.total_tokens += response.tokens_used
+                if response.cost_estimate:
+                    self.total_cost += response.cost_estimate
+                self.response_times.append(response.response_time)
+                
+                # Parse strategic thinking response
+                thinking_result = self._parse_thinking_response(response.content)
+                
+                # Store in strategic memory
+                self.strategic_memory.append(f"Round {context.current_round} thinking: {thinking_result.get('strategy', '')}")
+                
+                return thinking_result
+                
+            except Exception as e:
+                self.logger.warning(f"Thinking attempt {attempt + 1} failed: {e}")
+                if attempt == self.config.max_retries - 1:
+                    # Return fallback thinking
+                    return {
+                        "reasoning": "Unable to complete strategic analysis due to technical issues",
+                        "strategy": "Will proceed with preference-based approach",
+                        "target_items": [],
+                        "anticipated_resistance": []
+                    }
+        
+        # Should not reach here
+        return {}
+    
+    def _build_thinking_messages(self, context: NegotiationContext, prompt: str) -> List[Dict[str, str]]:
+        """Build messages for private thinking."""
+        system_prompt = f"""You are {context.agent_id}, a strategic negotiation agent engaged in private strategic planning.
+
+PRIVATE ANALYSIS SESSION:
+- This is completely private - other agents cannot see your thoughts
+- Analyze the situation strategically to plan your next proposal
+- Consider what you learned from discussions and previous rounds
+- Think about other agents' likely preferences and resistance points
+
+YOUR PREFERENCES:
+{self._format_preferences(context.preferences, context.items)}
+
+STRATEGIC MINDSET:
+- Maximize your utility while ensuring proposals can get unanimous support
+- Identify items others seem to value less but you value highly
+- Plan how to frame proposals to appear fair to all agents
+- Consider what concessions you might need to make
+
+Response format: Provide your analysis as structured strategic thinking."""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # Add conversation history context if available
+        if hasattr(context, 'conversation_history') and context.conversation_history:
+            # Add recent context
+            recent_context = "RECENT DISCUSSION HIGHLIGHTS:\n"
+            for msg in context.conversation_history[-4:]:  # Last 4 messages
+                if isinstance(msg, dict) and msg.get('content'):
+                    agent = msg.get('agent_id', 'unknown')
+                    content = msg.get('content', '')[:150]  # Truncate for context
+                    recent_context += f"- {agent}: {content}\n"
+            
+            # Insert context before the main prompt
+            messages[1]["content"] = recent_context + "\n" + messages[1]["content"]
+        
+        return messages
+    
+    def _parse_thinking_response(self, response_content: str) -> Dict[str, Any]:
+        """Parse the strategic thinking response."""
+        try:
+            # Try to parse as JSON first
+            if response_content.strip().startswith('{'):
+                return json.loads(response_content)
+            
+            # Otherwise, extract structured information from text
+            result = {
+                "reasoning": "",
+                "strategy": "",
+                "target_items": [],
+                "anticipated_resistance": []
+            }
+            
+            # Simple text parsing for structured elements
+            lines = response_content.split('\n')
+            current_section = None
+            
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Look for section headers
+                if 'reasoning' in line.lower() and ':' in line:
+                    current_section = 'reasoning'
+                    result['reasoning'] = line.split(':', 1)[1].strip() if ':' in line else ""
+                elif 'strategy' in line.lower() and ':' in line:
+                    current_section = 'strategy'
+                    result['strategy'] = line.split(':', 1)[1].strip() if ':' in line else ""
+                elif 'target' in line.lower() and 'items' in line.lower():
+                    current_section = 'target_items'
+                elif 'resistance' in line.lower() or 'opposition' in line.lower():
+                    current_section = 'anticipated_resistance'
+                else:
+                    # Add content to current section
+                    if current_section == 'reasoning':
+                        result['reasoning'] += " " + line
+                    elif current_section == 'strategy':
+                        result['strategy'] += " " + line
+                    elif current_section == 'target_items' and line.startswith('-'):
+                        result['target_items'].append(line[1:].strip())
+                    elif current_section == 'anticipated_resistance' and line.startswith('-'):
+                        result['anticipated_resistance'].append(line[1:].strip())
+            
+            return result
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to parse thinking response: {e}")
+            return {
+                "reasoning": response_content[:200] + "..." if len(response_content) > 200 else response_content,
+                "strategy": "Basic preference-driven approach",
+                "target_items": [],
+                "anticipated_resistance": []
+            }
+    
     def _build_context_messages(self, context: NegotiationContext, 
                                prompt: str) -> List[Dict[str, str]]:
         """Build conversation context for the LLM."""
