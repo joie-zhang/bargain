@@ -385,10 +385,19 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
         try:
             # Try to parse the JSON directly first
             proposal = json.loads(response.content)
+            # Ensure required fields are present
+            if "allocation" not in proposal:
+                raise ValueError("Missing allocation field")
+            if "reasoning" not in proposal:
+                proposal["reasoning"] = "No reasoning provided"
             proposal["proposed_by"] = self.agent_id
             proposal["round"] = context.current_round
             return proposal
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ValueError) as e:
+            # Log the parsing issue for debugging
+            self.logger.debug(f"Direct JSON parsing failed for {self.agent_id}: {e}")
+            self.logger.debug(f"Raw response content: {response.content[:300]}...")
+            
             # Try to extract JSON from text response
             try:
                 import re
@@ -397,6 +406,7 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 json_match = re.search(r'\{[\s\S]*\}', response.content)
                 if json_match:
                     json_str = json_match.group(0)
+                    self.logger.debug(f"Extracted JSON string: {json_str[:200]}...")
                     proposal = json.loads(json_str)
                     
                     # Convert the allocation format if needed
@@ -438,6 +448,10 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                                 converted_allocation[actual_agent_key] = items
                         
                         proposal["allocation"] = converted_allocation
+                    
+                    # Ensure required fields are present
+                    if "reasoning" not in proposal:
+                        proposal["reasoning"] = "No reasoning provided"
                     
                     proposal["proposed_by"] = self.agent_id
                     proposal["round"] = context.current_round
