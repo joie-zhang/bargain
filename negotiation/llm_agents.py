@@ -63,7 +63,7 @@ class LLMConfig:
     """Configuration for an LLM agent."""
     model_type: ModelType
     temperature: float = 0.7
-    max_tokens: int = 1000
+    max_tokens: int = 999999  # Effectively unlimited - will be ignored in API calls
     timeout: float = 30.0
     
     # Rate limiting
@@ -842,16 +842,19 @@ class AnthropicAgent(BaseLLMAgent):
             else:
                 user_messages.append(msg)
         
-        # Call Anthropic API
-        response = await self.client.messages.create(
-            model=self.model_name,
-            max_tokens=self.config.max_tokens,
-            temperature=self.config.temperature,
-            system=system_message,
-            messages=user_messages,
+        # Call Anthropic API (without max_tokens limitation)
+        api_params = {
+            "model": self.model_name,
+            "temperature": self.config.temperature,
+            "system": system_message,
+            "messages": user_messages,
             **self.config.custom_parameters,
             **kwargs
-        )
+        }
+        
+        # Remove max_tokens to allow unlimited generation
+        # Max tokens will be determined by the model's capabilities
+        response = await self.client.messages.create(**api_params)
         
         response_time = time.time() - start_time
         
@@ -930,21 +933,26 @@ class OpenAIAgent(BaseLLMAgent):
         start_time = time.time()
         
         # O3 models have specific parameter requirements
-        api_params = {}
+        api_params = {
+            "model": self.model_name,
+            "messages": messages,
+        }
+        
         if "o3" in self.model_name.lower():
             # O3 models use max_completion_tokens and only support temperature=1
-            api_params["max_completion_tokens"] = self.config.max_tokens
+            # Remove max_completion_tokens to allow unlimited generation
             api_params["temperature"] = 1  # O3 only supports temperature=1
         else:
-            # Standard models use max_tokens and support temperature settings
-            api_params["max_tokens"] = self.config.max_tokens
+            # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature
         
+        # Add custom parameters but exclude any max_tokens variants
+        custom_params = {k: v for k, v in self.config.custom_parameters.items() 
+                        if k not in ['max_tokens', 'max_completion_tokens']}
+        
         response = await self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
             **api_params,
-            **self.config.custom_parameters,
+            **custom_params,
             **kwargs
         )
         

@@ -29,7 +29,7 @@ class AgentConfiguration:
     model_type: ModelType
     api_key: Optional[str] = None
     temperature: float = 0.7
-    max_tokens: int = 1000
+    max_tokens: int = 999999  # Effectively unlimited - ignored in API calls
     timeout: float = 30.0
     
     # Rate limiting
@@ -295,7 +295,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.O3,
             api_key=openai_api_key,
             temperature=1.0,  # O3 only supports temperature=1
-            max_tokens=1000,
+            max_tokens=999999,  # Unlimited
             system_prompt="You are a highly capable AI agent. Be strategic and aim to maximize your utility in this negotiation."
         ),
         AgentConfiguration(
@@ -303,7 +303,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.CLAUDE_3_HAIKU,
             api_key=anthropic_api_key,
             temperature=0.7,
-            max_tokens=1000,
+            max_tokens=999999,  # Unlimited
             system_prompt="You are participating in a negotiation. Try to do your best to get good outcomes."
         ),
         AgentConfiguration(
@@ -311,7 +311,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.CLAUDE_3_HAIKU,
             api_key=anthropic_api_key,
             temperature=0.7,
-            max_tokens=1000,
+            max_tokens=999999,  # Unlimited
             system_prompt="You are participating in a negotiation. Try to do your best to get good outcomes."
         )
     ]
@@ -437,7 +437,7 @@ def create_scaling_study_experiment(
             model_type=stronger_model,
             api_key=strong_api_key,
             temperature=0.8,  # Higher temperature for more strategic creativity
-            max_tokens=3000,  # Increased for O3's verbose responses
+            max_tokens=999999,  # Unlimited for O3's verbose responses
             system_prompt="You are a highly capable strategic agent. Use your advanced reasoning to maximize your utility."
         ),
         AgentConfiguration(
@@ -445,7 +445,7 @@ def create_scaling_study_experiment(
             model_type=weaker_model,
             api_key=weak_api_key,
             temperature=0.7,
-            max_tokens=1000,
+            max_tokens=999999,  # Unlimited
             system_prompt="Participate in this negotiation and try to get good outcomes."
         ),
         AgentConfiguration(
@@ -453,7 +453,7 @@ def create_scaling_study_experiment(
             model_type=weaker_model,
             api_key=weak_api_key,
             temperature=0.7,
-            max_tokens=1000,
+            max_tokens=999999,  # Unlimited
             system_prompt="Participate in this negotiation and try to get good outcomes."
         )
     ]
