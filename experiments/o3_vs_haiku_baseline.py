@@ -332,11 +332,18 @@ class O3VsHaikuExperiment:
             )
             conversation_logs.extend(proposal_results["messages"])
             
-            # Phase 4: Voting
+            # Phase 4B: Proposal Enumeration
+            self.logger.info("Proposal enumeration phase...")
+            enumeration_results = await self._run_proposal_enumeration_phase(
+                agents, items, preferences, round_num, config["t_rounds"], proposal_results["proposals"]
+            )
+            conversation_logs.extend(enumeration_results["messages"])
+            
+            # Phase 5: Voting
             self.logger.info("Voting phase...")
             voting_results = await self._run_voting_phase(
                 agents, items, preferences, round_num, config["t_rounds"],
-                proposal_results["proposals"]
+                proposal_results["proposals"], enumeration_results["enumerated_proposals"]
             )
             conversation_logs.extend(voting_results["messages"])
             
@@ -854,9 +861,16 @@ Please provide your strategic thinking in this format:
 Remember: This thinking is completely private. Use it to plan the most effective proposal possible."""
     
     async def _run_proposal_phase(self, agents, items, preferences, round_num, max_rounds):
-        """Run the proposal phase of negotiation."""
+        """
+        Run the proposal phase of negotiation.
+        
+        Step 4A of the 14-phase round flow: Agents submit formal proposals based on 
+        their private strategic thinking from the previous phase.
+        """
         messages = []
         proposals = []
+        
+        self.logger.info(f"=== PROPOSAL SUBMISSION PHASE - Round {round_num} ===")
         
         for agent in agents:
             context = NegotiationContext(
@@ -869,30 +883,296 @@ Remember: This thinking is completely private. Use it to plan the most effective
                 turn_type="proposal"
             )
             
-            proposal = await agent.propose_allocation(context)
+            # Generate strategic proposal based on private thinking
+            proposal = await self._generate_strategic_proposal(agent, context, round_num, max_rounds)
             proposals.append(proposal)
             
+            # Create detailed message with strategic context
             message = {
                 "phase": "proposal",
                 "round": round_num,
                 "from": agent.agent_id,
-                "content": f"Proposed allocation: {proposal['allocation']}",
+                "content": f"I propose this allocation: {proposal['allocation']} - {proposal.get('reasoning', 'No reasoning provided')}",
                 "proposal": proposal,
-                "timestamp": time.time()
+                "timestamp": time.time(),
+                "agent_id": agent.agent_id
             }
             messages.append(message)
             
-            self.logger.info(f"  {agent.agent_id} proposes: {proposal['allocation']}")
-            self.logger.info(f"    Reasoning: {proposal['reasoning']}")
+            # Enhanced logging with strategic insights
+            self.logger.info(f"📋 {agent.agent_id} FORMAL PROPOSAL:")
+            self.logger.info(f"   Allocation: {proposal['allocation']}")
+            self.logger.info(f"   Reasoning: {proposal.get('reasoning', 'No reasoning provided')}")
+            if proposal.get('expected_utility'):
+                self.logger.info(f"   Expected Utility: {proposal['expected_utility']}")
+            if proposal.get('strategic_rationale'):
+                self.logger.info(f"   Strategic Rationale: {proposal['strategic_rationale']}")
         
         return {"messages": messages, "proposals": proposals}
     
-    async def _run_voting_phase(self, agents, items, preferences, round_num, max_rounds, proposals):
-        """Run the voting phase of negotiation."""
+    async def _generate_strategic_proposal(self, agent, context, round_num, max_rounds):
+        """Generate a strategic proposal informed by private thinking."""
+        # Check if agent has recent strategic thinking to inform proposal
+        strategic_context = ""
+        if hasattr(agent, 'strategic_memory') and agent.strategic_memory:
+            # Get the most recent strategic thinking
+            recent_thinking = [mem for mem in agent.strategic_memory 
+                             if f"Round {round_num}" in mem]
+            if recent_thinking:
+                strategic_context = f"\nRecall your private strategic analysis: {recent_thinking[-1]}"
+        
+        # Enhanced proposal prompt with strategic guidance
+        enhanced_prompt = self._create_strategic_proposal_prompt(
+            context.items, context.agents, round_num, max_rounds, strategic_context
+        )
+        
+        # Generate proposal using enhanced context
+        enhanced_context = NegotiationContext(
+            current_round=round_num,
+            max_rounds=max_rounds,
+            items=context.items,
+            agents=context.agents,
+            agent_id=agent.agent_id,
+            preferences=context.preferences,
+            turn_type="strategic_proposal"
+        )
+        
+        try:
+            # Use the agent's generate_response with our strategic prompt
+            response = await agent.generate_response(enhanced_context, enhanced_prompt)
+            
+            # Parse the response as a proposal
+            proposal = self._parse_strategic_proposal_response(response.content, agent.agent_id, round_num)
+            
+            return proposal
+            
+        except Exception as e:
+            self.logger.warning(f"Strategic proposal generation failed for {agent.agent_id}: {e}")
+            # Fallback to standard proposal method
+            return await agent.propose_allocation(context)
+    
+    def _create_strategic_proposal_prompt(self, items, agents, round_num, max_rounds, strategic_context=""):
+        """Create an enhanced proposal prompt with strategic guidance."""
+        items_list = [f"  {i}: {item['name']}" for i, item in enumerate(items)]
+        items_text = "\n".join(items_list)
+        
+        urgency_note = ""
+        if round_num >= max_rounds - 1:
+            urgency_note = "\n🚨 **FINAL OPPORTUNITY**: This may be your last chance to reach consensus!"
+        
+        agent_list = [agent if isinstance(agent, str) else agent.agent_id for agent in agents]
+        
+        return f"""📋 STRATEGIC PROPOSAL SUBMISSION - Round {round_num}/{max_rounds}
+
+Now it's time to submit your formal proposal based on your strategic analysis.
+
+**ITEMS AVAILABLE:**
+{items_text}
+
+**PARTICIPANTS:** {', '.join(agent_list)}{strategic_context}
+
+**PROPOSAL GUIDELINES:**
+- Submit ONE formal allocation that distributes ALL items among ALL agents
+- Base your proposal on your private strategic thinking
+- Consider what you learned from the discussion phase
+- Balance your own utility with the need for unanimous acceptance
+- Frame your reasoning to make the proposal appealing to others{urgency_note}
+
+**REQUIRED FORMAT:**
+Respond with ONLY a JSON object in this exact format:
+{{
+    "allocation": {{
+        "{agent_list[0]}": [item_indices_they_get],
+        "{agent_list[1] if len(agent_list) > 1 else 'agent_1'}": [item_indices_they_get],
+        "{agent_list[2] if len(agent_list) > 2 else 'agent_2'}": [item_indices_they_get]
+    }},
+    "reasoning": "Clear explanation of why this allocation is fair and beneficial for everyone",
+    "strategic_rationale": "Brief note on how this aligns with your strategic thinking",
+    "expected_utility": "Your expected utility from this proposal"
+}}
+
+Use actual agent IDs as keys and item indices (0-{len(items)-1}) as values. Every item must be allocated to exactly one agent."""
+    
+    def _parse_strategic_proposal_response(self, response_content, agent_id, round_num):
+        """Parse the strategic proposal response with enhanced error handling."""
+        try:
+            # Try direct JSON parsing first
+            import json
+            if response_content.strip().startswith('{'):
+                proposal = json.loads(response_content)
+            else:
+                # Extract JSON from text
+                import re
+                json_match = re.search(r'\{[\s\S]*\}', response_content)
+                if json_match:
+                    proposal = json.loads(json_match.group(0))
+                else:
+                    raise ValueError("No JSON found in response")
+            
+            # Ensure required fields
+            if "allocation" not in proposal:
+                raise ValueError("Missing allocation field")
+            
+            # Add metadata
+            proposal["proposed_by"] = agent_id
+            proposal["round"] = round_num
+            
+            # Ensure all expected fields have defaults
+            if "reasoning" not in proposal:
+                proposal["reasoning"] = "No reasoning provided"
+            if "strategic_rationale" not in proposal:
+                proposal["strategic_rationale"] = "Strategy not specified"
+            if "expected_utility" not in proposal:
+                proposal["expected_utility"] = "Not calculated"
+            
+            return proposal
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to parse strategic proposal from {agent_id}: {e}")
+            # Return fallback proposal
+            return {
+                "allocation": {agent_id: [0]},  # Give first item to self as fallback
+                "reasoning": f"Fallback proposal due to parsing error: {e}",
+                "strategic_rationale": "Emergency fallback",
+                "expected_utility": "Unknown",
+                "proposed_by": agent_id,
+                "round": round_num
+            }
+    
+    async def _run_proposal_enumeration_phase(self, agents, items, preferences, round_num, max_rounds, proposals):
+        """
+        Run the proposal enumeration phase of negotiation.
+        
+        Step 4B of the 14-phase round flow: Number and display all proposals from 1 to n 
+        (where n = number of agents) for easy reference in subsequent voting and discussion.
+        """
         messages = []
         
-        # Vote on the first proposal (can be extended to vote on all)
+        self.logger.info(f"=== PROPOSAL ENUMERATION PHASE - Round {round_num} ===")
+        
         if not proposals:
+            self.logger.warning("No proposals to enumerate!")
+            return {
+                "messages": messages,
+                "enumerated_proposals": [],
+                "proposal_summary": "No proposals submitted"
+            }
+        
+        # Create enumerated proposal display
+        enumerated_proposals = []
+        proposal_display_lines = []
+        
+        # Header for the enumeration
+        proposal_display_lines.append(f"📋 FORMAL PROPOSALS SUBMITTED - Round {round_num}")
+        proposal_display_lines.append("=" * 60)
+        proposal_display_lines.append(f"Total Proposals: {len(proposals)}")
+        proposal_display_lines.append("")
+        
+        # Number and display each proposal
+        for i, proposal in enumerate(proposals, 1):
+            proposal_num = i
+            proposer = proposal.get('proposed_by', f'Agent_{i}')
+            allocation = proposal.get('allocation', {})
+            reasoning = proposal.get('reasoning', 'No reasoning provided')
+            
+            # Create enumerated proposal entry
+            enumerated_proposal = {
+                "proposal_number": proposal_num,
+                "proposer": proposer,
+                "allocation": allocation,
+                "reasoning": reasoning,
+                "strategic_rationale": proposal.get('strategic_rationale', 'Not specified'),
+                "expected_utility": proposal.get('expected_utility', 'Not calculated'),
+                "original_proposal": proposal
+            }
+            enumerated_proposals.append(enumerated_proposal)
+            
+            # Format for display
+            proposal_display_lines.append(f"PROPOSAL #{proposal_num} (by {proposer}):")
+            proposal_display_lines.append(f"  Allocation:")
+            
+            # Display allocation in a clear format
+            for agent_id, item_indices in allocation.items():
+                if item_indices:  # Only show if agent gets items
+                    item_names = []
+                    for idx in item_indices:
+                        if 0 <= idx < len(items):
+                            item_names.append(f"{idx}:{items[idx]['name']}")
+                        else:
+                            item_names.append(f"{idx}:unknown")
+                    proposal_display_lines.append(f"    → {agent_id}: {', '.join(item_names)}")
+                else:
+                    proposal_display_lines.append(f"    → {agent_id}: (no items)")
+            
+            proposal_display_lines.append(f"  Reasoning: {reasoning}")
+            if proposal.get('strategic_rationale') and proposal['strategic_rationale'] != 'Not specified':
+                proposal_display_lines.append(f"  Strategy: {proposal['strategic_rationale']}")
+            proposal_display_lines.append("")
+        
+        # Create comprehensive proposal summary
+        proposal_summary = "\n".join(proposal_display_lines)
+        
+        # Log the enumeration
+        self.logger.info("📋 PROPOSAL ENUMERATION:")
+        for line in proposal_display_lines:
+            self.logger.info(f"  {line}")
+        
+        # Create system message with enumerated proposals for agents to see
+        enumeration_message = {
+            "phase": "proposal_enumeration",
+            "round": round_num,
+            "from": "system",
+            "content": proposal_summary,
+            "enumerated_proposals": enumerated_proposals,
+            "timestamp": time.time(),
+            "agent_id": "system",
+            "message_type": "enumeration"
+        }
+        messages.append(enumeration_message)
+        
+        # Send enumeration to all agents for their context
+        for agent in agents:
+            agent_specific_message = {
+                "phase": "proposal_enumeration",
+                "round": round_num,
+                "from": "system",
+                "to": agent.agent_id,
+                "content": f"All proposals have been numbered for reference:\n\n{proposal_summary}",
+                "enumerated_proposals": enumerated_proposals,
+                "timestamp": time.time(),
+                "agent_id": "system",
+                "message_type": "agent_enumeration"
+            }
+            messages.append(agent_specific_message)
+        
+        return {
+            "messages": messages,
+            "enumerated_proposals": enumerated_proposals,
+            "proposal_summary": proposal_summary,
+            "total_proposals": len(proposals)
+        }
+    
+    async def _run_voting_phase(self, agents, items, preferences, round_num, max_rounds, proposals, enumerated_proposals=None):
+        """
+        Run the voting phase of negotiation.
+        
+        Step 5 of the 14-phase round flow: Agents vote on the enumerated proposals.
+        """
+        messages = []
+        
+        self.logger.info(f"=== VOTING PHASE - Round {round_num} ===")
+        
+        # Use enumerated proposals if available, otherwise fall back to original proposals
+        if enumerated_proposals:
+            self.logger.info(f"Voting on {len(enumerated_proposals)} enumerated proposals")
+            voting_proposals = enumerated_proposals
+        else:
+            self.logger.info(f"Voting on {len(proposals)} proposals (not enumerated)")
+            voting_proposals = [{"proposal_number": i+1, "original_proposal": prop, **prop} 
+                              for i, prop in enumerate(proposals)]
+        
+        # Vote on the first proposal (can be extended to vote on all)
+        if not voting_proposals:
             return {
                 "messages": messages,
                 "consensus_reached": False,
@@ -900,8 +1180,12 @@ Remember: This thinking is completely private. Use it to plan the most effective
                 "winner_agent_id": None
             }
         
-        test_proposal = proposals[0]
+        # Vote on the first enumerated proposal (can be extended to vote on all)
+        test_proposal_enum = voting_proposals[0]
+        test_proposal = test_proposal_enum.get('original_proposal', test_proposal_enum)
         votes = []
+        
+        self.logger.info(f"Voting on Proposal #{test_proposal_enum.get('proposal_number', 1)} by {test_proposal_enum.get('proposer', 'Unknown')}")
         
         for agent in agents:
             context = NegotiationContext(
@@ -912,7 +1196,8 @@ Remember: This thinking is completely private. Use it to plan the most effective
                 agent_id=agent.agent_id,
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="voting",
-                current_proposals=proposals
+                current_proposals=proposals,
+                enumerated_proposals=voting_proposals  # Provide enumerated context
             )
             
             vote = await agent.vote_on_proposal(context, test_proposal)
