@@ -950,8 +950,18 @@ class OpenAIAgent(BaseLLMAgent):
         
         response_time = time.time() - start_time
         
+        # DEBUG: Log O3 API responses only if they fail
+        if "o3" in self.model_name.lower() and not response.choices[0].message.content:
+            print(f"\n⚠️  O3 API Response Issue:")
+            print(f"Model: {self.model_name}")
+            print(f"Finish reason: {response.choices[0].finish_reason}")
+            print(f"Content length: {len(response.choices[0].message.content or '')}")
+            if response.usage:
+                print(f"Tokens used: {response.usage.total_tokens}")
+            print("=" * 80)
+        
         return AgentResponse(
-            content=response.choices[0].message.content,
+            content=response.choices[0].message.content,  # Keep original - no masking
             model_used=self.model_name,
             response_time=response_time,
             tokens_used=response.usage.total_tokens if response.usage else None,
