@@ -437,7 +437,7 @@ def create_scaling_study_experiment(
             model_type=stronger_model,
             api_key=strong_api_key,
             temperature=0.8,  # Higher temperature for more strategic creativity
-            max_tokens=1500,
+            max_tokens=3000,  # Increased for O3's verbose responses
             system_prompt="You are a highly capable strategic agent. Use your advanced reasoning to maximize your utility."
         ),
         AgentConfiguration(
