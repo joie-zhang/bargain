@@ -362,11 +362,15 @@ Response format: Provide your analysis as structured strategic thinking."""
         return messages
     
     def _parse_thinking_response(self, response_content: str) -> Dict[str, Any]:
-        """Parse the strategic thinking response."""
+        """Parse the strategic thinking response with enhanced O3 support."""
         try:
             # Try to parse as JSON first
             if response_content.strip().startswith('{'):
                 return json.loads(response_content)
+            
+            # Check if it's O3 format (often uses bullet points and structured text)
+            if self._is_o3_thinking_format(response_content):
+                return self._parse_o3_thinking_format(response_content)
             
             # Otherwise, extract structured information from text
             result = {
@@ -417,6 +421,91 @@ Response format: Provide your analysis as structured strategic thinking."""
                 "target_items": [],
                 "anticipated_resistance": []
             }
+    
+    def _is_o3_thinking_format(self, response_content: str) -> bool:
+        """Check if the response is in O3's typical thinking format."""
+        content_lower = response_content.lower()
+        
+        # O3 often uses bullet points, numbered lists, and analytical structure
+        o3_indicators = [
+            "- " in response_content or "• " in response_content,  # Bullet points
+            "1." in response_content or "2." in response_content,  # Numbered lists
+            "analysis:" in content_lower,
+            "strategic" in content_lower,
+            "quill" in content_lower or "stone" in content_lower,  # Specific to our items
+            "utility" in content_lower,
+            "proposal" in content_lower and "strategy" in content_lower
+        ]
+        
+        return sum(o3_indicators) >= 2  # Must match at least 2 indicators
+    
+    def _parse_o3_thinking_format(self, response_content: str) -> Dict[str, Any]:
+        """Parse O3's specific thinking format."""
+        result = {
+            "reasoning": "",
+            "strategy": "",
+            "target_items": [],
+            "anticipated_resistance": []
+        }
+        
+        # O3 tends to provide comprehensive analysis in paragraph or bullet form
+        lines = response_content.split('\n')
+        full_text = response_content
+        
+        # Extract reasoning (usually the bulk of O3's analysis)
+        reasoning_parts = []
+        strategy_parts = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Look for strategy-related content
+            if any(keyword in line.lower() for keyword in ['strategy', 'approach', 'plan', 'propose']):
+                strategy_parts.append(line)
+            # Look for analysis content
+            elif any(keyword in line.lower() for keyword in ['analysis', 'prefer', 'value', 'utility', 'because']):
+                reasoning_parts.append(line)
+            # Bullet points and lists are often reasoning
+            elif line.startswith(('- ', '• ', '1.', '2.', '3.')):
+                reasoning_parts.append(line)
+            else:
+                # Default to reasoning for O3's comprehensive analysis
+                reasoning_parts.append(line)
+        
+        # Combine reasoning
+        if reasoning_parts:
+            result['reasoning'] = ' '.join(reasoning_parts)
+        else:
+            # Fallback: use first half of content as reasoning
+            result['reasoning'] = full_text[:len(full_text)//2]
+        
+        # Combine strategy
+        if strategy_parts:
+            result['strategy'] = ' '.join(strategy_parts) 
+        else:
+            # Fallback: extract strategy from reasoning or use second half
+            result['strategy'] = full_text[len(full_text)//2:]
+        
+        # Extract target items (O3 often mentions specific items)
+        items_mentioned = []
+        content_lower = full_text.lower()
+        item_names = ['apple', 'jewel', 'stone', 'quill', 'pencil']
+        for item in item_names:
+            if item in content_lower:
+                items_mentioned.append(item.title())
+        result['target_items'] = items_mentioned[:3]  # Limit to top 3
+        
+        # Extract anticipated resistance (O3 often mentions other agents)
+        resistance_mentions = []
+        if 'haiku' in content_lower or 'other' in content_lower:
+            resistance_mentions.append("May face resistance from other agents")
+        if 'unanimous' in content_lower:
+            resistance_mentions.append("Need unanimous approval")
+        result['anticipated_resistance'] = resistance_mentions
+        
+        return result
     
     def _build_context_messages(self, context: NegotiationContext, 
                                prompt: str) -> List[Dict[str, str]]:
