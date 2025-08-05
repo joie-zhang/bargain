@@ -1485,8 +1485,20 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
     
     def _parse_private_voting_response(self, response_content, agent_id, enumerated_proposals):
         """Parse the private voting response with robust error handling and O3 support."""
+        
+        # Check for O3 format first - O3 rarely provides clean JSON
+        if 'o3' in agent_id.lower():
+            self.logger.debug(f"O3 agent detected - checking format for {agent_id}")
+            self.logger.debug(f"Response preview: {response_content[:200]}...")
+            
+            if self._is_o3_voting_format(response_content, agent_id):
+                self.logger.info(f"✅ Detected O3 voting format, using specialized parser")
+                return self._parse_o3_voting_format(response_content, agent_id, enumerated_proposals)
+            else:
+                self.logger.warning(f"❌ O3 format not detected, falling back to JSON parsing")
+        
         try:
-            # Try direct JSON parsing first
+            # Try direct JSON parsing for Claude agents or well-formatted O3 responses
             import json
             if response_content.strip().startswith('{'):
                 voting_data = json.loads(response_content)
@@ -1497,11 +1509,7 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 if json_match:
                     voting_data = json.loads(json_match.group(0))
                 else:
-                    # Check if this is O3's format (often provides detailed analysis instead of JSON)
-                    if self._is_o3_voting_format(response_content, agent_id):
-                        return self._parse_o3_voting_format(response_content, agent_id, enumerated_proposals)
-                    else:
-                        raise ValueError("No JSON found in response")
+                    raise ValueError("No JSON found in response")
             
             # Validate votes structure
             if "votes" not in voting_data:
@@ -1538,7 +1546,7 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
         except Exception as e:
             self.logger.warning(f"Failed to parse private voting response from {agent_id}: {e}")
             # Log the actual response for debugging O3 format
-            self.logger.debug(f"Raw O3 voting response: {response_content[:500]}...")
+            self.logger.warning(f"Raw O3 voting response: {response_content[:500]}...")
             
             # Try O3 format parsing as last resort
             if 'o3' in agent_id.lower():
@@ -1575,65 +1583,172 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
             'utility' in content_lower,
             'reasoning' in content_lower or 'rationale' in content_lower,
             len(response_content) > 100,  # O3 tends to be verbose
-            'stone' in content_lower or 'kite' in content_lower or 'hat' in content_lower  # Item references
+            any(item in content_lower for item in ['camera', 'apple', 'notebook', 'flower', 'pencil', 'stone', 'kite', 'hat'])  # Item references
         ]
         
         return sum(o3_indicators) >= 4
     
     def _parse_o3_voting_format(self, response_content, agent_id, enumerated_proposals):
         """Parse O3's analytical voting format and extract structured votes."""
+        self.logger.info(f"Parsing O3 voting format for {agent_id}")
+        self.logger.debug(f"O3 response content: {response_content[:1000]}...")
+        
         content_lower = response_content.lower()
         votes = []
         
-        # Try to extract votes for each proposal
+        # Enhanced pattern matching for O3's verbose style
         for enum_prop in enumerated_proposals:
             prop_num = enum_prop.get('proposal_number')
             
-            # Look for mentions of this proposal number
+            # Multiple patterns for finding proposal references
             prop_patterns = [
                 f"proposal #{prop_num}",
                 f"proposal {prop_num}",
                 f"#{prop_num}",
-                f"option {prop_num}"
+                f"option {prop_num}",
+                f"proposal number {prop_num}",
+                f"the {prop_num}",
+                f"({prop_num})"
             ]
             
-            # Default vote (O3 tends to be cautious, so default to strategic assessment)
-            vote_decision = "reject"  # Conservative default
+            # Default to strategic conservative approach
+            vote_decision = "reject"
             reasoning = f"Strategic analysis of proposal {prop_num}"
             private_rationale = "Analyzed based on utility and strategic considerations"
             
-            # Look for explicit accept/reject signals near proposal mentions
+            # Look for proposal-specific content
+            prop_found = False
             for pattern in prop_patterns:
                 if pattern in content_lower:
-                    # Find context around this proposal mention
-                    prop_context = self._extract_context_around_word(response_content, pattern, 100)
+                    prop_found = True
+                    # Extract dedicated context for this specific proposal
+                    prop_context = self._extract_proposal_specific_context(response_content, prop_num)
                     prop_context_lower = prop_context.lower()
                     
-                    # Look for voting signals
-                    accept_signals = ['accept', 'support', 'approve', 'favor', 'like', 'good', 'yes']
-                    reject_signals = ['reject', 'oppose', 'decline', 'against', 'no', 'poor', 'bad']
+                    self.logger.debug(f"Found proposal {prop_num} context: {prop_context[:100]}...")
                     
-                    accept_count = sum(1 for signal in accept_signals if signal in prop_context_lower)
-                    reject_count = sum(1 for signal in reject_signals if signal in prop_context_lower)
+                    # Enhanced voting signals detection with negation awareness
+                    accept_score = 0
+                    reject_score = 0
                     
-                    if accept_count > reject_count:
+                    # Look for explicit voting statements
+                    prop_sentences = prop_context.split('.')
+                    for sentence in prop_sentences:
+                        sentence_lower = sentence.lower().strip()
+                        
+                        # Skip empty sentences
+                        if not sentence_lower:
+                            continue
+                        
+                        # Check for explicit accept/reject statements
+                        if f'accept' in sentence_lower and f'proposal {prop_num}' in sentence_lower:
+                            # Check for negation
+                            if any(neg in sentence_lower for neg in ["can't", "cannot", "won't", "will not", "not", "don't"]):
+                                reject_score += 3
+                            else:
+                                accept_score += 3
+                        
+                        if f'reject' in sentence_lower and f'proposal {prop_num}' in sentence_lower:
+                            reject_score += 3
+                        
+                        # Look for sentiment words but check for negation
+                        positive_words = ['good', 'excellent', 'reasonable', 'beneficial', 'solid', 'favorable']
+                        negative_words = ['poor', 'bad', 'terrible', 'unfavorable', 'little value', 'unacceptable']
+                        
+                        for word in positive_words:
+                            if word in sentence_lower:
+                                # Check for negation nearby
+                                if any(neg in sentence_lower for neg in ["not", "don't", "isn't", "aren't", "can't", "won't"]):
+                                    reject_score += 1
+                                else:
+                                    accept_score += 1
+                        
+                        for word in negative_words:
+                            if word in sentence_lower:
+                                reject_score += 2
+                    
+                    # Also look for direct vote statements at the end
+                    if f'accept proposal {prop_num}' in content_lower or f'accept {prop_num}' in content_lower:
+                        accept_score += 5
+                    if f'reject proposal {prop_num}' in content_lower or f'reject {prop_num}' in content_lower:
+                        reject_score += 5
+                    
+                    if accept_score > reject_score:
                         vote_decision = "accept"
-                        reasoning = f"Strategic analysis favors proposal {prop_num}"
-                        private_rationale = f"Analysis shows this proposal aligns with strategic interests"
-                    elif reject_count > accept_count:
-                        vote_decision = "reject"  
-                        reasoning = f"Strategic analysis disfavors proposal {prop_num}"
-                        private_rationale = f"Analysis shows this proposal doesn't align with strategic interests"
+                        reasoning = f"Analysis indicates positive assessment of proposal {prop_num}"
+                        private_rationale = f"Strategic evaluation favors this proposal"
+                    elif reject_score > accept_score:
+                        vote_decision = "reject"
+                        reasoning = f"Analysis indicates negative assessment of proposal {prop_num}"
+                        private_rationale = f"Strategic evaluation opposes this proposal"
+                    
+                    # Try to extract actual reasoning from O3's text
+                    if prop_context:
+                        # Look for complete sentences containing reasoning keywords
+                        sentences = prop_context.split('.')
+                        best_reasoning = None
+                        for sentence in sentences:
+                            sentence_clean = sentence.strip()
+                            if len(sentence_clean) > 10:  # Ignore fragments
+                                sentence_lower = sentence_clean.lower()
+                                reasoning_keywords = ['because', 'since', 'reason', 'utility', 'value', 'gives me', 'provides', 'allocation']
+                                if any(word in sentence_lower for word in reasoning_keywords):
+                                    # Take the full sentence but limit to reasonable length
+                                    if len(sentence_clean) <= 300:
+                                        best_reasoning = sentence_clean
+                                        break
+                                    else:
+                                        # For very long sentences, take first part with some context
+                                        best_reasoning = sentence_clean[:250] + "..."
+                                        break
+                        
+                        if best_reasoning:
+                            reasoning = best_reasoning
+                            # Also try to extract a better private rationale from the same context
+                            rationale_keywords = ['because', 'since', 'therefore', 'strategy', 'maximize', 'minimize']
+                            for sentence in sentences:
+                                sentence_clean = sentence.strip() 
+                                if len(sentence_clean) > 15 and sentence_clean != best_reasoning:
+                                    sentence_lower = sentence_clean.lower()
+                                    if any(word in sentence_lower for word in rationale_keywords):
+                                        # Clean up any contamination from proposal enumeration
+                                        if "proposal #" not in sentence_lower and "by " not in sentence_lower:
+                                            private_rationale = sentence_clean[:200]
+                                            break
                     
                     break
             
-            # Special case: if O3 mentions specific items they want in context of this proposal
-            if prop_num == 1:  # Proposal 1 analysis
-                prop1_context = self._extract_proposal_context(response_content, 1)
-                if self._o3_items_match_proposal(prop1_context, enum_prop):
-                    vote_decision = "accept"
-                    reasoning = "This proposal aligns with my strategic preferences"
-                    private_rationale = "Maximizes utility for my preferred items"
+            if not prop_found:
+                # Look for final vote summary statements like "My votes are: reject proposal 1, accept proposal 2"
+                final_vote_patterns = [
+                    f"reject proposal {prop_num}",
+                    f"accept proposal {prop_num}", 
+                    f"reject {prop_num}",
+                    f"accept {prop_num}",
+                    f"vote reject on proposal {prop_num}",
+                    f"vote accept on proposal {prop_num}"
+                ]
+                
+                for pattern in final_vote_patterns:
+                    if pattern in content_lower:
+                        if "reject" in pattern:
+                            vote_decision = "reject"
+                            reasoning = f"Explicit reject vote for proposal {prop_num}"
+                        else:
+                            vote_decision = "accept"
+                            reasoning = f"Explicit accept vote for proposal {prop_num}"
+                        break
+                else:
+                    # If no specific proposal mention found, try to infer from overall sentiment
+                    overall_accept_signals = content_lower.count('accept') + content_lower.count('support')
+                    overall_reject_signals = content_lower.count('reject') + content_lower.count('oppose')
+                    
+                    if overall_accept_signals > overall_reject_signals and prop_num <= 2:
+                        # Lean accept for first couple proposals if generally positive
+                        vote_decision = "accept"
+                        reasoning = f"Inferred positive sentiment toward proposal {prop_num}"
+            
+            self.logger.debug(f"O3 vote for proposal {prop_num}: {vote_decision} - {reasoning}")
             
             votes.append({
                 "proposal_number": prop_num,
@@ -1642,6 +1757,7 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 "private_rationale": private_rationale
             })
         
+        self.logger.info(f"O3 parsed votes: {[v['vote'] for v in votes]}")
         return {"votes": votes}
     
     def _extract_proposal_context(self, text, prop_num):
@@ -1651,6 +1767,54 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
         for pattern in patterns:
             if pattern.lower() in text.lower():
                 return self._extract_context_around_word(text, pattern, 150)
+        
+        return ""
+    
+    def _extract_proposal_specific_context(self, text, prop_num):
+        """Extract context specifically for one proposal, avoiding contamination from others."""
+        text_lower = text.lower()
+        
+        # Find the section that talks about this specific proposal
+        patterns = [f"proposal #{prop_num}", f"proposal {prop_num}", f"for proposal {prop_num}"]
+        
+        for pattern in patterns:
+            pattern_pos = text_lower.find(pattern)
+            if pattern_pos != -1:
+                # Look for the end of this proposal's discussion
+                # Usually marked by next proposal or end of major section
+                start_pos = max(0, pattern_pos - 50)  # Small lead-in context
+                
+                # Find where this proposal's discussion ends
+                next_patterns = [f"proposal #{prop_num + 1}", f"proposal {prop_num + 1}", f"for proposal {prop_num + 1}"]
+                end_pos = len(text)
+                
+                for next_pattern in next_patterns:
+                    next_pos = text_lower.find(next_pattern, pattern_pos + len(pattern))
+                    if next_pos != -1:
+                        end_pos = next_pos
+                        break
+                
+                # Also check for section breaks like double newlines
+                section_break = text.find('\n\n', pattern_pos + len(pattern))
+                if section_break != -1 and section_break < end_pos:
+                    end_pos = section_break
+                
+                # Extract just this proposal's context
+                proposal_context = text[start_pos:end_pos].strip()
+                
+                # Clean up any obvious contamination
+                lines = proposal_context.split('\n')
+                clean_lines = []
+                for line in lines:
+                    line_clean = line.strip()
+                    # Skip lines that are clearly from other proposals or system text
+                    if line_clean and not any(exclude in line.lower() for exclude in [
+                        f'proposal #{prop_num + 1}', f'proposal #{prop_num - 1}',
+                        'by o3_agent', 'by haiku_agent', 'allocation:', 'reasoning:'
+                    ]):
+                        clean_lines.append(line_clean)
+                
+                return ' '.join(clean_lines)
         
         return ""
     
