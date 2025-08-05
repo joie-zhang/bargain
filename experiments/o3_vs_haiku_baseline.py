@@ -793,6 +793,13 @@ The game will begin shortly. Please acknowledge that you understand these rules 
                 # Get agent's private strategic thinking
                 thinking_response = await agent.think_strategy(thinking_prompt, context)
                 
+                # Simplified O3 thinking debugging - only log empty responses
+                if 'o3' in agent.agent_id.lower():
+                    if not thinking_response.get('reasoning') and not thinking_response.get('strategy'):
+                        print(f"\n⚠️  O3 thinking response is mostly empty for {agent.agent_id}")
+                        print(f"Response keys with content: {[k for k, v in thinking_response.items() if v]}")
+                        print("This may indicate a token limit issue.\n")
+                
                 self.logger.info(f"[PRIVATE] {agent.agent_id} strategic thinking:")
                 self.logger.info(f"  Thought process: {thinking_response.get('reasoning', 'No reasoning provided')}")
                 self.logger.info(f"  Proposal strategy: {thinking_response.get('strategy', 'No strategy provided')}")
@@ -1004,6 +1011,13 @@ Use actual agent IDs as keys and item indices (0-{len(items)-1}) as values. Ever
     
     def _parse_strategic_proposal_response(self, response_content, agent_id, round_num):
         """Parse the strategic proposal response with enhanced error handling and O3 support."""
+        
+        # Simplified O3 debugging - only log failures
+        if 'o3' in agent_id.lower() and len(response_content) == 0:
+            print(f"\n⚠️  O3 proposal response is empty for {agent_id} in round {round_num}")
+            print(f"Response length: {len(response_content)} characters")
+            print("This indicates a token limit or API issue.\n")
+        
         try:
             # Try direct JSON parsing first
             import json
@@ -1041,6 +1055,11 @@ Use actual agent IDs as keys and item indices (0-{len(items)-1}) as values. Ever
             return proposal
             
         except Exception as e:
+            if 'o3' in agent_id.lower():
+                print(f"\n❌ EXCEPTION in O3 proposal parsing: {e}")
+                print(f"Exception type: {type(e)}")
+                print("Attempting O3 format parsing as fallback...\n")
+            
             self.logger.warning(f"Failed to parse strategic proposal from {agent_id}: {e}")
             # Log the actual response for debugging
             self.logger.debug(f"Raw O3 response content: {response_content[:500]}...")
@@ -1486,6 +1505,11 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
     def _parse_private_voting_response(self, response_content, agent_id, enumerated_proposals):
         """Parse the private voting response with robust error handling and O3 support."""
         
+        # Simplified O3 voting debugging - only log empty responses  
+        if 'o3' in agent_id.lower() and len(response_content) == 0:
+            print(f"\n⚠️  O3 voting response is empty for {agent_id}")
+            print("This indicates a token limit or API issue.\n")
+        
         # Check for O3 format first - O3 rarely provides clean JSON
         if 'o3' in agent_id.lower():
             self.logger.debug(f"O3 agent detected - checking format for {agent_id}")
@@ -1544,6 +1568,11 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
             return {"votes": votes}
             
         except Exception as e:
+            if 'o3' in agent_id.lower():
+                print(f"\n❌ EXCEPTION in O3 voting parsing: {e}")
+                print(f"Exception type: {type(e)}")
+                print("Attempting O3 voting format parsing as fallback...\n")
+            
             self.logger.warning(f"Failed to parse private voting response from {agent_id}: {e}")
             # Log the actual response for debugging O3 format
             self.logger.warning(f"Raw O3 voting response: {response_content[:500]}...")
@@ -1551,8 +1580,11 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
             # Try O3 format parsing as last resort
             if 'o3' in agent_id.lower():
                 try:
-                    return self._parse_o3_voting_format(response_content, agent_id, enumerated_proposals)
-                except:
+                    result = self._parse_o3_voting_format(response_content, agent_id, enumerated_proposals)
+                    print(f"✅ O3 format parsing succeeded as fallback")
+                    return result
+                except Exception as fallback_e:
+                    print(f"❌ O3 format parsing also failed: {fallback_e}")
                     pass
             
             # Return fallback votes (reject all)
