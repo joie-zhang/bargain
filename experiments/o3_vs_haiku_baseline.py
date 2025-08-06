@@ -362,9 +362,26 @@ class O3VsHaikuExperiment:
                 final_utilities = voting_results["final_utilities"]
                 winner_agent_id = voting_results["winner_agent_id"]
                 self.logger.info(f"🎉 Consensus reached in round {round_num}!")
+                
+                # Phase 7A: Individual Reflection on successful consensus
+                self.logger.info("Individual reflection phase on consensus...")
+                reflection_results = await self._run_individual_reflection_phase(
+                    agents, items, preferences, round_num, config["t_rounds"],
+                    voting_results, consensus_reached=True
+                )
+                conversation_logs.extend(reflection_results["messages"])
                 break
             else:
                 self.logger.info(f"❌ No consensus in round {round_num}")
+                
+                # Phase 7A: Individual Reflection on failed round (if not final round)
+                if round_num < config["t_rounds"]:
+                    self.logger.info("Individual reflection phase on round outcomes...")
+                    reflection_results = await self._run_individual_reflection_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        voting_results, consensus_reached=False
+                    )
+                    conversation_logs.extend(reflection_results["messages"])
         
         # Get agent performance stats
         agent_performance = {}
@@ -2066,6 +2083,211 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
             "chosen_proposal": chosen_proposal,
             "vote_results": vote_results
         }
+    
+    async def _run_individual_reflection_phase(self, agents, items, preferences, round_num, max_rounds, voting_results, consensus_reached=False):
+        """
+        Phase 7A: Individual Reflection
+        Each agent privately reflects on round outcomes and learns from the experience.
+        """
+        messages = []
+        
+        self.logger.info(f"=== INDIVIDUAL REFLECTION PHASE - Round {round_num} ===")
+        
+        # Each agent reflects privately on what happened
+        for agent in agents:
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=[a.agent_id for a in agents],
+                agent_id=agent.agent_id,
+                preferences=preferences["agent_preferences"][agent.agent_id],
+                turn_type="reflection"
+            )
+            
+            try:
+                # Generate reflection prompt based on round outcome
+                reflection_prompt = self._create_individual_reflection_prompt(
+                    items, agent.agent_id, round_num, max_rounds, 
+                    voting_results, consensus_reached
+                )
+                
+                # Get agent's private reflection
+                self.logger.info(f"🤔 {agent.agent_id} reflecting on round {round_num}...")
+                response = await agent.think_privately(context, reflection_prompt)
+                
+                # Phase 7B: Extract and update memory with key takeaways
+                key_takeaways = await self._extract_key_takeaways(agent, response, round_num, consensus_reached)
+                await self._update_agent_strategic_memory(agent, key_takeaways, round_num)
+                
+                # Create reflection message for logging
+                reflection_message = {
+                    "phase": "individual_reflection",
+                    "round": round_num,
+                    "from": agent.agent_id,
+                    "content": f"Completed private reflection on round {round_num} outcomes",
+                    "key_takeaways": key_takeaways,
+                    "timestamp": time.time(),
+                    "agent_id": agent.agent_id,
+                    "message_type": "private_reflection"
+                }
+                messages.append(reflection_message)
+                
+                self.logger.info(f"  {agent.agent_id} completed reflection with {len(key_takeaways)} key takeaways")
+                
+            except Exception as e:
+                self.logger.error(f"Error in individual reflection for {agent.agent_id}: {e}")
+                # Add error message for tracking
+                error_message = {
+                    "phase": "individual_reflection",
+                    "round": round_num,
+                    "from": agent.agent_id,
+                    "content": f"Reflection failed: {str(e)}",
+                    "error": True,
+                    "timestamp": time.time()
+                }
+                messages.append(error_message)
+        
+        self.logger.info("Individual reflection phase completed - agents have updated their strategic memory")
+        
+        return {"messages": messages}
+    
+    def _create_individual_reflection_prompt(self, items, agent_id, round_num, max_rounds, voting_results, consensus_reached):
+        """Create a comprehensive reflection prompt for agents to analyze round outcomes."""
+        outcome_text = "CONSENSUS ACHIEVED! 🎉" if consensus_reached else "No consensus reached ❌"
+        
+        # Get voting summary for context
+        vote_summary = self._format_voting_summary_for_reflection(voting_results)
+        
+        urgency_note = ""
+        if round_num >= max_rounds - 1 and not consensus_reached:
+            urgency_note = "\n⚠️ **CRITICAL**: This was one of the final rounds. Analyze what prevented consensus."
+        elif not consensus_reached and round_num < max_rounds:
+            urgency_note = f"\n🔄 **STRATEGY UPDATE**: {max_rounds - round_num} rounds remaining. What needs to change?"
+        
+        return f"""🤔 PRIVATE REFLECTION TIME - Round {round_num}/{max_rounds}
+
+**ROUND OUTCOME:** {outcome_text}
+
+**WHAT HAPPENED THIS ROUND:**
+{vote_summary}
+
+**YOUR REFLECTION TASK:**
+Analyze what happened in this round and extract strategic insights for future rounds. Consider:
+
+**1. PROPOSAL ANALYSIS:**
+- Which proposals were most/least successful and why?
+- What made some proposals more acceptable than others?
+- How did other agents' strategic positioning affect outcomes?
+
+**2. VOTING PATTERNS:**
+- What voting patterns emerged among different agents?
+- Which agents seem to have aligned vs. conflicting interests?
+- Are there signs of strategic voting (not just utility maximization)?
+
+**3. COMMUNICATION INSIGHTS:**
+- What did you learn about other agents' preferences from their discussion?
+- Which agents were more/less transparent about their preferences?
+- Did any agents use strategic communication (misleading, pressure, etc.)?
+
+**4. STRATEGIC LEARNINGS:**
+- What worked well in your approach this round?
+- What would you do differently if you could replay this round?
+- How should you adjust your strategy for future rounds?
+
+**5. RELATIONSHIP DYNAMICS:**
+- Are there potential coalition opportunities with specific agents?
+- Which agents might be easiest/hardest to negotiate with?
+- Are there signs of other agents trying to exploit or manipulate you?
+
+{urgency_note}
+
+**PROVIDE YOUR ANALYSIS:**
+Reflect deeply on these questions and provide strategic insights that will help you negotiate more effectively in future rounds. Focus on actionable learnings that will improve your decision-making."""
+    
+    def _format_voting_summary_for_reflection(self, voting_results):
+        """Format voting results in a concise way for reflection prompts."""
+        if not voting_results.get("vote_results"):
+            return "No voting data available for reflection."
+        
+        summary_lines = []
+        vote_results = voting_results["vote_results"]
+        
+        for prop_num, result in vote_results.items():
+            proposal = result.get("proposal", {})
+            proposer = proposal.get("proposer", f"Agent_{prop_num}")
+            allocation = proposal.get("allocation", {})
+            
+            accept_count = result.get("accept_count", 0)
+            total_votes = len(result.get("votes", []))
+            unanimous = result.get("unanimous", False)
+            
+            status = "ACCEPTED ✅" if unanimous else f"{accept_count}/{total_votes} votes"
+            summary_lines.append(f"Proposal #{prop_num} (by {proposer}): {allocation} → {status}")
+        
+        return "\n".join(summary_lines) if summary_lines else "No proposals were submitted."
+    
+    async def _extract_key_takeaways(self, agent, reflection_response, round_num, consensus_reached):
+        """Extract key strategic takeaways from an agent's reflection."""
+        # For now, we'll extract key insights from the reflection content
+        # This could be enhanced with more sophisticated NLP in the future
+        
+        key_takeaways = []
+        
+        # Add basic contextual takeaway
+        outcome = "consensus achieved" if consensus_reached else "consensus failed"
+        key_takeaways.append(f"Round {round_num}: {outcome}")
+        
+        # Try to extract strategic insights from the response
+        if hasattr(reflection_response, 'content') and reflection_response.content:
+            response_text = reflection_response.content.lower()
+            
+            # Look for strategic insights in the response
+            if "coalition" in response_text or "alliance" in response_text:
+                key_takeaways.append(f"Round {round_num}: Identified potential coalition opportunities")
+            
+            if "exploit" in response_text or "manipulat" in response_text:
+                key_takeaways.append(f"Round {round_num}: Detected strategic manipulation attempts")
+            
+            if "transparent" in response_text or "honest" in response_text:
+                key_takeaways.append(f"Round {round_num}: Analyzed agent transparency levels")
+            
+            if "adjust" in response_text or "change strategy" in response_text:
+                key_takeaways.append(f"Round {round_num}: Identified need for strategy adjustment")
+        
+        # Always include at least one substantive takeaway
+        if len(key_takeaways) == 1:  # Only the basic outcome
+            key_takeaways.append(f"Round {round_num}: Gained strategic insights for future negotiations")
+        
+        return key_takeaways
+    
+    async def _update_agent_strategic_memory(self, agent, key_takeaways, round_num):
+        """
+        Phase 7B: Memory Update
+        Update agent's strategic memory with key takeaways from the round.
+        """
+        # Add takeaways to agent's strategic memory
+        for takeaway in key_takeaways:
+            agent.strategic_memory.append(takeaway)
+        
+        # Add round completion marker
+        agent.strategic_memory.append(f"Completed reflection for round {round_num}")
+        
+        # Trim memory if it gets too long (keep last 20 entries)
+        if len(agent.strategic_memory) > 20:
+            agent.strategic_memory = agent.strategic_memory[-20:]
+        
+        # Update conversation memory with reflection completion
+        agent.conversation_memory.append({
+            "type": "reflection_completed",
+            "round": round_num,
+            "takeaways_count": len(key_takeaways),
+            "timestamp": time.time()
+        })
+        
+        # Trim conversation memory if needed (keep last 50 entries)
+        if len(agent.conversation_memory) > 50:
+            agent.conversation_memory = agent.conversation_memory[-50:]
     
     def _calculate_utilities_from_proposal(self, proposal, agents, preferences):
         """Calculate final utilities for each agent based on a chosen proposal."""
