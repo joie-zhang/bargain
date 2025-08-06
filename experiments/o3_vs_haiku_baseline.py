@@ -1643,10 +1643,10 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 f"({prop_num})"
             ]
             
-            # Default to strategic conservative approach
-            vote_decision = "reject"
-            reasoning = f"Strategic analysis of proposal {prop_num}"
-            private_rationale = "Analyzed based on utility and strategic considerations"
+            # No default fallback - force explicit parsing or failure
+            vote_decision = None
+            reasoning = None
+            private_rationale = None
             
             # Look for proposal-specific content
             prop_found = False
@@ -1707,12 +1707,14 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                     
                     if accept_score > reject_score:
                         vote_decision = "accept"
-                        reasoning = f"Analysis indicates positive assessment of proposal {prop_num}"
-                        private_rationale = f"Strategic evaluation favors this proposal"
+                        # Try to find actual reasoning, no generic fallbacks
+                        reasoning = self._extract_actual_reasoning(prop_context, prop_num) or f"[PARSING ERROR: Could not extract reasoning for accept vote on proposal {prop_num}]"
+                        private_rationale = self._extract_actual_private_rationale(prop_context, prop_num) or f"[PARSING ERROR: Could not extract private rationale for proposal {prop_num}]"
                     elif reject_score > accept_score:
                         vote_decision = "reject"
-                        reasoning = f"Analysis indicates negative assessment of proposal {prop_num}"
-                        private_rationale = f"Strategic evaluation opposes this proposal"
+                        # Try to find actual reasoning, no generic fallbacks
+                        reasoning = self._extract_actual_reasoning(prop_context, prop_num) or f"[PARSING ERROR: Could not extract reasoning for reject vote on proposal {prop_num}]"
+                        private_rationale = self._extract_actual_private_rationale(prop_context, prop_num) or f"[PARSING ERROR: Could not extract private rationale for proposal {prop_num}]"
                     
                     # Try to extract actual reasoning from O3's text
                     if prop_context:
@@ -1765,20 +1767,20 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                     if pattern in content_lower:
                         if "reject" in pattern:
                             vote_decision = "reject"
-                            reasoning = f"Explicit reject vote for proposal {prop_num}"
+                            reasoning = self._extract_actual_reasoning(content_lower, prop_num) or f"[PARSING ERROR: Found explicit reject but no reasoning for proposal {prop_num}]"
+                            private_rationale = self._extract_actual_private_rationale(content_lower, prop_num) or f"[PARSING ERROR: Found explicit reject but no private rationale for proposal {prop_num}]"
                         else:
                             vote_decision = "accept"
-                            reasoning = f"Explicit accept vote for proposal {prop_num}"
+                            reasoning = self._extract_actual_reasoning(content_lower, prop_num) or f"[PARSING ERROR: Found explicit accept but no reasoning for proposal {prop_num}]"
+                            private_rationale = self._extract_actual_private_rationale(content_lower, prop_num) or f"[PARSING ERROR: Found explicit accept but no private rationale for proposal {prop_num}]"
                         break
-                else:
-                    # If no specific proposal mention found, try to infer from overall sentiment
-                    overall_accept_signals = content_lower.count('accept') + content_lower.count('support')
-                    overall_reject_signals = content_lower.count('reject') + content_lower.count('oppose')
-                    
-                    if overall_accept_signals > overall_reject_signals and prop_num <= 2:
-                        # Lean accept for first couple proposals if generally positive
-                        vote_decision = "accept"
-                        reasoning = f"Inferred positive sentiment toward proposal {prop_num}"
+                # No else clause - if no patterns found, leave vote_decision as None to trigger the validation error
+            
+            # Validate that we actually parsed the vote - no silent defaults!
+            if vote_decision is None or reasoning is None or private_rationale is None:
+                self.logger.error(f"Failed to parse O3 vote for proposal {prop_num}")
+                self.logger.error(f"Raw response content for debugging:\n{response_content}")
+                raise ValueError(f"O3 voting parser failed to extract vote_decision='{vote_decision}', reasoning='{reasoning}', private_rationale='{private_rationale}' for proposal {prop_num}. Check logs for raw response content.")
             
             self.logger.debug(f"O3 vote for proposal {prop_num}: {vote_decision} - {reasoning}")
             
@@ -1791,6 +1793,38 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
         
         self.logger.info(f"O3 parsed votes: {[v['vote'] for v in votes]}")
         return {"votes": votes}
+    
+    def _extract_actual_reasoning(self, prop_context, prop_num):
+        """Extract actual reasoning from O3's response, return None if not found."""
+        if not prop_context:
+            return None
+            
+        # Look for sentences containing reasoning indicators
+        sentences = prop_context.split('.')
+        for sentence in sentences:
+            sentence_clean = sentence.strip()
+            if len(sentence_clean) > 20:  # Must be substantial
+                sentence_lower = sentence_clean.lower()
+                reasoning_keywords = ['because', 'since', 'reason', 'utility', 'value', 'gives me', 'provides', 'allocation', 'worth', 'benefit']
+                if any(word in sentence_lower for word in reasoning_keywords):
+                    return sentence_clean
+        return None
+    
+    def _extract_actual_private_rationale(self, prop_context, prop_num):
+        """Extract actual private rationale from O3's response, return None if not found."""
+        if not prop_context:
+            return None
+            
+        # Look for strategic thinking or internal reasoning
+        sentences = prop_context.split('.')
+        for sentence in sentences:
+            sentence_clean = sentence.strip()
+            if len(sentence_clean) > 15:  # Must be substantial
+                sentence_lower = sentence_clean.lower()
+                strategic_keywords = ['strategy', 'strategic', 'maximize', 'optimal', 'best for me', 'my utility', 'advantage', 'position']
+                if any(word in sentence_lower for word in strategic_keywords):
+                    return sentence_clean
+        return None
     
     def _extract_proposal_context(self, text, prop_num):
         """Extract context specifically about a proposal number."""
