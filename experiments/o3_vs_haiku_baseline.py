@@ -1625,6 +1625,25 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
         self.logger.info(f"Parsing O3 voting format for {agent_id}")
         self.logger.debug(f"O3 response content: {response_content[:1000]}...")
         
+        # First, try to parse as JSON (O3's preferred format)
+        try:
+            import json
+            # Try to extract JSON from the response
+            json_start = response_content.find('{')
+            json_end = response_content.rfind('}') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                json_content = response_content[json_start:json_end]
+                parsed_data = json.loads(json_content)
+                
+                if 'votes' in parsed_data and isinstance(parsed_data['votes'], list):
+                    self.logger.info(f"Successfully parsed O3 JSON voting format with {len(parsed_data['votes'])} votes")
+                    return parsed_data  # Return the parsed JSON directly
+                    
+        except (json.JSONDecodeError, ValueError) as e:
+            self.logger.debug(f"JSON parsing failed, falling back to text parsing: {e}")
+        
+        # Fallback to text parsing if JSON parsing fails
         content_lower = response_content.lower()
         votes = []
         
