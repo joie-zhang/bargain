@@ -842,18 +842,17 @@ class AnthropicAgent(BaseLLMAgent):
             else:
                 user_messages.append(msg)
         
-        # Call Anthropic API (without max_tokens limitation)
+        # Call Anthropic API (max_tokens is required)
         api_params = {
             "model": self.model_name,
             "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,  # Required by Anthropic API
             "system": system_message,
             "messages": user_messages,
             **self.config.custom_parameters,
             **kwargs
         }
         
-        # Remove max_tokens to allow unlimited generation
-        # Max tokens will be determined by the model's capabilities
         response = await self.client.messages.create(**api_params)
         
         response_time = time.time() - start_time

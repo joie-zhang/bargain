@@ -303,7 +303,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.CLAUDE_3_HAIKU,
             api_key=anthropic_api_key,
             temperature=0.7,
-            max_tokens=999999,  # Unlimited
+            max_tokens=4000,  # Reasonable limit for Claude Haiku
             system_prompt="You are participating in a negotiation. Try to do your best to get good outcomes."
         ),
         AgentConfiguration(
@@ -311,7 +311,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.CLAUDE_3_HAIKU,
             api_key=anthropic_api_key,
             temperature=0.7,
-            max_tokens=999999,  # Unlimited
+            max_tokens=4000,  # Reasonable limit for Claude Haiku
             system_prompt="You are participating in a negotiation. Try to do your best to get good outcomes."
         )
     ]
