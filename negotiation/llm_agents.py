@@ -790,6 +790,67 @@ Keep your response conversational and authentic. Respond as you would in a real 
             "conversation_length": len(self.conversation_memory)
         }
     
+    async def think_privately(self, context: NegotiationContext, reflection_prompt: str) -> Any:
+        """
+        Generate private reflection thoughts for post-round analysis.
+        
+        This method allows agents to privately reflect on round outcomes and
+        extract strategic insights for future negotiations.
+        """
+        # Wait for rate limits
+        await self.rate_limiter.wait_if_needed()
+        
+        # Build messages for reflection prompt
+        reflection_messages = self._build_reflection_messages(context, reflection_prompt)
+        
+        # Call LLM for private reflection
+        for attempt in range(self.config.max_retries):
+            try:
+                response = await self._call_llm_api(reflection_messages)
+                
+                # Update tracking
+                self.total_requests += 1
+                if response.tokens_used:
+                    self.total_tokens += response.tokens_used
+                if response.cost_estimate:
+                    self.total_cost += response.cost_estimate
+                self.response_times.append(response.response_time)
+                
+                # Store reflection in conversation memory
+                self.conversation_memory.append({
+                    "type": "private_reflection",
+                    "round": context.current_round,
+                    "content": response.content[:500] if response.content else "",  # Truncated for memory
+                    "timestamp": time.time()
+                })
+                
+                return response
+                
+            except Exception as e:
+                self.logger.error(f"Private reflection attempt {attempt + 1} failed: {e}")
+                if attempt == self.config.max_retries - 1:
+                    raise
+        
+        return None
+    
+    def _build_reflection_messages(self, context: NegotiationContext, reflection_prompt: str) -> List[Dict[str, str]]:
+        """Build messages for private reflection."""
+        messages = [
+            {"role": "system", "content": f"You are {context.agent_id}, a strategic negotiation agent reflecting privately on round outcomes."},
+            {"role": "user", "content": reflection_prompt}
+        ]
+        
+        # Add relevant strategic memory context if available
+        if self.strategic_memory:
+            recent_memory = self.strategic_memory[-5:]  # Last 5 strategic memories
+            memory_context = "\n".join(recent_memory)
+            messages.append({
+                "role": "user", 
+                "content": f"Your recent strategic memory:\n{memory_context}\n\nNow provide your reflection on this round:"
+            })
+        
+        return messages
+    
     def export_conversation_memory(self, filepath: str) -> None:
         """Export conversation memory to file."""
         filepath = Path(filepath)
