@@ -75,6 +75,39 @@ def test_voting_summary_formatting():
     
     print("✅ Voting summary formatting works correctly")
 
+def test_takeaway_extraction_returns_raw_content():
+    """Test that takeaway extraction returns the agent's actual reflection content."""
+    experiment = O3VsHaikuExperiment()
+    
+    # Mock response with actual reflection content
+    class MockResponse:
+        def __init__(self, content):
+            self.content = content
+    
+    # Mock agent
+    class MockAgent:
+        def __init__(self):
+            self.agent_id = "test_agent"
+    
+    agent = MockAgent()
+    mock_response = MockResponse("I learned that building coalitions is crucial. The voting patterns suggest agent transparency varies significantly. I need to adjust my communication strategy to be more persuasive while remaining trustworthy.")
+    
+    # Test extraction
+    import asyncio
+    async def test_extraction():
+        reflection_content = await experiment._extract_key_takeaways(
+            agent, mock_response, round_num=1, consensus_reached=False
+        )
+        return reflection_content
+    
+    result = asyncio.run(test_extraction())
+    
+    # Should return the exact content, not template-based extraction
+    expected = "I learned that building coalitions is crucial. The voting patterns suggest agent transparency varies significantly. I need to adjust my communication strategy to be more persuasive while remaining trustworthy."
+    assert result == expected
+    
+    print("✅ Takeaway extraction returns raw agent reflection content")
+
 
 if __name__ == "__main__":
     print("Testing Individual Reflection Phase Implementation...")
@@ -83,6 +116,7 @@ if __name__ == "__main__":
     test_reflection_phase_components()
     test_reflection_prompt_generation()
     test_voting_summary_formatting()
+    test_takeaway_extraction_returns_raw_content()
     
     print("\n🎉 All basic tests passed! Reflection phase is correctly implemented.")
     print("\nPhase 5 Implementation Status:")
