@@ -2116,9 +2116,9 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 self.logger.info(f"🤔 {agent.agent_id} reflecting on round {round_num}...")
                 response = await agent.think_privately(context, reflection_prompt)
                 
-                # Phase 7B: Extract and update memory with key takeaways
-                key_takeaways = await self._extract_key_takeaways(agent, response, round_num, consensus_reached)
-                await self._update_agent_strategic_memory(agent, key_takeaways, round_num)
+                # Phase 7B: Extract and update memory with reflection content
+                reflection_content = await self._extract_key_takeaways(agent, response, round_num, consensus_reached)
+                await self._update_agent_strategic_memory(agent, reflection_content, round_num)
                 
                 # Create reflection message for logging
                 reflection_message = {
@@ -2126,14 +2126,15 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                     "round": round_num,
                     "from": agent.agent_id,
                     "content": f"Completed private reflection on round {round_num} outcomes",
-                    "key_takeaways": key_takeaways,
+                    "reflection_content": reflection_content,
                     "timestamp": time.time(),
                     "agent_id": agent.agent_id,
                     "message_type": "private_reflection"
                 }
                 messages.append(reflection_message)
                 
-                self.logger.info(f"  {agent.agent_id} completed reflection with {len(key_takeaways)} key takeaways")
+                reflection_length = len(reflection_content) if isinstance(reflection_content, str) else 0
+                self.logger.info(f"  {agent.agent_id} completed reflection ({reflection_length} characters)")
                 
             except Exception as e:
                 self.logger.error(f"Error in individual reflection for {agent.agent_id}: {e}")
@@ -2228,47 +2229,31 @@ Reflect deeply on these questions and provide strategic insights that will help 
         return "\n".join(summary_lines) if summary_lines else "No proposals were submitted."
     
     async def _extract_key_takeaways(self, agent, reflection_response, round_num, consensus_reached):
-        """Extract key strategic takeaways from an agent's reflection."""
-        # For now, we'll extract key insights from the reflection content
-        # This could be enhanced with more sophisticated NLP in the future
-        
-        key_takeaways = []
-        
-        # Add basic contextual takeaway
-        outcome = "consensus achieved" if consensus_reached else "consensus failed"
-        key_takeaways.append(f"Round {round_num}: {outcome}")
-        
-        # Try to extract strategic insights from the response
+        """Return the agent's actual reflection content as their key takeaways."""
+        # Return the raw reflection content instead of template-based extraction
         if hasattr(reflection_response, 'content') and reflection_response.content:
-            response_text = reflection_response.content.lower()
+            # Return the agent's actual reflection, preserving their unique insights
+            return reflection_response.content.strip()
+        else:
+            # Visible error when fallback is triggered
+            error_msg = f"🚨 REFLECTION EXTRACTION FAILED for {agent.agent_id} in round {round_num}"
+            self.logger.error(error_msg)
+            self.logger.error(f"   Reflection response: {reflection_response}")
+            self.logger.error(f"   Response type: {type(reflection_response)}")
+            if hasattr(reflection_response, '__dict__'):
+                self.logger.error(f"   Response attributes: {reflection_response.__dict__}")
             
-            # Look for strategic insights in the response
-            if "coalition" in response_text or "alliance" in response_text:
-                key_takeaways.append(f"Round {round_num}: Identified potential coalition opportunities")
-            
-            if "exploit" in response_text or "manipulat" in response_text:
-                key_takeaways.append(f"Round {round_num}: Detected strategic manipulation attempts")
-            
-            if "transparent" in response_text or "honest" in response_text:
-                key_takeaways.append(f"Round {round_num}: Analyzed agent transparency levels")
-            
-            if "adjust" in response_text or "change strategy" in response_text:
-                key_takeaways.append(f"Round {round_num}: Identified need for strategy adjustment")
-        
-        # Always include at least one substantive takeaway
-        if len(key_takeaways) == 1:  # Only the basic outcome
-            key_takeaways.append(f"Round {round_num}: Gained strategic insights for future negotiations")
-        
-        return key_takeaways
+            # Fallback content with clear error indication
+            outcome = "consensus achieved" if consensus_reached else "consensus failed"
+            return f"⚠️ FALLBACK REFLECTION - Round {round_num}: {outcome}. Original reflection extraction failed - check logs for details."
     
-    async def _update_agent_strategic_memory(self, agent, key_takeaways, round_num):
+    async def _update_agent_strategic_memory(self, agent, reflection_content, round_num):
         """
         Phase 7B: Memory Update
-        Update agent's strategic memory with key takeaways from the round.
+        Update agent's strategic memory with reflection content from the round.
         """
-        # Add takeaways to agent's strategic memory
-        for takeaway in key_takeaways:
-            agent.strategic_memory.append(takeaway)
+        # Add the full reflection content to strategic memory
+        agent.strategic_memory.append(f"Round {round_num} reflection: {reflection_content}")
         
         # Add round completion marker
         agent.strategic_memory.append(f"Completed reflection for round {round_num}")
@@ -2281,7 +2266,7 @@ Reflect deeply on these questions and provide strategic insights that will help 
         agent.conversation_memory.append({
             "type": "reflection_completed",
             "round": round_num,
-            "takeaways_count": len(key_takeaways),
+            "reflection_length": len(reflection_content) if isinstance(reflection_content, str) else 0,
             "timestamp": time.time()
         })
         
