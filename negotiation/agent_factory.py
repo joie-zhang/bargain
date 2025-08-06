@@ -295,7 +295,7 @@ def create_o3_vs_haiku_experiment(
             model_type=ModelType.O3,
             api_key=openai_api_key,
             temperature=1.0,  # O3 only supports temperature=1
-            max_tokens=999999,  # Unlimited
+            max_tokens=4000,  # Reasonable limit
             system_prompt="You are a highly capable AI agent. Be strategic and aim to maximize your utility in this negotiation."
         ),
         AgentConfiguration(
