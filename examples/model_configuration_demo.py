@@ -412,18 +412,23 @@ def demo_gemini_gemma_showcase():
                 if model.input_cost_per_1m:
                     print(f"      Cost: ${model.input_cost_per_1m:.3f}/${model.output_cost_per_1m:.2f} per 1M tokens")
     
-    # Show Gemma models
+    # Show Gemma models by generation
     print("\n🔓 Open Source Gemma Models:")
-    gemma_models = ["gemma-2-27b", "gemma-2-12b", "gemma-2-4b", "gemma-2-1b"]
     
-    for model_id in gemma_models:
+    print("\n  📅 Gemma 2 Series (2B, 9B, 27B):")
+    gemma_2_models = ["gemma-2-2b", "gemma-2-9b", "gemma-2-27b"]
+    for model_id in gemma_2_models:
         model = registry.get_model(model_id)
         if model:
-            print(f"\n  🤖 {model.display_name}:")
-            print(f"    VRAM: {model.estimated_vram_gb}GB")
-            print(f"    Speed: {model.estimated_speed}")
-            print(f"    GPU Required: {'Yes' if model.requires_gpu else 'No'}")
-            print(f"    Reasoning: {model.reasoning_capability}")
+            print(f"    • {model.display_name}: {model.estimated_vram_gb}GB VRAM, {model.reasoning_capability} reasoning")
+    
+    print("\n  📅 Gemma 3 Series (1B, 4B, 12B, 27B):")
+    gemma_3_models = ["gemma-3-1b", "gemma-3-4b", "gemma-3-12b", "gemma-3-27b"]
+    for model_id in gemma_3_models:
+        model = registry.get_model(model_id)
+        if model:
+            cpu_note = " (CPU-compatible!)" if not model.requires_gpu else ""
+            print(f"    • {model.display_name}: {model.estimated_vram_gb}GB VRAM, {model.reasoning_capability} reasoning{cpu_note}")
     
     # Load and show the showcase configuration
     print("\n⚙️  Gemini/Gemma Showcase Configuration:")
@@ -474,7 +479,7 @@ def demo_cost_estimation():
     # Show cost-effectiveness analysis
     print("\n📈 Cost-Effectiveness Analysis:")
     print("  For budget-conscious experiments:")
-    budget_models = ["gemini-2.5-flash", "gemini-1.5-flash", "claude-3-haiku", "gemma-2-4b"]
+    budget_models = ["gemini-2.5-flash", "gemini-1.5-flash", "claude-3-haiku", "gemma-3-4b", "gemma-2-9b"]
     for model_id in budget_models:
         model = registry.get_model(model_id)
         if model:
