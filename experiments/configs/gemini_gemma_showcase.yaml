@@ -1,0 +1,196 @@
+# Gemini and Gemma Models Showcase Configuration
+# This configuration demonstrates the full range of Google's models
+
+config_name: "gemini_gemma_showcase"
+description: "Showcase experiment featuring the latest Gemini models and open-source Gemma variants"
+version: "1.0"
+
+# Provider configurations
+providers:
+  google:
+    provider: "google"
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+    max_retries: 3
+    retry_delay: 1.0
+
+  openrouter:
+    provider: "openrouter"
+    requests_per_minute: 100
+    tokens_per_minute: 200000
+    max_retries: 3
+    retry_delay: 1.0
+
+# Available models - showcasing the full range
+available_models:
+  # Latest Gemini 2.5 series
+  gemini-2.5-pro:
+    display_name: "Gemini 2.5 Pro"
+    family: "gemini"
+    provider: "google"
+    api_model_name: "gemini-2.5-pro"
+    context_window: 2000000
+    supports_system_prompt: true
+    supports_vision: true
+    supports_function_calling: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+    input_cost_per_1m: 1.25
+    output_cost_per_1m: 2.50
+
+  gemini-2.5-flash:
+    display_name: "Gemini 2.5 Flash"
+    family: "gemini"
+    provider: "google"
+    api_model_name: "gemini-2.5-flash"
+    context_window: 1000000
+    supports_system_prompt: true
+    supports_vision: true
+    supports_function_calling: true
+    reasoning_capability: "high"
+    estimated_speed: "fast"
+    input_cost_per_1m: 0.075
+    output_cost_per_1m: 0.30
+
+  # Gemini 2.0 series
+  gemini-2.0-flash:
+    display_name: "Gemini 2.0 Flash"
+    family: "gemini"
+    provider: "google"
+    api_model_name: "gemini-2.0-flash"
+    context_window: 1000000
+    supports_system_prompt: true
+    supports_vision: true
+    supports_function_calling: true
+    reasoning_capability: "high"
+    estimated_speed: "fast"
+    input_cost_per_1m: 0.075
+    output_cost_per_1m: 0.30
+
+  # Legacy but powerful Gemini 1.5
+  gemini-1.5-pro:
+    display_name: "Gemini 1.5 Pro"
+    family: "gemini"
+    provider: "google"
+    api_model_name: "gemini-1.5-pro"
+    context_window: 2000000
+    supports_system_prompt: true
+    supports_vision: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+    input_cost_per_1m: 1.25
+    output_cost_per_1m: 5.0
+
+  # Gemma models via OpenRouter
+  gemma-2-27b:
+    display_name: "Gemma 2 27B"
+    family: "gemma"
+    provider: "openrouter"
+    api_model_name: "google/gemma-2-27b-it"
+    context_window: 8192
+    supports_system_prompt: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+    requires_gpu: true
+    estimated_vram_gb: 54
+
+  gemma-2-12b:
+    display_name: "Gemma 2 12B"
+    family: "gemma"
+    provider: "openrouter"
+    api_model_name: "google/gemma-2-12b-it"
+    context_window: 8192
+    supports_system_prompt: true
+    reasoning_capability: "medium"
+    estimated_speed: "fast"
+    requires_gpu: true
+    estimated_vram_gb: 24
+
+  gemma-2-4b:
+    display_name: "Gemma 2 4B"
+    family: "gemma"
+    provider: "openrouter"
+    api_model_name: "google/gemma-2-4b-it"
+    context_window: 8192
+    supports_system_prompt: true
+    reasoning_capability: "medium"
+    estimated_speed: "fast"
+    requires_gpu: true
+    estimated_vram_gb: 8
+
+# Agent configurations showcasing different model tiers
+agents:
+  # High-end reasoning agent
+  - agent_id: "flagship_gemini_pro"
+    model_id: "gemini-2.5-pro"
+    temperature: 0.7
+    max_output_tokens: 2048
+    strategic_level: "balanced"
+    reasoning_steps: true
+    system_prompt: |
+      You are a sophisticated AI negotiator powered by Gemini 2.5 Pro.
+      You excel at complex reasoning, strategic thinking, and finding creative solutions.
+      Use your advanced capabilities to analyze situations deeply and propose thoughtful agreements.
+
+  # Fast but capable agent  
+  - agent_id: "speedy_flash"
+    model_id: "gemini-2.5-flash"
+    temperature: 0.8
+    max_output_tokens: 1536
+    strategic_level: "cooperative"
+    reasoning_steps: true
+    system_prompt: |
+      You are a quick-thinking negotiator powered by Gemini Flash.
+      You prioritize efficiency while maintaining high-quality reasoning.
+      Focus on finding mutually beneficial solutions rapidly.
+
+  # Open-source powerhouse
+  - agent_id: "open_source_champion"
+    model_id: "gemma-2-27b"
+    temperature: 0.7
+    max_output_tokens: 1536
+    strategic_level: "balanced"
+    reasoning_steps: true
+    system_prompt: |
+      You are an open-source AI representing the democratization of AI technology.
+      You bring transparency and community-driven values to negotiations.
+      Advocate for fair, open solutions that benefit all participants.
+
+  # Lightweight but smart agent
+  - agent_id: "efficient_gemma"
+    model_id: "gemma-2-12b"
+    temperature: 0.6
+    max_output_tokens: 1024
+    strategic_level: "balanced"
+    reasoning_steps: true
+    system_prompt: |
+      You are a resource-efficient negotiator that proves smaller can be smarter.
+      Focus on clear, concise communication and practical solutions.
+      Demonstrate that efficiency and effectiveness go hand in hand.
+
+  # Ultra-fast baseline
+  - agent_id: "compact_gemma"
+    model_id: "gemma-2-4b"
+    temperature: 0.7
+    max_output_tokens: 1024
+    strategic_level: "cooperative"
+    reasoning_steps: false  # Keep it simple for faster processing
+    system_prompt: |
+      You are a compact AI agent focused on straightforward, honest negotiation.
+      Keep your responses clear and to the point.
+      Aim for simple, fair solutions that everyone can understand.
+
+# Default API keys (will use environment variables)
+default_api_keys: {}
+
+# Validation rules for this showcase
+validation_rules:
+  min_agents: 5
+  max_agents: 5
+  temperature_range: [0.1, 1.0]
+  require_system_prompt_support: true
+  
+  # Showcase-specific rules
+  require_google_models: true  # Must have at least one Google model
+  require_gemma_models: true   # Must have at least one Gemma model
+  max_high_cost_models: 2      # Limit expensive models
