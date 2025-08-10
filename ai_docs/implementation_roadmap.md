@@ -107,7 +107,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 **Objective**: Major refactor of o3_vs_haiku_baseline.py for full configurability via YAML
 - **Deliverables**:
   - **Model Configuration**: Support for OpenAI models (O4-mini, O3, GPT-5, GPT-4o, gpt-oss, etc.), Claude models (Haiku, Sonnet, Opus), Llama models, Gemini models, Qwen models, either through their native API or via OpenRouter or, for open-weight models, when executed from a local copy of the model from the Princeton cluster from the filepath /scratch/gpfs/DANQIC/models/
-  - **Environment Parameters**: Configurable n (number of agents), m (number of items), t (number of rounds)
+  - **Environment Parameters**: Configurable n (number of agents), m (number of items), t (number of rounds), γ (discount factor)
   - **Preference Systems**: Choose between vector preferences or matrix preferences via config
   - **Competition Level**: Configurable cosine similarity (e.g., 0.1 for low competition, 0.95 for high competition)
   - **Proposal Order Analysis**: 
