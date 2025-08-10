@@ -28,7 +28,8 @@ from negotiation import (
     AgentFactory,
     create_o3_vs_haiku_experiment,
     ModelType,
-    NegotiationContext
+    NegotiationContext,
+    UtilityEngine
 )
 
 
@@ -119,6 +120,9 @@ class O3VsHaikuExperiment:
             "random_seed": None,
             "max_reflection_chars": 2000  # Cap reflection content to reduce token waste
         }
+        
+        # Initialize utility engine (will be configured per experiment)
+        self.utility_engine = None
     
     async def run_single_experiment(self, 
                                   experiment_config: Optional[Dict[str, Any]] = None,
@@ -142,6 +146,10 @@ class O3VsHaikuExperiment:
         config = {**self.default_config}
         if experiment_config:
             config.update(experiment_config)
+        
+        # Initialize utility engine with discount factor
+        gamma_discount = config.get("gamma_discount", 0.9)
+        self.utility_engine = UtilityEngine(gamma=gamma_discount, logger=self.logger)
         
         # Create experiment configuration
         try:
@@ -2056,8 +2064,8 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 self.logger.info(f"🎲 MULTIPLE UNANIMOUS PROPOSALS! Randomly selected Proposal #{chosen_proposal['proposal_number']} by {chosen_proposal['proposer']}")
                 self.logger.info(f"   Other unanimous proposals: {[p['proposal']['proposal_number'] for p in unanimous_proposals if p['proposal'] != chosen_proposal]}")
             
-            # Calculate final utilities based on chosen proposal
-            final_utilities = self._calculate_utilities_from_proposal(chosen_proposal, agents, preferences)
+            # Calculate final utilities based on chosen proposal (with round-based discounting)
+            final_utilities = self._calculate_utilities_from_proposal(chosen_proposal, agents, preferences, round_num)
             
             # Determine winner (highest utility)
             if final_utilities:
@@ -2274,8 +2282,39 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
         if len(agent.conversation_memory) > 50:
             agent.conversation_memory = agent.conversation_memory[-50:]
     
-    def _calculate_utilities_from_proposal(self, proposal, agents, preferences):
-        """Calculate final utilities for each agent based on a chosen proposal."""
+    def _calculate_utilities_from_proposal(self, proposal, agents, preferences, round_number=0):
+        """
+        Calculate final utilities for each agent based on a chosen proposal.
+        
+        Uses the enhanced utility engine with discount factor applied based on round number.
+        """
+        if not self.utility_engine:
+            self.logger.warning("Utility engine not initialized, using simple calculation")
+            return self._calculate_utilities_legacy(proposal, agents, preferences)
+        
+        allocation = proposal.get('allocation', {})
+        
+        try:
+            # Use the enhanced utility engine with proper discounting
+            final_utilities = self.utility_engine.calculate_all_utilities(
+                allocation=allocation,
+                preferences=preferences,
+                round_number=round_number,
+                include_details=False
+            )
+            
+            # Log utility calculation details for debugging
+            self.logger.info(f"Calculated utilities with discount factor {self.utility_engine.gamma}^{round_number} = {self.utility_engine.gamma**round_number:.4f}")
+            
+            return final_utilities
+            
+        except Exception as e:
+            self.logger.error(f"Error in enhanced utility calculation: {e}")
+            self.logger.info("Falling back to legacy utility calculation")
+            return self._calculate_utilities_legacy(proposal, agents, preferences)
+    
+    def _calculate_utilities_legacy(self, proposal, agents, preferences):
+        """Legacy utility calculation without discount factor (fallback)."""
         final_utilities = {}
         allocation = proposal.get('allocation', {})
         
@@ -2386,46 +2425,64 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
         winner_agent_id = None
         
         if consensus_reached:
-            # Calculate final utilities
+            # Calculate final utilities using enhanced utility engine
             self.logger.info(f"Calculating utilities from proposal: {test_proposal['allocation']}")
             
-            for agent in agents:
-                agent_prefs = preferences["agent_preferences"][agent.agent_id]
+            try:
+                # Use the enhanced utility engine with proper discounting
+                final_utilities = self.utility_engine.calculate_all_utilities(
+                    allocation=test_proposal['allocation'],
+                    preferences=preferences,
+                    round_number=round_num,
+                    include_details=False
+                ) if self.utility_engine else {}
                 
-                # Try to find allocation for this agent
-                allocated_items = []
+                # Log utility details
+                for agent_id, utility in final_utilities.items():
+                    allocated_items = test_proposal['allocation'].get(agent_id, [])
+                    self.logger.info(f"  {agent_id}: allocated items {allocated_items}, utility = {utility:.2f}")
                 
-                # Check if allocation uses the same agent ID
-                if agent.agent_id in test_proposal['allocation']:
-                    allocated_items = test_proposal['allocation'][agent.agent_id]
-                else:
-                    # Check if allocation uses different naming (agent_0, agent_1, etc.)
-                    # Map back to find the right allocation
-                    agent_idx = None
-                    if agent.agent_id == agents[0].agent_id:
-                        agent_idx = 0
-                    elif agent.agent_id == agents[1].agent_id:
-                        agent_idx = 1
-                    elif agent.agent_id == agents[2].agent_id:
-                        agent_idx = 2
+            except Exception as e:
+                self.logger.error(f"Error in enhanced utility calculation: {e}")
+                self.logger.info("Falling back to legacy utility calculation")
+                
+                # Fallback to legacy calculation
+                for agent in agents:
+                    agent_prefs = preferences["agent_preferences"][agent.agent_id]
                     
-                    if agent_idx is not None:
-                        # Try various naming patterns
-                        possible_keys = [f"agent_{agent_idx}", f"agent{agent_idx}", str(agent_idx)]
-                        for key in possible_keys:
-                            if key in test_proposal['allocation']:
-                                allocated_items = test_proposal['allocation'][key]
-                                break
-                
-                # Calculate utility
-                if allocated_items:
-                    agent_utility = sum(agent_prefs[item_id] for item_id in allocated_items if item_id < len(agent_prefs))
-                else:
-                    agent_utility = 0.0
-                
-                final_utilities[agent.agent_id] = agent_utility
-                
-                self.logger.info(f"  {agent.agent_id}: allocated items {allocated_items}, utility = {agent_utility:.2f}")
+                    # Try to find allocation for this agent
+                    allocated_items = []
+                    
+                    # Check if allocation uses the same agent ID
+                    if agent.agent_id in test_proposal['allocation']:
+                        allocated_items = test_proposal['allocation'][agent.agent_id]
+                    else:
+                        # Check if allocation uses different naming (agent_0, agent_1, etc.)
+                        # Map back to find the right allocation
+                        agent_idx = None
+                        if agent.agent_id == agents[0].agent_id:
+                            agent_idx = 0
+                        elif agent.agent_id == agents[1].agent_id:
+                            agent_idx = 1
+                        elif agent.agent_id == agents[2].agent_id:
+                            agent_idx = 2
+                        
+                        if agent_idx is not None:
+                            # Try various naming patterns
+                            possible_keys = [f"agent_{agent_idx}", f"agent{agent_idx}", str(agent_idx)]
+                            for key in possible_keys:
+                                if key in test_proposal['allocation']:
+                                    allocated_items = test_proposal['allocation'][key]
+                                    break
+                    
+                    # Calculate utility (without discount)
+                    if allocated_items:
+                        agent_utility = sum(agent_prefs[item_id] for item_id in allocated_items if item_id < len(agent_prefs))
+                    else:
+                        agent_utility = 0.0
+                    
+                    final_utilities[agent.agent_id] = agent_utility
+                    self.logger.info(f"  {agent.agent_id}: allocated items {allocated_items}, utility = {agent_utility:.2f}")
             
             # Determine winner
             if final_utilities:
