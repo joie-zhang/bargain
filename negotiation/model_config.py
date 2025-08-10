@@ -430,7 +430,7 @@ class ModelRegistry:
             output_cost_per_1m=0.15
         ))
         
-        # Gemma models (open source from Google)
+        # Gemma 2 models (2B, 9B, 27B variants)
         self.register_model(ModelSpec(
             model_id="gemma-2-27b",
             display_name="Gemma 2 27B",
@@ -446,11 +446,54 @@ class ModelRegistry:
         ))
         
         self.register_model(ModelSpec(
-            model_id="gemma-2-12b",
-            display_name="Gemma 2 12B", 
+            model_id="gemma-2-9b",
+            display_name="Gemma 2 9B", 
             family=ModelFamily.GEMMA,
             provider=ModelProvider.OPENROUTER,
-            api_model_name="google/gemma-2-12b-it",
+            api_model_name="google/gemma-2-9b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="fast",
+            requires_gpu=True,
+            estimated_vram_gb=18
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemma-2-2b",
+            display_name="Gemma 2 2B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-2-2b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="fast",
+            requires_gpu=True,
+            estimated_vram_gb=4
+        ))
+        
+        # Gemma 3 models (latest: 1B, 4B, 12B, 27B variants)
+        self.register_model(ModelSpec(
+            model_id="gemma-3-27b",
+            display_name="Gemma 3 27B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-3-27b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="high",
+            estimated_speed="medium",
+            requires_gpu=True,
+            estimated_vram_gb=54
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemma-3-12b",
+            display_name="Gemma 3 12B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-3-12b-it",
             context_window=8192,
             supports_system_prompt=True,
             reasoning_capability="medium",
@@ -460,11 +503,11 @@ class ModelRegistry:
         ))
         
         self.register_model(ModelSpec(
-            model_id="gemma-2-4b",
-            display_name="Gemma 2 4B",
+            model_id="gemma-3-4b",
+            display_name="Gemma 3 4B",
             family=ModelFamily.GEMMA,
             provider=ModelProvider.OPENROUTER,
-            api_model_name="google/gemma-2-4b-it",
+            api_model_name="google/gemma-3-4b-it",
             context_window=8192,
             supports_system_prompt=True,
             reasoning_capability="medium",
@@ -474,11 +517,11 @@ class ModelRegistry:
         ))
         
         self.register_model(ModelSpec(
-            model_id="gemma-2-1b",
-            display_name="Gemma 2 1B",
+            model_id="gemma-3-1b",
+            display_name="Gemma 3 1B",
             family=ModelFamily.GEMMA,
             provider=ModelProvider.OPENROUTER,
-            api_model_name="google/gemma-2-1b-it",
+            api_model_name="google/gemma-3-1b-it",
             context_window=8192,
             supports_system_prompt=True,
             reasoning_capability="low",

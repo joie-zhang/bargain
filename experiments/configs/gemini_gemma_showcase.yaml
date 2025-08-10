@@ -81,12 +81,12 @@ available_models:
     input_cost_per_1m: 1.25
     output_cost_per_1m: 5.0
 
-  # Gemma models via OpenRouter
-  gemma-2-27b:
-    display_name: "Gemma 2 27B"
+  # Gemma models via OpenRouter (mix of 2 and 3 series)
+  gemma-3-27b:
+    display_name: "Gemma 3 27B"
     family: "gemma"
     provider: "openrouter"
-    api_model_name: "google/gemma-2-27b-it"
+    api_model_name: "google/gemma-3-27b-it"
     context_window: 8192
     supports_system_prompt: true
     reasoning_capability: "high"
@@ -94,11 +94,11 @@ available_models:
     requires_gpu: true
     estimated_vram_gb: 54
 
-  gemma-2-12b:
-    display_name: "Gemma 2 12B"
+  gemma-3-12b:
+    display_name: "Gemma 3 12B"
     family: "gemma"
     provider: "openrouter"
-    api_model_name: "google/gemma-2-12b-it"
+    api_model_name: "google/gemma-3-12b-it"
     context_window: 8192
     supports_system_prompt: true
     reasoning_capability: "medium"
@@ -106,17 +106,17 @@ available_models:
     requires_gpu: true
     estimated_vram_gb: 24
 
-  gemma-2-4b:
-    display_name: "Gemma 2 4B"
+  gemma-2-9b:
+    display_name: "Gemma 2 9B"
     family: "gemma"
     provider: "openrouter"
-    api_model_name: "google/gemma-2-4b-it"
+    api_model_name: "google/gemma-2-9b-it"
     context_window: 8192
     supports_system_prompt: true
     reasoning_capability: "medium"
     estimated_speed: "fast"
     requires_gpu: true
-    estimated_vram_gb: 8
+    estimated_vram_gb: 18
 
 # Agent configurations showcasing different model tiers
 agents:
@@ -144,41 +144,41 @@ agents:
       You prioritize efficiency while maintaining high-quality reasoning.
       Focus on finding mutually beneficial solutions rapidly.
 
-  # Open-source powerhouse
+  # Open-source powerhouse (latest Gemma 3)
   - agent_id: "open_source_champion"
-    model_id: "gemma-2-27b"
+    model_id: "gemma-3-27b"
     temperature: 0.7
     max_output_tokens: 1536
     strategic_level: "balanced"
     reasoning_steps: true
     system_prompt: |
-      You are an open-source AI representing the democratization of AI technology.
+      You are an open-source AI representing the latest in democratized AI technology.
       You bring transparency and community-driven values to negotiations.
       Advocate for fair, open solutions that benefit all participants.
 
-  # Lightweight but smart agent
+  # Efficient new generation
   - agent_id: "efficient_gemma"
-    model_id: "gemma-2-12b"
+    model_id: "gemma-3-12b"
     temperature: 0.6
     max_output_tokens: 1024
     strategic_level: "balanced"
     reasoning_steps: true
     system_prompt: |
-      You are a resource-efficient negotiator that proves smaller can be smarter.
+      You are a next-generation efficient negotiator from the Gemma 3 series.
       Focus on clear, concise communication and practical solutions.
-      Demonstrate that efficiency and effectiveness go hand in hand.
+      Demonstrate that the latest models can be both capable and resource-efficient.
 
-  # Ultra-fast baseline
-  - agent_id: "compact_gemma"
-    model_id: "gemma-2-4b"
+  # Balanced generation 2 model
+  - agent_id: "balanced_gemma"
+    model_id: "gemma-2-9b"
     temperature: 0.7
     max_output_tokens: 1024
     strategic_level: "cooperative"
-    reasoning_steps: false  # Keep it simple for faster processing
+    reasoning_steps: true
     system_prompt: |
-      You are a compact AI agent focused on straightforward, honest negotiation.
-      Keep your responses clear and to the point.
-      Aim for simple, fair solutions that everyone can understand.
+      You are a well-balanced Gemma 2 model offering solid performance.
+      Keep your responses thoughtful but concise.
+      Aim for practical, fair solutions that work for everyone.
 
 # Default API keys (will use environment variables)
 default_api_keys: {}

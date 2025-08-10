@@ -45,22 +45,37 @@ Proven models with large context windows.
 
 Open-source models from Google that can be run via OpenRouter or locally on Princeton cluster.
 
-### Gemma 2 Series
+### Gemma 2 Series (2B, 9B, 27B)
 
-All models support system prompts and offer competitive performance for their size.
+The established generation with solid performance.
 
 | Model | Display Name | Parameters | VRAM | GPU Required | Reasoning | Speed |
 |-------|-------------|------------|------|--------------|-----------|-------|
 | `gemma-2-27b` | Gemma 2 27B | 27B | 54GB | Yes | High | Medium |
-| `gemma-2-12b` | Gemma 2 12B | 12B | 24GB | Yes | Medium | Fast |
-| `gemma-2-4b` | Gemma 2 4B | 4B | 8GB | Yes | Medium | Fast |
-| `gemma-2-1b` | Gemma 2 1B | 1B | 2GB | No | Low | Very Fast |
+| `gemma-2-9b` | Gemma 2 9B | 9B | 18GB | Yes | Medium | Fast |
+| `gemma-2-2b` | Gemma 2 2B | 2B | 4GB | Yes | Medium | Fast |
 
 **OpenRouter API Names**:
 - `google/gemma-2-27b-it`
-- `google/gemma-2-12b-it`
-- `google/gemma-2-4b-it`
-- `google/gemma-2-1b-it`
+- `google/gemma-2-9b-it`
+- `google/gemma-2-2b-it`
+
+### Gemma 3 Series (1B, 4B, 12B, 27B) - Latest
+
+The newest generation with improved capabilities and efficiency.
+
+| Model | Display Name | Parameters | VRAM | GPU Required | Reasoning | Speed |
+|-------|-------------|------------|------|--------------|-----------|-------|
+| `gemma-3-27b` | Gemma 3 27B | 27B | 54GB | Yes | High | Medium |
+| `gemma-3-12b` | Gemma 3 12B | 12B | 24GB | Yes | Medium | Fast |
+| `gemma-3-4b` | Gemma 3 4B | 4B | 8GB | Yes | Medium | Fast |
+| `gemma-3-1b` | Gemma 3 1B | 1B | 2GB | No | Low | Very Fast |
+
+**OpenRouter API Names**:
+- `google/gemma-3-27b-it`
+- `google/gemma-3-12b-it`
+- `google/gemma-3-4b-it`
+- `google/gemma-3-1b-it`
 
 ## 🚀 Usage Examples
 
@@ -104,17 +119,23 @@ providers:
 available_models:
   gemini-2.5-flash:
     # Cloud-based fast reasoning
-  gemma-2-12b:
-    # Open-source alternative
+  gemma-3-12b:
+    # Latest open-source alternative
+  gemma-2-9b:
+    # Established open-source model
 
 agents:
   - agent_id: "cloud_agent"
     model_id: "gemini-2.5-flash"
     system_prompt: "You are a cloud-powered negotiator with advanced capabilities."
 
-  - agent_id: "open_source_agent"
-    model_id: "gemma-2-12b"
-    system_prompt: "You represent open-source AI values in this negotiation."
+  - agent_id: "open_source_latest"
+    model_id: "gemma-3-12b"
+    system_prompt: "You represent the latest in open-source AI technology."
+    
+  - agent_id: "open_source_stable"
+    model_id: "gemma-2-9b" 
+    system_prompt: "You bring proven open-source reliability to this negotiation."
 ```
 
 ### Princeton Cluster Gemma
