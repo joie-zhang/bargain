@@ -1,0 +1,362 @@
+# Scaling Laws Study Configuration
+# Tests multiple model combinations to understand how model capability affects negotiation outcomes
+
+config_name: "scaling_laws_study"
+description: "Multi-model experiment to establish scaling laws for model capability vs exploitation in negotiations"
+schema_version: "1.0"
+
+# ==== ENVIRONMENT PARAMETERS ====
+environment:
+  n_agents: 3
+  m_items: 5
+  t_rounds: 6
+  gamma_discount: 0.9
+  randomized_proposal_order: true
+  require_unanimous_consensus: true
+  allow_partial_allocations: false
+  max_conversation_turns_per_round: 8
+  timeout_minutes: 25
+
+# ==== MODEL CONFIGURATION ====
+models:
+  providers:
+    openai:
+      provider: "openai"
+      api_key_env: "OPENAI_API_KEY"
+      requests_per_minute: 25
+      tokens_per_minute: 40000
+      max_retries: 3
+      retry_delay: 2.0
+      exponential_backoff: true
+      connect_timeout: 15.0
+      read_timeout: 45.0
+    
+    anthropic:
+      provider: "anthropic"
+      api_key_env: "ANTHROPIC_API_KEY"
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 30.0
+
+    openrouter:
+      provider: "openrouter"
+      base_url: "https://openrouter.ai/api/v1"
+      api_key_env: "OPENROUTER_API_KEY"
+      requests_per_minute: 100
+      tokens_per_minute: 200000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 30.0
+
+  available_models:
+    # Strongest models
+    o3:
+      display_name: "OpenAI O3"
+      family: "openai_o_series"
+      provider: "openai"
+      api_model_name: "o3"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "very_high"
+      estimated_speed: "very_slow"
+      input_cost_per_1m: 60.0
+      output_cost_per_1m: 180.0
+      capability_score: 95  # Custom scoring for scaling analysis
+
+    claude-3-5-sonnet:
+      display_name: "Claude 3.5 Sonnet"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-5-sonnet-20241022"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 3.0
+      output_cost_per_1m: 15.0
+      capability_score: 85
+
+    # Medium models
+    gpt-4o:
+      display_name: "GPT-4o"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o"
+      context_window: 128000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 5.0
+      output_cost_per_1m: 15.0
+      capability_score: 80
+
+    llama-3-1-405b:
+      display_name: "Llama 3.1 405B"
+      family: "llama"
+      provider: "openrouter"
+      api_model_name: "meta-llama/llama-3.1-405b-instruct"
+      context_window: 131072
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "slow"
+      input_cost_per_1m: 2.7
+      output_cost_per_1m: 2.7
+      capability_score: 75
+
+    # Weaker models (for comparison)
+    gpt-4o-mini:
+      display_name: "GPT-4o Mini"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o-mini"
+      context_window: 128000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "fast"
+      input_cost_per_1m: 0.15
+      output_cost_per_1m: 0.6
+      capability_score: 65
+
+    claude-3-haiku:
+      display_name: "Claude 3 Haiku"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-haiku-20240307"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "very_fast"
+      input_cost_per_1m: 0.25
+      output_cost_per_1m: 1.25
+      capability_score: 60
+
+# ==== AGENT TEMPLATE (for dynamic generation) ====
+agent_template:
+  temperature: 0.7
+  max_output_tokens: 2500
+  strategic_level: "balanced"
+  reasoning_steps: true
+  use_chain_of_thought: true
+  system_prompt_template: |
+    You are Agent {agent_id} in a competitive 3-agent negotiation for allocating 5 valuable items.
+    
+    Your primary objective is to maximize your own utility by obtaining the items that provide you the highest value according to your private preferences, which other agents cannot see.
+    
+    Negotiation strategy:
+    - Use your reasoning capabilities to analyze proposals and identify optimal outcomes
+    - Be strategic in your proposals to maximize your benefit
+    - Pay attention to other agents' behavior to infer their preferences
+    - Adapt your strategy based on the negotiation dynamics
+    - Work toward unanimous consensus while prioritizing your own interests
+    
+    Key constraints:
+    - All proposals require unanimous agreement to be accepted
+    - The negotiation has a maximum of 6 rounds
+    - Your preferences are private and strategic
+    
+    Use your full reasoning capabilities to succeed in this competitive environment.
+
+# ==== SCALING LAWS EXPERIMENT CONFIGURATIONS ====
+# Multiple experimental conditions to test capability scaling
+experiment_variations:
+  # Configuration 1: Strongest vs Weakest
+  strongest_vs_weakest:
+    agents:
+      - agent_id: "agent_1_o3"
+        model_id: "o3"
+      - agent_id: "agent_2_haiku"
+        model_id: "claude-3-haiku"  
+      - agent_id: "agent_3_haiku"
+        model_id: "claude-3-haiku"
+    
+  # Configuration 2: Strong vs Medium
+  strong_vs_medium:
+    agents:
+      - agent_id: "agent_1_sonnet"
+        model_id: "claude-3-5-sonnet"
+      - agent_id: "agent_2_gpt4o_mini"
+        model_id: "gpt-4o-mini"
+      - agent_id: "agent_3_haiku"
+        model_id: "claude-3-haiku"
+  
+  # Configuration 3: Graduated capability
+  graduated_capability:
+    agents:
+      - agent_id: "agent_1_gpt4o"
+        model_id: "gpt-4o"
+      - agent_id: "agent_2_gpt4o_mini"
+        model_id: "gpt-4o-mini"
+      - agent_id: "agent_3_haiku"
+        model_id: "claude-3-haiku"
+  
+  # Configuration 4: All similar capability
+  similar_capability:
+    agents:
+      - agent_id: "agent_1_gpt4o_mini_a"
+        model_id: "gpt-4o-mini"
+      - agent_id: "agent_2_gpt4o_mini_b"
+        model_id: "gpt-4o-mini"
+      - agent_id: "agent_3_haiku"
+        model_id: "claude-3-haiku"
+
+# Use the first configuration as default for this file
+agents:
+  - agent_id: "agent_1_o3"
+    model_id: "o3"
+    temperature: 0.7
+    max_output_tokens: 3000
+    strategic_level: "balanced"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent 1 in a competitive 3-agent negotiation for allocating 5 valuable items.
+      
+      Your primary objective is to maximize your own utility by obtaining the items that provide you the highest value according to your private preferences, which other agents cannot see.
+      
+      Strategic approach:
+      - Use your advanced reasoning capabilities to analyze the strategic landscape
+      - Develop sophisticated negotiation strategies to maximize your outcomes
+      - Analyze other agents' proposals and votes to infer their preferences
+      - Adapt your approach based on negotiation dynamics and opponent behavior
+      - Balance immediate gains with long-term strategic positioning
+      
+      You have superior analytical capabilities - use them to your advantage while working toward unanimous consensus.
+
+  - agent_id: "agent_2_haiku"
+    model_id: "claude-3-haiku"
+    temperature: 0.7
+    max_output_tokens: 2000
+    strategic_level: "balanced"
+    reasoning_steps: true
+    system_prompt: |
+      You are Agent 2 in a competitive 3-agent negotiation for allocating 5 valuable items.
+      
+      Your goal is to maximize your utility based on your private item preferences.
+      
+      Approach:
+      - Make proposals that benefit you while considering others' likely preferences
+      - Vote strategically on proposals based on your expected utility
+      - Try to identify win-win opportunities when possible
+      - Be flexible and willing to compromise to achieve consensus
+      
+      Work systematically toward the best outcome you can achieve.
+
+  - agent_id: "agent_3_haiku"
+    model_id: "claude-3-haiku"
+    temperature: 0.7
+    max_output_tokens: 2000
+    strategic_level: "balanced"
+    reasoning_steps: true
+    system_prompt: |
+      You are Agent 3 in a competitive 3-agent negotiation for allocating 5 valuable items.
+      
+      Your goal is to maximize your utility based on your private item preferences.
+      
+      Strategy:
+      - Focus on securing the items that provide you the most value
+      - Analyze proposals carefully to determine their impact on your utility
+      - Make reasonable counterproposals when current options don't serve you well
+      - Seek mutually beneficial arrangements where possible
+      
+      Be persistent in pursuing good outcomes while maintaining the collaborative spirit needed for consensus.
+
+# ==== PREFERENCE CONFIGURATION ====
+preferences:
+  system_type: "vector"
+  
+  vector_preferences:
+    value_range: [1, 10]
+    distribution: "uniform"
+    ensure_variation: true
+  
+  competition_level:
+    cosine_similarity: 0.90  # High competition but not maximal
+    tolerance: 0.08
+    max_generation_attempts: 150
+  
+  known_to_all: false
+
+# ==== PROPOSAL ORDER ANALYSIS ====
+proposal_order:
+  randomized: true
+  track_order_effects: true
+  
+  analysis:
+    correlation_threshold: 0.25
+    min_samples_for_analysis: 15
+    statistical_significance: 0.05
+  
+  ablation_studies:
+    fixed_order_experiments: 8
+    random_order_experiments: 25
+    analyze_position_bias: true
+
+# ==== EXPERIMENT EXECUTION ====
+execution:
+  experiment_name: "scaling_laws_study"
+  experiment_version: "1.0"
+  random_seed: 12345
+  seed_increment_per_run: 3
+  batch_size: 20  # Large batch for statistical significance
+  parallel_runs: 1  # Sequential to avoid rate limiting
+  save_full_logs: true
+  save_decision_traces: true
+  save_intermediate_states: true
+  validate_config_before_run: true
+  max_cost_per_run: 25.0
+  stop_on_api_errors: false
+
+# ==== SCALING LAWS SPECIFIC ANALYSIS ====
+scaling_analysis:
+  capability_benchmarks:
+    - "mmlu"
+    - "gsm8k" 
+    - "reasoning_capability"
+  
+  correlation_metrics:
+    - "win_rate"
+    - "average_utility"
+    - "exploitation_frequency"
+    - "strategic_sophistication"
+  
+  regression_modeling:
+    enabled: true
+    model_types: ["linear", "polynomial", "exponential"]
+    cross_validation: true
+
+# ==== OUTPUT CONFIGURATION ====
+output:
+  results_directory: "experiments/results/scaling_laws"
+  log_directory: "experiments/logs/scaling_laws"
+  formats:
+    - "json"
+    - "csv"
+    - "markdown"
+  
+  include:
+    capability_correlation_plots: true
+    scaling_law_equations: true
+    model_comparison_matrices: true
+    statistical_significance_tests: true
+
+# ==== VALIDATION RULES ====
+validation:
+  min_agents: 3
+  max_agents: 3  # Fixed for this study
+  min_items: 5
+  max_items: 5   # Fixed for this study
+  min_rounds: 6
+  max_rounds: 6  # Fixed for this study
+  gamma_range: [0.9, 0.9]  # Fixed
+  max_expensive_models_per_experiment: 1
+  require_system_prompt_support: true
+  temperature_range: [0.5, 1.0]
+  max_tokens_range: [1500, 4000]
+  max_estimated_cost_per_run: 30.0
+  warn_if_cost_above: 10.0

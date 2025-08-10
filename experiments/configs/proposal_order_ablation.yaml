@@ -1,0 +1,291 @@
+# Proposal Order Ablation Study
+# Specifically designed to isolate and measure proposal order effects
+
+config_name: "proposal_order_ablation"
+description: "Systematic study of proposal order effects with fixed vs randomized orders"
+schema_version: "1.0"
+
+# ==== ENVIRONMENT PARAMETERS ====
+environment:
+  n_agents: 3
+  m_items: 5
+  t_rounds: 5          # Shorter rounds to focus on order effects
+  gamma_discount: 0.85 # Moderate discounting
+  
+  # Order-specific settings
+  randomized_proposal_order: true  # Will be overridden in different experimental conditions
+  require_unanimous_consensus: true
+  allow_partial_allocations: false
+  max_conversation_turns_per_round: 6
+  timeout_minutes: 20
+
+# ==== MODEL CONFIGURATION ====
+models:
+  providers:
+    openai:
+      provider: "openai"
+      api_key_env: "OPENAI_API_KEY"
+      requests_per_minute: 40
+      tokens_per_minute: 60000
+      max_retries: 3
+      retry_delay: 1.5
+      exponential_backoff: true
+      connect_timeout: 12.0
+      read_timeout: 35.0
+
+    anthropic:
+      provider: "anthropic"
+      api_key_env: "ANTHROPIC_API_KEY"
+      requests_per_minute: 80
+      tokens_per_minute: 150000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 25.0
+
+  available_models:
+    gpt-4o:
+      display_name: "GPT-4o"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o"
+      context_window: 128000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 5.0
+      output_cost_per_1m: 15.0
+
+    gpt-4o-mini:
+      display_name: "GPT-4o Mini"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o-mini"
+      context_window: 128000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "fast"
+      input_cost_per_1m: 0.15
+      output_cost_per_1m: 0.6
+
+    claude-3-haiku:
+      display_name: "Claude 3 Haiku"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-haiku-20240307"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "very_fast"
+      input_cost_per_1m: 0.25
+      output_cost_per_1m: 1.25
+
+# ==== AGENT CONFIGURATIONS ====
+agents:
+  # Mix of models to test order effects across different capabilities
+  - agent_id: "agent_alpha"
+    model_id: "gpt-4o"
+    temperature: 0.7
+    max_output_tokens: 2000
+    strategic_level: "balanced"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent Alpha in a 3-agent negotiation for 5 items.
+      
+      Your goal is to maximize your utility based on your private item preferences.
+      Pay attention to the ORDER in which agents make proposals, as this may affect the dynamics.
+      
+      Order-aware strategy:
+      - Consider whether you're proposing first, middle, or last
+      - If you go first, you set the agenda but have less information about others
+      - If you go last, you can respond to others but may seem reactive
+      - Adapt your strategy based on your position in the proposal order
+      
+      Notice patterns in how proposal order affects negotiation outcomes.
+
+  - agent_id: "agent_beta"
+    model_id: "gpt-4o-mini"
+    temperature: 0.7
+    max_output_tokens: 1800
+    strategic_level: "balanced"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent Beta in a 3-agent negotiation for 5 items.
+      
+      Your goal is to maximize your utility based on your private item preferences.
+      Be aware of your position in the proposal order each round.
+      
+      Position-adaptive approach:
+      - First position: Be bold and set favorable terms
+      - Middle position: Build on or counter the first proposal strategically
+      - Last position: Synthesize earlier proposals or offer alternatives
+      
+      Track how your proposal position affects your success rate.
+
+  - agent_id: "agent_gamma"  
+    model_id: "claude-3-haiku"
+    temperature: 0.7
+    max_output_tokens: 1800
+    strategic_level: "balanced"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent Gamma in a 3-agent negotiation for 5 items.
+      
+      Your goal is to maximize your utility based on your private item preferences.
+      Pay careful attention to proposal order dynamics.
+      
+      Order-responsive strategy:
+      - Analyze how your position in the order affects your influence
+      - When early: Take initiative and shape the negotiation
+      - When late: Use information from earlier proposals to your advantage
+      - Look for patterns in how order affects outcomes across rounds
+      
+      Adapt your negotiation tactics based on your proposal position.
+
+# ==== PREFERENCE CONFIGURATION ====
+preferences:
+  system_type: "vector"
+  
+  vector_preferences:
+    value_range: [2, 9]
+    distribution: "uniform"
+    ensure_variation: true
+  
+  competition_level:
+    cosine_similarity: 0.85  # Moderate competition
+    tolerance: 0.06
+    max_generation_attempts: 80
+  
+  known_to_all: false
+
+# ==== PROPOSAL ORDER ANALYSIS (Main Focus) ====
+proposal_order:
+  # Enhanced order analysis for this specific study
+  randomized: true  # Base configuration - will be varied in experiment conditions
+  track_order_effects: true
+  
+  analysis:
+    correlation_threshold: 0.15  # Lower threshold for order effect detection
+    min_samples_for_analysis: 8
+    statistical_significance: 0.1   # Less strict for exploratory order analysis
+  
+  ablation_studies:
+    fixed_order_experiments: 15     # More fixed order runs
+    random_order_experiments: 30    # More random order runs for comparison
+    analyze_position_bias: true
+    
+    # Extended order analysis
+    first_position_advantage_test: true
+    last_position_advantage_test: true
+    middle_position_effects: true
+    
+    # Specific order configurations to test
+    fixed_orders_to_test:
+      - ["agent_alpha", "agent_beta", "agent_gamma"]
+      - ["agent_beta", "agent_gamma", "agent_alpha"]  
+      - ["agent_gamma", "agent_alpha", "agent_beta"]
+      - ["agent_alpha", "agent_gamma", "agent_beta"]
+      - ["agent_beta", "agent_alpha", "agent_gamma"]
+      - ["agent_gamma", "agent_beta", "agent_alpha"]
+
+# ==== EXPERIMENTAL CONDITIONS ====
+experimental_conditions:
+  # Condition 1: Completely fixed order (same every round)
+  completely_fixed:
+    randomized_proposal_order: false
+    fixed_order: ["agent_alpha", "agent_beta", "agent_gamma"]
+    runs: 10
+  
+  # Condition 2: Completely random order (different every round)
+  completely_random:
+    randomized_proposal_order: true
+    runs: 20
+  
+  # Condition 3: Rotate systematically
+  systematic_rotation:
+    randomized_proposal_order: false
+    rotation_pattern: "round_robin"  # Each agent goes first once per 3 rounds
+    runs: 15
+
+# ==== EXPERIMENT EXECUTION ====
+execution:
+  experiment_name: "proposal_order_ablation"
+  experiment_version: "1.0"
+  random_seed: 54321
+  seed_increment_per_run: 5
+  batch_size: 45  # Large batch for statistical power on order effects
+  parallel_runs: 1
+  save_full_logs: true
+  save_decision_traces: true
+  save_intermediate_states: true
+  validate_config_before_run: true
+  max_cost_per_run: 8.0  # Using cheaper models for volume
+  stop_on_api_errors: false
+
+# ==== ORDER-SPECIFIC ANALYSIS ====
+analysis:
+  win_criteria: "highest_utility"
+  track_model_vs_model: true
+  
+  # Order-focused metrics
+  order_effect_analysis:
+    position_bias_measurement: true
+    first_mover_advantage: true
+    last_mover_advantage: true
+    agenda_setting_power: true
+    response_advantage: true
+    
+  # Statistical tests for order effects
+  statistical_tests:
+    chi_square_position_wins: true
+    anova_position_utility: true
+    correlation_position_outcome: true
+    regression_order_effects: true
+  
+  strategic_analysis:
+    detect_manipulation: true
+    detect_gaslighting: false
+    detect_anger: true
+    sentiment_analysis: true
+    
+    # Order-specific strategic patterns
+    detect_agenda_setting: true
+    detect_anchoring_effects: true
+    detect_reactive_patterns: true
+
+# ==== SPECIALIZED OUTPUT FOR ORDER ANALYSIS ====
+output:
+  results_directory: "experiments/results/order_ablation"
+  log_directory: "experiments/logs/order_ablation"
+  formats:
+    - "json"
+    - "csv"
+    - "markdown"
+  
+  # Order-specific outputs
+  include:
+    position_bias_charts: true
+    order_correlation_matrices: true
+    round_by_round_order_tracking: true
+    statistical_significance_tests: true
+    first_vs_last_position_comparison: true
+
+# ==== VALIDATION RULES ====
+validation:
+  min_agents: 3
+  max_agents: 3  # Fixed for order study
+  min_items: 5
+  max_items: 5   # Fixed for order study
+  min_rounds: 4
+  max_rounds: 8
+  gamma_range: [0.8, 0.9]
+  max_expensive_models_per_experiment: 1
+  require_system_prompt_support: true
+  temperature_range: [0.6, 0.8]
+  max_tokens_range: [1500, 2500]
+  max_estimated_cost_per_run: 12.0
+  warn_if_cost_above: 4.0

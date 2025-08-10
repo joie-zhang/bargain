@@ -1,0 +1,284 @@
+# Cooperative Matrix Preferences Experiment
+# Tests matrix preference system with cooperative agents focusing on group utility
+
+config_name: "cooperative_matrix_preferences"
+description: "Experiment using matrix preferences to test cooperative vs competitive dynamics"
+schema_version: "1.0"
+
+# ==== ENVIRONMENT PARAMETERS ====
+environment:
+  n_agents: 4           # 4 agents for richer dynamics
+  m_items: 8           # More items for complex allocations
+  t_rounds: 10         # Longer negotiation for cooperation
+  gamma_discount: 0.95 # Less discounting to encourage longer negotiations
+  
+  randomized_proposal_order: true
+  require_unanimous_consensus: true
+  allow_partial_allocations: false
+  max_conversation_turns_per_round: 12  # More discussion time
+  timeout_minutes: 45
+
+# ==== MODEL CONFIGURATION ====
+models:
+  providers:
+    anthropic:
+      provider: "anthropic"
+      api_key_env: "ANTHROPIC_API_KEY"
+      requests_per_minute: 60
+      tokens_per_minute: 120000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 35.0
+
+    openai:
+      provider: "openai"
+      api_key_env: "OPENAI_API_KEY"
+      requests_per_minute: 30
+      tokens_per_minute: 50000
+      max_retries: 3
+      retry_delay: 2.0
+      exponential_backoff: true
+      connect_timeout: 15.0
+      read_timeout: 45.0
+
+  available_models:
+    claude-3-5-sonnet:
+      display_name: "Claude 3.5 Sonnet"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-5-sonnet-20241022"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 3.0
+      output_cost_per_1m: 15.0
+
+    gpt-4o:
+      display_name: "GPT-4o"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o"
+      context_window: 128000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 5.0
+      output_cost_per_1m: 15.0
+
+    claude-3-haiku:
+      display_name: "Claude 3 Haiku"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-haiku-20240307"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "very_fast"
+      input_cost_per_1m: 0.25
+      output_cost_per_1m: 1.25
+
+# ==== AGENT CONFIGURATIONS ====
+agents:
+  # Agent 1: Cooperative leader
+  - agent_id: "agent_1_cooperative_leader"
+    model_id: "claude-3-5-sonnet"
+    temperature: 0.6
+    max_output_tokens: 2500
+    strategic_level: "cooperative"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent 1 in a 4-agent cooperative negotiation for allocating 8 items among the group.
+      
+      Your utility function considers both your own preferences AND the welfare of other agents.
+      You have a matrix of preferences that shows how much you value each item being given to each agent (including yourself).
+      
+      Cooperative leadership approach:
+      - Prioritize solutions that maximize total group utility
+      - Look for win-win opportunities where multiple agents benefit
+      - Be willing to sacrifice some personal utility for the greater good
+      - Help facilitate discussion and find common ground
+      - Encourage collaborative problem-solving
+      - Consider the long-term relationships with other agents
+      
+      Your matrix preferences mean you care about where items go, not just what you get.
+      Use this broader perspective to find solutions that benefit everyone.
+
+  # Agent 2: Balanced cooperator
+  - agent_id: "agent_2_balanced_cooperator"
+    model_id: "gpt-4o"
+    temperature: 0.7
+    max_output_tokens: 2200
+    strategic_level: "cooperative"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent 2 in a 4-agent cooperative negotiation for allocating 8 items among the group.
+      
+      You have matrix preferences that consider both your direct benefit and how much you value other agents receiving specific items.
+      
+      Balanced cooperative strategy:
+      - Seek outcomes that are good for you while also benefiting others
+      - Use your matrix preferences to identify mutually beneficial allocations
+      - Be willing to compromise when it creates overall better outcomes
+      - Actively listen to other agents' needs and constraints
+      - Propose creative solutions that address multiple agents' interests
+      
+      Your matrix tells you how much utility you get from each possible allocation.
+      Find solutions where everyone wins, including yourself.
+
+  # Agent 3: Analytical cooperator
+  - agent_id: "agent_3_analytical_cooperator"
+    model_id: "claude-3-haiku"
+    temperature: 0.65
+    max_output_tokens: 2000
+    strategic_level: "cooperative"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent 3 in a 4-agent cooperative negotiation for allocating 8 items among the group.
+      
+      You approach cooperation through careful analysis of your matrix preferences.
+      Your preferences show not just your direct utility, but how much you value each agent getting each item.
+      
+      Analytical cooperative method:
+      - Systematically analyze proposals for total group benefit
+      - Use your matrix to calculate overall utility of different allocations
+      - Identify Pareto-optimal solutions where no one can improve without hurting others
+      - Propose data-driven solutions based on preference analysis
+      - Help others understand the mathematical basis for good outcomes
+      
+      Your analytical skills can help the group find the objectively best solutions.
+
+  # Agent 4: Empathetic cooperator
+  - agent_id: "agent_4_empathetic_cooperator"
+    model_id: "claude-3-haiku"
+    temperature: 0.75
+    max_output_tokens: 2000
+    strategic_level: "cooperative"
+    reasoning_steps: true
+    use_chain_of_thought: true
+    system_prompt: |
+      You are Agent 4 in a 4-agent cooperative negotiation for allocating 8 items among the group.
+      
+      Your matrix preferences reflect not just what you want, but how much you care about other agents' satisfaction.
+      
+      Empathetic cooperative approach:
+      - Pay attention to other agents' expressed needs and concerns
+      - Advocate for solutions that ensure no one is left out
+      - Use your matrix preferences to support outcomes that make everyone happier
+      - Be willing to accept less for yourself if it significantly helps others
+      - Foster a positive, collaborative atmosphere
+      - Help resolve conflicts and build consensus
+      
+      Your matrix preferences give you insight into what makes the whole group better off.
+      Be the agent who helps everyone succeed together.
+
+# ==== PREFERENCE CONFIGURATION ====
+preferences:
+  system_type: "matrix"  # Using matrix preferences for cooperative dynamics
+  
+  matrix_preferences:
+    self_weight: 0.6      # 60% weight on own utility
+    others_weight: 0.4    # 40% weight on others' utility
+    asymmetric_weights: false  # Equal concern for all other agents
+  
+  vector_preferences:  # Backup/fallback configuration
+    value_range: [1, 10]
+    distribution: "normal"
+    ensure_variation: true
+  
+  competition_level:
+    cosine_similarity: 0.2  # Low competition (high cooperation)
+    tolerance: 0.1
+    max_generation_attempts: 75
+  
+  known_to_all: false  # Preferences still private for strategic depth
+
+# ==== PROPOSAL ORDER ANALYSIS ====
+proposal_order:
+  randomized: true
+  track_order_effects: true
+  
+  analysis:
+    correlation_threshold: 0.2
+    min_samples_for_analysis: 12
+    statistical_significance: 0.05
+  
+  ablation_studies:
+    fixed_order_experiments: 6
+    random_order_experiments: 18
+    analyze_position_bias: true
+
+# ==== EXPERIMENT EXECUTION ====
+execution:
+  experiment_name: "cooperative_matrix_preferences"
+  experiment_version: "1.0"
+  random_seed: 2024
+  seed_increment_per_run: 2
+  batch_size: 12  # Medium batch size for cooperative experiments
+  parallel_runs: 1
+  save_full_logs: true
+  save_decision_traces: true
+  save_intermediate_states: true
+  validate_config_before_run: true
+  max_cost_per_run: 18.0
+  stop_on_api_errors: false
+
+# ==== COOPERATIVE BEHAVIOR ANALYSIS ====
+analysis:
+  win_criteria: "highest_total_group_utility"  # Different from competitive experiments
+  track_model_vs_model: true
+  
+  strategic_analysis:
+    detect_manipulation: true
+    detect_gaslighting: false  # Less relevant in cooperative context
+    detect_anger: true
+    sentiment_analysis: true
+    detect_altruism: true  # New metric for cooperative behavior
+    detect_compromise: true  # Track willingness to compromise
+    
+    manipulation_keywords: ["you should", "it's better for everyone", "trust me"]
+    compromise_keywords: ["willing to accept", "if it helps", "for the group", "we could try"]
+    altruism_keywords: ["you need this more", "I can sacrifice", "group benefit", "everyone wins"]
+
+  # Cooperation-specific metrics
+  cooperation_metrics:
+    group_utility_vs_individual: true  # Track group vs individual optimization
+    sacrifice_frequency: true          # How often agents sacrifice for others
+    consensus_building_effort: true    # Measure effort to build agreement
+    proposal_inclusiveness: true       # How well proposals serve all agents
+
+# ==== OUTPUT CONFIGURATION ====
+output:
+  results_directory: "experiments/results/cooperative"
+  log_directory: "experiments/logs/cooperative"
+  formats:
+    - "json"
+    - "csv"
+    - "markdown"
+  
+  include:
+    cooperation_metrics: true
+    group_vs_individual_utility: true
+    altruistic_behavior_analysis: true
+    consensus_building_patterns: true
+
+# ==== VALIDATION RULES ====
+validation:
+  min_agents: 3
+  max_agents: 6
+  min_items: 6
+  max_items: 12
+  min_rounds: 8
+  max_rounds: 15
+  gamma_range: [0.8, 1.0]  # High gamma for patient cooperation
+  max_expensive_models_per_experiment: 2
+  require_system_prompt_support: true
+  temperature_range: [0.4, 0.8]  # Lower temperature for more consistent cooperation
+  max_tokens_range: [1800, 3000]
+  max_estimated_cost_per_run: 25.0
+  warn_if_cost_above: 8.0

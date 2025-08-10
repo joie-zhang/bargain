@@ -1,0 +1,447 @@
+# Comprehensive Experiment Configuration Schema
+# This schema defines all possible parameters for configurable multi-agent negotiation experiments
+
+schema_version: "1.0"
+description: "Complete schema for parameterized multi-agent negotiation experiments"
+
+# ==== ENVIRONMENT PARAMETERS ====
+environment:
+  # Core negotiation parameters
+  n_agents: 3           # Number of agents (n)
+  m_items: 5           # Number of items to allocate (m) 
+  t_rounds: 6          # Maximum number of negotiation rounds (t)
+  gamma_discount: 0.9  # Discount factor (γ) for utility calculations
+  
+  # Environment behavior settings
+  randomized_proposal_order: true  # Whether to randomize speaking order each round
+  require_unanimous_consensus: true  # Whether all agents must agree for consensus
+  allow_partial_allocations: false  # Whether items can be split between agents
+  
+  # Termination conditions
+  max_conversation_turns_per_round: 10  # Max discussion exchanges per round
+  timeout_minutes: 30  # Overall experiment timeout
+
+# ==== MODEL CONFIGURATION ====
+models:
+  # Provider configurations with rate limiting
+  providers:
+    openai:
+      provider: "openai"
+      base_url: null  # Use default API endpoint
+      api_key_env: "OPENAI_API_KEY"
+      requests_per_minute: 30
+      tokens_per_minute: 50000
+      max_retries: 3
+      retry_delay: 2.0
+      exponential_backoff: true
+      connect_timeout: 15.0
+      read_timeout: 45.0
+    
+    anthropic:
+      provider: "anthropic"
+      base_url: null
+      api_key_env: "ANTHROPIC_API_KEY" 
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 30.0
+    
+    openrouter:
+      provider: "openrouter"
+      base_url: "https://openrouter.ai/api/v1"
+      api_key_env: "OPENROUTER_API_KEY"
+      requests_per_minute: 100
+      tokens_per_minute: 200000
+      max_retries: 3
+      retry_delay: 1.0
+      exponential_backoff: true
+      connect_timeout: 10.0
+      read_timeout: 30.0
+    
+    local_cluster:
+      provider: "local"
+      base_path: "/scratch/gpfs/DANQIC/models/"
+      gpu_allocation: "1"  # Number of GPUs to request
+      memory_gb: 16
+      timeout_minutes: 60
+
+  # Available model definitions
+  available_models:
+    # OpenAI Models
+    o3:
+      display_name: "OpenAI O3"
+      family: "openai_o_series" 
+      provider: "openai"
+      api_model_name: "o3"
+      context_window: 200000
+      supports_system_prompt: true
+      supports_function_calling: true
+      reasoning_capability: "very_high"
+      estimated_speed: "very_slow"
+      input_cost_per_1m: 60.0
+      output_cost_per_1m: 180.0
+    
+    o3-mini:
+      display_name: "OpenAI O3 Mini"
+      family: "openai_o_series"
+      provider: "openai" 
+      api_model_name: "o3-mini"
+      context_window: 200000
+      supports_system_prompt: true
+      supports_function_calling: true
+      reasoning_capability: "high"
+      estimated_speed: "slow"
+      input_cost_per_1m: 3.0
+      output_cost_per_1m: 12.0
+    
+    gpt-4o:
+      display_name: "GPT-4o"
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o"
+      context_window: 128000
+      supports_system_prompt: true
+      supports_function_calling: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 5.0
+      output_cost_per_1m: 15.0
+    
+    gpt-4o-mini:
+      display_name: "GPT-4o Mini" 
+      family: "gpt4"
+      provider: "openai"
+      api_model_name: "gpt-4o-mini"
+      context_window: 128000
+      supports_system_prompt: true
+      supports_function_calling: true
+      reasoning_capability: "medium"
+      estimated_speed: "fast"
+      input_cost_per_1m: 0.15
+      output_cost_per_1m: 0.6
+    
+    # Anthropic Claude Models
+    claude-3-5-sonnet:
+      display_name: "Claude 3.5 Sonnet"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-5-sonnet-20241022"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 3.0
+      output_cost_per_1m: 15.0
+    
+    claude-3-haiku:
+      display_name: "Claude 3 Haiku"
+      family: "claude"
+      provider: "anthropic"
+      api_model_name: "claude-3-haiku-20240307"
+      context_window: 200000
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "very_fast"
+      input_cost_per_1m: 0.25
+      output_cost_per_1m: 1.25
+    
+    # Models via OpenRouter
+    llama-3-1-405b:
+      display_name: "Llama 3.1 405B"
+      family: "llama"
+      provider: "openrouter"
+      api_model_name: "meta-llama/llama-3.1-405b-instruct"
+      context_window: 131072
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "slow"
+      input_cost_per_1m: 2.7
+      output_cost_per_1m: 2.7
+    
+    gemini-1-5-pro:
+      display_name: "Gemini 1.5 Pro"
+      family: "gemini"
+      provider: "openrouter"
+      api_model_name: "google/gemini-pro-1.5"
+      context_window: 1000000
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      input_cost_per_1m: 2.5
+      output_cost_per_1m: 10.0
+    
+    qwen-2-5-72b:
+      display_name: "Qwen 2.5 72B"
+      family: "qwen"
+      provider: "openrouter"
+      api_model_name: "qwen/qwen-2.5-72b-instruct"
+      context_window: 32768
+      supports_system_prompt: true
+      reasoning_capability: "medium"
+      estimated_speed: "medium"
+      input_cost_per_1m: 0.9
+      output_cost_per_1m: 0.9
+    
+    # Local cluster models (Princeton Della/PLI)
+    llama-3-1-70b-local:
+      display_name: "Llama 3.1 70B (Local)"
+      family: "llama"
+      provider: "local_cluster"
+      model_path: "/scratch/gpfs/DANQIC/models/llama-3.1-70b-instruct"
+      context_window: 131072
+      supports_system_prompt: true
+      reasoning_capability: "high"
+      estimated_speed: "medium"
+      gpu_memory_gb: 80
+
+# ==== AGENT CONFIGURATIONS ====
+agents:
+  # Template for agent configuration
+  # Agents will be instantiated based on this template
+  template:
+    temperature: 0.7
+    max_output_tokens: 2048
+    strategic_level: "balanced"  # Options: cooperative, balanced, competitive
+    reasoning_steps: true
+    use_chain_of_thought: true
+    
+    # Default system prompt template
+    system_prompt_template: |
+      You are Agent {agent_id} in a multi-party negotiation for allocating {m_items} items among {n_agents} participants.
+      
+      Your goal is to maximize your own utility while engaging in {strategic_level} negotiation.
+      You have your own preferences for different items, and other agents have theirs.
+      
+      Key principles for {strategic_level} strategy:
+      - Be strategic but fair in your proposals  
+      - Consider the preferences of other agents to build consensus
+      - Use logical reasoning to support your proposals
+      - Adapt your strategy based on how the negotiation progresses
+      
+      The negotiation will last up to {t_rounds} rounds.
+      Remember: You need unanimous agreement to reach a consensus.
+    
+    # Custom parameters per model family
+    custom_parameters:
+      openai_o_series:
+        reasoning_effort: "high"  # O3-specific
+      claude:
+        thinking_mode: "analytical"
+      llama:
+        instruction_following: "strict"
+
+# ==== PREFERENCE SYSTEMS ====
+preferences:
+  # Choose preference system type
+  system_type: "vector"  # Options: "vector", "matrix"
+  
+  # Vector preferences configuration
+  vector_preferences:
+    value_range: [0, 10]  # Range of preference values
+    distribution: "uniform"  # Options: uniform, normal, exponential
+    ensure_variation: true  # Ensure agents have different preferences
+    
+  # Matrix preferences configuration (for cooperative scenarios)
+  matrix_preferences:
+    self_weight: 0.7      # Weight for own utility
+    others_weight: 0.3    # Weight for others' utility
+    asymmetric_weights: false  # Whether agents weight others differently
+  
+  # Competition level configuration
+  competition_level:
+    cosine_similarity: 0.95  # Target similarity between preference vectors
+    tolerance: 0.05          # Allowed deviation from target similarity
+    max_generation_attempts: 100  # Max tries to achieve target similarity
+  
+  # Preference visibility
+  known_to_all: false  # Whether preferences are public or secret
+
+# ==== PROPOSAL ORDER ANALYSIS ====
+proposal_order:
+  randomized: true  # Whether to randomize proposal order each round
+  track_order_effects: true  # Whether to analyze order effects
+  
+  # Order effect analysis settings
+  analysis:
+    correlation_threshold: 0.3  # Minimum correlation to consider significant
+    min_samples_for_analysis: 10  # Minimum runs needed for order analysis
+    statistical_significance: 0.05  # P-value threshold
+  
+  # Ablation study configuration  
+  ablation_studies:
+    fixed_order_experiments: 5  # Number of runs with fixed order
+    random_order_experiments: 15  # Number of runs with random order
+    analyze_position_bias: true  # Whether first/last position matters
+
+# ==== EXPERIMENT EXECUTION ====
+execution:
+  # Experiment identification
+  experiment_name: "parameterized_negotiation"
+  experiment_version: "1.0"
+  
+  # Reproducibility
+  random_seed: null  # If null, will use current timestamp
+  seed_increment_per_run: 1  # How much to increment seed between runs
+  
+  # Batch configuration
+  batch_size: 1  # Number of runs in a batch
+  parallel_runs: 1  # Number of concurrent experiments (be careful with rate limits)
+  
+  # Output configuration
+  save_full_logs: true  # Whether to save complete conversation logs
+  save_decision_traces: true  # Whether to save agent reasoning traces
+  save_intermediate_states: true  # Whether to save state after each round
+  
+  # Validation and safety
+  validate_config_before_run: true
+  max_cost_per_run: 10.0  # Max $ cost per experiment run
+  stop_on_api_errors: false  # Whether to stop batch on single API failure
+
+# ==== ANALYSIS AND METRICS ====
+analysis:
+  # Win rate analysis
+  win_criteria: "highest_utility"  # Options: highest_utility, consensus_leader
+  track_model_vs_model: true  # Track performance by model type
+  
+  # Strategic behavior detection
+  strategic_analysis:
+    detect_manipulation: true
+    detect_gaslighting: true  
+    detect_anger: true
+    sentiment_analysis: true
+    
+    # Keywords/patterns to look for
+    manipulation_keywords: ["clearly", "obviously", "any reasonable person"]
+    gaslighting_keywords: ["you're confused", "you misunderstood", "that's not what happened"]
+    anger_keywords: ["ridiculous", "unfair", "outrageous", "insulting"]
+  
+  # Scaling laws analysis
+  scaling_laws:
+    capability_proxy_benchmarks: ["mmlu", "gsm8k", "reasoning_capability"]
+    correlation_analysis: true
+    regression_modeling: true
+    
+# ==== OUTPUT CONFIGURATION ====
+output:
+  # File formats and locations
+  results_directory: "experiments/results"
+  log_directory: "experiments/logs"
+  
+  # Output formats
+  formats:
+    - "json"    # Machine-readable results
+    - "csv"     # Tabular data for analysis
+    - "markdown" # Human-readable reports
+  
+  # What to include in outputs
+  include:
+    full_conversations: true
+    utility_calculations: true
+    strategic_behavior_analysis: true
+    timing_information: true
+    model_metadata: true
+    configuration_snapshot: true
+
+# ==== VALIDATION RULES ====
+validation:
+  # Environment constraints
+  min_agents: 2
+  max_agents: 10
+  min_items: 1  
+  max_items: 20
+  min_rounds: 1
+  max_rounds: 20
+  gamma_range: [0.1, 1.0]
+  
+  # Model constraints
+  max_expensive_models_per_experiment: 2  # Limit O3 usage for cost control
+  require_system_prompt_support: true
+  temperature_range: [0.0, 2.0]
+  max_tokens_range: [100, 8192]
+  
+  # Cost constraints
+  max_estimated_cost_per_run: 50.0  # Max estimated $ per run
+  warn_if_cost_above: 5.0  # Warn if estimated cost is high
+  
+  # Time constraints  
+  max_expected_runtime_minutes: 120
+  warn_if_runtime_above_minutes: 30
+
+# ==== SLURM CLUSTER CONFIGURATION ====
+# Configuration for running on Princeton Della/PLI clusters
+cluster:
+  slurm:
+    partition: "gpu"  # Partition to use
+    nodes: 1
+    ntasks_per_node: 1
+    cpus_per_task: 4
+    memory: "32G"
+    time: "02:00:00"  # 2 hours max
+    gres: "gpu:1"  # GPU allocation
+    
+    # Environment setup
+    modules:
+      - "python/3.9"
+      - "cuda/11.8"
+    
+    conda_env: "negotiation"  # Conda environment name
+    
+    # Output files
+    output_pattern: "logs/cluster/exp_%j.out"
+    error_pattern: "logs/cluster/exp_%j.err"
+    
+    # Array job configuration for batch runs
+    array_jobs:
+      enabled: false
+      max_array_size: 100
+      max_concurrent_jobs: 10
+
+# ==== EXAMPLE CONFIGURATIONS ====
+# These are example presets that can be referenced
+example_presets:
+  baseline_o3_vs_haiku:
+    environment:
+      n_agents: 3
+      m_items: 5
+      t_rounds: 6
+      gamma_discount: 0.9
+    agents:
+      - model: "o3"
+      - model: "claude-3-haiku"
+      - model: "claude-3-haiku"
+    preferences:
+      system_type: "vector"
+      competition_level:
+        cosine_similarity: 0.95
+  
+  cooperative_matrix:
+    environment:
+      n_agents: 4
+      m_items: 8
+      t_rounds: 10
+      gamma_discount: 0.95
+    preferences:
+      system_type: "matrix"
+      matrix_preferences:
+        self_weight: 0.5
+        others_weight: 0.5
+      competition_level:
+        cosine_similarity: 0.1  # Low competition
+  
+  scaling_laws_study:
+    environment:
+      n_agents: 3
+      m_items: 5
+      t_rounds: 6
+    # Models ranging from weak to strong
+    models_to_test:
+      - ["gpt-4o-mini", "claude-3-haiku", "claude-3-haiku"]
+      - ["gpt-4o", "claude-3-haiku", "claude-3-haiku"] 
+      - ["claude-3-5-sonnet", "claude-3-haiku", "claude-3-haiku"]
+      - ["o3-mini", "claude-3-haiku", "claude-3-haiku"]
+      - ["o3", "claude-3-haiku", "claude-3-haiku"]
+    execution:
+      batch_size: 20  # Multiple runs per configuration
