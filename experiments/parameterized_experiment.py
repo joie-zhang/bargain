@@ -40,7 +40,10 @@ from negotiation import (
     AgentConfiguration,
     ModelType,
     NegotiationContext,
-    UtilityEngine
+    UtilityEngine,
+    # Import the new modular negotiation engine
+    StandardNegotiationEngine,
+    NegotiationEngineConfig
 )
 
 
@@ -522,88 +525,120 @@ class ParameterizedExperimentRunner:
                                            env: Any, 
                                            preferences: Dict[str, Any],
                                            config: ExperimentConfig) -> Dict[str, Any]:
-        """Run the actual negotiation with full parameter support."""
+        """Run negotiation using the modular negotiation engine."""
         
-        # Initialize utility engine
-        utility_engine = UtilityEngine(gamma=config.environment.gamma_discount, logger=self.logger)
+        # Convert experiment config to negotiation engine config
+        negotiation_config = NegotiationEngineConfig(
+            n_agents=config.environment.n_agents,
+            m_items=config.environment.m_items,
+            t_rounds=config.environment.t_rounds,
+            gamma_discount=config.environment.gamma_discount,
+            max_discussion_turns=config.environment.max_conversation_turns_per_round,
+            allow_private_thinking=True,
+            require_unanimous_consensus=config.environment.require_unanimous_consensus,
+            randomized_proposal_order=config.environment.randomized_proposal_order,
+            max_reflection_chars=2000,
+            turn_timeout_seconds=config.environment.timeout_minutes * 60 if config.environment.timeout_minutes else 60
+        )
         
-        # Track proposal orders
-        proposal_orders = []
-        conversation_logs = []
+        # Create negotiation engine
+        engine = StandardNegotiationEngine(negotiation_config)
         
-        consensus_reached = False
-        final_round = 0
+        self.logger.info(f"Starting parameterized negotiation with engine: {engine.engine_id}")
         
-        # Run negotiation rounds
-        for round_num in range(1, config.environment.t_rounds + 1):
-            final_round = round_num
-            self.logger.info(f"Starting round {round_num}")
+        try:
+            # Run negotiation using the modular engine
+            result = await engine.run_negotiation(agents, env, preferences)
             
-            # Randomize proposal order if configured
-            if config.environment.randomized_proposal_order:
-                agent_order = random.sample(agents, len(agents))
-            else:
-                agent_order = agents[:]
+            # Extract proposal orders from phase results
+            proposal_orders = self._extract_proposal_orders(result)
             
-            # Track the order
-            proposal_orders.append([agent.agent_id for agent in agent_order])
+            # Extract structured proposals and votes
+            proposals = self._extract_proposals(result)
+            votes = self._extract_votes(result)
             
-            # Run discussion phase
-            discussion_logs = await self._run_discussion_phase(agent_order, round_num, config)
-            conversation_logs.extend(discussion_logs)
+            # Convert result to format expected by parameterized system
+            return {
+                "consensus_reached": result.consensus_reached,
+                "final_round": result.final_round,
+                "winner_agent_id": result.winner_agent_id,
+                "final_utilities": result.final_utilities,
+                "proposal_orders": proposal_orders,
+                "conversation_logs": [msg.to_dict() if hasattr(msg, 'to_dict') else msg for msg in result.conversation_logs],
+                "proposals": proposals,
+                "votes": votes,
+                "strategic_behaviors": result.strategic_behaviors,
+                "agent_performance": result.agent_performance,
+                "total_duration": result.total_duration,
+                "api_costs": result.api_costs
+            }
             
-            # Run proposal phase  
-            proposals = await self._run_proposal_phase(agent_order, round_num, config, preferences)
-            
-            # Run voting phase
-            votes = await self._run_voting_phase(agent_order, proposals, round_num, config)
-            
-            # Check for consensus
-            consensus_reached = self._check_consensus(votes, proposals)
-            
-            if consensus_reached:
-                self.logger.info(f"Consensus reached in round {round_num}")
-                break
-        
-        # Calculate final utilities
-        if consensus_reached and proposals:
-            winning_proposal = self._get_winning_proposal(votes, proposals)
-            final_utilities = utility_engine.calculate_utilities(
-                winning_proposal, preferences, final_round
-            )
-        else:
-            # No agreement - everyone gets 0
-            final_utilities = {agent.agent_id: 0.0 for agent in agents}
-        
-        # Determine winner
-        winner_agent_id = max(final_utilities.keys(), key=lambda k: final_utilities[k]) if final_utilities else None
-        
-        return {
-            "consensus_reached": consensus_reached,
-            "final_round": final_round,
-            "winner_agent_id": winner_agent_id,
-            "final_utilities": final_utilities,
-            "proposal_orders": proposal_orders,
-            "conversation_logs": conversation_logs,
-            "proposals": proposals if consensus_reached else [],
-            "votes": votes if consensus_reached else []
-        }
+        except Exception as e:
+            self.logger.error(f"Modular negotiation engine failed: {e}")
+            # Return error state
+            return {
+                "consensus_reached": False,
+                "final_round": 0,
+                "winner_agent_id": None,
+                "final_utilities": {agent.agent_id: 0.0 for agent in agents},
+                "proposal_orders": [],
+                "conversation_logs": [],
+                "proposals": [],
+                "votes": [],
+                "strategic_behaviors": {"error": True, "error_message": str(e)},
+                "agent_performance": {},
+                "total_duration": 0.0,
+                "api_costs": {}
+            }
     
-    async def _run_discussion_phase(self, agents: List[Any], round_num: int, config: ExperimentConfig) -> List[Dict[str, Any]]:
-        """Run the discussion phase for a round."""
-        logs = []
+    def _extract_proposal_orders(self, result) -> List[List[str]]:
+        """Extract proposal orders from negotiation result."""
+        proposal_orders = []
         
-        # Agents engage in strategic discussion about the negotiation
-        for agent in agents:
-            message = f"Agent {agent.agent_id} discusses strategy for round {round_num}"
-            logs.append({
-                "agent_id": agent.agent_id,
-                "message": message,
-                "round": round_num,
-                "phase": "discussion"
-            })
+        for phase_result in result.phase_results:
+            if phase_result.phase_type == "proposal":
+                # Extract order from proposals in this phase
+                proposals = phase_result.phase_data.get("proposals", [])
+                order = [p.get("agent_id") for p in proposals if p.get("agent_id")]
+                if order:
+                    proposal_orders.append(order)
         
-        return logs
+        return proposal_orders
+    
+    def _extract_proposals(self, result) -> List[Dict[str, Any]]:
+        """Extract structured proposals from negotiation result."""
+        proposals = []
+        
+        for phase_result in result.phase_results:
+            if phase_result.phase_type == "proposal":
+                phase_proposals = phase_result.phase_data.get("proposals", [])
+                for p in phase_proposals:
+                    proposals.append({
+                        "round": phase_result.round_number,
+                        "agent_id": p.get("agent_id"),
+                        "proposal": p.get("proposal"),
+                        "generation_time": p.get("generation_time", 0)
+                    })
+        
+        return proposals
+    
+    def _extract_votes(self, result) -> List[Dict[str, Any]]:
+        """Extract vote data from negotiation result."""
+        votes = []
+        
+        for phase_result in result.phase_results:
+            if phase_result.phase_type == "voting":
+                round_votes = phase_result.phase_data.get("votes", {})
+                for agent_id, agent_votes in round_votes.items():
+                    votes.append({
+                        "round": phase_result.round_number,
+                        "agent_id": agent_id,
+                        "votes": agent_votes
+                    })
+        
+        return votes
+    
+    # Note: Negotiation phases are now handled by the modular negotiation engine
     
     async def _run_proposal_phase(self, agents: List[Any], round_num: int, config: ExperimentConfig, preferences: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Run the proposal phase for a round."""

@@ -159,9 +159,29 @@ async def run_single_experiment(config_path: Path, experiment_id: Optional[str] 
         
     except ConfigurationError as e:
         print(f"Configuration Error: {e}")
+        print(f"Config file: {config_path}")
+        sys.exit(1)
+    except KeyError as e:
+        print(f"KeyError during experiment: {e}")
+        print(f"This likely indicates a data structure mismatch in the experiment system.")
+        print(f"Key '{e}' was expected but not found.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
+        sys.exit(1)
+    except ZeroDivisionError as e:
+        print(f"Division by zero error during experiment: {e}")
+        print(f"This likely indicates that all utilities were zero, causing issues in final calculations.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
         sys.exit(1)
     except Exception as e:
-        print(f"Experiment failed: {e}")
+        print(f"Experiment failed with unexpected error: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 
@@ -175,9 +195,29 @@ async def run_batch_experiment(config_path: Path, num_runs: int) -> None:
         
     except ConfigurationError as e:
         print(f"Configuration Error: {e}")
+        print(f"Config file: {config_path}")
+        sys.exit(1)
+    except KeyError as e:
+        print(f"KeyError during batch experiment: {e}")
+        print(f"This likely indicates a data structure mismatch in the experiment system.")
+        print(f"Key '{e}' was expected but not found.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
+        sys.exit(1)
+    except ZeroDivisionError as e:
+        print(f"Division by zero error during batch experiment: {e}")
+        print(f"This likely indicates that all utilities were zero, causing issues in final calculations.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
         sys.exit(1)
     except Exception as e:
-        print(f"Batch experiment failed: {e}")
+        print(f"Batch experiment failed with unexpected error: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 
@@ -201,8 +241,27 @@ async def run_preset_experiment(preset_name: str, num_runs: Optional[int] = None
         print(f"Preset Error: {e}")
         print("Available presets: baseline_o3_vs_haiku, cooperative_matrix, scaling_laws_study")
         sys.exit(1)
+    except KeyError as e:
+        print(f"KeyError during preset experiment: {e}")
+        print(f"This likely indicates a data structure mismatch in the experiment system.")
+        print(f"Key '{e}' was expected but not found.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
+        sys.exit(1)
+    except ZeroDivisionError as e:
+        print(f"Division by zero error during preset experiment: {e}")
+        print(f"This likely indicates that all utilities were zero, causing issues in final calculations.")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
+        sys.exit(1)
     except Exception as e:
-        print(f"Preset experiment failed: {e}")
+        print(f"Preset experiment failed with unexpected error: {e}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        print("\nFull traceback:")
+        traceback.print_exc()
         sys.exit(1)
 
 

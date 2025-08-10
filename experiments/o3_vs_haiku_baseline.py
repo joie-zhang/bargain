@@ -29,7 +29,10 @@ from negotiation import (
     create_o3_vs_haiku_experiment,
     ModelType,
     NegotiationContext,
-    UtilityEngine
+    UtilityEngine,
+    # Import the new modular negotiation engine
+    StandardNegotiationEngine,
+    NegotiationEngineConfig
 )
 
 
