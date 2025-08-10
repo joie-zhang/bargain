@@ -64,6 +64,14 @@ from .agent_factory import (
     agent_factory
 )
 
+from .utility_engine import (
+    UtilityEngine,
+    UtilityCalculationResult,
+    create_utility_engine,
+    calculate_discounted_utility,
+    compare_discount_factors
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -118,5 +126,12 @@ __all__ = [
     "create_cooperative_experiment", 
     "create_simulated_experiment",
     "create_scaling_study_experiment",
-    "agent_factory"
+    "agent_factory",
+    
+    # Utility Engine components
+    "UtilityEngine",
+    "UtilityCalculationResult",
+    "create_utility_engine",
+    "calculate_discounted_utility",
+    "compare_discount_factors"
 ]
