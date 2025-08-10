@@ -116,7 +116,8 @@ class O3VsHaikuExperiment:
             "gamma_discount": 0.9,
             "competition_level": 0.95,  # Highly competitive
             "known_to_all": False,  # Secret preferences
-            "random_seed": None
+            "random_seed": None,
+            "max_reflection_chars": 2000  # Cap reflection content to reduce token waste
         }
     
     async def run_single_experiment(self, 
@@ -367,7 +368,7 @@ class O3VsHaikuExperiment:
                 self.logger.info("Individual reflection phase on consensus...")
                 reflection_results = await self._run_individual_reflection_phase(
                     agents, items, preferences, round_num, config["t_rounds"],
-                    voting_results, consensus_reached=True
+                    voting_results, consensus_reached=True, config=config
                 )
                 conversation_logs.extend(reflection_results["messages"])
                 break
@@ -379,7 +380,7 @@ class O3VsHaikuExperiment:
                     self.logger.info("Individual reflection phase on round outcomes...")
                     reflection_results = await self._run_individual_reflection_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
-                        voting_results, consensus_reached=False
+                        voting_results, consensus_reached=False, config=config
                     )
                     conversation_logs.extend(reflection_results["messages"])
         
@@ -2084,7 +2085,7 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
             "vote_results": vote_results
         }
     
-    async def _run_individual_reflection_phase(self, agents, items, preferences, round_num, max_rounds, voting_results, consensus_reached=False):
+    async def _run_individual_reflection_phase(self, agents, items, preferences, round_num, max_rounds, voting_results, consensus_reached=False, config=None):
         """
         Phase 7A: Individual Reflection
         Each agent privately reflects on round outcomes and learns from the experience.
@@ -2117,7 +2118,8 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
                 response = await agent.think_privately(context, reflection_prompt)
                 
                 # Phase 7B: Extract and update memory with reflection content
-                reflection_content = await self._extract_key_takeaways(agent, response, round_num, consensus_reached)
+                max_chars = config.get("max_reflection_chars", 2000) if config else 2000
+                reflection_content = await self._extract_key_takeaways(agent, response, round_num, consensus_reached, max_chars)
                 await self._update_agent_strategic_memory(agent, reflection_content, round_num)
                 
                 # Create reflection message for logging
@@ -2174,37 +2176,18 @@ Vote on ALL proposals. Use "accept" or "reject" only."""
 {vote_summary}
 
 **YOUR REFLECTION TASK:**
-Analyze what happened in this round and extract strategic insights for future rounds. Consider:
+Provide a concise strategic analysis (keep under 2000 characters) covering:
 
-**1. PROPOSAL ANALYSIS:**
-- Which proposals were most/least successful and why?
-- What made some proposals more acceptable than others?
-- How did other agents' strategic positioning affect outcomes?
-
-**2. VOTING PATTERNS:**
-- What voting patterns emerged among different agents?
-- Which agents seem to have aligned vs. conflicting interests?
-- Are there signs of strategic voting (not just utility maximization)?
-
-**3. COMMUNICATION INSIGHTS:**
-- What did you learn about other agents' preferences from their discussion?
-- Which agents were more/less transparent about their preferences?
-- Did any agents use strategic communication (misleading, pressure, etc.)?
-
-**4. STRATEGIC LEARNINGS:**
-- What worked well in your approach this round?
-- What would you do differently if you could replay this round?
-- How should you adjust your strategy for future rounds?
-
-**5. RELATIONSHIP DYNAMICS:**
-- Are there potential coalition opportunities with specific agents?
-- Which agents might be easiest/hardest to negotiate with?
-- Are there signs of other agents trying to exploit or manipulate you?
+**1. Proposal analysis** - Why did proposals succeed/fail?
+**2. Voting patterns** - Which agents have aligned/conflicting interests?
+**3. Communication insights** - What did you learn about others' preferences?
+**4. Strategic learnings** - What worked/didn't work in your approach?
+**5. Future adjustments** - How will you change strategy for remaining rounds?
 
 {urgency_note}
 
 **PROVIDE YOUR ANALYSIS:**
-Reflect deeply on these questions and provide strategic insights that will help you negotiate more effectively in future rounds. Focus on actionable learnings that will improve your decision-making."""
+Focus on actionable insights that will help you negotiate more effectively. Be concise but thorough."""
     
     def _format_voting_summary_for_reflection(self, voting_results):
         """Format voting results in a concise way for reflection prompts."""
@@ -2228,12 +2211,29 @@ Reflect deeply on these questions and provide strategic insights that will help 
         
         return "\n".join(summary_lines) if summary_lines else "No proposals were submitted."
     
-    async def _extract_key_takeaways(self, agent, reflection_response, round_num, consensus_reached):
-        """Return the agent's actual reflection content as their key takeaways."""
+    async def _extract_key_takeaways(self, agent, reflection_response, round_num, consensus_reached, max_chars=2000):
+        """Return the agent's actual reflection content as their key takeaways, with character limit."""
         # Return the raw reflection content instead of template-based extraction
         if hasattr(reflection_response, 'content') and reflection_response.content:
-            # Return the agent's actual reflection, preserving their unique insights
-            return reflection_response.content.strip()
+            content = reflection_response.content.strip()
+            
+            # Apply character limit to prevent excessive token usage
+            if len(content) > max_chars:
+                # Truncate but try to end at a sentence boundary
+                truncated = content[:max_chars]
+                last_period = truncated.rfind('.')
+                last_newline = truncated.rfind('\n')
+                
+                # Find the best truncation point
+                best_cut = max(last_period, last_newline)
+                if best_cut > max_chars * 0.8:  # Only use if it's not too short (80% of max)
+                    content = truncated[:best_cut + 1]
+                else:
+                    content = truncated + "..."
+                
+                self.logger.info(f"Truncated {agent.agent_id} reflection from {len(reflection_response.content)} to {len(content)} chars")
+            
+            return content
         else:
             # Visible error when fallback is triggered
             error_msg = f"🚨 REFLECTION EXTRACTION FAILED for {agent.agent_id} in round {round_num}"
