@@ -9,6 +9,7 @@ import sys
 import subprocess
 import os
 import re
+import yaml
 from datetime import datetime
 from pathlib import Path
 
@@ -51,6 +52,20 @@ def get_changed_files():
                 changed_files.append(filename)
     
     return changed_files
+
+
+def get_file_size(file_path):
+    """Get human-readable file size"""
+    try:
+        size = os.path.getsize(file_path)
+        if size < 1024:
+            return f"{size}B"
+        elif size < 1024 * 1024:
+            return f"{size/1024:.1f}KB"
+        else:
+            return f"{size/(1024*1024):.1f}MB"
+    except OSError:
+        return None
 
 
 def is_experiment_session(transcript_path, changes_summary):
@@ -112,100 +127,208 @@ def parse_transcript_for_changes(transcript_path):
         return []
 
 
+def load_config():
+    """Load commit configuration from yaml file"""
+    config_path = Path.cwd() / ".claude" / "commit-config.yaml"
+    default_config = {
+        'file_patterns': {
+            'experiments': ['experiments/', 'experiment_'],
+            'results': ['results/', 'result_', '.json'],
+            'analysis': ['analysis', '.ipynb'],
+            'tests': ['test_', '/tests/'],
+            'docs': ['.md', 'docs/']
+        },
+        'research_indicators': ['experiment', 'analysis', 'negotiation', 'agent'],
+        'max_files_to_analyze': 5,
+        'features': {'detailed_descriptions': True}
+    }
+    
+    try:
+        if config_path.exists():
+            with open(config_path, 'r') as f:
+                return yaml.safe_load(f) or default_config
+    except Exception:
+        pass
+    return default_config
+
+
+def analyze_file_content(file_path, config, max_chars=1000):
+    """Analyze file content to understand what was done"""
+    try:
+        if not os.path.exists(file_path) or os.path.getsize(file_path) > 1024 * 1024:
+            return None
+            
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read(max_chars)
+            
+        filename = os.path.basename(file_path).lower()
+        
+        # Look for research indicators from config
+        research_terms = []
+        for term in config.get('research_indicators', []):
+            if term.lower() in content.lower():
+                research_terms.append(term)
+        
+        # Analyze content for specific patterns
+        if filename.endswith('.json'):
+            if any(field in content for field in ['final_utilities', 'winner_agent', 'consensus_reached']):
+                return f"negotiation results ({', '.join(research_terms[:2]) if research_terms else 'data'})"
+            elif 'experiment' in content.lower():
+                return f"experiment config ({', '.join(research_terms[:2]) if research_terms else 'setup'})"
+        elif filename.endswith('.py'):
+            if 'class ' in content and 'def ' in content:
+                if research_terms:
+                    return f"{research_terms[0]} implementation"
+                return "code implementation"
+            elif 'def test_' in content:
+                return "test implementation"
+        elif filename.endswith('.md'):
+            lines = content.split('\n')
+            first_header = next((line.replace('#', '').strip() for line in lines[:5] if line.startswith('#')), None)
+            if first_header:
+                return f"docs: {first_header[:50]}"
+        
+        # Generic analysis based on research terms found
+        if research_terms:
+            return f"{research_terms[0]} work"
+            
+        return None
+        
+    except Exception:
+        return None
+
+
+def classify_files_by_config(changed_files, config):
+    """Classify files based on config patterns"""
+    classifications = {}
+    file_patterns = config.get('file_patterns', {})
+    
+    for category, patterns in file_patterns.items():
+        matching_files = []
+        for file_path in changed_files:
+            file_lower = file_path.lower()
+            if any(pattern.lower() in file_lower for pattern in patterns):
+                matching_files.append(file_path)
+        if matching_files:
+            classifications[category] = matching_files
+    
+    return classifications
+
+
 def generate_intelligent_commit_message(changed_files, changes_summary):
-    """Generate intelligent commit message based on changed files and context"""
+    """Generate detailed commit message in Claude Code style"""
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
     
     if not changed_files:
         return None
     
-    # Analyze file types and patterns
-    file_types = {
-        'specs': [f for f in changed_files if 'spec' in f.lower()],
-        'tasks': [f for f in changed_files if 'task' in f.lower()],
-        'experiments': [f for f in changed_files if 'experiment' in f.lower()],
-        'results': [f for f in changed_files if 'result' in f.lower()],
-        'analysis': [f for f in changed_files if 'analysis' in f.lower()],
-        'docs': [f for f in changed_files if f.endswith('.md')],
-        'scripts': [f for f in changed_files if f.endswith('.py')],
-        'configs': [f for f in changed_files if any(ext in f for ext in ['.json', '.yaml', '.yml', '.toml'])],
-        'data': [f for f in changed_files if any(ext in f for ext in ['.csv', '.txt', '.log'])]
-    }
+    # Load configuration
+    config = load_config()
+    max_analyze = config.get('max_files_to_analyze', 8)
     
-    # Determine primary activity
-    if file_types['specs']:
+    # Classify files by config
+    file_classifications = classify_files_by_config(changed_files, config)
+    
+    # Analyze file contents for detailed context
+    file_details = []
+    content_contexts = []
+    
+    for file_path in changed_files[:max_analyze]:
+        context = analyze_file_content(file_path, config)
+        if context:
+            content_contexts.append(context)
+            file_details.append({
+                'path': file_path,
+                'name': os.path.basename(file_path),
+                'context': context,
+                'size': get_file_size(file_path)
+            })
+    
+    # Determine primary activity and generate detailed title
+    if file_classifications.get('results'):
+        commit_type = "feat"
+        if any('negotiation results' in ctx for ctx in content_contexts):
+            title = f"feat: add negotiation experiment results"
+        elif any('experiment config' in ctx for ctx in content_contexts):
+            title = f"feat: add experiment configuration and results"
+        else:
+            title = f"feat: add experiment results ({len(file_classifications['results'])} files)"
+        primary_category = "results"
+    elif file_classifications.get('experiments'):
+        commit_type = "feat"
+        if len(changed_files) == 1:
+            title = f"feat: add {file_details[0]['context'] if file_details else 'experiment setup'}"
+        else:
+            title = f"feat: add experiment setup ({len(file_classifications['experiments'])} files)"
+        primary_category = "experiments"
+    elif file_classifications.get('analysis'):
+        commit_type = "feat"
+        title = f"feat: add analysis implementation ({len(file_classifications['analysis'])} files)"
+        primary_category = "analysis"
+    elif file_classifications.get('tests'):
+        commit_type = "test"
+        title = f"test: add test implementation ({len(file_classifications['tests'])} files)"
+        primary_category = "tests"
+    elif file_classifications.get('docs'):
         commit_type = "docs"
-        activity = "specification"
-        primary_files = file_types['specs']
-    elif file_types['tasks']:
-        commit_type = "feat"
-        activity = "task implementation"
-        primary_files = file_types['tasks']
-    elif file_types['experiments']:
-        commit_type = "feat"
-        activity = "experiment"
-        primary_files = file_types['experiments']
-    elif file_types['results']:
-        commit_type = "feat"
-        activity = "results"
-        primary_files = file_types['results']
-    elif file_types['analysis']:
-        commit_type = "docs"
-        activity = "analysis"
-        primary_files = file_types['analysis']
-    elif file_types['scripts']:
-        commit_type = "feat"
-        activity = "implementation"
-        primary_files = file_types['scripts']
-    elif file_types['docs']:
-        commit_type = "docs"
-        activity = "documentation"
-        primary_files = file_types['docs']
+        if len(changed_files) == 1 and file_details:
+            title = f"docs: {file_details[0]['context']}"
+        else:
+            title = f"docs: add documentation ({len(file_classifications['docs'])} files)"
+        primary_category = "documentation"
     else:
         commit_type = "feat"
-        activity = "research session"
-        primary_files = changed_files[:3]  # First few files
-    
-    # Ensure primary_files is valid and not empty
-    if not primary_files:
-        primary_files = changed_files[:3] if changed_files else []
-        activity = "research session"
-    
-    # Log debug info for troubleshooting
-    log_to_research(f"Commit generation - Activity: {activity}, Files: {len(primary_files)}, Type: {commit_type}")
-    
-    # Generate commit message with robust error handling
-    try:
-        if len(primary_files) == 1:
-            filename = os.path.basename(primary_files[0]) if primary_files[0] else "files"
-            title = f"{commit_type}: add {filename}"
-        elif len(primary_files) <= 3:
-            filenames = [os.path.basename(f) for f in primary_files if f]
-            if filenames:
-                title = f"{commit_type}: add {', '.join(filenames)}"
-            else:
-                title = f"{commit_type}: add {activity} files"
+        if content_contexts and len(content_contexts) == 1:
+            title = f"feat: add {content_contexts[0]}"
         else:
-            title = f"{commit_type}: add {activity} files ({len(changed_files)} files)"
-    except Exception:
-        # Fallback if filename extraction fails
-        title = f"{commit_type}: add {activity} files ({len(changed_files)} files)"
+            title = f"feat: add implementation ({len(changed_files)} files)"
+        primary_category = "implementation"
     
-    # Add description
+    # Build detailed description in Claude Code style
     description_parts = []
-    if changes_summary:
-        # Use conversation context
-        context = ', '.join(changes_summary[:3])
-        description_parts.append(f"Research session: {context}")
     
+    # Summary of what was accomplished
+    if content_contexts:
+        unique_contexts = list(dict.fromkeys(content_contexts))
+        if len(unique_contexts) == 1:
+            description_parts.append(f"Added {unique_contexts[0]} to support multi-agent negotiation research.")
+        else:
+            description_parts.append("Research session completed with multiple components:")
+            for i, ctx in enumerate(unique_contexts[:5], 1):
+                description_parts.append(f"- {ctx}")
+    
+    # File breakdown by category
+    if len(file_classifications) > 1:
+        description_parts.append("")
+        description_parts.append("Files by category:")
+        for category, files in sorted(file_classifications.items()):
+            file_list = [os.path.basename(f) for f in files[:3]]
+            if len(files) > 3:
+                file_list.append(f"... and {len(files)-3} more")
+            description_parts.append(f"- {category.title()}: {', '.join(file_list)}")
+    
+    # Detailed file information for small commits
+    if len(changed_files) <= 3 and file_details:
+        description_parts.append("")
+        description_parts.append("Modified files:")
+        for detail in file_details:
+            size_info = f" ({detail['size']})" if detail['size'] else ""
+            description_parts.append(f"- {detail['name']}: {detail['context']}{size_info}")
+    
+    # Session metadata
+    description_parts.append("")
     description_parts.append(f"Session completed: {timestamp}")
+    if changes_summary:
+        relevant_changes = [change for change in changes_summary[:3] if change.strip()]
+        if relevant_changes:
+            description_parts.append(f"Context: {'; '.join(relevant_changes)}")
     
-    if len(changed_files) > 1:
-        description_parts.append(f"Files modified: {len(changed_files)}")
+    description = "\n".join(description_parts)
     
-    description = "\n\n".join(description_parts)
+    # Log for debugging
+    log_to_research(f"Generated detailed commit: {title[:50]}... | Files: {len(changed_files)} | Categories: {list(file_classifications.keys())}")
     
-    return f"{title}\n\n{description}\n\n🤖 Auto-committed by Claude Code research hook"
+    return f"{title}\n\n{description}\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
 
 
 def log_to_research(message):

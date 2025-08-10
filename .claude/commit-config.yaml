@@ -1,0 +1,75 @@
+# Configuration for intelligent git commit messages
+# This file allows customization without changing code
+
+# File path patterns that indicate specific types of work
+file_patterns:
+  experiments:
+    - "experiments/"
+    - "experiment_"
+    - "_experiment"
+  
+  results:
+    - "results/"
+    - "result_"
+    - "_result"
+    - ".json"  # Combined with results/ paths
+  
+  configs:
+    - "config"
+    - ".yaml"
+    - ".toml"
+    - "settings"
+  
+  analysis:
+    - "analysis"
+    - "_analysis"
+    - ".ipynb"
+  
+  tests:
+    - "test_"
+    - "_test."
+    - "/tests/"
+  
+  docs:
+    - ".md"
+    - "README"
+    - "docs/"
+
+# Directory-based classifications
+directory_patterns:
+  experiment_data: ["experiments/results/", "experiments/logs/", "experiments/outputs/"]
+  implementation: ["negotiation/", "scripts/", "utils/"]
+  documentation: ["docs/", "ai_docs/"]
+  configuration: ["configs/", ".claude/"]
+
+# Terms that indicate research activities (case-insensitive)
+research_indicators:
+  - "experiment"
+  - "analysis" 
+  - "research"
+  - "negotiation"
+  - "agent"
+  - "baseline"
+  - "evaluation"
+
+# Commit type mappings
+commit_types:
+  experiment_data: "feat"
+  implementation: "feat"
+  documentation: "docs"
+  configuration: "config"
+  tests: "test"
+  analysis: "docs"
+  results: "feat"
+
+# Maximum number of files to analyze for context (increased for more detail)
+max_files_to_analyze: 8
+
+# Enable/disable features
+features:
+  analyze_git_diff: true
+  use_directory_structure: true
+  include_file_count: true
+  detailed_descriptions: true
+  include_file_sizes: true
+  claude_code_style: true
