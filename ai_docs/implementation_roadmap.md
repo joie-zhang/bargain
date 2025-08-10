@@ -103,7 +103,27 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Accurate utility calculations for all scenarios
 - **Estimated Time**: 1 week
 
-#### 8. Context Management System
+#### 8. Experiment Parameterization System
+**Objective**: Major refactor of o3_vs_haiku_baseline.py for full configurability via YAML
+- **Deliverables**:
+  - **Model Configuration**: Support for OpenAI models (O3, GPT-4, etc.), Claude models (Haiku, Sonnet, Opus), Llama models, Gemini models
+  - **Environment Parameters**: Configurable n (number of agents), m (number of items), t (number of rounds)
+  - **Preference Systems**: Choose between vector preferences or matrix preferences via config
+  - **Competition Level**: Configurable cosine similarity (e.g., 0.1 for low competition, 0.95 for high competition)
+  - **Proposal Order Analysis**: 
+    - Randomized proposal order with tracking
+    - Correlation analysis between win rate and proposal order
+    - Ablation studies based purely on proposal order effects
+  - **YAML Configuration Schema**: Well-documented config files for different experimental scenarios
+  - **Validation System**: Config validation to ensure parameter combinations are valid
+- **Success Criteria**: 
+  - Single experiment script can run any model combination through YAML config
+  - Proposal order effects can be isolated and measured
+  - Easy setup for systematic ablation studies across all parameters
+- **Estimated Time**: 2-3 weeks
+- **Priority**: High (needed for systematic exploration of parameter space)
+
+#### 9. Context Management System
 **Objective**: Persistent agent memory across rounds
 - **Deliverables**:
   - Agent memory persistence between rounds
@@ -114,7 +134,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 3: Configuration & Baselines (Medium Priority)**
 
-#### 9. Experiment Configuration System
+#### 10. Experiment Configuration System
 **Objective**: Flexible parameter management
 - **Deliverables**:
   - YAML/JSON configuration files
@@ -123,7 +143,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Easy experiment setup with different parameters
 - **Estimated Time**: 1 week
 
-#### 10. Baseline Agent Implementation
+#### 11. Baseline Agent Implementation
 **Objective**: Random/greedy/cooperative agents
 - **Deliverables**:
   - Random agent (random proposals and votes)
@@ -132,7 +152,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Strong baselines for comparison with LLM agents
 - **Estimated Time**: 1 week
 
-#### 11. Metrics and Analysis System
+#### 12. Metrics and Analysis System
 **Objective**: Win rates, utilities, sentiment analysis
 - **Deliverables**:
   - Individual utility tracking
@@ -142,7 +162,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Comprehensive metrics for each negotiation
 - **Estimated Time**: 1-2 weeks
 
-#### 12. Exploitation Detection Framework
+#### 13. Exploitation Detection Framework
 **Objective**: Strategic behavior identification
 - **Deliverables**:
   - Qualitative analysis tools
@@ -154,7 +174,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 4: Infrastructure & Analysis (Low Priority)**
 
-#### 13. Princeton Cluster Integration
+#### 14. Princeton Cluster Integration
 **Objective**: SLURM job submission for Della/PLI
 - **Deliverables**:
   - SLURM job scripts
@@ -163,7 +183,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Large-scale experiments run on Princeton clusters
 - **Estimated Time**: 1-2 weeks
 
-#### 14. Logging and Experiment Tracking
+#### 15. Logging and Experiment Tracking
 **Objective**: Comprehensive data collection
 - **Deliverables**:
   - Complete conversation logs
@@ -173,7 +193,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Full experiment reproducibility and analysis
 - **Estimated Time**: 1 week
 
-#### 15. Scaling Laws Analysis Pipeline
+#### 16. Scaling Laws Analysis Pipeline
 **Objective**: Statistical relationship analysis
 - **Deliverables**:
   - Model capability vs. exploitation correlation analysis
@@ -182,7 +202,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Clear scaling relationships between model strength and exploitation
 - **Estimated Time**: 2-3 weeks
 
-#### 16. Reproducibility Infrastructure
+#### 17. Reproducibility Infrastructure
 **Objective**: Seed management and versioning
 - **Deliverables**:
   - Random seed management
