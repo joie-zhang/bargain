@@ -234,9 +234,9 @@ class TestModelClientFactory:
             model_id="test",
             display_name="Test Model",
             family=ModelFamily.CUSTOM,
-            provider=ModelProvider("unsupported")
+            provider=ModelProvider.LOCAL_VLLM  # Valid enum value but not handled by factory
         )
-        provider_config = ProviderConfig(provider=ModelProvider("unsupported"))
+        provider_config = ProviderConfig(provider=ModelProvider.LOCAL_VLLM)
         
         with pytest.raises(ValueError, match="Unsupported provider"):
             ModelClientFactory.create_client(provider_config, model_spec)
