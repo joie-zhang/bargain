@@ -1,0 +1,235 @@
+# Model Configuration Schema for Multi-Agent Negotiation Experiments
+# This file defines the structure and examples for model configurations
+
+config_name: "example_multi_model_experiment"
+description: "Example configuration showing all supported model providers and features"
+version: "1.0"
+
+# Provider configurations - define how to connect to each model provider
+providers:
+  # OpenAI configuration for GPT and O-series models
+  openai:
+    provider: "openai"
+    api_key: null  # Will use OPENAI_API_KEY environment variable
+    api_base_url: null  # Use default OpenAI endpoint
+    organization: null
+    requests_per_minute: 50
+    tokens_per_minute: 80000
+    max_retries: 3
+    retry_delay: 1.0
+    exponential_backoff: true
+    connect_timeout: 10.0
+    read_timeout: 30.0
+    custom_headers: {}
+
+  # Anthropic configuration for Claude models
+  anthropic:
+    provider: "anthropic"
+    api_key: null  # Will use ANTHROPIC_API_KEY environment variable
+    api_base_url: null
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+    max_retries: 3
+    retry_delay: 1.0
+    exponential_backoff: true
+    connect_timeout: 10.0
+    read_timeout: 30.0
+    custom_headers: {}
+
+  # Google configuration for Gemini models
+  google:
+    provider: "google"
+    api_key: null  # Will use GOOGLE_API_KEY environment variable
+    requests_per_minute: 60
+    tokens_per_minute: 100000
+    max_retries: 3
+    retry_delay: 1.0
+
+  # OpenRouter configuration for accessing multiple models through one API
+  openrouter:
+    provider: "openrouter"
+    api_key: null  # Will use OPENROUTER_API_KEY environment variable
+    api_base_url: "https://openrouter.ai/api/v1"
+    requests_per_minute: 200
+    tokens_per_minute: 500000
+    max_retries: 3
+    retry_delay: 1.0
+
+  # Princeton cluster configuration for local models
+  princeton_cluster:
+    provider: "princeton_cluster"
+    requests_per_minute: 1000  # No API limits for local models
+    tokens_per_minute: 1000000
+    max_retries: 2
+    retry_delay: 0.5
+
+# Available models - define specific models that can be used
+available_models:
+  # OpenAI O-series models
+  o3:
+    display_name: "OpenAI O3"
+    family: "openai_o_series"
+    provider: "openai"
+    api_model_name: "o3"
+    context_window: 200000
+    supports_system_prompt: true
+    supports_function_calling: true
+    supports_vision: false
+    reasoning_capability: "high"
+    estimated_speed: "slow"
+
+  o3-mini:
+    display_name: "OpenAI O3-mini"
+    family: "openai_o_series"
+    provider: "openai"
+    api_model_name: "o3-mini"
+    context_window: 128000
+    supports_system_prompt: true
+    supports_function_calling: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+
+  # OpenAI GPT models
+  gpt-4o:
+    display_name: "GPT-4o"
+    family: "openai_gpt"
+    provider: "openai"
+    api_model_name: "gpt-4o"
+    context_window: 128000
+    supports_system_prompt: true
+    supports_function_calling: true
+    supports_vision: true
+    reasoning_capability: "high"
+    estimated_speed: "fast"
+
+  # Claude models
+  claude-3-haiku:
+    display_name: "Claude 3 Haiku"
+    family: "claude"
+    provider: "anthropic"
+    api_model_name: "claude-3-haiku-20240307"
+    context_window: 200000
+    supports_system_prompt: true
+    reasoning_capability: "medium"
+    estimated_speed: "fast"
+
+  claude-3-sonnet:
+    display_name: "Claude 3 Sonnet"
+    family: "claude"
+    provider: "anthropic"
+    api_model_name: "claude-3-sonnet-20240229"
+    context_window: 200000
+    supports_system_prompt: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+
+  # Gemini models
+  gemini-1.5-pro:
+    display_name: "Gemini 1.5 Pro"
+    family: "gemini"
+    provider: "google"
+    api_model_name: "gemini-1.5-pro"
+    context_window: 2000000
+    supports_system_prompt: true
+    supports_vision: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+
+  # Llama models via OpenRouter
+  llama-3-70b:
+    display_name: "Llama 3 70B"
+    family: "llama"
+    provider: "openrouter"
+    api_model_name: "meta-llama/llama-3-70b-instruct"
+    context_window: 32000
+    supports_system_prompt: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+    requires_gpu: true
+    estimated_vram_gb: 80
+
+  # Qwen models via OpenRouter
+  qwen-2.5-72b:
+    display_name: "Qwen 2.5 72B"
+    family: "qwen"
+    provider: "openrouter"
+    api_model_name: "qwen/qwen-2.5-72b-instruct"
+    context_window: 32768
+    supports_system_prompt: true
+    reasoning_capability: "high"
+    estimated_speed: "medium"
+
+  # Local Princeton cluster model example
+  llama-3-8b-local:
+    display_name: "Llama 3 8B (Princeton Cluster)"
+    family: "llama"
+    provider: "princeton_cluster"
+    local_path: "/scratch/gpfs/DANQIC/models/llama-3-8b-instruct"
+    context_window: 32000
+    supports_system_prompt: true
+    reasoning_capability: "medium"
+    estimated_speed: "fast"
+    requires_gpu: true
+    estimated_vram_gb: 16
+
+# Agent configurations - assign models to specific agents in the experiment
+agents:
+  - agent_id: "agent_1_strong"
+    model_id: "o3"
+    temperature: 0.7
+    max_output_tokens: 2048
+    strategic_level: "balanced"
+    system_prompt: "You are a strategic negotiator representing your interests in a multi-party negotiation."
+    reasoning_steps: true
+    custom_parameters: {}
+
+  - agent_id: "agent_2_medium"
+    model_id: "claude-3-sonnet"
+    temperature: 0.8
+    max_output_tokens: 2048
+    strategic_level: "cooperative"
+    system_prompt: "You are a collaborative negotiator seeking win-win outcomes."
+    reasoning_steps: true
+
+  - agent_id: "agent_3_baseline"
+    model_id: "claude-3-haiku"
+    temperature: 0.7
+    max_output_tokens: 1536
+    strategic_level: "balanced"
+    reasoning_steps: true
+
+# Default API keys (can be overridden by provider configs)
+default_api_keys: {}
+
+# Princeton cluster specific configuration
+cluster_config:
+  # SLURM configuration for cluster jobs
+  slurm_partition: "gpu"
+  slurm_time: "02:00:00"
+  slurm_nodes: 1
+  slurm_gpus_per_node: 1
+  slurm_mem: "32GB"
+  
+  # Model loading configuration
+  torch_dtype: "float16"
+  device_map: "auto"
+  low_cpu_mem_usage: true
+  
+  # Environment setup
+  conda_env: "negotiation"
+  python_path: "/opt/conda/envs/negotiation/bin/python"
+
+# Validation rules for configuration
+validation_rules:
+  # Ensure no more than one O3 agent per experiment (due to cost)
+  max_o3_agents: 1
+  
+  # Minimum number of agents for meaningful negotiation
+  min_agents: 2
+  max_agents: 6
+  
+  # Ensure balanced temperature ranges
+  temperature_range: [0.1, 1.5]
+  
+  # Validate model compatibility
+  require_system_prompt_support: true
