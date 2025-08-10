@@ -37,6 +37,7 @@ from negotiation import (
     create_negotiation_environment,
     create_competitive_preferences,
     AgentFactory,
+    AgentConfiguration,
     ModelType,
     NegotiationContext,
     UtilityEngine
@@ -485,16 +486,23 @@ class ParameterizedExperimentRunner:
             model_config = config.models[agent_config.model_id]
             provider_config = config.providers[model_config.provider]
             
-            # Create agent with configured parameters
-            agent = await self.agent_factory.create_agent(
+            # Create AgentConfiguration object
+            agent_configuration = AgentConfiguration(
                 agent_id=agent_config.agent_id,
                 model_type=self._map_model_to_type(model_config),
-                model_name=model_config.api_model_name,
+                api_key=provider_config.api_key_env,
                 temperature=agent_config.temperature,
                 max_tokens=agent_config.max_output_tokens,
                 system_prompt=agent_config.system_prompt,
-                provider_config=provider_config
+                strategic_level=agent_config.strategic_level.value if hasattr(agent_config.strategic_level, 'value') else agent_config.strategic_level,
+                requests_per_minute=provider_config.requests_per_minute,
+                tokens_per_minute=provider_config.tokens_per_minute,
+                max_retries=provider_config.max_retries,
+                retry_delay=provider_config.retry_delay,
             )
+            
+            # Create agent using AgentConfiguration
+            agent = self.agent_factory.create_agent(agent_configuration)
             agents.append(agent)
         
         return agents
@@ -505,9 +513,7 @@ class ParameterizedExperimentRunner:
             m_items=config.environment.m_items,
             n_agents=config.environment.n_agents,
             t_rounds=config.environment.t_rounds,
-            gamma_discount=config.environment.gamma_discount,
-            require_unanimous=config.environment.require_unanimous_consensus,
-            randomized_order=config.environment.randomized_proposal_order
+            gamma_discount=config.environment.gamma_discount
         )
         return env
     
@@ -1003,13 +1009,35 @@ class ParameterizedExperimentRunner:
     
     def _map_model_to_type(self, model_config) -> ModelType:
         """Map model configuration to ModelType enum."""
-        # This is a simple mapping - would need to be implemented based on actual ModelType enum
-        if "o3" in model_config.api_model_name.lower():
+        model_name = model_config.api_model_name.lower()
+        
+        # O3 models
+        if "o3-mini" in model_name:
+            return ModelType.O3_MINI
+        elif "o3" in model_name:
             return ModelType.O3
-        elif "claude" in model_config.api_model_name.lower():
-            return ModelType.CLAUDE_HAIKU
+            
+        # Claude models
+        elif "claude-3-5-sonnet" in model_name:
+            return ModelType.CLAUDE_3_5_SONNET
+        elif "claude-3-opus" in model_name:
+            return ModelType.CLAUDE_3_OPUS
+        elif "claude-3-sonnet" in model_name:
+            return ModelType.CLAUDE_3_SONNET
+        elif "claude-3-haiku" in model_name:
+            return ModelType.CLAUDE_3_HAIKU
+            
+        # GPT models
+        elif "gpt-4o" in model_name:
+            return ModelType.GPT_4O
+        elif "gpt-4-turbo" in model_name:
+            return ModelType.GPT_4_TURBO
+        elif "gpt-4" in model_name:
+            return ModelType.GPT_4
+            
         else:
-            return ModelType.GPT4O_MINI
+            # Default fallback
+            return ModelType.GPT_4O
     
     async def run_batch_experiments(self, 
                                   config_path_or_dict: Union[str, Path, Dict[str, Any], ExperimentConfig],

@@ -231,6 +231,31 @@ export ANTHROPIC_API_KEY="your_anthropic_key"
 ### Required Dependencies:
 The system requires the negotiation module and experiment configuration system to be properly set up in your project.
 
+## Current Status & Known Issues
+
+### ✅ Working Components:
+- Configuration validation (`--dry-run`)
+- Cost estimation
+- Agent creation (OpenAI and Anthropic models)
+- Environment setup
+- Preference generation
+- Basic negotiation flow initiation
+
+### 🚧 Known Issues (In Progress):
+1. **Division by Zero Error**: Currently encountering a division by zero error during negotiation analysis
+   - Agents and environment create successfully
+   - All negotiation rounds start properly
+   - Error occurs in utility calculation or statistical analysis phase
+   - **Status**: Under investigation
+
+2. **Mock vs Real LLM Integration**: 
+   - Current implementation uses simplified mock negotiation phases
+   - Need to integrate with actual LLM conversation flows
+   - **Status**: Planned for next iteration
+
+### 🔧 Debug Mode:
+If you encounter issues, check the logs in `experiments/logs/parameterized_experiments_YYYYMMDD.log`
+
 ## Best Practices
 
 1. **Always dry-run first** to validate configuration and estimate costs
@@ -239,6 +264,15 @@ The system requires the negotiation module and experiment configuration system t
 4. **Save configurations** for reproducible experiments
 5. **Use version control** to track configuration changes
 6. **Check logs** in `experiments/logs/` for debugging
+
+### Quick Fixes for Common Issues:
+
+#### Division by Zero Error (Current Known Issue):
+```bash
+# This error occurs during negotiation analysis
+# Temporary workaround: Use simpler configurations with fewer parameters
+# Full fix is in progress
+```
 
 ## Next Steps
 
