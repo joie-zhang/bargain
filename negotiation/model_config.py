@@ -47,6 +47,7 @@ class ModelFamily(Enum):
     CLAUDE = "claude"
     LLAMA = "llama"
     GEMINI = "gemini"
+    GEMMA = "gemma"
     QWEN = "qwen"
     CUSTOM = "custom"
 
@@ -303,7 +304,87 @@ class ModelRegistry:
             estimated_vram_gb=16
         ))
         
-        # Gemini models
+        # Gemini 2.5 models (latest generation)
+        self.register_model(ModelSpec(
+            model_id="gemini-2.5-pro",
+            display_name="Gemini 2.5 Pro",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-2.5-pro",
+            context_window=2000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            supports_function_calling=True,
+            reasoning_capability="high",
+            estimated_speed="medium",
+            input_cost_per_1m=1.25,
+            output_cost_per_1m=2.50
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemini-2.5-flash",
+            display_name="Gemini 2.5 Flash",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-2.5-flash",
+            context_window=1000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            supports_function_calling=True,
+            reasoning_capability="high",
+            estimated_speed="fast",
+            input_cost_per_1m=0.075,
+            output_cost_per_1m=0.30
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemini-2.5-flash-lite",
+            display_name="Gemini 2.5 Flash Lite",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-2.5-flash-lite",
+            context_window=1000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            reasoning_capability="medium",
+            estimated_speed="very_fast",
+            input_cost_per_1m=0.0375,
+            output_cost_per_1m=0.15
+        ))
+        
+        # Gemini 2.0 models
+        self.register_model(ModelSpec(
+            model_id="gemini-2.0-flash",
+            display_name="Gemini 2.0 Flash",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-2.0-flash",
+            context_window=1000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            supports_function_calling=True,
+            reasoning_capability="high",
+            estimated_speed="fast",
+            input_cost_per_1m=0.075,
+            output_cost_per_1m=0.30
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemini-2.0-flash-lite",
+            display_name="Gemini 2.0 Flash Lite",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-2.0-flash-lite",
+            context_window=1000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            reasoning_capability="medium",
+            estimated_speed="very_fast",
+            input_cost_per_1m=0.0375,
+            output_cost_per_1m=0.15
+        ))
+        
+        # Gemini 1.5 models (legacy but still useful)
         self.register_model(ModelSpec(
             model_id="gemini-1.5-pro",
             display_name="Gemini 1.5 Pro",
@@ -314,7 +395,9 @@ class ModelRegistry:
             supports_system_prompt=True,
             supports_vision=True,
             reasoning_capability="high",
-            estimated_speed="medium"
+            estimated_speed="medium",
+            input_cost_per_1m=1.25,
+            output_cost_per_1m=5.0
         ))
         
         self.register_model(ModelSpec(
@@ -325,8 +408,83 @@ class ModelRegistry:
             api_model_name="gemini-1.5-flash",
             context_window=1000000,
             supports_system_prompt=True,
+            supports_vision=True,
             reasoning_capability="medium",
-            estimated_speed="fast"
+            estimated_speed="fast",
+            input_cost_per_1m=0.075,
+            output_cost_per_1m=0.30
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemini-1.5-flash-8b",
+            display_name="Gemini 1.5 Flash 8B",
+            family=ModelFamily.GEMINI,
+            provider=ModelProvider.GOOGLE,
+            api_model_name="gemini-1.5-flash-8b",
+            context_window=1000000,
+            supports_system_prompt=True,
+            supports_vision=True,
+            reasoning_capability="medium",
+            estimated_speed="very_fast",
+            input_cost_per_1m=0.0375,
+            output_cost_per_1m=0.15
+        ))
+        
+        # Gemma models (open source from Google)
+        self.register_model(ModelSpec(
+            model_id="gemma-2-27b",
+            display_name="Gemma 2 27B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-2-27b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="high",
+            estimated_speed="medium",
+            requires_gpu=True,
+            estimated_vram_gb=54
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemma-2-12b",
+            display_name="Gemma 2 12B", 
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-2-12b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="fast",
+            requires_gpu=True,
+            estimated_vram_gb=24
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemma-2-4b",
+            display_name="Gemma 2 4B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-2-4b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="fast",
+            requires_gpu=True,
+            estimated_vram_gb=8
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="gemma-2-1b",
+            display_name="Gemma 2 1B",
+            family=ModelFamily.GEMMA,
+            provider=ModelProvider.OPENROUTER,
+            api_model_name="google/gemma-2-1b-it",
+            context_window=8192,
+            supports_system_prompt=True,
+            reasoning_capability="low",
+            estimated_speed="very_fast",
+            requires_gpu=False,  # Can run on CPU
+            estimated_vram_gb=2
         ))
         
         # Qwen models

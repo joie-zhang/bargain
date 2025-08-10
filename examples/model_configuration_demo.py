@@ -55,10 +55,10 @@ def demo_model_registry():
     print("\n📊 Models by family:")
     for family, models in families.items():
         print(f"  {family}: {len(models)} models")
-        for model in models[:2]:  # Show first 2 examples
+        for model in models[:3]:  # Show first 3 examples
             print(f"    - {model.model_id} ({model.display_name})")
-        if len(models) > 2:
-            print(f"    ... and {len(models) - 2} more")
+        if len(models) > 3:
+            print(f"    ... and {len(models) - 3} more")
     
     # Show specific model details
     print("\n🔍 Model Details Example:")
@@ -384,6 +384,67 @@ def demo_princeton_cluster_usage():
         print("  ✅ Cluster configuration is valid!")
 
 
+def demo_gemini_gemma_showcase():
+    """Demonstrate the new Gemini and Gemma models."""
+    print("\n🌟 Gemini & Gemma Models Showcase")
+    print("=" * 50)
+    
+    registry = create_default_registry()
+    
+    # Show Gemini models by generation
+    print("🧠 Google Gemini Models by Generation:")
+    
+    gemini_generations = {
+        "2.5": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
+        "2.0": ["gemini-2.0-flash", "gemini-2.0-flash-lite"],
+        "1.5": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+    }
+    
+    for generation, model_ids in gemini_generations.items():
+        print(f"\n  📅 Gemini {generation} Series:")
+        for model_id in model_ids:
+            model = registry.get_model(model_id)
+            if model:
+                print(f"    • {model.display_name}")
+                print(f"      Context: {model.context_window:,} tokens")
+                print(f"      Vision: {'✅' if model.supports_vision else '❌'}")
+                print(f"      Functions: {'✅' if model.supports_function_calling else '❌'}")
+                if model.input_cost_per_1m:
+                    print(f"      Cost: ${model.input_cost_per_1m:.3f}/${model.output_cost_per_1m:.2f} per 1M tokens")
+    
+    # Show Gemma models
+    print("\n🔓 Open Source Gemma Models:")
+    gemma_models = ["gemma-2-27b", "gemma-2-12b", "gemma-2-4b", "gemma-2-1b"]
+    
+    for model_id in gemma_models:
+        model = registry.get_model(model_id)
+        if model:
+            print(f"\n  🤖 {model.display_name}:")
+            print(f"    VRAM: {model.estimated_vram_gb}GB")
+            print(f"    Speed: {model.estimated_speed}")
+            print(f"    GPU Required: {'Yes' if model.requires_gpu else 'No'}")
+            print(f"    Reasoning: {model.reasoning_capability}")
+    
+    # Load and show the showcase configuration
+    print("\n⚙️  Gemini/Gemma Showcase Configuration:")
+    try:
+        manager = ConfigurationManager()
+        showcase_config = manager.load_config("gemini_gemma_showcase")
+        
+        print(f"  📋 {showcase_config.config_name}")
+        print(f"  📝 {showcase_config.description}")
+        print(f"  👥 {len(showcase_config.agents)} agents configured")
+        
+        print("\n  🎭 Agent Lineup:")
+        for agent in showcase_config.agents:
+            print(f"    • {agent.agent_id}: {agent.model_spec.display_name}")
+            print(f"      Strategy: {agent.strategic_level}")
+            print(f"      Temperature: {agent.temperature}")
+        
+    except Exception as e:
+        print(f"  ⚠️  Showcase config not available: {e}")
+
+
 def demo_cost_estimation():
     """Demonstrate cost estimation features."""
     print("\n💰 Cost Estimation Demonstration")
@@ -391,19 +452,34 @@ def demo_cost_estimation():
     
     registry = create_default_registry()
     
-    # Show cost information for different models
+    # Show cost information for different models including new Gemini ones
     print("📊 Model Cost Comparison (per 1M tokens):")
     
-    models_to_compare = ["o3", "claude-3-haiku", "claude-3-sonnet", "gpt-4o"]
+    models_to_compare = [
+        "o3", "claude-3-haiku", "claude-3-sonnet", "gpt-4o",
+        "gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro"
+    ]
     
     for model_id in models_to_compare:
         model = registry.get_model(model_id)
         if model and model.input_cost_per_1m and model.output_cost_per_1m:
             print(f"\n  💰 {model.display_name}:")
-            print(f"    Input:  ${model.input_cost_per_1m:.2f}/1M tokens")
+            print(f"    Input:  ${model.input_cost_per_1m:.3f}/1M tokens")
             print(f"    Output: ${model.output_cost_per_1m:.2f}/1M tokens")
             print(f"    Speed:  {model.estimated_speed}")
             print(f"    Reasoning: {model.reasoning_capability}")
+        elif model:
+            print(f"\n  💰 {model.display_name}: Cost info not available")
+    
+    # Show cost-effectiveness analysis
+    print("\n📈 Cost-Effectiveness Analysis:")
+    print("  For budget-conscious experiments:")
+    budget_models = ["gemini-2.5-flash", "gemini-1.5-flash", "claude-3-haiku", "gemma-2-4b"]
+    for model_id in budget_models:
+        model = registry.get_model(model_id)
+        if model:
+            cost_indicator = "💰" if model.input_cost_per_1m and model.input_cost_per_1m < 0.1 else "🔓" if model.provider.value == "openrouter" and "gemma" in model_id else "💎"
+            print(f"    {cost_indicator} {model.display_name} - {model.reasoning_capability} reasoning, {model.estimated_speed} speed")
     
     # Estimate cost for a typical negotiation
     print("\n🧮 Cost Estimation for Typical 3-Agent Negotiation:")
@@ -442,13 +518,16 @@ async def main():
     demo_validation()
     demo_model_manager_integration()
     demo_princeton_cluster_usage()
+    demo_gemini_gemma_showcase()
     demo_cost_estimation()
     
     print("\n" + "=" * 80)
     print("✅ All demonstrations completed successfully!")
     print("\n📚 Key Features Demonstrated:")
-    print("  • Model registry with 10+ pre-configured models")
+    print("  • Model registry with 20+ pre-configured models")
     print("  • Support for OpenAI, Anthropic, Google, OpenRouter, and Princeton cluster")
+    print("  • Complete Gemini lineup: 2.5, 2.0, and 1.5 series (8 models)")
+    print("  • Open-source Gemma models: 27B, 12B, 4B, 1B variants")
     print("  • YAML-based configuration with validation")
     print("  • Cost estimation and performance characteristics")
     print("  • Integration with existing experiment framework")
