@@ -15,6 +15,7 @@ This experiment tests whether stronger models (O3) can exploit weaker models
 
 import asyncio
 import json
+import sys
 import time
 import random
 from pathlib import Path
@@ -141,6 +142,9 @@ class O3VsHaikuExperiment:
             experiment_id = f"o3_haiku_{int(time.time())}_{random.randint(1000, 9999)}"
         
         self.logger.info(f"Starting experiment {experiment_id}")
+        
+        # Track experiment start time for metadata
+        experiment_start_time = time.time()
         
         # Merge with default config
         config = {**self.default_config}
@@ -284,6 +288,93 @@ class O3VsHaikuExperiment:
         
         self.logger.info(f"Individual results saved to: {results_file}")
     
+    def _create_enhanced_config(self, base_config, agents, preferences, items, 
+                               experiment_start_time, experiment_id):
+        """
+        Create enhanced configuration that captures all experiment hyperparameters 
+        for full reproducibility.
+        
+        Args:
+            base_config: Basic experiment configuration
+            agents: List of LLM agents used in experiment
+            preferences: Agent preference vectors/matrices
+            items: List of negotiation items
+            experiment_start_time: Unix timestamp when experiment started
+            experiment_id: Unique experiment identifier
+            
+        Returns:
+            Dict containing comprehensive experiment configuration
+        """
+        enhanced_config = base_config.copy()
+        
+        # Add experiment metadata
+        enhanced_config["experiment_metadata"] = {
+            "experiment_id": experiment_id,
+            "start_time": experiment_start_time,
+            "end_time": time.time(),
+            "duration_seconds": time.time() - experiment_start_time,
+            "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
+            "timestamp_iso": time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(experiment_start_time))
+        }
+        
+        # Add detailed agent configurations (model hyperparameters)
+        enhanced_config["agent_configurations"] = {}
+        for agent in agents:
+            agent_config = {
+                "agent_id": agent.agent_id,
+                "model_type": agent.config.model_type.value,
+                "temperature": agent.config.temperature,
+                "max_tokens": agent.config.max_tokens,
+                "timeout": agent.config.timeout,
+                "requests_per_minute": agent.config.requests_per_minute,
+                "tokens_per_minute": agent.config.tokens_per_minute,
+                "max_retries": agent.config.max_retries,
+                "retry_delay": agent.config.retry_delay,
+                "system_prompt": agent.config.system_prompt,
+                "custom_parameters": agent.config.custom_parameters
+            }
+            enhanced_config["agent_configurations"][agent.agent_id] = agent_config
+        
+        # Add preference system configuration
+        enhanced_config["preference_configuration"] = {
+            "preference_type": "vector",  # Currently only vector preferences are implemented
+            "preferences_by_agent": {}
+        }
+        
+        # Store actual preference values for each agent (for full reproducibility)
+        for agent_id, pref_vector in preferences.items():
+            enhanced_config["preference_configuration"]["preferences_by_agent"][agent_id] = {
+                "preference_vector": pref_vector.tolist() if hasattr(pref_vector, 'tolist') else list(pref_vector),
+                "preference_sum": sum(pref_vector),
+                "max_preference": max(pref_vector),
+                "min_preference": min(pref_vector)
+            }
+        
+        # Add item configuration
+        enhanced_config["item_configuration"] = {
+            "items": [{"id": i, "name": item} for i, item in enumerate(items)],
+            "num_items": len(items)
+        }
+        
+        # Add proposal order tracking (will be enhanced in future steps)
+        enhanced_config["proposal_order_configuration"] = {
+            "randomization_enabled": True,
+            "order_tracking_enabled": True,
+            "random_seed_used": base_config.get("random_seed")
+        }
+        
+        # Add negotiation flow configuration
+        enhanced_config["negotiation_flow_configuration"] = {
+            "discussion_phase_enabled": True,
+            "private_thinking_phase_enabled": True,
+            "proposal_phase_enabled": True,
+            "voting_phase_enabled": True,
+            "reflection_phase_enabled": True,
+            "max_reflection_chars": base_config.get("max_reflection_chars", 2000)
+        }
+        
+        return enhanced_config
+    
     async def _run_negotiation(self, 
                              experiment_id: str,
                              agents: List,
@@ -402,10 +493,15 @@ class O3VsHaikuExperiment:
             agents, winner_agent_id, final_utilities, strategic_behaviors
         )
         
+        # Enhanced configuration capture for full reproducibility
+        enhanced_config = self._create_enhanced_config(
+            config, agents, preferences, items, experiment_start_time, experiment_id
+        )
+        
         return ExperimentResults(
             experiment_id=experiment_id,
             timestamp=time.time(),
-            config=config,
+            config=enhanced_config,
             consensus_reached=consensus_reached,
             final_round=round_num if consensus_reached else config["t_rounds"],
             winner_agent_id=winner_agent_id,

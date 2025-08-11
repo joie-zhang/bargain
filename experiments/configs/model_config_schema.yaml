@@ -401,3 +401,204 @@ validation_rules:
   
   # Validate model compatibility
   require_system_prompt_support: true
+
+# Environment configuration - core negotiation parameters (n, m, t, γ)
+environment:
+  # Number of agents (n) - minimum 2, maximum 6 for meaningful negotiation
+  num_agents: 3
+  agent_validation:
+    min_agents: 2
+    max_agents: 6
+    
+  # Number of items (m) - items to be negotiated over  
+  num_items: 5
+  item_validation:
+    min_items: 2
+    max_items: 20
+    
+  # Maximum number of negotiation rounds (t)
+  max_rounds: 6
+  round_validation:
+    min_rounds: 1
+    max_rounds: 20
+    
+  # Discount factor (γ) - utility decay over time
+  discount_factor: 0.9
+  discount_validation:
+    min_gamma: 0.1
+    max_gamma: 1.0
+
+  # Competition configuration
+  competition_level: 0.95  # 0.0 = cooperative, 1.0 = highly competitive
+  competition_validation:
+    min_competition: 0.0
+    max_competition: 1.0
+
+  # Information sharing
+  known_to_all: false  # Whether preferences are public or secret
+  
+  # Randomization
+  random_seed: null  # null = random, integer = fixed seed for reproducibility
+
+# Preference system configuration
+preferences:
+  # Preference type: "vector" or "matrix"
+  preference_type: "vector"
+  
+  # Vector preferences (competitive scenarios)
+  vector_preferences:
+    # Value range for individual item preferences
+    value_range: [0.0, 10.0]
+    
+    # Preference distribution method
+    distribution: "uniform"  # "uniform", "normal", "beta"
+    
+    # Preference similarity control (affects competition level)
+    similarity_target: 0.95  # Target cosine similarity between agent preferences
+    similarity_tolerance: 0.05
+    
+  # Matrix preferences (cooperative scenarios) - future implementation
+  matrix_preferences:
+    enabled: false
+    # Will be expanded when matrix preferences are implemented
+    
+  # Preference generation parameters
+  generation:
+    max_attempts: 1000  # Maximum attempts to generate valid preferences
+    normalize_preferences: true  # Ensure preferences sum to reasonable range
+
+# Negotiation flow configuration
+negotiation_flow:
+  # Phase enablement - which phases to include
+  phases:
+    discussion_phase: true
+    private_thinking_phase: true  
+    proposal_phase: true
+    voting_phase: true
+    reflection_phase: true
+    
+  # Phase-specific parameters
+  discussion:
+    max_discussion_rounds: 3
+    enable_strategic_discussion: true
+    
+  private_thinking:
+    enable_private_scratchpad: true
+    thinking_time_limit: 30  # seconds
+    
+  proposal:
+    randomize_proposal_order: true
+    track_proposal_order: true
+    max_proposals_per_agent: 1
+    
+  voting:
+    voting_method: "unanimous"  # "unanimous", "majority" 
+    enable_private_voting: true
+    reveal_votes_after_collection: true
+    
+  reflection:
+    enable_individual_reflection: true
+    max_reflection_chars: 2000
+    reflection_after_each_round: true
+
+# Proposal order analysis configuration
+proposal_order_analysis:
+  # Enable tracking and analysis of proposal order effects
+  enabled: true
+  
+  # Randomization settings
+  randomization:
+    method: "shuffle"  # "shuffle", "round_robin", "fixed"
+    seed_from_experiment: true  # Use experiment random seed
+    
+  # Analysis settings
+  correlation_analysis:
+    track_win_rate_by_order: true
+    track_utility_by_order: true
+    statistical_significance_threshold: 0.05
+    
+  # Ablation study support
+  ablation_studies:
+    isolate_order_effects: true
+    control_for_preferences: true
+    minimum_runs_per_condition: 10
+
+# Analysis and metrics configuration  
+analysis:
+  # Strategic behavior detection
+  strategic_behavior_detection:
+    detect_manipulation: true
+    detect_anger_expressions: true
+    detect_gaslighting: true
+    detect_cooperation_breakdown: true
+    detect_strategic_deception: true
+    
+  # Conversation analysis
+  conversation_analysis:
+    sentiment_analysis: true
+    keyword_tracking: true
+    turn_length_analysis: true
+    
+  # Utility and outcome analysis
+  outcome_analysis:
+    track_individual_utilities: true
+    track_win_rates: true
+    track_consensus_rates: true
+    calculate_social_welfare: true
+    analyze_utility_distribution: true
+    
+  # Statistical analysis
+  statistical_analysis:
+    significance_testing: true
+    confidence_intervals: true
+    effect_size_calculation: true
+    multiple_comparison_correction: "bonferroni"
+    
+  # Performance metrics
+  performance_metrics:
+    track_response_times: true
+    track_token_usage: true
+    track_api_costs: true
+    track_error_rates: true
+
+# Experiment metadata configuration
+experiment_metadata:
+  # Experiment identification
+  experiment_name: "O3 vs Claude Haiku Baseline"
+  experiment_description: "Testing strategic behavior between O3 and Claude Haiku models"
+  researcher: "AI Safety Research Team"
+  
+  # Versioning and reproducibility
+  config_version: "1.0"
+  codebase_version: null  # Will be auto-detected from git
+  
+  # Output configuration
+  results_directory: "experiments/results"
+  save_conversation_logs: true
+  save_detailed_results: true
+  compress_large_outputs: false
+  
+  # Logging configuration
+  log_level: "INFO"  # "DEBUG", "INFO", "WARNING", "ERROR"
+  verbose_logging: false
+
+# Princeton cluster configuration (when running on cluster)
+cluster_config:
+  # SLURM job configuration
+  slurm:
+    partition: "gpu"
+    time_limit: "02:00:00"
+    nodes: 1
+    gpus_per_node: 1
+    memory: "32GB"
+    
+  # Model loading for local models
+  model_loading:
+    torch_dtype: "float16"
+    device_map: "auto" 
+    low_cpu_mem_usage: true
+    
+  # Environment setup
+  environment:
+    conda_env: "negotiation"
+    python_path: "/opt/conda/envs/negotiation/bin/python"
