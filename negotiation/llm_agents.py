@@ -35,6 +35,7 @@ class ModelProvider(Enum):
     """Supported LLM providers."""
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    OPENROUTER = "openrouter"  # OpenRouter for multiple models
     TEST = "test"  # For testing with real minimal models
 
 
@@ -52,6 +53,12 @@ class ModelType(Enum):
     GPT_4O = "gpt-4o"
     O3_MINI = "o3-mini"
     O3 = "o3"
+    
+    # Gemma models (via OpenRouter)
+    GEMMA_2B = "gemma-2b"
+    GEMMA_7B = "gemma-7b"
+    GEMMA_2_9B = "gemma-2-9b"
+    GEMMA_2_27B = "gemma-2-27b"
     
     # Test models (using simulated agents for testing)
     TEST_STRONG = "test-strong-model"  # Simulated strong agent

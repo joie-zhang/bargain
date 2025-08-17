@@ -209,6 +209,28 @@ class AgentFactory:
         if config.model_type in [ModelType.TEST_STRONG, ModelType.TEST_WEAK]:
             agent = SimulatedAgent(config.agent_id, llm_config, config.strategic_level)
             
+        # Gemma models via OpenRouter
+        elif config.model_type in [
+            ModelType.GEMMA_2B,
+            ModelType.GEMMA_7B,
+            ModelType.GEMMA_2_9B,
+            ModelType.GEMMA_2_27B
+        ]:
+            # Use OpenRouter for Gemma models
+            openrouter_key = config.api_key or os.getenv("OPENROUTER_API_KEY")
+            if not openrouter_key:
+                raise ValueError(f"OpenRouter API key required for Gemma model {config.model_type}")
+            
+            try:
+                # Import OpenRouter client
+                from .openrouter_client import OpenRouterAgent
+                agent = OpenRouterAgent(config.agent_id, llm_config, openrouter_key)
+            except ImportError:
+                raise ValueError("OpenRouter client not available")
+            except Exception as e:
+                print(f"Failed to create OpenRouterAgent for {config.agent_id}: {e}")
+                raise
+            
         # Determine provider and create appropriate agent
         elif config.model_type in [
             ModelType.CLAUDE_3_OPUS,

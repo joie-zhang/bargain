@@ -72,6 +72,12 @@ from .utility_engine import (
     compare_discount_factors
 )
 
+from .negotiation_runner import (
+    ModularNegotiationRunner,
+    NegotiationOutcome,
+    NegotiationPhase
+)
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -133,5 +139,10 @@ __all__ = [
     "UtilityCalculationResult",
     "create_utility_engine",
     "calculate_discounted_utility",
-    "compare_discount_factors"
+    "compare_discount_factors",
+    
+    # Negotiation Runner components
+    "ModularNegotiationRunner",
+    "NegotiationOutcome",
+    "NegotiationPhase"
 ]
