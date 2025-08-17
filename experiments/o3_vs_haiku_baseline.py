@@ -161,7 +161,8 @@ class O3VsHaikuExperiment:
                 experiment_name=f"O3 vs Haiku Baseline - {experiment_id}",
                 competition_level=config["competition_level"],
                 known_to_all=config["known_to_all"],
-                random_seed=config["random_seed"]
+                random_seed=config["random_seed"],
+                num_agents=config["n_agents"]
             )
         except ValueError as e:
             self.logger.error(f"Failed to create experiment config: {e}")
@@ -193,12 +194,10 @@ class O3VsHaikuExperiment:
         
         preferences = pref_manager.generate_preferences()
         
-        # Map agent IDs to preferences
-        agent_id_mapping = {
-            agents[0].agent_id: "agent_0",
-            agents[1].agent_id: "agent_1",
-            agents[2].agent_id: "agent_2"
-        }
+        # Map agent IDs to preferences (dynamic based on number of agents)
+        agent_id_mapping = {}
+        for i, agent in enumerate(agents):
+            agent_id_mapping[agent.agent_id] = f"agent_{i}"
         
         updated_prefs = {}
         for custom_id, standard_id in agent_id_mapping.items():
@@ -216,7 +215,7 @@ class O3VsHaikuExperiment:
         
         # Run the negotiation
         results = await self._run_negotiation(
-            experiment_id, agents, env, preferences, config
+            experiment_id, agents, env, preferences, config, experiment_start_time
         )
         
         # Save individual experiment results
@@ -229,9 +228,13 @@ class O3VsHaikuExperiment:
         """Create a simulated experiment configuration for testing."""
         from negotiation.agent_factory import create_simulated_experiment
         
+        # Create strategic levels for the number of agents (1 aggressive O3 + cooperative Haiku agents)
+        strategic_levels = ["aggressive"] + ["cooperative"] * (config["n_agents"] - 1)
+        
         return create_simulated_experiment(
             experiment_name=f"Simulated O3 vs Haiku - {experiment_id}",
-            strategic_levels=["aggressive", "cooperative", "balanced"]  # Simulate O3 as aggressive
+            strategic_levels=strategic_levels,
+            num_agents=config["n_agents"]
         )
     
     def _log_experiment_setup(self, agents, preferences, env):
@@ -342,7 +345,7 @@ class O3VsHaikuExperiment:
         }
         
         # Store actual preference values for each agent (for full reproducibility)
-        for agent_id, pref_vector in preferences.items():
+        for agent_id, pref_vector in preferences["agent_preferences"].items():
             enhanced_config["preference_configuration"]["preferences_by_agent"][agent_id] = {
                 "preference_vector": pref_vector.tolist() if hasattr(pref_vector, 'tolist') else list(pref_vector),
                 "preference_sum": sum(pref_vector),
@@ -380,7 +383,8 @@ class O3VsHaikuExperiment:
                              agents: List,
                              env,
                              preferences: Dict[str, Any],
-                             config: Dict[str, Any]) -> ExperimentResults:
+                             config: Dict[str, Any],
+                             experiment_start_time: float) -> ExperimentResults:
         """Run the complete negotiation process."""
         
         conversation_logs = []
@@ -2653,7 +2657,8 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
     async def run_batch_experiments(self, 
                                   num_runs: int = 10,
                                   batch_id: Optional[str] = None,
-                                  save_results: bool = True) -> BatchResults:
+                                  save_results: bool = True,
+                                  experiment_config: Optional[Dict[str, Any]] = None) -> BatchResults:
         """
         Run a batch of O3 vs Claude Haiku experiments.
         
@@ -2661,6 +2666,7 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
             num_runs: Number of individual experiments to run
             batch_id: Unique identifier for this batch
             save_results: Whether to save results to disk
+            experiment_config: Configuration to override defaults
             
         Returns:
             BatchResults object with aggregate statistics
@@ -2675,8 +2681,10 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
         for run_idx in range(num_runs):
             self.logger.info(f"Running experiment {run_idx + 1}/{num_runs}")
             
-            # Use different random seeds for each run
+            # Use different random seeds for each run and merge with provided config
             config = {**self.default_config, "random_seed": run_idx + 1}
+            if experiment_config:
+                config.update(experiment_config)
             
             try:
                 result = await self.run_single_experiment(
@@ -2783,25 +2791,56 @@ Focus on actionable insights that will help you negotiate more effectively. Be c
 
 async def main():
     """Main function to run the O3 vs Claude Haiku baseline experiment."""
+    import argparse
+    import sys
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="O3 vs Claude Haiku Baseline Experiment")
+    parser.add_argument("--max-rounds", type=int, default=6, help="Maximum number of negotiation rounds")
+    parser.add_argument("--num-agents", type=int, default=3, help="Number of agents (minimum 2)")
+    parser.add_argument("--batch", action="store_true", help="Run batch experiments")
+    parser.add_argument("--batch-size", type=int, default=10, help="Number of experiments in batch")
+    parser.add_argument("--competition-level", type=float, default=0.95, help="Competition level (0-1)")
+    parser.add_argument("--random-seed", type=int, help="Random seed for reproducibility")
+    args = parser.parse_args()
+    
+    # Validate arguments
+    if args.num_agents < 2:
+        print("Error: Number of agents must be at least 2")
+        sys.exit(1)
+    
     print("=" * 60)
     print("O3 vs Claude Haiku Baseline Experiment")
     print("=" * 60)
+    
+    # Create experiment configuration from command line arguments
+    experiment_config = {
+        "t_rounds": args.max_rounds,
+        "n_agents": args.num_agents,
+        "competition_level": args.competition_level,
+        "random_seed": args.random_seed
+    }
     
     # Initialize experiment runner
     experiment = O3VsHaikuExperiment()
     
     print("\n🚀 Starting baseline experiment...")
     print("Configuration:")
-    print(f"  - 3 agents: 1 O3, 2 Claude Haiku")
+    if args.num_agents == 3:
+        print(f"  - {args.num_agents} agents: 1 O3, 2 Claude Haiku")
+    else:
+        print(f"  - {args.num_agents} agents: 1 O3, {args.num_agents-1} Claude Haiku")
     print(f"  - 5 items to negotiate")
-    print(f"  - Highly competitive preferences (similarity ≈ 0.95)")
+    print(f"  - Highly competitive preferences (similarity ≈ {args.competition_level})")
     print(f"  - Secret preferences (unknown to other agents)")
-    print(f"  - Maximum 6 rounds")
+    print(f"  - Maximum {args.max_rounds} rounds")
+    if args.random_seed:
+        print(f"  - Random seed: {args.random_seed}")
     
     try:
         # Run a single experiment first
         print("\n--- Single Experiment Test ---")
-        single_result = await experiment.run_single_experiment()
+        single_result = await experiment.run_single_experiment(experiment_config=experiment_config)
         
         print(f"\n📊 Single Experiment Results:")
         print(f"  Experiment ID: {single_result.experiment_id}")
@@ -2817,23 +2856,16 @@ async def main():
                 print(f"    {agent_id}: {utility:.2f}")
         
         # Run batch experiment only if requested
-        import sys
-        if "--batch" in sys.argv:
-            batch_size = 10
-            if "--batch-size" in sys.argv:
-                try:
-                    batch_idx = sys.argv.index("--batch-size")
-                    batch_size = int(sys.argv[batch_idx + 1])
-                except (ValueError, IndexError):
-                    print("Invalid batch size, using default of 10")
-                    batch_size = 10
-            
-            print(f"\n--- Batch Experiment ({batch_size} runs) ---")
-            batch_results = await experiment.run_batch_experiments(num_runs=batch_size)
+        if args.batch:
+            print(f"\n--- Batch Experiment ({args.batch_size} runs) ---")
+            batch_results = await experiment.run_batch_experiments(
+                num_runs=args.batch_size, 
+                experiment_config=experiment_config
+            )
             
             print(f"\n📈 Batch Results Summary:")
             print(f"  Batch ID: {batch_results.batch_id}")
-            print(f"  Successful Runs: {batch_results.num_runs}/{batch_size}")
+            print(f"  Successful Runs: {batch_results.num_runs}/{args.batch_size}")
             print(f"  O3 Win Rate: {batch_results.o3_win_rate:.1%}")
             print(f"  Haiku Win Rate: {batch_results.haiku_win_rate:.1%}")
             print(f"  Consensus Rate: {batch_results.consensus_rate:.1%}")
