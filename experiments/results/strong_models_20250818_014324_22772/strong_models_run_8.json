@@ -1,0 +1,109 @@
+{
+  "run_index": 8,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "llama_3_1_405b_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "llama_3_1_405b_1": "meta-llama/llama-3.1-405b-instruct",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      9.479443790787862,
+      1.1524287638803998,
+      8.311962625182986,
+      9.922274676391808,
+      2.6912791377083822,
+      2.3739166828052105
+    ],
+    [
+      10.0,
+      2.272704984535319,
+      6.390143684360756,
+      7.933448378562784,
+      6.006301702107077,
+      5.002428115406799
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "llama_3_1_405b_1": {
+      "item_0": 9.479443790787862,
+      "item_1": 1.1524287638803998,
+      "item_2": 8.311962625182986,
+      "item_3": 9.922274676391808,
+      "item_4": 2.6912791377083822,
+      "item_5": 2.3739166828052105
+    },
+    "gemini_pro_2": {
+      "item_0": 10.0,
+      "item_1": 2.272704984535319,
+      "item_2": 6.390143684360756,
+      "item_3": 7.933448378562784,
+      "item_4": 6.006301702107077,
+      "item_5": 5.002428115406799
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500206050907692
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "llama_3_1_405b_1": [
+        0,
+        1,
+        2
+      ],
+      "gemini_pro_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "llama_3_1_405b_1": 18.98799827048581,
+      "gemini_pro_2": 11.819290062760587
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_1",
+      "content": "I am particularly interested in Item_2 and Item_4. I would be open to trading Item_0 or Item_1 in exchange for either of those. What items are most important to you?",
+      "timestamp": 1755508442.466512,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "Hello! I'm interested in a few items, particularly Item_4 and Item_0. A fair split seems like a good starting point, so I'm open to discussing various combinations that could benefit us both. What are your initial thoughts on the items?",
+      "timestamp": 1755508457.335722,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T02:14:51.554701",
+  "duration_seconds": 51.00663495063782,
+  "metrics": {
+    "mean_utility": 15.403644166623199,
+    "max_utility": 18.98799827048581,
+    "min_utility": 11.819290062760587,
+    "utility_spread": 7.168708207725224
+  }
+}

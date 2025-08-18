@@ -1,0 +1,109 @@
+{
+  "run_index": 9,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "llama_3_1_405b_1",
+    "llama_3_1_405b_2"
+  ],
+  "agent_models": {
+    "llama_3_1_405b_1": "meta-llama/llama-3.1-405b-instruct",
+    "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+  },
+  "initial_preferences_matrix": [
+    [
+      8.951301396738774,
+      8.84936615600104,
+      5.670216862383619,
+      4.45829903901309,
+      5.70771362733569,
+      3.284546771641522
+    ],
+    [
+      8.04617102970124,
+      5.507122169230533,
+      5.201419025517341,
+      6.935759246256787,
+      7.480897075088298,
+      5.257234055811488
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "llama_3_1_405b_1": {
+      "item_0": 8.951301396738774,
+      "item_1": 8.84936615600104,
+      "item_2": 5.670216862383619,
+      "item_3": 4.45829903901309,
+      "item_4": 5.70771362733569,
+      "item_5": 3.284546771641522
+    },
+    "llama_3_1_405b_2": {
+      "item_0": 8.04617102970124,
+      "item_1": 5.507122169230533,
+      "item_2": 5.201419025517341,
+      "item_3": 6.935759246256787,
+      "item_4": 7.480897075088298,
+      "item_5": 5.257234055811488
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.95
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "llama_3_1_405b_1": [
+        0,
+        1,
+        2
+      ],
+      "llama_3_1_405b_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "llama_3_1_405b_1": 24.980846939454675,
+      "llama_3_1_405b_2": 18.073542256827544
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_1",
+      "content": "I'm most interested in Item_2 and Item_5, as I believe they hold significant value. I'm willing to consider a trade involving Item_1 or Item_3 in exchange for one of these preferred items. A potential deal could be Item_1 + Item_3 for Item_2, but I'm open to negotiations.",
+      "timestamp": 1755506935.820714,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_2",
+      "content": "I'm particularly interested in Item_2 and Item_5, as they hold significant value for me. I'd be open to a trade involving Item_1 or Item_3 if it means securing one of my top choices. Perhaps we could discuss a package deal where I get Item_2 and you get Item_1 and Item_4?",
+      "timestamp": 1755506939.787858,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:49:15.400253",
+  "duration_seconds": 22.13301992416382,
+  "metrics": {
+    "mean_utility": 21.527194598141108,
+    "max_utility": 24.980846939454675,
+    "min_utility": 18.073542256827544,
+    "utility_spread": 6.907304682627132
+  }
+}

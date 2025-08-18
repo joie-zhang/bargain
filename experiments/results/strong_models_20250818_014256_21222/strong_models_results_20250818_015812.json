@@ -1,0 +1,1177 @@
+{
+  "experiment": "Strong Models Competition",
+  "timestamp": "2025-08-18T01:42:56.718962",
+  "configuration": {
+    "models": [
+      "gemini-pro",
+      "gemini-pro"
+    ],
+    "num_runs": 10,
+    "max_rounds": 10,
+    "num_items": 6,
+    "competition_level": 0.95
+  },
+  "runs": [
+    {
+      "run_index": 0,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.869088268713707,
+          7.095710210443487,
+          1.3575766172502313,
+          4.801432020373295,
+          9.303560349133607,
+          0.017471148349708088
+        ],
+        [
+          4.862706093202723,
+          7.092673242451369,
+          3.425713737156747,
+          6.624932183780534,
+          8.415757814911533,
+          2.9299549897569874
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 6.869088268713707,
+          "item_1": 7.095710210443487,
+          "item_2": 1.3575766172502313,
+          "item_3": 4.801432020373295,
+          "item_4": 9.303560349133607,
+          "item_5": 0.017471148349708088
+        },
+        "gemini_pro_2": {
+          "item_0": 4.862706093202723,
+          "item_1": 7.092673242451369,
+          "item_2": 3.425713737156747,
+          "item_3": 6.624932183780534,
+          "item_4": 8.415757814911533,
+          "item_5": 2.9299549897569874
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000002
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "gemini_pro_1": [
+            1,
+            3,
+            5
+          ],
+          "gemini_pro_2": [
+            0,
+            2,
+            4
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 11.354657166353709,
+          "gemini_pro_2": 9.12936662912897
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello, I'm still evaluating all the items, but Item_2 and Item_5 have initially caught my attention. I am open to any deal structure as long as it feels balanced and fair for both of us. Which items are you most interested in so we can find a good starting point?",
+          "timestamp": 1755506591.335954,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "I'm still evaluating all the items, but my initial interest is in Item_1, Item_3, and Item_5. I'm curious to hear what you are interested in so we can work towards a mutually beneficial deal.",
+          "timestamp": 1755506607.1668348,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Clearly articulating my core interests has established a baseline, but now I must pivot from positional statements to asking probing questions that uncover their underlying needs and create opportunities for mutual gain.",
+          "timestamp": 1755506683.155414
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Establishing our core interests has been a solid foundation, but to break the stalemate, I must now pivot from defending a fixed position to proposing creative, multi-part solutions that can create mutual gain.",
+          "timestamp": 1755506697.405535
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "gemini_pro_1",
+          "content": "After reviewing the items, I'm most interested in Item_2 and Item_5 at the moment. As a starting point, perhaps we could consider a simple trade. I would be happy to take Item_2 and Item_5 if you would take Item_0 and Item_3.",
+          "timestamp": 1755506720.066748,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "gemini_pro_2",
+          "content": "My main interests are aligning with Item_4 and Item_1 at the moment. I'm open to discussing a package deal that would be mutually beneficial, as I see potential for both of us to walk away with something we value. What items are you currently focused on acquiring?",
+          "timestamp": 1755506732.702548,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:46:22.088283",
+      "duration_seconds": 205.369225025177,
+      "metrics": {
+        "mean_utility": 10.242011897741339,
+        "max_utility": 11.354657166353709,
+        "min_utility": 9.12936662912897,
+        "utility_spread": 2.2252905372247387
+      }
+    },
+    {
+      "run_index": 1,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          7.589676117318018,
+          9.155524892544948,
+          0.9310751168421627,
+          4.632834007066381,
+          7.868895226821299,
+          5.171464094014238
+        ],
+        [
+          5.669862692973636,
+          7.44402390162464,
+          3.303364961019658,
+          7.853246289603758,
+          7.022545878751642,
+          6.554215561394677
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 7.589676117318018,
+          "item_1": 9.155524892544948,
+          "item_2": 0.9310751168421627,
+          "item_3": 4.632834007066381,
+          "item_4": 7.868895226821299,
+          "item_5": 5.171464094014238
+        },
+        "gemini_pro_2": {
+          "item_0": 5.669862692973636,
+          "item_1": 7.44402390162464,
+          "item_2": 3.303364961019658,
+          "item_3": 7.853246289603758,
+          "item_4": 7.022545878751642,
+          "item_5": 6.554215561394677
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 11.571089412738708,
+          "gemini_pro_2": 21.764731361597704
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello, I'm looking forward to a productive negotiation. While all the items have some appeal, I'm particularly interested in Item_3 and Item_5 at the moment. I'm open to any deal that feels balanced, perhaps a simple 3-3 split to start the conversation.",
+          "timestamp": 1755506793.522481,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello! I'm interested in a few items, particularly Item_2 and Item_4, but my priorities are flexible. I'm open to any arrangement that feels fair, so I'm curious to hear what items you have your eye on.",
+          "timestamp": 1755506804.570574,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:47:20.310406",
+      "duration_seconds": 58.21982407569885,
+      "metrics": {
+        "mean_utility": 16.667910387168206,
+        "max_utility": 21.764731361597704,
+        "min_utility": 11.571089412738708,
+        "utility_spread": 10.193641948858996
+      }
+    },
+    {
+      "run_index": 2,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          5.05448004407536,
+          1.7118275918801107,
+          6.926250801998407,
+          1.418468365298654,
+          4.857377202698034,
+          0.39679946248352693
+        ],
+        [
+          4.826865225483919,
+          2.862534024283626,
+          5.795617667782212,
+          3.125175906704248,
+          4.5756092106185156,
+          2.535715048287984
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 5.05448004407536,
+          "item_1": 1.7118275918801107,
+          "item_2": 6.926250801998407,
+          "item_3": 1.418468365298654,
+          "item_4": 4.857377202698034,
+          "item_5": 0.39679946248352693
+        },
+        "gemini_pro_2": {
+          "item_0": 4.826865225483919,
+          "item_1": 2.862534024283626,
+          "item_2": 5.795617667782212,
+          "item_3": 3.125175906704248,
+          "item_4": 4.5756092106185156,
+          "item_5": 2.535715048287984
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            1,
+            3,
+            5
+          ],
+          "gemini_pro_2": [
+            0,
+            2,
+            4
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 10.047653456958539,
+          "gemini_pro_2": 20.220641697304398
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello there. I'm interested in a few items, but Item_2 and Item_5 are the ones that catch my eye the most. I'm open to discussing any deal that would allow me to walk away with those two.",
+          "timestamp": 1755506851.896777,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Based on my initial review, Item_4 and Item_5 hold the most significance for my interests. I am open to discussing a trade where I might take both of those in exchange for a package of other items. What are your priorities?",
+          "timestamp": 1755506864.656961,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:48:30.973203",
+      "duration_seconds": 70.66213870048523,
+      "metrics": {
+        "mean_utility": 15.134147577131468,
+        "max_utility": 20.220641697304398,
+        "min_utility": 10.047653456958539,
+        "utility_spread": 10.172988240345859
+      }
+    },
+    {
+      "run_index": 3,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.6997554669257315,
+          6.0430822782839675,
+          0.22228907317897173,
+          4.961178035300403,
+          4.485984341302018,
+          4.035689032583819
+        ],
+        [
+          5.3609006751436805,
+          6.628453081723121,
+          1.7218376423614112,
+          7.129786699432505,
+          3.4596491322740173,
+          2.00890678653209
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 6.6997554669257315,
+          "item_1": 6.0430822782839675,
+          "item_2": 0.22228907317897173,
+          "item_3": 4.961178035300403,
+          "item_4": 4.485984341302018,
+          "item_5": 4.035689032583819
+        },
+        "gemini_pro_2": {
+          "item_0": 5.3609006751436805,
+          "item_1": 6.628453081723121,
+          "item_2": 1.7218376423614112,
+          "item_3": 7.129786699432505,
+          "item_4": 3.4596491322740173,
+          "item_5": 2.00890678653209
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 5.045239860371359,
+          "gemini_pro_2": 9.936729838776534
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello! I'm open to finding a deal that works for both of us. For me, Item_0 and Item_3 hold some particular interest, but I'm flexible. Perhaps we could consider a simple 3-3 split to start the conversation?",
+          "timestamp": 1755506921.887291,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello, I'm looking forward to finding a deal that works for both of us. Based on my initial assessment, Item_0 and Item_1 hold the most significance for my interests. I'm open to discussing any package, but a deal that includes those two items would be a great starting point for me.",
+          "timestamp": 1755506935.667628,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:49:31.075751",
+      "duration_seconds": 60.10003089904785,
+      "metrics": {
+        "mean_utility": 7.490984849573946,
+        "max_utility": 9.936729838776534,
+        "min_utility": 5.045239860371359,
+        "utility_spread": 4.8914899784051755
+      }
+    },
+    {
+      "run_index": 4,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          5.197904867802976,
+          1.054931618086874,
+          1.4264177474644069,
+          3.0633608654811137,
+          2.5245885556822656,
+          3.0859048197903505
+        ],
+        [
+          4.102349735689847,
+          1.114647779672973,
+          1.621513214153397,
+          4.61817506934736,
+          3.15273329890648,
+          1.864943080312457
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 5.197904867802976,
+          "item_1": 1.054931618086874,
+          "item_2": 1.4264177474644069,
+          "item_3": 3.0633608654811137,
+          "item_4": 2.5245885556822656,
+          "item_5": 3.0859048197903505
+        },
+        "gemini_pro_2": {
+          "item_0": 4.102349735689847,
+          "item_1": 1.114647779672973,
+          "item_2": 1.621513214153397,
+          "item_3": 4.61817506934736,
+          "item_4": 3.15273329890648,
+          "item_5": 1.864943080312457
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 16.56085719134972,
+          "gemini_pro_2": 11.2734638875521
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello, it's a pleasure to negotiate with you. My initial assessment suggests that Item_2, Item_4, and Item_5 hold the most potential value for me. I believe a fair outcome is possible, so perhaps we could explore a deal where we each end up with three items.",
+          "timestamp": 1755506982.0751889,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello, it's a pleasure to negotiate with you. Looking over the items, I have a particular interest in Item_3 and Item_4. I am, however, open to discussing any potential package that might be mutually beneficial.",
+          "timestamp": 1755506998.388698,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:50:44.377969",
+      "duration_seconds": 73.30064988136292,
+      "metrics": {
+        "mean_utility": 13.91716053945091,
+        "max_utility": 16.56085719134972,
+        "min_utility": 11.2734638875521,
+        "utility_spread": 5.287393303797618
+      }
+    },
+    {
+      "run_index": 5,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          1.5607049062476142,
+          9.9851256315823,
+          7.850386730465408,
+          7.086946859136114,
+          8.913102393298356,
+          6.539338597234343
+        ],
+        [
+          5.0022169479045,
+          6.91333817251252,
+          8.850037439489821,
+          4.7710562646496335,
+          9.035201488911643,
+          8.981137971336178
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 1.5607049062476142,
+          "item_1": 9.9851256315823,
+          "item_2": 7.850386730465408,
+          "item_3": 7.086946859136114,
+          "item_4": 8.913102393298356,
+          "item_5": 6.539338597234343
+        },
+        "gemini_pro_2": {
+          "item_0": 5.0022169479045,
+          "item_1": 6.91333817251252,
+          "item_2": 8.850037439489821,
+          "item_3": 4.7710562646496335,
+          "item_4": 9.035201488911643,
+          "item_5": 8.981137971336178
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 10.591151473213065,
+          "gemini_pro_2": 16.243615956158457
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello! I'm interested in a few of the items here, with Item_2 and Item_4 standing out to me the most. I'm open to any deal that feels balanced, but perhaps a simple split where we each take three items would be a good place to start our discussion.",
+          "timestamp": 1755507055.4130418,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "I see potential value across the board, but Item_2 and Item_5 are particularly interesting to me. I'm open to discussing a fair split of all the items, or perhaps a trade centered on those two.",
+          "timestamp": 1755507066.914152,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:51:42.487398",
+      "duration_seconds": 58.10753679275513,
+      "metrics": {
+        "mean_utility": 13.417383714685762,
+        "max_utility": 16.243615956158457,
+        "min_utility": 10.591151473213065,
+        "utility_spread": 5.652464482945392
+      }
+    },
+    {
+      "run_index": 6,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.880802785407311,
+          9.684157649211132,
+          6.376206891004115,
+          7.4929572882875615,
+          0.5248524871927629,
+          2.3559468179215335
+        ],
+        [
+          4.810431307877312,
+          7.994163192800729,
+          8.414373495524835,
+          7.547372631835795,
+          3.864266596536297,
+          3.7430962201903566
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 6.880802785407311,
+          "item_1": 9.684157649211132,
+          "item_2": 6.376206891004115,
+          "item_3": 7.4929572882875615,
+          "item_4": 0.5248524871927629,
+          "item_5": 2.3559468179215335
+        },
+        "gemini_pro_2": {
+          "item_0": 4.810431307877312,
+          "item_1": 7.994163192800729,
+          "item_2": 8.414373495524835,
+          "item_3": 7.547372631835795,
+          "item_4": 3.864266596536297,
+          "item_5": 3.7430962201903566
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 15.054305100591638,
+          "gemini_pro_2": 20.486240603022242
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello! For me, Item_1, Item_3, and Item_4 hold the most interest, but I'm flexible. I think a fair outcome would be for each of us to get three items, so I'm open to any proposals along those lines.",
+          "timestamp": 1755507115.286666,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello! I'm interested in a few of the items, particularly Item_0 and Item_5, but my preferences are pretty flexible at this stage. I'm aiming for a fair deal, so perhaps a simple 3-3 split would be a good place to start our discussion.",
+          "timestamp": 1755507126.620152,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:52:52.063351",
+      "duration_seconds": 69.57406115531921,
+      "metrics": {
+        "mean_utility": 17.77027285180694,
+        "max_utility": 20.486240603022242,
+        "min_utility": 15.054305100591638,
+        "utility_spread": 5.431935502430605
+      }
+    },
+    {
+      "run_index": 7,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          3.17946551462852,
+          6.900593526363448,
+          7.528338671582302,
+          4.775197946141602,
+          7.4654222754095665,
+          4.186274982294412
+        ],
+        [
+          0.9332858629377142,
+          8.01146013084654,
+          6.9506841269268484,
+          1.500944317293426,
+          7.5841135864880975,
+          6.109409139389702
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 3.17946551462852,
+          "item_1": 6.900593526363448,
+          "item_2": 7.528338671582302,
+          "item_3": 4.775197946141602,
+          "item_4": 7.4654222754095665,
+          "item_5": 4.186274982294412
+        },
+        "gemini_pro_2": {
+          "item_0": 0.9332858629377142,
+          "item_1": 8.01146013084654,
+          "item_2": 6.9506841269268484,
+          "item_3": 1.500944317293426,
+          "item_4": 7.5841135864880975,
+          "item_5": 6.109409139389702
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            2,
+            4
+          ],
+          "gemini_pro_2": [
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 8.764596843388492,
+          "gemini_pro_2": 15.811345349495708
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello! I'm interested in a few of the items, particularly Item_2 and Item_5, but I'm quite flexible at this early stage. Ultimately, I'm looking for a fair distribution that works for both of us, so I'm open to hearing what you're interested in.",
+          "timestamp": 1755507182.049563,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello, it's a pleasure to negotiate with you. For me, Item_2 and Item_4 hold significant value, and I'm also interested in Item_0. I'm open to finding a deal that benefits us both, perhaps one where we each secure a couple of our preferred items.",
+          "timestamp": 1755507195.272341,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:53:55.784614",
+      "duration_seconds": 63.719006061553955,
+      "metrics": {
+        "mean_utility": 12.2879710964421,
+        "max_utility": 15.811345349495708,
+        "min_utility": 8.764596843388492,
+        "utility_spread": 7.046748506107216
+      }
+    },
+    {
+      "run_index": 8,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          3.0465280329338187,
+          8.641727703200727,
+          2.336413149995018,
+          3.0843927727364107,
+          5.5645216047960115,
+          3.5118421996243265
+        ],
+        [
+          5.540528847008377,
+          7.311344491624082,
+          1.6529788264676755,
+          4.986926412579655,
+          5.095489793054962,
+          2.1239170899318203
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 3.0465280329338187,
+          "item_1": 8.641727703200727,
+          "item_2": 2.336413149995018,
+          "item_3": 3.0843927727364107,
+          "item_4": 5.5645216047960115,
+          "item_5": 3.5118421996243265
+        },
+        "gemini_pro_2": {
+          "item_0": 5.540528847008377,
+          "item_1": 7.311344491624082,
+          "item_2": 1.6529788264676755,
+          "item_3": 4.986926412579655,
+          "item_4": 5.095489793054962,
+          "item_5": 2.1239170899318203
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9499999999999998
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "gemini_pro_1": [
+            0,
+            1,
+            2
+          ],
+          "gemini_pro_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 5.166310867120419,
+          "gemini_pro_2": 14.101479068675555
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "I'm interested in several items, but Item_2 and Item_5 are the ones that catch my eye the most. However, I'm flexible and primarily interested in making sure we both walk away with a good deal. What are you hoping to get?",
+          "timestamp": 1755507248.353716,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Hello, I'm looking forward to finding a deal that benefits both of us. From my perspective, Item_2 and Item_4 seem to hold the most potential value. I'm open to discussing different combinations and hearing what you're interested in.",
+          "timestamp": 1755507266.562377,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:55:02.330948",
+      "duration_seconds": 66.54513311386108,
+      "metrics": {
+        "mean_utility": 9.633894967897987,
+        "max_utility": 14.101479068675555,
+        "min_utility": 5.166310867120419,
+        "utility_spread": 8.935168201555136
+      }
+    },
+    {
+      "run_index": 9,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "gemini_pro_1",
+        "gemini_pro_2"
+      ],
+      "agent_models": {
+        "gemini_pro_1": "google/gemini-2.5-pro",
+        "gemini_pro_2": "google/gemini-2.5-pro"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.30474165508724,
+          2.79238446950987,
+          8.963473507721584,
+          4.82158485327393,
+          1.5539557859356379,
+          2.550890793148637
+        ],
+        [
+          6.169244114918012,
+          4.934152720378963,
+          7.7679649977765735,
+          6.060392254216475,
+          3.742279845442278,
+          3.974893242180912
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "gemini_pro_1": {
+          "item_0": 8.30474165508724,
+          "item_1": 2.79238446950987,
+          "item_2": 8.963473507721584,
+          "item_3": 4.82158485327393,
+          "item_4": 1.5539557859356379,
+          "item_5": 2.550890793148637
+        },
+        "gemini_pro_2": {
+          "item_0": 6.169244114918012,
+          "item_1": 4.934152720378963,
+          "item_2": 7.7679649977765735,
+          "item_3": 6.060392254216475,
+          "item_4": 3.742279845442278,
+          "item_5": 3.974893242180912
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000002
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "gemini_pro_1": [
+            3,
+            4,
+            5
+          ],
+          "gemini_pro_2": [
+            0,
+            1,
+            2
+          ]
+        },
+        "final_utilities": {
+          "gemini_pro_1": 18.693522985202993,
+          "gemini_pro_2": 21.756352944188905
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "Hello. I'm open to discussing any configuration, but I'm initially most interested in Item_5 and Item_3. I'm confident we can construct a deal that benefits us both, so I'm keen to learn what items you value most.",
+          "timestamp": 1755507316.467946,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "I see potential value across the board, but Item_2 and Item_4 catch my eye initially. I'm curious to know which items you prioritize so we can start working towards a fair trade for both of us.",
+          "timestamp": 1755507329.327337,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "gemini_pro_1",
+          "content": "My strategy of clearly anchoring our discussion on my primary interests has been effective for establishing a baseline, but has not yet created movement. I will now shift to asking more open-ended questions to better understand their constraints and introduce new, tradable options to expand the potential for a solution.",
+          "timestamp": 1755507394.027185
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "gemini_pro_2",
+          "content": "Clearly articulating our positions has successfully defined the disagreement, but to break the impasse, I will now shift from defending a stance to proposing creative options that address our underlying interests.",
+          "timestamp": 1755507411.668544
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "gemini_pro_1",
+          "content": "I'm interested in a variety of items, particularly Item_2 and Item_5, as they would be a great combination for my collection. I'm open to different arrangements, but perhaps a deal where I take those two and one other could work for both of us. What are your priorities in this negotiation?",
+          "timestamp": 1755507423.045001,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "gemini_pro_2",
+          "content": "My primary interests are Item_2 and Item_5, as they are the most significant for my needs. I'm willing to be flexible on the other items to make a deal happen. What items are you targeting?",
+          "timestamp": 1755507437.4187431,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:58:12.389589",
+      "duration_seconds": 190.05685806274414,
+      "metrics": {
+        "mean_utility": 20.224937964695947,
+        "max_utility": 21.756352944188905,
+        "min_utility": 18.693522985202993,
+        "utility_spread": 3.062829958985912
+      }
+    }
+  ],
+  "summary": {
+    "total_runs": 10,
+    "successful_runs": 10,
+    "consensus_rate": 1.0,
+    "avg_rounds": 1.2,
+    "avg_utility_spread": 6.289995066065664
+  }
+}

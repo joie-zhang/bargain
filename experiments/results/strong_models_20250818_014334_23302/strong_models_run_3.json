@@ -1,0 +1,269 @@
+{
+  "run_index": 3,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "gemini_pro_1",
+    "llama_3_1_405b_2"
+  ],
+  "agent_models": {
+    "gemini_pro_1": "google/gemini-2.5-pro",
+    "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+  },
+  "initial_preferences_matrix": [
+    [
+      3.139381042099628,
+      8.104093184783238,
+      3.6436333100941765,
+      9.505942747204726,
+      3.90364158439234,
+      0.40903805576901653
+    ],
+    [
+      3.483141058604163,
+      9.961696008187008,
+      5.2604145700264215,
+      6.558805772125739,
+      2.7565304666390436,
+      2.2182801502475904
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "gemini_pro_1": {
+      "item_0": 3.139381042099628,
+      "item_1": 8.104093184783238,
+      "item_2": 3.6436333100941765,
+      "item_3": 9.505942747204726,
+      "item_4": 3.90364158439234,
+      "item_5": 0.40903805576901653
+    },
+    "llama_3_1_405b_2": {
+      "item_0": 3.483141058604163,
+      "item_1": 9.961696008187008,
+      "item_2": 5.2604145700264215,
+      "item_3": 6.558805772125739,
+      "item_4": 2.7565304666390436,
+      "item_5": 2.2182801502475904
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500000000000001
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 6,
+    "final_allocation": {
+      "gemini_pro_1": [
+        0,
+        1,
+        2
+      ],
+      "llama_3_1_405b_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_1": 10.519895082858609,
+      "llama_3_1_405b_2": 12.23523799167887
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "Hello! Looking over the set, I have a particular interest in Item_2 and Item_5. I am curious to hear what you are interested in, as I am sure we can find a deal that works for both of us.",
+      "timestamp": 1755507475.986586,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_2",
+      "content": "I have a strong interest in Item_2 and Item_5, as they hold significant value to me. I'd be open to negotiating a deal that involves trading Item_1 or Item_3 in exchange for one of these items. A potential bundle deal involving Item_2 and Item_4 could also be intriguing, depending on the terms.",
+      "timestamp": 1755507479.229507,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "Establishing our core interests has been productive, but we are deadlocked on the main issue. I will now propose a multi-part package deal to create new avenues for compromise and mutual gain.",
+      "timestamp": 1755507512.1235268
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "llama_3_1_405b_2",
+      "content": "The human and I are both presenting our perspectives, which is good for understanding each other's positions. To make progress, I should focus more on finding common ground and exploring creative solutions that could satisfy both of our key interests.",
+      "timestamp": 1755507514.644184
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "gemini_pro_1",
+      "content": "My main interests lie with Item_4 and Item_0, as they are quite valuable to me. I'm willing to be flexible on the other items, so perhaps we can work out a deal where I get those two and you get a fair share of the rest. What are your thoughts on that as a starting point?",
+      "timestamp": 1755507526.9182148,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "llama_3_1_405b_2",
+      "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be willing to consider a trade involving Item_1 or Item_3 in exchange for one of these preferred items. A potential deal could be Item_1 and Item_3 for Item_2, but I'm open to negotiations.",
+      "timestamp": 1755507529.471953,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 2,
+      "from": "gemini_pro_1",
+      "content": "My data-driven approach has established a credible position, but to break the impasse, I must now shift from defending my stance to asking questions that uncover their underlying interests and potential trade-offs.",
+      "timestamp": 1755507576.289715
+    },
+    {
+      "phase": "reflection",
+      "round": 2,
+      "from": "llama_3_1_405b_2",
+      "content": "So far, active listening and asking clarifying questions have been effective in understanding the counterparty's concerns and needs. To move towards a consensus, I may need to try differently by making more creative concessions or finding novel solutions that address both parties' interests simultaneously.",
+      "timestamp": 1755507578.230145
+    },
+    {
+      "phase": "discussion",
+      "round": 3,
+      "from": "gemini_pro_1",
+      "content": "My priorities are starting to become clearer, and Item_4 stands out as particularly important to me. I also see some potential value in Item_1. I would be open to a deal where I receive Item_4 in exchange for two other items, depending on which ones you are focused on.",
+      "timestamp": 1755507594.975158,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 3,
+      "from": "llama_3_1_405b_2",
+      "content": "I have a strong preference for Item_2 and Item_4. A deal involving those two items would be ideal for me. However, I'm open to considering other offers if they provide good value.",
+      "timestamp": 1755507597.045653,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 3,
+      "from": "gemini_pro_1",
+      "content": "Clearly articulating my position has been effective for finding some common ground, but to break the current impasse, I will shift from trading concessions to proposing a new, creative package that addresses their underlying interests.",
+      "timestamp": 1755507644.402771
+    },
+    {
+      "phase": "reflection",
+      "round": 3,
+      "from": "llama_3_1_405b_2",
+      "content": "Upon reflection, I notice that active listening and mirroring the counterparty's concerns have been effective in building rapport and creating a collaborative atmosphere, but we still haven't reached a consensus. To break the impasse, I should try to introduce creative solutions or alternatives that address the counterparty's underlying interests and needs, rather than just focusing on positions.",
+      "timestamp": 1755507646.559655
+    },
+    {
+      "phase": "discussion",
+      "round": 4,
+      "from": "gemini_pro_1",
+      "content": "My priorities are solidifying around Item_2, which is essential for me, and I'm also quite interested in Item_0. I'm willing to be flexible on the other items to facilitate an agreement. Perhaps a deal where I get those two and you get a larger share of the rest could work for both of us.",
+      "timestamp": 1755507667.112641,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 4,
+      "from": "llama_3_1_405b_2",
+      "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be open to trading Item_1 or Item_3 for either of those, or potentially bundling Item_0 and Item_4 for a comprehensive deal. However, Item_2 remains my top priority.",
+      "timestamp": 1755507669.5602272,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 4,
+      "from": "gemini_pro_1",
+      "content": "Our strategy of exchanging detailed information has successfully clarified each side's core interests, but our positional bargaining on individual items has led to a stalemate. I will now shift focus to proposing a creative package deal that addresses our most critical needs simultaneously, aiming to create new value and break the impasse.",
+      "timestamp": 1755507717.736289
+    },
+    {
+      "phase": "reflection",
+      "round": 4,
+      "from": "llama_3_1_405b_2",
+      "content": "Upon reflection, I notice that active listening and asking clarifying questions have been effective in understanding the counterparty's concerns and needs, but I haven't yet found the right concession to make to reach a mutually beneficial agreement. In the next round, I should try to be more creative in my proposals and explore alternative solutions that address both parties' interests.",
+      "timestamp": 1755507719.581606
+    },
+    {
+      "phase": "discussion",
+      "round": 5,
+      "from": "gemini_pro_1",
+      "content": "My priorities are starting to narrow, and I'm most interested in securing Item_2 and Item_4. However, to make things fair, I'm open to compromises on the other items. Perhaps a deal where I take Item_2, Item_4, and Item_0, and you get the remaining three could work for both of us.",
+      "timestamp": 1755507731.552324,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 5,
+      "from": "llama_3_1_405b_2",
+      "content": "I'm particularly interested in Item_3 and Item_5, as I believe they hold significant value. I'd be willing to consider a trade involving Item_1 or Item_2 in exchange for one of these items, but I'd need a compelling offer. Perhaps a bundle deal involving Item_0 and Item_4 could also be discussed, but my primary focus remains on acquiring Item_3 or Item_5.",
+      "timestamp": 1755507734.269121,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 5,
+      "from": "gemini_pro_1",
+      "content": "While our iterative proposals have clarified the key sticking points, we are now at a positional impasse. I will shift from trading small concessions to proposing a package deal that addresses our core interests simultaneously to break the deadlock.",
+      "timestamp": 1755507790.1631098
+    },
+    {
+      "phase": "reflection",
+      "round": 5,
+      "from": "llama_3_1_405b_2",
+      "content": "Upon reflection, I notice that active listening and asking clarifying questions have been effective in building trust and understanding the counterpart's perspective. However, I may need to try differently by being more explicit about my own goals and limits to create a clearer path to a mutually beneficial agreement.",
+      "timestamp": 1755507791.959213
+    },
+    {
+      "phase": "discussion",
+      "round": 6,
+      "from": "gemini_pro_1",
+      "content": "My focus is really narrowing to Item_4 and Item_0 at this point. I'd be willing to make significant concessions on the other items to secure that pair. Let's talk if that kind of trade interests you.",
+      "timestamp": 1755507803.7554739,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 6,
+      "from": "llama_3_1_405b_2",
+      "content": "I am most interested in Item_2 and Item_5. I would be open to a deal involving trading away Item_0 or Item_3 if it meant securing those two items. However, I am flexible and willing to negotiate to find a mutually beneficial arrangement.",
+      "timestamp": 1755507806.8206651,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T02:05:10.878602",
+  "duration_seconds": 447.2373089790344,
+  "metrics": {
+    "mean_utility": 11.37756653726874,
+    "max_utility": 12.23523799167887,
+    "min_utility": 10.519895082858609,
+    "utility_spread": 1.7153429088202614
+  }
+}

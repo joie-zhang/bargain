@@ -1,0 +1,109 @@
+{
+  "run_index": 8,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "llama_3_1_405b_1",
+    "qwen_3_235b_a22b_2507_2"
+  ],
+  "agent_models": {
+    "llama_3_1_405b_1": "meta-llama/llama-3.1-405b-instruct",
+    "qwen_3_235b_a22b_2507_2": "qwen/qwen3-235b-a22b-2507"
+  },
+  "initial_preferences_matrix": [
+    [
+      9.692133932114164,
+      2.787880684632836,
+      3.2532824223322288,
+      2.3650445004133616,
+      8.11680272258971,
+      2.101119938047894
+    ],
+    [
+      8.668801428821334,
+      3.655628860386416,
+      3.1077855581834077,
+      6.2770770406224194,
+      6.8173768410539095,
+      2.033670939448053
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "llama_3_1_405b_1": {
+      "item_0": 9.692133932114164,
+      "item_1": 2.787880684632836,
+      "item_2": 3.2532824223322288,
+      "item_3": 2.3650445004133616,
+      "item_4": 8.11680272258971,
+      "item_5": 2.101119938047894
+    },
+    "qwen_3_235b_a22b_2507_2": {
+      "item_0": 8.668801428821334,
+      "item_1": 3.655628860386416,
+      "item_2": 3.1077855581834077,
+      "item_3": 6.2770770406224194,
+      "item_4": 6.8173768410539095,
+      "item_5": 2.033670939448053
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9499999999999998
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "llama_3_1_405b_1": [
+        0,
+        1,
+        2
+      ],
+      "qwen_3_235b_a22b_2507_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "llama_3_1_405b_1": 6.666986162293687,
+      "qwen_3_235b_a22b_2507_2": 15.52703732474916
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_1",
+      "content": "I have a strong interest in Item_2 and Item_5, and I believe they would be valuable additions to my portfolio. I'd be open to negotiating a deal that involves trading Item_1 or Item_3, or potentially a bundle deal that includes Item_4. I'm willing to listen to counteroffers and work towards a mutually beneficial agreement.",
+      "timestamp": 1755507087.245328,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_2",
+      "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I'd be open to trading one of them for Item_1 or Item_5, depending on what the other party values.",
+      "timestamp": 1755507088.277573,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:51:46.298544",
+  "duration_seconds": 22.206697940826416,
+  "metrics": {
+    "mean_utility": 11.097011743521424,
+    "max_utility": 15.52703732474916,
+    "min_utility": 6.666986162293687,
+    "utility_spread": 8.860051162455473
+  }
+}

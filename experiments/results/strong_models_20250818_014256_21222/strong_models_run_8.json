@@ -1,0 +1,109 @@
+{
+  "run_index": 8,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "gemini_pro_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "gemini_pro_1": "google/gemini-2.5-pro",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      3.0465280329338187,
+      8.641727703200727,
+      2.336413149995018,
+      3.0843927727364107,
+      5.5645216047960115,
+      3.5118421996243265
+    ],
+    [
+      5.540528847008377,
+      7.311344491624082,
+      1.6529788264676755,
+      4.986926412579655,
+      5.095489793054962,
+      2.1239170899318203
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "gemini_pro_1": {
+      "item_0": 3.0465280329338187,
+      "item_1": 8.641727703200727,
+      "item_2": 2.336413149995018,
+      "item_3": 3.0843927727364107,
+      "item_4": 5.5645216047960115,
+      "item_5": 3.5118421996243265
+    },
+    "gemini_pro_2": {
+      "item_0": 5.540528847008377,
+      "item_1": 7.311344491624082,
+      "item_2": 1.6529788264676755,
+      "item_3": 4.986926412579655,
+      "item_4": 5.095489793054962,
+      "item_5": 2.1239170899318203
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9499999999999998
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "gemini_pro_1": [
+        0,
+        1,
+        2
+      ],
+      "gemini_pro_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_1": 5.166310867120419,
+      "gemini_pro_2": 14.101479068675555
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "I'm interested in several items, but Item_2 and Item_5 are the ones that catch my eye the most. However, I'm flexible and primarily interested in making sure we both walk away with a good deal. What are you hoping to get?",
+      "timestamp": 1755507248.353716,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "Hello, I'm looking forward to finding a deal that benefits both of us. From my perspective, Item_2 and Item_4 seem to hold the most potential value. I'm open to discussing different combinations and hearing what you're interested in.",
+      "timestamp": 1755507266.562377,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:55:02.330948",
+  "duration_seconds": 66.54513311386108,
+  "metrics": {
+    "mean_utility": 9.633894967897987,
+    "max_utility": 14.101479068675555,
+    "min_utility": 5.166310867120419,
+    "utility_spread": 8.935168201555136
+  }
+}

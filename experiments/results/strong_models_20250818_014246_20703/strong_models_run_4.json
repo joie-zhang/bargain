@@ -1,0 +1,109 @@
+{
+  "run_index": 4,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "claude_4_sonnet_1",
+    "claude_4_sonnet_2"
+  ],
+  "agent_models": {
+    "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+    "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+  },
+  "initial_preferences_matrix": [
+    [
+      1.9217745822097776,
+      8.885367997546549,
+      1.146469631192415,
+      8.102887968315311,
+      3.7461041481485235,
+      3.1784050502687777
+    ],
+    [
+      3.4961161038781645,
+      7.584780427128761,
+      4.601522682479193,
+      7.726852502765817,
+      2.9079772867991984,
+      3.829283033983823
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "claude_4_sonnet_1": {
+      "item_0": 1.9217745822097776,
+      "item_1": 8.885367997546549,
+      "item_2": 1.146469631192415,
+      "item_3": 8.102887968315311,
+      "item_4": 3.7461041481485235,
+      "item_5": 3.1784050502687777
+    },
+    "claude_4_sonnet_2": {
+      "item_0": 3.4961161038781645,
+      "item_1": 7.584780427128761,
+      "item_2": 4.601522682479193,
+      "item_3": 7.726852502765817,
+      "item_4": 2.9079772867991984,
+      "item_5": 3.829283033983823
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500000000000001
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "claude_4_sonnet_1": [
+        0,
+        1,
+        2
+      ],
+      "claude_4_sonnet_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "claude_4_sonnet_1": 14.634849428567493,
+      "claude_4_sonnet_2": 17.361788383942766
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_1",
+      "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my current priorities and would provide significant value to me. I'd be open to trading away Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most drawn to, and do you see potential for us to each focus on different subsets?",
+      "timestamp": 1755507025.338154,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "I'm quite interested in Items 2, 4, and 5 - they align well with my priorities for this negotiation. I'd be willing to consider trading some of the lower-numbered items if you have strong preferences for those, as I'm looking for mutually beneficial arrangements. What items are you most drawn to, and do you see any potential for us to find complementary interests?",
+      "timestamp": 1755507029.312764,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:51:00.873225",
+  "duration_seconds": 39.60579514503479,
+  "metrics": {
+    "mean_utility": 15.998318906255129,
+    "max_utility": 17.361788383942766,
+    "min_utility": 14.634849428567493,
+    "utility_spread": 2.7269389553752728
+  }
+}
