@@ -1,0 +1,132 @@
+{
+  "experiment": "Strong Models Competition",
+  "timestamp": "2025-08-17T23:47:33.275431",
+  "configuration": {
+    "models": [
+      "claude-3-5-sonnet",
+      "llama-3-1-405b"
+    ],
+    "num_runs": 1,
+    "max_rounds": 3,
+    "num_items": 6,
+    "competition_level": 0.95
+  },
+  "runs": [
+    {
+      "run_index": 0,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 3,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_3_5_sonnet_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "claude_3_5_sonnet_1": "anthropic/claude-sonnet-4",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.2940221448800475,
+          2.5296634358893986,
+          7.862459865736633,
+          2.934948213484142,
+          5.253708490072838,
+          8.471264365370358
+        ],
+        [
+          3.3033245810426455,
+          4.739069399039369,
+          6.1448702507233,
+          1.9098718178331717,
+          5.940721767338082,
+          10.0
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_3_5_sonnet_1": {
+          "item_0": 6.2940221448800475,
+          "item_1": 2.5296634358893986,
+          "item_2": 7.862459865736633,
+          "item_3": 2.934948213484142,
+          "item_4": 5.253708490072838,
+          "item_5": 8.471264365370358
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 3.3033245810426455,
+          "item_1": 4.739069399039369,
+          "item_2": 6.1448702507233,
+          "item_3": 1.9098718178331717,
+          "item_4": 5.940721767338082,
+          "item_5": 10.0
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9516322465671602
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_3_5_sonnet_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_3_5_sonnet_1": 15.576289327361913,
+          "llama_3_1_405b_2": 6.070120590157012
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_3_5_sonnet_1",
+          "content": "I'm particularly interested in Items 0, 2, and 4 - they align well with my current priorities and would provide significant value to me. I'd be open to trading away Items 1, 3, and 5 if we can find a mutually beneficial arrangement. What items are you most drawn to, and do you see any potential for us to each focus on different subsets?",
+          "timestamp": 1755499656.875944,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_4. I would be open to a deal involving trading Item_0 and Item_3 in exchange for those two items. However, I am flexible and willing to negotiate to find a mutually beneficial arrangement.",
+          "timestamp": 1755499662.036799,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-17T23:48:05.724079",
+      "duration_seconds": 32.44858479499817,
+      "metrics": {
+        "mean_utility": 10.823204958759462,
+        "max_utility": 15.576289327361913,
+        "min_utility": 6.070120590157012,
+        "utility_spread": 9.5061687372049
+      }
+    }
+  ],
+  "summary": {
+    "total_runs": 1,
+    "successful_runs": 1,
+    "consensus_rate": 1.0,
+    "avg_rounds": 1.0,
+    "avg_utility_spread": 9.5061687372049
+  }
+}
