@@ -1,0 +1,109 @@
+{
+  "run_index": 7,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "claude_4_sonnet_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      6.178071040971288,
+      3.5591704285487022,
+      7.334117455463792,
+      8.382735039075126,
+      5.489857291217788,
+      2.7277927880158694
+    ],
+    [
+      9.051955951838087,
+      3.9101189781893764,
+      5.433181213962621,
+      8.595379281683675,
+      2.474180890821973,
+      2.393043444451636
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "claude_4_sonnet_1": {
+      "item_0": 6.178071040971288,
+      "item_1": 3.5591704285487022,
+      "item_2": 7.334117455463792,
+      "item_3": 8.382735039075126,
+      "item_4": 5.489857291217788,
+      "item_5": 2.7277927880158694
+    },
+    "gemini_pro_2": {
+      "item_0": 9.051955951838087,
+      "item_1": 3.9101189781893764,
+      "item_2": 5.433181213962621,
+      "item_3": 8.595379281683675,
+      "item_4": 2.474180890821973,
+      "item_5": 2.393043444451636
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500000000000001
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "gemini_pro_2": [
+        0,
+        1,
+        2
+      ],
+      "claude_4_sonnet_1": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_2": 16.930297459180185,
+      "claude_4_sonnet_1": 10.028552501171413
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_1",
+      "content": "I'm particularly interested in Items 1, 3, and 5 as they align well with my priorities, though I'd be willing to negotiate on the specifics. I'm looking for a deal where we can both walk away satisfied - perhaps we could explore a split where each of us gets our top priorities while making reasonable compromises on the others. What items are most important to you, and do you see any potential for a mutually beneficial arrangement?",
+      "timestamp": 1755503158.81893,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "I'm still evaluating everything, but I have a particular interest in Item_2 and Item_4. I'm confident we can find a fair arrangement for both of us, and I am open to discussing any of the items to make that happen.",
+      "timestamp": 1755503170.769855,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T00:46:48.677284",
+  "duration_seconds": 54.25818586349487,
+  "metrics": {
+    "mean_utility": 13.4794249801758,
+    "max_utility": 16.930297459180185,
+    "min_utility": 10.028552501171413,
+    "utility_spread": 6.901744958008772
+  }
+}
