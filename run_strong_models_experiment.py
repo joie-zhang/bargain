@@ -170,12 +170,15 @@ async def run_strong_models_negotiation(
                 logger.error("Need at least 2 agents for negotiation")
                 continue
             
-            # Create preferences
-            preferences = create_competitive_preferences(
+            # Create preferences using PreferenceManager
+            preference_manager = create_competitive_preferences(
                 n_agents=len(agents),
                 m_items=num_items,
                 cosine_similarity=competition_level
             )
+            
+            # Generate the actual preference data
+            preferences_data = preference_manager.generate_preferences()
             
             # Create item names
             items = [f"Item_{i}" for i in range(num_items)]
@@ -183,7 +186,7 @@ async def run_strong_models_negotiation(
             # Create negotiation runner
             runner = ModularNegotiationRunner(
                 agents=agents,
-                preferences=preferences,
+                preferences=preference_manager,  # Pass the PreferenceManager object to runner
                 items=items,
                 max_rounds=max_rounds,
                 discount_factor=0.9,
@@ -195,35 +198,36 @@ async def run_strong_models_negotiation(
             outcome = await runner.run_negotiation()
             
             # Record EVERYTHING - comprehensive data capture
-            # Convert preferences to serializable format
-            if hasattr(preferences, 'get_preferences_array'):
-                pref_array = preferences.get_preferences_array()
-                if hasattr(pref_array, 'tolist'):
-                    serialized_prefs = pref_array.tolist()
-                else:
-                    serialized_prefs = pref_array
-            elif hasattr(preferences, 'tolist'):
-                serialized_prefs = preferences.tolist()
-            else:
-                # Fallback - try to extract the underlying numpy array
-                import numpy as np
-                if isinstance(preferences, np.ndarray):
-                    serialized_prefs = preferences.tolist()
-                else:
-                    serialized_prefs = str(preferences)  # Last resort
-            
-            # Create detailed preference mapping for each agent
+            # Extract preferences from the generated preferences_data
+            serialized_prefs = None
             preference_details = {}
-            for i, agent in enumerate(agents):
-                agent_prefs = {}
-                if hasattr(preferences, 'get_preferences_array'):
-                    pref_arr = preferences.get_preferences_array()
-                    if hasattr(pref_arr, 'shape') and len(pref_arr.shape) > 1:
-                        agent_prefs = {f"item_{j}": float(pref_arr[i][j]) for j in range(pref_arr.shape[1])}
-                    elif isinstance(serialized_prefs, list) and i < len(serialized_prefs):
-                        if isinstance(serialized_prefs[i], list):
-                            agent_prefs = {f"item_{j}": float(val) for j, val in enumerate(serialized_prefs[i])}
-                preference_details[agent.agent_id] = agent_prefs
+            
+            # Get the actual preference vectors from the generated data
+            if preferences_data and "agent_preferences" in preferences_data:
+                agent_prefs = preferences_data["agent_preferences"]
+                
+                # Map agent IDs from runner to preference data
+                # The preference system uses agent_0, agent_1, etc., but our agents have custom IDs
+                serialized_prefs = []
+                for i, agent in enumerate(agents):
+                    # Get preferences for agent_i (indexed position)
+                    agent_key = f"agent_{i}"
+                    if agent_key in agent_prefs:
+                        pref_vector = agent_prefs[agent_key]
+                        serialized_prefs.append(pref_vector)
+                        
+                        # Create detailed preference mapping
+                        preference_details[agent.agent_id] = {
+                            f"item_{j}": float(val)
+                            for j, val in enumerate(pref_vector)
+                        }
+                    else:
+                        preference_details[agent.agent_id] = {"error": f"No preferences found for agent index {i}"}
+            
+            # Also extract cosine similarities if available
+            cosine_similarities = None
+            if preferences_data and "cosine_similarities" in preferences_data:
+                cosine_similarities = preferences_data["cosine_similarities"]
             
             # Extract ALL conversation data from runner
             conversation_logs = []
@@ -257,6 +261,7 @@ async def run_strong_models_negotiation(
                 "agent_models": {a.agent_id: config["model_id"] for a, model_name in zip(agents, models) if model_name in STRONG_MODELS_CONFIG for config in [STRONG_MODELS_CONFIG[model_name]]},
                 "initial_preferences_matrix": serialized_prefs,
                 "initial_preferences_by_agent": preference_details,
+                "preference_cosine_similarities": cosine_similarities,
                 "negotiation_outcome": {
                     "consensus_reached": outcome.consensus_reached,
                     "final_round": outcome.final_round,
