@@ -3,10 +3,10 @@
 Strong Models Competition Experiment
 
 This script runs negotiations between state-of-the-art large language models:
-- Gemini 2.0 Flash Thinking (Google's latest reasoning model)
-- Claude 3.5 Sonnet (Anthropic's latest)
+- Gemini 2.5 Pro (Google's latest reasoning model)
+- Claude 4 Sonnet (Anthropic's latest)
 - Llama 3.1 405B (Meta's largest open model)
-- Qwen 2.5 72B (Alibaba's strong model)
+- Qwen 3 235B (Alibaba's strong model)
 
 All models are accessed via OpenRouter for consistent API access.
 """
@@ -38,20 +38,20 @@ from negotiation.openrouter_client import OpenRouterAgent
 # Configuration for strong models via OpenRouter
 STRONG_MODELS_CONFIG = {
     "gemini-pro": {
-        "name": "Gemini Pro 1.5",
+        "name": "Gemini Pro 2.5",
         "model_id": "google/gemini-2.5-pro",  # Google's advanced model
         "provider": "Google",
         "description": "Google's advanced reasoning model",
         "temperature": 0.7,
         "system_prompt": "You are Gemini Pro 2.5, an advanced reasoning model. Use strategic thinking to achieve optimal outcomes in this negotiation."
     },
-    "claude-3-5-sonnet": {
-        "name": "Claude 3.5 Sonnet",
-        "model_id": "anthropic/claude-sonnet-4",  # Latest Claude 3.5 Sonnet
+    "claude-4-sonnet": {
+        "name": "Claude 4 Sonnet",
+        "model_id": "anthropic/claude-sonnet-4",
         "provider": "Anthropic", 
         "description": "Anthropic's latest and most capable model",
         "temperature": 0.7,
-        "system_prompt": "You are Claude 3.5 Sonnet. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation."
+        "system_prompt": "You are Claude 4 Sonnet. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation."
     },
     "llama-3-1-405b": {
         "name": "Llama 3.1 405B",
@@ -61,13 +61,13 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are Llama 3.1 405B, a highly capable large language model. Use your extensive knowledge and reasoning to negotiate effectively."
     },
-    "qwen-2-5-72b": {
-        "name": "Qwen 2.5 72B", 
+    "qwen-3-235b-a22b-2507": {
+        "name": "Qwen 3 235B", 
         "model_id": "qwen/qwen3-235b-a22b-2507",
         "provider": "Alibaba",
         "description": "Alibaba's strong multilingual model",
         "temperature": 0.7,
-        "system_prompt": "You are Qwen 2.5 72B, an advanced AI model. Apply strategic analysis to achieve the best possible outcomes in this negotiation."
+        "system_prompt": "You are Qwen 3 235B, an advanced AI model. Apply strategic analysis to achieve the best possible outcomes in this negotiation."
     }
 }
 
@@ -345,7 +345,7 @@ async def main():
         "--models",
         nargs="+",
         choices=list(STRONG_MODELS_CONFIG.keys()),
-        default=["gemini-pro", "claude-3-5-sonnet", "llama-3-1-405b", "qwen-2-5-72b"],
+        default=["gemini-pro", "claude-4-sonnet", "llama-3-1-405b", "qwen-3-235b-a22b-2507"],
         help="Models to include in negotiation"
     )
     
