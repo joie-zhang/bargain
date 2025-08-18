@@ -1,0 +1,109 @@
+{
+  "run_index": 7,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "gemini_pro_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "gemini_pro_1": "google/gemini-2.5-pro",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      3.17946551462852,
+      6.900593526363448,
+      7.528338671582302,
+      4.775197946141602,
+      7.4654222754095665,
+      4.186274982294412
+    ],
+    [
+      0.9332858629377142,
+      8.01146013084654,
+      6.9506841269268484,
+      1.500944317293426,
+      7.5841135864880975,
+      6.109409139389702
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "gemini_pro_1": {
+      "item_0": 3.17946551462852,
+      "item_1": 6.900593526363448,
+      "item_2": 7.528338671582302,
+      "item_3": 4.775197946141602,
+      "item_4": 7.4654222754095665,
+      "item_5": 4.186274982294412
+    },
+    "gemini_pro_2": {
+      "item_0": 0.9332858629377142,
+      "item_1": 8.01146013084654,
+      "item_2": 6.9506841269268484,
+      "item_3": 1.500944317293426,
+      "item_4": 7.5841135864880975,
+      "item_5": 6.109409139389702
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500000000000001
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "gemini_pro_1": [
+        0,
+        2,
+        4
+      ],
+      "gemini_pro_2": [
+        1,
+        3,
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_1": 8.764596843388492,
+      "gemini_pro_2": 15.811345349495708
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "Hello! I'm interested in a few of the items, particularly Item_2 and Item_5, but I'm quite flexible at this early stage. Ultimately, I'm looking for a fair distribution that works for both of us, so I'm open to hearing what you're interested in.",
+      "timestamp": 1755507182.049563,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "Hello, it's a pleasure to negotiate with you. For me, Item_2 and Item_4 hold significant value, and I'm also interested in Item_0. I'm open to finding a deal that benefits us both, perhaps one where we each secure a couple of our preferred items.",
+      "timestamp": 1755507195.272341,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:53:55.784614",
+  "duration_seconds": 63.719006061553955,
+  "metrics": {
+    "mean_utility": 12.2879710964421,
+    "max_utility": 15.811345349495708,
+    "min_utility": 8.764596843388492,
+    "utility_spread": 7.046748506107216
+  }
+}

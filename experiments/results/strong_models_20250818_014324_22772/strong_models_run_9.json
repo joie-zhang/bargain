@@ -1,0 +1,109 @@
+{
+  "run_index": 9,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "llama_3_1_405b_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "llama_3_1_405b_1": "meta-llama/llama-3.1-405b-instruct",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      3.7165826433450055,
+      4.048360953957658,
+      0.9779260174681992,
+      1.7180327531828643,
+      6.332850613657382,
+      6.2880007751836615
+    ],
+    [
+      5.453665853742448,
+      2.5027255580048053,
+      3.0836707574050646,
+      1.852533683290158,
+      6.262515578541711,
+      5.058460755640938
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "llama_3_1_405b_1": {
+      "item_0": 3.7165826433450055,
+      "item_1": 4.048360953957658,
+      "item_2": 0.9779260174681992,
+      "item_3": 1.7180327531828643,
+      "item_4": 6.332850613657382,
+      "item_5": 6.2880007751836615
+    },
+    "gemini_pro_2": {
+      "item_0": 5.453665853742448,
+      "item_1": 2.5027255580048053,
+      "item_2": 3.0836707574050646,
+      "item_3": 1.852533683290158,
+      "item_4": 6.262515578541711,
+      "item_5": 5.058460755640938
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9500000000000001
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "llama_3_1_405b_1": [
+        0,
+        3,
+        5
+      ],
+      "gemini_pro_2": [
+        1,
+        2,
+        4
+      ]
+    },
+    "final_utilities": {
+      "llama_3_1_405b_1": 19.919911808155383,
+      "gemini_pro_2": 13.496815028154508
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_1",
+      "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be willing to consider a trade involving Item_1 or Item_3 in exchange for one of these items. A potential deal could be Item_1 and Item_3 for Item_2, or Item_1 and Item_4 for Item_5.",
+      "timestamp": 1755508493.72735,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "I'm primarily interested in Item_1 and Item_4, but my priorities are not set in stone. I believe a fair deal is one where we both walk away with items we value, so I'm curious to hear what you are focused on.",
+      "timestamp": 1755508509.4287958,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T02:15:50.637705",
+  "duration_seconds": 59.08030295372009,
+  "metrics": {
+    "mean_utility": 16.708363418154946,
+    "max_utility": 19.919911808155383,
+    "min_utility": 13.496815028154508,
+    "utility_spread": 6.423096780000876
+  }
+}

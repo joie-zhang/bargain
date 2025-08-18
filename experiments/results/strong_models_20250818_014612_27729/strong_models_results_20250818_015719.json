@@ -1,0 +1,1625 @@
+{
+  "experiment": "Strong Models Competition",
+  "timestamp": "2025-08-18T01:46:12.330274",
+  "configuration": {
+    "models": [
+      "qwen-3-235b-a22b-2507",
+      "llama-3-1-405b"
+    ],
+    "num_runs": 10,
+    "max_rounds": 10,
+    "num_items": 6,
+    "competition_level": 0.95
+  },
+  "runs": [
+    {
+      "run_index": 0,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          4.590945816954614,
+          3.745354365867404,
+          8.697658179778566,
+          1.3846376457278597,
+          8.79432682843705,
+          5.224753536511666
+        ],
+        [
+          6.036773099818536,
+          5.742330904856526,
+          7.719938500732562,
+          4.078812623686646,
+          6.135528296946498,
+          5.832093268166841
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 4.590945816954614,
+          "item_1": 3.745354365867404,
+          "item_2": 8.697658179778566,
+          "item_3": 1.3846376457278597,
+          "item_4": 8.79432682843705,
+          "item_5": 5.224753536511666
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 6.036773099818536,
+          "item_1": 5.742330904856526,
+          "item_2": 7.719938500732562,
+          "item_3": 4.078812623686646,
+          "item_4": 6.135528296946498,
+          "item_5": 5.832093268166841
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 4,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 14.48818680566096,
+          "llama_3_1_405b_2": 15.13697758257226
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I\u2019m open to creative deals; maybe we can find a package that works for both of us if you share your preferences.",
+          "timestamp": 1755506773.221205,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_4. I would be open to trading Item_0 or Item_3 in exchange for either of those. What items are you most keen on acquiring?",
+          "timestamp": 1755506775.798399,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have built trust, but we need to shift toward integrative bargaining by identifying shared priorities and trade-offs to unlock value. I should propose a structured agenda to clarify interests and explore creative options that address both sides\u2019 core concerns.",
+          "timestamp": 1755506794.111416
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "The strategies of active listening, asking clarifying questions, and finding common ground seem to be working well. I should try to be more solution-oriented and offer specific proposals to move the negotiation forward.",
+          "timestamp": 1755506795.780525
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. That said, I could be flexible on Item_1 if you're willing to concede on Item_3. Maybe we can work out a deal where you get Item_2 and Item_5, and I take Item_0 and Item_3, with Item_1 potentially up for negotiation depending on your priorities.",
+          "timestamp": 1755506799.168383,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly keen on acquiring Item_2 and Item_5, as I believe they hold significant value. I'd be willing to consider trading Item_1 or Item_3 in exchange for one of these items. Perhaps a bundle deal involving Item_0 and Item_4 could also be a viable option for both parties.",
+          "timestamp": 1755506801.281874,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "So far, active listening and reframing shared interests have helped maintain constructive dialogue. I should now introduce more specific trade-offs to bridge remaining gaps and incentivize compromise.",
+          "timestamp": 1755506822.435713
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that actively listening to the counterparty's concerns and needs has helped build trust and facilitated open discussion, but we still haven't converged on a mutually acceptable solution. To move forward, I should focus on creative, interest-based bargaining and explore novel options that meet both parties' underlying interests, rather than just positioning around specific numbers or terms.",
+          "timestamp": 1755506825.4062011
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. That said, I could see a deal where I take those in exchange for Item_1 or Item_2, depending on what you value most. Maybe we can align on a trade that gives us both win-win outcomes.",
+          "timestamp": 1755506826.716346,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_5. I would be willing to make a deal involving trading away Item_1 or Item_4 in exchange for those items. However, if you are also keen on Item_2 or Item_5, perhaps we could explore a compromise.",
+          "timestamp": 1755506831.552545,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have built trust, but overly rigid positional bargaining on key terms is stalling consensus. I should shift toward integrative negotiation\u2014identifying shared interests and generating creative trade-offs to unlock value across issues.",
+          "timestamp": 1755506860.766399
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "The human and I are both presenting our perspectives clearly and professionally, which is allowing for a productive discussion. To make further progress, I should focus more on finding areas of agreement and proposing creative solutions that address both of our key interests.",
+          "timestamp": 1755506862.599731
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they align best with my core needs. That said, I could be open to trading one of them if I receive Item_5 in return, as it also holds significant value for me. Let\u2019s explore bundles that include Item_5 going to me, and I\u2019ll be flexible on the others.",
+          "timestamp": 1755506863.002721,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in Item_2 and Item_5, as they hold significant value to me. I'd be open to negotiating a package deal for these two items, potentially offering concessions on Item_0 or Item_1 in exchange. A fair trade would be Item_2 and Item_5 for Item_3 and Item_4.",
+          "timestamp": 1755506865.4329522,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:48:10.906568",
+      "duration_seconds": 118.57620620727539,
+      "metrics": {
+        "mean_utility": 14.812582194116612,
+        "max_utility": 15.13697758257226,
+        "min_utility": 14.48818680566096,
+        "utility_spread": 0.6487907769112997
+      }
+    },
+    {
+      "run_index": 1,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          4.923078728300404,
+          8.75168149453736,
+          7.350433593848134,
+          0.5489767942881796,
+          0.29316399727716935,
+          2.9145685541614874
+        ],
+        [
+          4.953518411585571,
+          8.438063454559092,
+          5.677252177659375,
+          3.8088463436645794,
+          0.6361471890570014,
+          4.567066032991311
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 4.923078728300404,
+          "item_1": 8.75168149453736,
+          "item_2": 7.350433593848134,
+          "item_3": 0.5489767942881796,
+          "item_4": 0.29316399727716935,
+          "item_5": 2.9145685541614874
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 4.953518411585571,
+          "item_1": 8.438063454559092,
+          "item_2": 5.677252177659375,
+          "item_3": 3.8088463436645794,
+          "item_4": 0.6361471890570014,
+          "item_5": 4.567066032991311
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 14.802061083031937,
+          "llama_3_1_405b_2": 11.355471056865438
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I\u2019m open to creative deals; maybe I could trade one of them for a bundle like Item_1 and Item_4.",
+          "timestamp": 1755506893.2141812,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in Item_2 and Item_5, as I believe they hold significant value. I'm open to negotiating a deal that involves trading Item_1 or Item_3 in exchange for one of these items. A bundle deal involving Item_2 and Item_4 could also be a possibility, depending on the terms.",
+          "timestamp": 1755506895.7434602,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening helped build rapport, but clearer anchoring on shared interests could strengthen alignment. I should introduce specific trade-offs earlier to surface priorities and enable value-creating exchanges.",
+          "timestamp": 1755506917.2771342
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, it appears that active listening and open-ended questioning have been effective in gathering information and fostering a collaborative atmosphere, but a more direct and specific approach to addressing key interests and needs may be necessary to move towards consensus. In the next round, I should focus on making more targeted and creative proposals that take into account the counterparty's priorities and constraints.",
+          "timestamp": 1755506920.1082518
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I could see a deal where I take those in exchange for Item_5, which I\u2019m less attached to. Others\u2019 priorities might help clarify a fair trade.",
+          "timestamp": 1755506921.723297,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be open to a deal that involves trading Item_1 or Item_3 for either of those items, as I think they're less crucial to my overall goals. A package deal involving Item_2 and Item_4 could also be intriguing.",
+          "timestamp": 1755506924.5323431,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:49:00.589820",
+      "duration_seconds": 49.68193006515503,
+      "metrics": {
+        "mean_utility": 13.078766069948689,
+        "max_utility": 14.802061083031937,
+        "min_utility": 11.355471056865438,
+        "utility_spread": 3.446590026166499
+      }
+    },
+    {
+      "run_index": 2,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          5.645416349749718,
+          2.949898982877982,
+          4.192308692740577,
+          5.976602537425654,
+          2.2523380246420057,
+          1.8852163270746947
+        ],
+        [
+          5.4340611912303585,
+          5.710840390291029,
+          3.656039238631403,
+          4.770364281660535,
+          1.4331628780169368,
+          1.4748741951156294
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 5.645416349749718,
+          "item_1": 2.949898982877982,
+          "item_2": 4.192308692740577,
+          "item_3": 5.976602537425654,
+          "item_4": 2.2523380246420057,
+          "item_5": 1.8852163270746947
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 5.4340611912303585,
+          "item_1": 5.710840390291029,
+          "item_2": 3.656039238631403,
+          "item_3": 4.770364281660535,
+          "item_4": 1.4331628780169368,
+          "item_5": 1.4748741951156294
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 4,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 3.950473356512408,
+          "llama_3_1_405b_2": 9.871272258976012
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m particularly interested in Item_0 and Item_3\u2014they\u2019re my top priorities. I\u2019d be open to trading Item_1 or Item_5 if it means securing one of those, but I\u2019d prefer a package deal involving Item_0. A balanced exchange with mutual value would work well.",
+          "timestamp": 1755506941.774666,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in acquiring Item_2 and Item_5, as they hold significant value to me. I'd be open to negotiating a deal that involves trading Item_1 or Item_3 in exchange for one of these items. A potential bundle deal involving Item_2 and Item_4 could also be a possibility, depending on the terms.",
+          "timestamp": 1755506944.144217,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening helped build initial rapport, but overly rigid positioning on key trade-offs slowed progress. Next round, I\u2019ll introduce objective criteria and bundled concessions to create value and unlock movement.",
+          "timestamp": 1755506962.872438
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I realize that active listening and asking clarifying questions have been effective in building rapport and understanding the other party's interests. However, I may need to adapt my approach to be more assertive in presenting my own interests and creative solutions to find a mutually beneficial outcome.",
+          "timestamp": 1755506964.722021
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they hold the highest value for me due to strategic synergies. I\u2019d be open to trading Item_1 or Item_5 in exchange for either Item_0 or Item_3, especially if it helps create a balanced distribution that benefits both of us.",
+          "timestamp": 1755506965.679154,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong preference for Item_2 and Item_4. I would be open to trading Item_0 or Item_1 if that would help me secure my top choices. What items are you most interested in?",
+          "timestamp": 1755506967.702035,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have built trust, but we need to shift toward integrative bargaining to uncover shared interests. I should introduce objective criteria earlier to anchor trade-offs and prevent positional deadlock.",
+          "timestamp": 1755506986.55335
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that active listening and acknowledging the counterparty's concerns have helped build trust and keep the conversation productive, but we still haven't reached a consensus. To move forward, I should try to explore more creative solutions and make more specific, data-driven proposals to address the key sticking points and bridge the gap between our positions.",
+          "timestamp": 1755506988.8277571
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I could see a deal where I take those in exchange for giving up Item_1 and maybe Item_5, depending on what you want.",
+          "timestamp": 1755506990.095117,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in Item_2 and Item_5, and I believe they would complement each other well in a package deal. I'd be open to discussing a trade involving Item_1, but I'm less keen on Item_3 and Item_4. Perhaps we could explore a 2-for-1 swap involving Item_2 and one of your preferred items?",
+          "timestamp": 1755506993.160022,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "Collaborative framing and active listening have built trust, but rigid positions on key trade-offs are stalling progress. I should introduce objective criteria and explore underlying interests more deeply to unlock creative solutions.",
+          "timestamp": 1755507016.5909529
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "The strategies of active listening, asking clarifying questions, and finding common ground seem to be working well. To make further progress, I should focus more on uncovering underlying interests and exploring creative solutions that could satisfy both sides.",
+          "timestamp": 1755507018.621094
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014those are my top priorities. A deal where I get Item_0 and one of Item_4 or Item_5 could work well for me.",
+          "timestamp": 1755507020.896544,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_5. I would be willing to trade Item_0 and Item_3 in exchange for those two items. What items are you most keen on acquiring?",
+          "timestamp": 1755507022.677564,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:50:38.341468",
+      "duration_seconds": 97.74960207939148,
+      "metrics": {
+        "mean_utility": 6.91087280774421,
+        "max_utility": 9.871272258976012,
+        "min_utility": 3.950473356512408,
+        "utility_spread": 5.920798902463604
+      }
+    },
+    {
+      "run_index": 3,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          1.4501440295615187,
+          6.149659536331602,
+          4.178001359965501,
+          1.7325449963552797,
+          9.62585969601848,
+          7.232365562751452
+        ],
+        [
+          0.9542686426774138,
+          7.902891663287252,
+          5.511090441759984,
+          3.117500115957994,
+          6.0482866815394845,
+          8.081082988798324
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 1.4501440295615187,
+          "item_1": 6.149659536331602,
+          "item_2": 4.178001359965501,
+          "item_3": 1.7325449963552797,
+          "item_4": 9.62585969601848,
+          "item_5": 7.232365562751452
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 0.9542686426774138,
+          "item_1": 7.902891663287252,
+          "item_2": 5.511090441759984,
+          "item_3": 3.117500115957994,
+          "item_4": 6.0482866815394845,
+          "item_5": 8.081082988798324
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9499999999999998
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 4,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 8.99070680637378,
+          "llama_3_1_405b_2": 9.27628221423706
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. That said, I'm open to creative deals; maybe we can find a bundle that works for both of us, especially if you're willing to trade off on items I value less.",
+          "timestamp": 1755507040.719857,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in acquiring Item_2 and Item_5, as I believe they hold significant value. I'd be open to negotiating a trade involving Item_1 or Item_3 in exchange for one of these items. A bundle deal involving Item_2 and another item could also be a viable option.",
+          "timestamp": 1755507043.327362,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped build rapport, but more data-driven trade-offs may be needed to break the impasse. I should shift toward integrative bargaining by identifying shared interests and proposing creative concessions that unlock mutual gains.",
+          "timestamp": 1755507058.576942
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that active listening and open-ended questioning have been effective in gathering information and fostering dialogue, but I may need to employ more persuasive tactics, such as highlighting mutual benefits and creative compromise, to bridge the gap and reach a consensus. In the next round, I'll consider using time-sensitive language and making concrete proposals to test the other party's flexibility.",
+          "timestamp": 1755507061.200027
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I\u2019d be open to trading one of them for Item_1 or Item_2, depending on what you're willing to offer. Let\u2019s explore combinations that create mutual value.",
+          "timestamp": 1755507062.323252,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_5. I would be open to a deal involving trading away Item_0 or Item_3. However, Item_4 is also of moderate interest to me if the right offer came along.",
+          "timestamp": 1755507064.6053581,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped maintain constructive dialogue, but more targeted probing for underlying interests could uncover new trade-offs. I should shift toward offering calibrated, data-backed proposals to break the impasse.",
+          "timestamp": 1755507084.465749
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that actively listening to the counterparty's concerns and acknowledging their interests has helped build rapport and keep the conversation constructive. To move towards a consensus, I should try to be more specific and creative in my proposals, potentially exploring mutually beneficial trade-offs and compromises that address the counterparty's key needs.",
+          "timestamp": 1755507086.440943
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_2\u2014they're high priority for me. That said, I could be flexible on Item_4 if you're open to giving up Item_0.",
+          "timestamp": 1755507087.937151,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in Item_2 and Item_5. I'd be willing to consider a trade involving Item_1 or Item_3 in exchange for one of these items. A bundle deal involving Item_2 and Item_4 could also be a possibility, depending on the terms.",
+          "timestamp": 1755507089.853662,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped maintain constructive dialogue, but progress is hindered by unmet underlying interests. I should shift toward more integrative problem-solving, exploring trade-offs and creative options that address core priorities on both sides.",
+          "timestamp": 1755507110.347389
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that active listening and asking clarifying questions have been effective in building rapport and understanding the counterpart's concerns, but we have yet to find a mutually acceptable solution. To move forward, I should try to employ more creative and flexible problem-solving strategies, such as exploring alternative options or seeking common goals.",
+          "timestamp": 1755507113.955334
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_2\u2014they're high priority for me. I could be open to trading one of them for Item_4 or Item_5, depending on the package.",
+          "timestamp": 1755507115.474298,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I might be willing to consider a trade involving Item_1 or Item_3 if it means securing one of my desired items. A potential deal could be Item_1 and Item_3 in exchange for Item_2.",
+          "timestamp": 1755507117.607198,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:52:09.291698",
+      "duration_seconds": 90.94756984710693,
+      "metrics": {
+        "mean_utility": 9.13349451030542,
+        "max_utility": 9.27628221423706,
+        "min_utility": 8.99070680637378,
+        "utility_spread": 0.2855754078632806
+      }
+    },
+    {
+      "run_index": 4,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          1.1336793667434308,
+          4.873999092449076,
+          6.721588153393774,
+          7.284203467296154,
+          7.2568938152660465,
+          6.043289240390088
+        ],
+        [
+          4.0550352632359274,
+          4.6834712355164125,
+          7.628946528013291,
+          5.5319003041210015,
+          4.893850295031027,
+          7.831576188319717
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 1.1336793667434308,
+          "item_1": 4.873999092449076,
+          "item_2": 6.721588153393774,
+          "item_3": 7.284203467296154,
+          "item_4": 7.2568938152660465,
+          "item_5": 6.043289240390088
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 4.0550352632359274,
+          "item_1": 4.6834712355164125,
+          "item_2": 7.628946528013291,
+          "item_3": 5.5319003041210015,
+          "item_4": 4.893850295031027,
+          "item_5": 7.831576188319717
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 9.170838581482919,
+          "llama_3_1_405b_2": 8.808797402621298
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I could be open to trading one of them for Item_1 or Item_5, depending on the package. A bundle like Item_0 for Item_1 plus something small might work.",
+          "timestamp": 1755507130.8944,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in acquiring Item_2 and Item_5, as I believe they hold significant value. I'd be open to negotiating a trade involving Item_1 or Item_3 in exchange for one of these items. A potential deal could be Item_1 and Item_3 for Item_2, but I'm willing to listen to alternative proposals.",
+          "timestamp": 1755507133.1870122,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped build rapport, but more assertive agenda-setting may be needed to advance stalled points. I should balance relationship-building with clearer issue-linking to drive trade-offs.",
+          "timestamp": 1755507157.826147
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, my initial open-ended questions and active listening approach have helped establish a rapport and encouraged the counterpart to share their interests and concerns. However, to move towards a consensus, I should try differently by introducing more concrete and creative proposals that address the counterpart's specific needs and priorities.",
+          "timestamp": 1755507159.684109
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. That said, I could be flexible on Item_1 or Item_5 if you're open to giving up Item_0 or Item_3. Let\u2019s explore trades where we both get core priorities met.",
+          "timestamp": 1755507160.872004,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I am particularly interested in Item_2 and Item_5. I would be open to a deal involving trading Item_0 and Item_4 for those two items. However, Item_3 also holds some appeal, so I may be convinced to include that in a potential trade as well.",
+          "timestamp": 1755507167.011908,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:53:02.284628",
+      "duration_seconds": 52.99112296104431,
+      "metrics": {
+        "mean_utility": 8.989817992052108,
+        "max_utility": 9.170838581482919,
+        "min_utility": 8.808797402621298,
+        "utility_spread": 0.36204117886162024
+      }
+    },
+    {
+      "run_index": 5,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.48773916414464,
+          7.375089089137379,
+          2.0873135490359926,
+          8.40881671842779,
+          4.462546630773085,
+          7.789608588190155
+        ],
+        [
+          8.657651196283222,
+          4.783737179708866,
+          4.757506134153704,
+          7.246882479913231,
+          7.927732561987259,
+          6.800873217961661
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 8.48773916414464,
+          "item_1": 7.375089089137379,
+          "item_2": 2.0873135490359926,
+          "item_3": 8.40881671842779,
+          "item_4": 4.462546630773085,
+          "item_5": 7.789608588190155
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 8.657651196283222,
+          "item_1": 4.783737179708866,
+          "item_2": 4.757506134153704,
+          "item_3": 7.246882479913231,
+          "item_4": 7.927732561987259,
+          "item_5": 6.800873217961661
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 15.753314101971759,
+          "llama_3_1_405b_2": 8.34127464664612
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_2\u2014they're high priority for me. I'm open to trading Item_1 or Item_5 if it means securing one of those two; a fair deal could involve swapping my Item_1 for someone else's Item_0.",
+          "timestamp": 1755507183.935143,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_5. I would be open to trading Item_0 or Item_3 in exchange for one of my preferred items. Alternatively, a combination trade involving multiple lower-value items could also be compelling to me.",
+          "timestamp": 1755507186.89426,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:53:26.989322",
+      "duration_seconds": 24.698307752609253,
+      "metrics": {
+        "mean_utility": 12.04729437430894,
+        "max_utility": 15.753314101971759,
+        "min_utility": 8.34127464664612,
+        "utility_spread": 7.412039455325639
+      }
+    },
+    {
+      "run_index": 6,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          9.355543642865813,
+          9.91694912819724,
+          3.755268990294182,
+          2.0846917977395907,
+          9.45504497889019,
+          0.814993776827232
+        ],
+        [
+          7.979557786088577,
+          10.0,
+          1.9436474427001547,
+          4.724430768557967,
+          6.414562636610383,
+          0.9167298853027843
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 9.355543642865813,
+          "item_1": 9.91694912819724,
+          "item_2": 3.755268990294182,
+          "item_3": 2.0846917977395907,
+          "item_4": 9.45504497889019,
+          "item_5": 0.814993776827232
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 7.979557786088577,
+          "item_1": 10.0,
+          "item_2": 1.9436474427001547,
+          "item_3": 4.724430768557967,
+          "item_4": 6.414562636610383,
+          "item_5": 0.9167298853027843
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9661846981063766
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 24.126710127724543,
+          "llama_3_1_405b_2": 18.288551579816584
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're my top priorities. I'd be open to trading Item_1 or Item_5 if it helps secure either of those.",
+          "timestamp": 1755507208.2694888,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in Item_2 and Item_5, as they hold significant value for me. I'd be open to negotiating a package deal involving these two items, perhaps offering concessions on Item_1 or Item_3 in exchange for a favorable agreement. A trade involving Item_2 and Item_4 could also be a viable option, depending on the terms.",
+          "timestamp": 1755507211.063413,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:53:45.749489",
+      "duration_seconds": 18.75769305229187,
+      "metrics": {
+        "mean_utility": 21.207630853770564,
+        "max_utility": 24.126710127724543,
+        "min_utility": 18.288551579816584,
+        "utility_spread": 5.838158547907959
+      }
+    },
+    {
+      "run_index": 7,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          7.623773499285701,
+          4.940139085142489,
+          2.927897546354734,
+          6.98455398471069,
+          9.15524406440849,
+          4.604506256662174
+        ],
+        [
+          6.670876377869281,
+          2.890538263619601,
+          3.5917120638632176,
+          4.821367535310089,
+          9.256582562696337,
+          8.379578891582769
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 7.623773499285701,
+          "item_1": 4.940139085142489,
+          "item_2": 2.927897546354734,
+          "item_3": 6.98455398471069,
+          "item_4": 9.15524406440849,
+          "item_5": 4.604506256662174
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 6.670876377869281,
+          "item_1": 2.890538263619601,
+          "item_2": 3.5917120638632176,
+          "item_3": 4.821367535310089,
+          "item_4": 9.256582562696337,
+          "item_5": 8.379578891582769
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 3,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 21.40242253991604,
+          "llama_3_1_405b_2": 11.800043227240272
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_2\u2014they're my top priorities. I'm open to deals where I could trade Item_1 or Item_3 in exchange for one of those, depending on what you value.",
+          "timestamp": 1755507227.80594,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in acquiring Item_2 and Item_5, as I believe they hold significant value. I'd be open to negotiating a bundle deal for these two items, potentially offering Item_1 or Item_3 in return. A trade involving Item_4 could also be enticing, but it would depend on the specifics of the proposal.",
+          "timestamp": 1755507230.066344,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "So far, collaborative framing and active listening have helped maintain constructive dialogue. To advance, I should more clearly anchor on shared interests and propose incremental trade-offs to bridge remaining gaps.",
+          "timestamp": 1755507268.50293
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that actively listening to the counterpart's concerns and acknowledging their perspective has helped build trust and facilitated open communication, but we have yet to find common ground on key issues. To move forward, I should try to explore creative solutions and compromises that address both parties' needs, rather than simply advocating for my initial position.",
+          "timestamp": 1755507271.288616
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I could see a deal where I take those in exchange for giving up Item_1 and Item_4, if that aligns with your interests.",
+          "timestamp": 1755507272.561784,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be willing to consider a trade involving Item_1 or Item_3, but only if I can get both Item_2 and Item_5 in return. Alternatively, I might entertain a deal that includes Item_4, but only if it's part of a larger package.",
+          "timestamp": 1755507275.810039,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "So far, emphasizing mutual gains and active listening has helped build trust, but rigid positions on key terms are stalling progress. I should explore trade-offs across multiple issues simultaneously to unlock value and incentivize compromise.",
+          "timestamp": 1755507295.328736
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, I notice that actively listening to the counterpart's concerns and responding thoughtfully has helped build rapport and kept the conversation constructive. To move forward, I should try to inject more creative solutions and open-ended questions to uncover hidden interests and potential areas of agreement, rather than solely focusing on positional bargaining.",
+          "timestamp": 1755507297.99903
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. That said, I could see a deal where I take those in exchange for Item_5, or possibly bundle Item_1 with something less critical to balance things out.",
+          "timestamp": 1755507299.1722932,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "I am particularly interested in Item_2 and Item_5. I would be open to a trade involving Item_3 or Item_4 in exchange for one of my preferred items. However, I am also willing to negotiate and find a mutually beneficial deal that satisfies both of our interests.",
+          "timestamp": 1755507301.610587,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:55:25.148076",
+      "duration_seconds": 99.39636301994324,
+      "metrics": {
+        "mean_utility": 16.601232883578156,
+        "max_utility": 21.40242253991604,
+        "min_utility": 11.800043227240272,
+        "utility_spread": 9.602379312675767
+      }
+    },
+    {
+      "run_index": 8,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          4.309962737092602,
+          2.167644189643249,
+          7.257311008653296,
+          0.053533272584666,
+          3.493230851656736,
+          8.681554895975502
+        ],
+        [
+          4.779228180410571,
+          3.3433134864944414,
+          7.993235518670213,
+          3.276852817511908,
+          2.8596655702334814,
+          6.833148141440061
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 4.309962737092602,
+          "item_1": 2.167644189643249,
+          "item_2": 7.257311008653296,
+          "item_3": 0.053533272584666,
+          "item_4": 3.493230851656736,
+          "item_5": 8.681554895975502
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 4.779228180410571,
+          "item_1": 3.3433134864944414,
+          "item_2": 7.993235518670213,
+          "item_3": 3.276852817511908,
+          "item_4": 2.8596655702334814,
+          "item_5": 6.833148141440061
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9499999999999998
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 16.198125159611937,
+          "llama_3_1_405b_2": 16.323159660918698
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I'm open to trading away Item_1 or Item_2 if it means securing one of my top choices. A package deal involving Item_0 plus something mid-tier could be workable.",
+          "timestamp": 1755507327.8769212,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a high interest in Item_2 and Item_5, as they align with my primary goals. I'd be open to negotiating a bundle deal for these two items, potentially offering concessions on Item_1 or Item_3 in exchange. A trade involving Item_4 could also be acceptable, but it would depend on the specifics of the proposal.",
+          "timestamp": 1755507330.363948,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped build rapport, but progress is stalled due to misaligned priorities. I should shift toward interest-based bargaining, probing deeper into underlying needs to uncover integrative solutions.",
+          "timestamp": 1755507352.9752882
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "Persuasive arguments backed by logic and data have been effective. I should focus more on finding common ground and appealing to shared values.",
+          "timestamp": 1755507354.45742
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they hold the highest value for me. A deal where I receive both of those in exchange for Item_1 and Item_5 could work well, depending on your priorities.",
+          "timestamp": 1755507357.059315,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I have a strong interest in acquiring Item_2 and Item_5, as I believe they hold significant value. I'd be open to negotiating a bundle deal for these two items, potentially offering Item_1 or Item_3 in exchange. A fair trade would be Item_2 and Item_5 for Item_1 and Item_4.",
+          "timestamp": 1755507359.43315,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:56:15.394919",
+      "duration_seconds": 50.24488806724548,
+      "metrics": {
+        "mean_utility": 16.26064241026532,
+        "max_utility": 16.323159660918698,
+        "min_utility": 16.198125159611937,
+        "utility_spread": 0.12503450130676086
+      }
+    },
+    {
+      "run_index": 9,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "llama_3_1_405b_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+      },
+      "initial_preferences_matrix": [
+        [
+          5.653338618586815,
+          3.797517748560073,
+          3.6436200930482676,
+          1.9334446758297874,
+          3.382839879777877,
+          5.947613038851669
+        ],
+        [
+          3.6439363375944698,
+          5.717290082133588,
+          4.620446791537202,
+          1.3360643048105711,
+          4.228695727633134,
+          4.819970844673734
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 5.653338618586815,
+          "item_1": 3.797517748560073,
+          "item_2": 3.6436200930482676,
+          "item_3": 1.9334446758297874,
+          "item_4": 3.382839879777877,
+          "item_5": 5.947613038851669
+        },
+        "llama_3_1_405b_2": {
+          "item_0": 3.6439363375944698,
+          "item_1": 5.717290082133588,
+          "item_2": 4.620446791537202,
+          "item_3": 1.3360643048105711,
+          "item_4": 4.228695727633134,
+          "item_5": 4.819970844673734
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 3,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            1,
+            2
+          ],
+          "llama_3_1_405b_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 18.389550026673643,
+          "llama_3_1_405b_2": 11.237763653148432
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I\u2019m open to trading Item_1 or Item_5 if it helps craft a mutually beneficial deal.",
+          "timestamp": 1755507376.577887,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm particularly interested in Item_2 and Item_5, as I believe they hold significant value. I'd be open to negotiating a trade involving Item_1 or Item_3 in exchange for one of these items. Perhaps a bundle deal involving Item_2 and Item_4 could also be a viable option.",
+          "timestamp": 1755507378.688767,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have built trust, but progress is limited by divergent priorities. I should shift toward integrative bargaining, identifying trade-offs and shared interests to create value beyond fixed positions.",
+          "timestamp": 1755507389.51198
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "llama_3_1_405b_2",
+          "content": "So far, active listening and open-ended questioning have been effective in understanding the counterparty's needs and interests. However, I should try to be more specific and concrete in my proposals to move the negotiation forward and avoid getting stuck in vague discussions.",
+          "timestamp": 1755507391.19095
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_0 and Item_3\u2014they're high priority for me. I could see a deal where I take those in exchange for giving up Item_1 and Item_4, if that aligns with your interests. Let me know what you're thinking.",
+          "timestamp": 1755507395.583916,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "I am most interested in Item_2 and Item_4. I could be convinced to trade Item_1 or Item_3 in exchange for those. What items are you looking to acquire?",
+          "timestamp": 1755507397.7970948,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The collaborative framing and active listening have helped maintain constructive dialogue, but progress is hindered by unmet underlying interests. I should shift toward integrative tactics\u2014such as option-brainstorming and trade-off proposals\u2014to uncover mutual gains and break the impasse.",
+          "timestamp": 1755507419.964025
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "llama_3_1_405b_2",
+          "content": "Upon reflection, it appears that active listening and clarifying questions have been effective in understanding the counterparty's perspective, but a more explicit exploration of creative options and concessions may be necessary to break the impasse. In the next round, I will aim to introduce more innovative solutions and reciprocal compromises to foster a collaborative atmosphere and drive progress toward a mutually beneficial agreement.",
+          "timestamp": 1755507422.304288
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in Item_2 and Item_4\u2014they're high priority for me. I'd be open to trading Item_0 or Item_1 in exchange for those, or possibly bundling Item_3 if it helps create a fair deal. Let\u2019s explore combinations that balance our needs.",
+          "timestamp": 1755507425.54724,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "llama_3_1_405b_2",
+          "content": "I'm quite interested in Item_2 and Item_3. I could be persuaded to trade Item_0 or Item_1 for those. However, Item_5 is also appealing to me.",
+          "timestamp": 1755507427.436238,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:57:19.852737",
+      "duration_seconds": 64.45561790466309,
+      "metrics": {
+        "mean_utility": 14.813656839911037,
+        "max_utility": 18.389550026673643,
+        "min_utility": 11.237763653148432,
+        "utility_spread": 7.15178637352521
+      }
+    }
+  ],
+  "summary": {
+    "total_runs": 10,
+    "successful_runs": 10,
+    "consensus_rate": 1.0,
+    "avg_rounds": 2.6,
+    "avg_utility_spread": 4.0793194483007635
+  }
+}

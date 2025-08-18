@@ -1,0 +1,109 @@
+{
+  "run_index": 0,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "qwen_3_235b_a22b_2507_1",
+    "qwen_3_235b_a22b_2507_2"
+  ],
+  "agent_models": {
+    "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+    "qwen_3_235b_a22b_2507_2": "qwen/qwen3-235b-a22b-2507"
+  },
+  "initial_preferences_matrix": [
+    [
+      7.598410216615966,
+      1.8677969095755687,
+      9.666737478793733,
+      9.164729344294646,
+      2.305319317451967,
+      4.655598540620728
+    ],
+    [
+      5.142413675445807,
+      6.0689776155952995,
+      10.0,
+      8.205824476175767,
+      1.2634464132600458,
+      4.588148023782167
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "qwen_3_235b_a22b_2507_1": {
+      "item_0": 7.598410216615966,
+      "item_1": 1.8677969095755687,
+      "item_2": 9.666737478793733,
+      "item_3": 9.164729344294646,
+      "item_4": 2.305319317451967,
+      "item_5": 4.655598540620728
+    },
+    "qwen_3_235b_a22b_2507_2": {
+      "item_0": 5.142413675445807,
+      "item_1": 6.0689776155952995,
+      "item_2": 10.0,
+      "item_3": 8.205824476175767,
+      "item_4": 1.2634464132600458,
+      "item_5": 4.588148023782167
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9505468967273875
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "qwen_3_235b_a22b_2507_1": [
+        0,
+        1,
+        2
+      ],
+      "qwen_3_235b_a22b_2507_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "qwen_3_235b_a22b_2507_1": 18.782613248547904,
+      "qwen_3_235b_a22b_2507_2": 14.235174305267536
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "I'm primarily interested in Item_0 and Item_2\u2014they\u2019re my top priorities. I\u2019d be open to trading Item_4 and Item_5 for those if someone has them, or possibly bundling Item_1 in the mix to balance value. Let\u2019s see what others propose.",
+      "timestamp": 1755506596.998084,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_2",
+      "content": "I'm particularly interested in Item_0 and Item_3\u2014they\u2019re high priority for me. That said, I\u2019m open to creative deals; maybe I could trade one of those for Item_5 or a package involving Item_2.",
+      "timestamp": 1755506599.160563,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:43:36.394316",
+  "duration_seconds": 20.52919912338257,
+  "metrics": {
+    "mean_utility": 16.50889377690772,
+    "max_utility": 18.782613248547904,
+    "min_utility": 14.235174305267536,
+    "utility_spread": 4.547438943280367
+  }
+}

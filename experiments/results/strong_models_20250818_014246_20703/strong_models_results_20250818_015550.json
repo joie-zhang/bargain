@@ -1,0 +1,1369 @@
+{
+  "experiment": "Strong Models Competition",
+  "timestamp": "2025-08-18T01:42:46.931980",
+  "configuration": {
+    "models": [
+      "claude-4-sonnet",
+      "claude-4-sonnet"
+    ],
+    "num_runs": 10,
+    "max_rounds": 10,
+    "num_items": 6,
+    "competition_level": 0.95
+  },
+  "runs": [
+    {
+      "run_index": 0,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          2.629871954096169,
+          5.927824100248849,
+          9.32354677828122,
+          8.550954547862071,
+          9.296113813176321,
+          6.397647496892232
+        ],
+        [
+          2.876081061549548,
+          8.2201152827053,
+          6.266481561979696,
+          8.757268234113841,
+          6.59321058072726,
+          9.704596714991242
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 2.629871954096169,
+          "item_1": 5.927824100248849,
+          "item_2": 9.32354677828122,
+          "item_3": 8.550954547862071,
+          "item_4": 9.296113813176321,
+          "item_5": 6.397647496892232
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 2.876081061549548,
+          "item_1": 8.2201152827053,
+          "item_2": 6.266481561979696,
+          "item_3": 8.757268234113841,
+          "item_4": 6.59321058072726,
+          "item_5": 9.704596714991242
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 4,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            3
+          ],
+          "claude_4_sonnet_2": [
+            2,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 12.246977177291987,
+          "claude_4_sonnet_2": 13.826705372905455
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my strategic objectives. I'd be open to trading Items 0, 2, and 4 if you have strong preferences for any of those, as I see potential for mutually beneficial arrangements. What items are you most drawn to, and do you see any natural complementary interests between us?",
+          "timestamp": 1755506571.141668,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my strategic objectives. I'd be open to exploring a deal where I focus on these items while you prioritize others, though I'm curious to hear which items catch your attention first. Perhaps we can find complementary preferences that create value for both of us.",
+          "timestamp": 1755506574.9530082,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I notice I don't have context about what negotiation just concluded or what positions were taken. Without knowing the specific issues, participants, or outcomes from Round 1, I cannot meaningfully assess which strategies worked or recommend different approaches.\n\nCould you provide details about the negotiation topic, key positions, and what happened in Round 1 so I can offer strategic analysis?",
+          "timestamp": 1755506607.340394
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I notice this appears to be mid-negotiation, but I don't have context about what we're negotiating, what positions have been taken, or what specific strategies have been employed so far. Without knowing the subject matter, stakeholders, or previous exchanges, I can't meaningfully assess what's working or suggest different approaches.\n\nCould you provide more context about:\n- What we're negotiating\n- Who the parties are\n- What positions/offers have been made\n- What the key issues or sticking points seem to be\n\nThis would allow me to give you a substantive strategic reflection rather than generic advice.",
+          "timestamp": 1755506611.920913
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be willing to consider trading Items 0 and 1, which seem less critical to my needs, if we can find a mutually beneficial arrangement. What items are you most drawn to, and would you be open to a trade that gives us each our top priorities?",
+          "timestamp": 1755506616.276187,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my current priorities and would provide significant value to me. I'd be willing to consider a split where I focus on those items while you take Items 0, 1, and 3, though I'm open to discussing alternative arrangements if you have strong preferences for any of the items I mentioned.",
+          "timestamp": 1755506620.713116,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "My collaborative approach and detailed explanations seem to be building understanding, but I need to be more assertive about the value I'm providing while remaining open to compromise. I should focus on finding a middle ground that acknowledges both parties' core needs rather than just explaining my position.",
+          "timestamp": 1755506657.295033
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "My analytical approach and willingness to explore creative solutions seem to be building trust, but I may need to be more assertive about my core interests while remaining collaborative. I should focus on identifying the underlying needs behind positions and propose more concrete trade-offs that create mutual value.",
+          "timestamp": 1755506660.9534771
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic priorities. I'd be open to a deal where I focus on these three items while you take Items 0, 1, and 3 - this could create a mutually beneficial split that maximizes value for both of us. What are your thoughts on this potential arrangement, and which items are most important to you?",
+          "timestamp": 1755506664.8856971,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my priorities for this negotiation. I'd be willing to consider a deal where I take those three items while you get Items 0, 1, and 3, which seems like it could work well for both of us. What are your thoughts on that split, and which items are most valuable to you?",
+          "timestamp": 1755506668.928852,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_1",
+          "content": "My balanced approach of proposing 50-50 splits while emphasizing fairness and mutual benefit appears reasonable, but may be perceived as inflexible. I should consider showing more adaptability by exploring creative alternatives or making strategic concessions to demonstrate good faith and break the deadlock.",
+          "timestamp": 1755506707.641758
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "My balanced approach of offering fair compromises while clearly articulating reasoning seems to be building trust, but I may need to be more creative in finding novel solutions that address underlying interests rather than just splitting differences on stated positions.\n\nI should probe deeper into what's driving the other parties' positions and explore whether there are unexpressed needs or alternative value-creation opportunities we haven't considered yet.",
+          "timestamp": 1755506712.6743438
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities. I'd be willing to consider a deal where I take those three items while you get Items 0, 1, and 3 - this seems like it could create mutual value if our preferences differ. What items are you most drawn to, and do you see potential for a trade that benefits us both?",
+          "timestamp": 1755506716.5539808,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my priorities for this negotiation. I'd be willing to consider a deal where I focus on these three items while you take Items 0, 2, and 4 - though I'm open to discussing alternatives if you have strong preferences for any of the items I mentioned. What items are you most drawn to?",
+          "timestamp": 1755506720.029124,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:45:57.056514",
+      "duration_seconds": 190.12443685531616,
+      "metrics": {
+        "mean_utility": 13.03684127509872,
+        "max_utility": 13.826705372905455,
+        "min_utility": 12.246977177291987,
+        "utility_spread": 1.579728195613468
+      }
+    },
+    {
+      "run_index": 1,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          4.917794019269191,
+          8.123098229579533,
+          0.2716579759070614,
+          9.700684072166482,
+          5.143472202073073,
+          5.224481160969324
+        ],
+        [
+          3.903793818929119,
+          9.125365083630541,
+          4.53201757806492,
+          8.900002141376039,
+          3.4176296588609625,
+          5.306193933722359
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 4.917794019269191,
+          "item_1": 8.123098229579533,
+          "item_2": 0.2716579759070614,
+          "item_3": 9.700684072166482,
+          "item_4": 5.143472202073073,
+          "item_5": 5.224481160969324
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 3.903793818929119,
+          "item_1": 9.125365083630541,
+          "item_2": 4.53201757806492,
+          "item_3": 8.900002141376039,
+          "item_4": 3.4176296588609625,
+          "item_5": 5.306193933722359
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            2,
+            4
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 4.91219723045594,
+          "claude_4_sonnet_2": 18.013549434726336
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 0, 2, and 4 as they align well with my core objectives. I'd be open to exploring a deal where I focus on those items while potentially trading away Items 1, 3, and 5 if you find them valuable. What items are you most drawn to, and do you see any potential for a mutually beneficial arrangement?",
+          "timestamp": 1755506760.667011,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to exploring a deal where I focus on these items while you take priority on Items 0, 1, and 3 - this could create mutual value if our preferences don't completely overlap. What items are you most drawn to?",
+          "timestamp": 1755506764.431376,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:46:32.732992",
+      "duration_seconds": 35.675050020217896,
+      "metrics": {
+        "mean_utility": 11.462873332591137,
+        "max_utility": 18.013549434726336,
+        "min_utility": 4.91219723045594,
+        "utility_spread": 13.101352204270396
+      }
+    },
+    {
+      "run_index": 2,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.359345567919501,
+          5.691377265376452,
+          3.1901698422194977,
+          9.804784537323313,
+          1.047252274868753,
+          3.72669777198968
+        ],
+        [
+          4.2270309247681945,
+          6.374631431696878,
+          4.454267009653918,
+          8.342180560703369,
+          3.5967892352385813,
+          5.766798769963454
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 6.359345567919501,
+          "item_1": 5.691377265376452,
+          "item_2": 3.1901698422194977,
+          "item_3": 9.804784537323313,
+          "item_4": 1.047252274868753,
+          "item_5": 3.72669777198968
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 4.2270309247681945,
+          "item_1": 6.374631431696878,
+          "item_2": 4.454267009653918,
+          "item_3": 8.342180560703369,
+          "item_4": 3.5967892352385813,
+          "item_5": 5.766798769963454
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            3
+          ],
+          "claude_4_sonnet_2": [
+            2,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 8.445112849103104,
+          "claude_4_sonnet_2": 12.368831332455743
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5 as they align well with my priorities, though I'm open to creative arrangements. I'd be willing to consider trading some of my lower-priority items (like Items 0, 2, and 4) if we can find a mutually beneficial split. What items are you most drawn to, and do you see any potential for us to each focus on different subsets?",
+          "timestamp": 1755506797.146302,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities for this negotiation. I'd be willing to consider trading Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most focused on securing?",
+          "timestamp": 1755506800.102369,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I need more information about what happened in Round 1 to provide a meaningful reflection. Without knowing the negotiation context, positions taken, or specific outcomes, I can't assess which strategies worked or suggest improvements. Could you share details about the negotiation topic, my position, the other party's stance, and what occurred in Round 1?",
+          "timestamp": 1755506833.3501499
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I need more context about what negotiation is taking place and what positions were taken in Round 1 to provide meaningful strategic reflection. Without knowing the subject matter, participants, or initial proposals, I can only offer that successful negotiations typically require understanding all parties' underlying interests and finding creative solutions that create mutual value rather than just competing over fixed resources.",
+          "timestamp": 1755506837.543634
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my current priorities and would provide significant value to me. I'd be open to a deal where I focus on these items while you take the lead on Items 0, 2, and 4 - this could create a mutually beneficial arrangement where we each get our preferred items. What are your thoughts on this division, and which items are most important to you?",
+          "timestamp": 1755506842.481434,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 1, 3, and 5 - they align well with my core objectives. I'd be open to a deal where I take those three items while you get Items 0, 2, and 4, which seem like they might complement your needs better. What are your thoughts on this split, and which items are you most drawn to?",
+          "timestamp": 1755506846.2777631,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:47:59.768431",
+      "duration_seconds": 87.03436183929443,
+      "metrics": {
+        "mean_utility": 10.406972090779423,
+        "max_utility": 12.368831332455743,
+        "min_utility": 8.445112849103104,
+        "utility_spread": 3.923718483352639
+      }
+    },
+    {
+      "run_index": 3,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.075880082302896,
+          2.7289511842734804,
+          5.868986712961256,
+          4.14572282278904,
+          6.395448083886266,
+          0.21716471855235064
+        ],
+        [
+          5.96006767054402,
+          4.80189373552279,
+          4.344457770173191,
+          4.175335001951971,
+          5.841905069477349,
+          2.815715217987276
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 6.075880082302896,
+          "item_1": 2.7289511842734804,
+          "item_2": 5.868986712961256,
+          "item_3": 4.14572282278904,
+          "item_4": 6.395448083886266,
+          "item_5": 0.21716471855235064
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 5.96006767054402,
+          "item_1": 4.80189373552279,
+          "item_2": 4.344457770173191,
+          "item_3": 4.175335001951971,
+          "item_4": 5.841905069477349,
+          "item_5": 2.815715217987276
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000003
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 3,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            2,
+            4
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 14.753927445618904,
+          "claude_4_sonnet_2": 17.44700856850857
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my priorities. I'd be open to exploring a deal where I focus on those items while you take the lead on Items 0, 2, and 4 - though I'm flexible and curious to hear what matters most to you before we start making specific proposals.",
+          "timestamp": 1755506883.811923,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to exploring a deal where I focus on these items while you take priority on Items 0, 1, and 3 - this could create mutual value if our preferences don't completely overlap. What items are you most drawn to, and do you see potential for a complementary arrangement?",
+          "timestamp": 1755506888.343358,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I notice this appears to be referencing an ongoing negotiation, but I don't have context about what we're negotiating, what positions have been taken, or what specific strategies have been employed so far. \n\nCould you provide more details about the negotiation topic, the parties involved, and what's happened in Round 1? With that context, I'd be happy to offer strategic reflection on what approaches might be working and what adjustments could improve outcomes in subsequent rounds.",
+          "timestamp": 1755506921.63946
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I need more context about what negotiation took place in Round 1 to provide meaningful reflection. Without knowing the specific proposals, counteroffers, or positions taken by each party, I cannot assess which strategies worked or suggest improvements for future rounds.\n\nCould you provide details about what happened in Round 1 - the key proposals, responses, and points of disagreement?",
+          "timestamp": 1755506925.3782752
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my priorities and I believe they could provide significant value in my current situation. I'd be open to discussing a trade where I focus on these items while potentially offering you favorable terms on Items 0, 1, and 3, though I'd need to understand your preferences better first. What items are you most drawn to, and do you see any potential for a mutually beneficial arrangement?",
+          "timestamp": 1755506929.776961,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my current priorities and objectives. I'd be open to exploring a deal where I focus on these items while you take the lead on Items 0, 1, and 3 - this could create a mutually beneficial arrangement where we each get what we value most. What are your thoughts on this division, and which items are you most drawn to?",
+          "timestamp": 1755506934.005676,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "My emphasis on mutual benefit and collaborative framing seems to be resonating, but I may need to be more specific about trade-offs and concessions to move toward actual agreement rather than just positive dialogue.\n\nI should shift from general principles to concrete proposals with clear give-and-take elements that demonstrate flexibility while protecting my core interests.",
+          "timestamp": 1755506972.314836
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "My direct approach of proposing a specific split (60-40) seems to have moved us past vague discussions, but I may need to show more flexibility or find creative alternatives since we haven't reached consensus yet. I should listen more carefully to their concerns and potentially offer a compromise or explore if there are other ways to structure the agreement that addresses both our interests.",
+          "timestamp": 1755506976.7045472
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities and would provide significant value to me. I'd be willing to consider a trade where I focus on these items while you take Items 0, 1, and 3 - this could create a mutually beneficial arrangement where we each get our preferred items. What are your thoughts on this potential division, and which items are most important to you?",
+          "timestamp": 1755506981.160365,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my current priorities and would provide significant value to me. I'd be willing to consider a split where I focus on those three while you take Items 0, 1, and 3, though I'm open to discussing alternatives if you have strong preferences for any of the items I mentioned. What items are you most drawn to?",
+          "timestamp": 1755506985.6871848,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:50:21.264736",
+      "duration_seconds": 141.49528217315674,
+      "metrics": {
+        "mean_utility": 16.100468007063736,
+        "max_utility": 17.44700856850857,
+        "min_utility": 14.753927445618904,
+        "utility_spread": 2.693081122889664
+      }
+    },
+    {
+      "run_index": 4,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          1.9217745822097776,
+          8.885367997546549,
+          1.146469631192415,
+          8.102887968315311,
+          3.7461041481485235,
+          3.1784050502687777
+        ],
+        [
+          3.4961161038781645,
+          7.584780427128761,
+          4.601522682479193,
+          7.726852502765817,
+          2.9079772867991984,
+          3.829283033983823
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 1.9217745822097776,
+          "item_1": 8.885367997546549,
+          "item_2": 1.146469631192415,
+          "item_3": 8.102887968315311,
+          "item_4": 3.7461041481485235,
+          "item_5": 3.1784050502687777
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 3.4961161038781645,
+          "item_1": 7.584780427128761,
+          "item_2": 4.601522682479193,
+          "item_3": 7.726852502765817,
+          "item_4": 2.9079772867991984,
+          "item_5": 3.829283033983823
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 14.634849428567493,
+          "claude_4_sonnet_2": 17.361788383942766
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my current priorities and would provide significant value to me. I'd be open to trading away Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most drawn to, and do you see potential for us to each focus on different subsets?",
+          "timestamp": 1755507025.338154,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm quite interested in Items 2, 4, and 5 - they align well with my priorities for this negotiation. I'd be willing to consider trading some of the lower-numbered items if you have strong preferences for those, as I'm looking for mutually beneficial arrangements. What items are you most drawn to, and do you see any potential for us to find complementary interests?",
+          "timestamp": 1755507029.312764,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:51:00.873225",
+      "duration_seconds": 39.60579514503479,
+      "metrics": {
+        "mean_utility": 15.998318906255129,
+        "max_utility": 17.361788383942766,
+        "min_utility": 14.634849428567493,
+        "utility_spread": 2.7269389553752728
+      }
+    },
+    {
+      "run_index": 5,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          7.807573044385169,
+          2.6728179460738333,
+          5.896552170271292,
+          0.9306635589172041,
+          0.4929335855553829,
+          0.8976486523779104
+        ],
+        [
+          7.1341699606977516,
+          3.962154629812785,
+          4.952037924240734,
+          1.0316443798104293,
+          3.086447982744124,
+          1.7544771806463788
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 7.807573044385169,
+          "item_1": 2.6728179460738333,
+          "item_2": 5.896552170271292,
+          "item_3": 0.9306635589172041,
+          "item_4": 0.4929335855553829,
+          "item_5": 0.8976486523779104
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 7.1341699606977516,
+          "item_1": 3.962154629812785,
+          "item_2": 4.952037924240734,
+          "item_3": 1.0316443798104293,
+          "item_4": 3.086447982744124,
+          "item_5": 1.7544771806463788
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 14.326499388777414,
+          "claude_4_sonnet_2": 23.655502319351285
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities and would provide significant value to me. I'd be willing to consider trading away Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most drawn to, and do you see potential for us to each focus on different subsets?",
+          "timestamp": 1755507064.873591,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to exploring a deal where I focus on those items while you take priority on Items 0, 1, and 3 - this could create mutual value if our preferences complement each other. What items are you most drawn to, and do you see potential for a mutually beneficial arrangement?",
+          "timestamp": 1755507069.5412421,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:51:40.642675",
+      "duration_seconds": 39.76718807220459,
+      "metrics": {
+        "mean_utility": 18.99100085406435,
+        "max_utility": 23.655502319351285,
+        "min_utility": 14.326499388777414,
+        "utility_spread": 9.329002930573871
+      }
+    },
+    {
+      "run_index": 6,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.26876712602956,
+          9.009044325541542,
+          2.5831489283568585,
+          1.4300680853248793,
+          2.483343142940332,
+          7.340159166953591
+        ],
+        [
+          4.520226881348786,
+          9.653986633381914,
+          5.2562073485249865,
+          3.4920942647536495,
+          1.0990325062466757,
+          5.878842092258789
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 6.26876712602956,
+          "item_1": 9.009044325541542,
+          "item_2": 2.5831489283568585,
+          "item_3": 1.4300680853248793,
+          "item_4": 2.483343142940332,
+          "item_5": 7.340159166953591
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 4.520226881348786,
+          "item_1": 9.653986633381914,
+          "item_2": 5.2562073485249865,
+          "item_3": 3.4920942647536495,
+          "item_4": 1.0990325062466757,
+          "item_5": 5.878842092258789
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 22.37037228030243,
+          "claude_4_sonnet_2": 11.451755688759658
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my strategic objectives. I'd be open to exploring a deal where I focus on these key items while potentially trading away Items 0, 2, and 4 if you find them valuable. What items are you most drawn to, and do you see potential for a mutually beneficial arrangement?",
+          "timestamp": 1755507104.615548,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm very interested in Items 2, 4, and 5 - they align perfectly with my priorities for this negotiation. I'd be willing to consider trading Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most focused on securing?",
+          "timestamp": 1755507107.2729259,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:52:19.646865",
+      "duration_seconds": 39.0028440952301,
+      "metrics": {
+        "mean_utility": 16.911063984531044,
+        "max_utility": 22.37037228030243,
+        "min_utility": 11.451755688759658,
+        "utility_spread": 10.918616591542772
+      }
+    },
+    {
+      "run_index": 7,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          3.9778604752192037,
+          8.278930769889543,
+          9.087557741584844,
+          7.558154729386478,
+          3.8209851531729964,
+          4.653785054635197
+        ],
+        [
+          7.530052525525556,
+          9.360726292251831,
+          8.580731503251588,
+          5.730761034411415,
+          2.072527910843879,
+          2.2891669417404312
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 3.9778604752192037,
+          "item_1": 8.278930769889543,
+          "item_2": 9.087557741584844,
+          "item_3": 7.558154729386478,
+          "item_4": 3.8209851531729964,
+          "item_5": 4.653785054635197
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 7.530052525525556,
+          "item_1": 9.360726292251831,
+          "item_2": 8.580731503251588,
+          "item_3": 5.730761034411415,
+          "item_4": 2.072527910843879,
+          "item_5": 2.2891669417404312
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000002
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 18.4847532559073,
+          "claude_4_sonnet_2": 13.056042961122193
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 1, 3, and 5, as they align well with my priorities for this negotiation. I'd be open to exploring a deal where I focus on those items while potentially trading away Items 0, 2, and 4 if you have strong preferences for them. What items are you most drawn to, and do you see any potential for a mutually beneficial arrangement?",
+          "timestamp": 1755507143.279129,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities. I'd be open to discussing a split where I focus on those items while you take Items 0, 1, and 3 - though I'm curious to hear what items you value most before we explore specific arrangements. What are your key interests among these six items?",
+          "timestamp": 1755507147.358176,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:52:57.921827",
+      "duration_seconds": 38.272749185562134,
+      "metrics": {
+        "mean_utility": 15.770398108514748,
+        "max_utility": 18.4847532559073,
+        "min_utility": 13.056042961122193,
+        "utility_spread": 5.428710294785107
+      }
+    },
+    {
+      "run_index": 8,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.689958184304432,
+          6.01810925068266,
+          3.342876659964192,
+          4.257842808111806,
+          9.34955622413447,
+          8.093625440231442
+        ],
+        [
+          9.78834274493636,
+          5.939237096490733,
+          3.6070476899346597,
+          4.6295147442384526,
+          10.0,
+          3.041975337718908
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 8.689958184304432,
+          "item_1": 6.01810925068266,
+          "item_2": 3.342876659964192,
+          "item_3": 4.257842808111806,
+          "item_4": 9.34955622413447,
+          "item_5": 8.093625440231442
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 9.78834274493636,
+          "item_1": 5.939237096490733,
+          "item_2": 3.6070476899346597,
+          "item_3": 4.6295147442384526,
+          "item_4": 10.0,
+          "item_5": 3.041975337718908
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9524302153843617
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "claude_4_sonnet_2": [
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 20.195193713900064,
+          "claude_4_sonnet_2": 4.439331250827301
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to exploring a deal where I focus on these items while potentially trading away Items 0, 1, and 3 if you have strong preferences for those. What items are you most drawn to, and do you see any potential for mutually beneficial exchanges?",
+          "timestamp": 1755507181.68049,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities for this negotiation. I'd be willing to consider trading Items 0, 1, and 3 if we can find a mutually beneficial arrangement. What items are you most focused on securing?",
+          "timestamp": 1755507184.833067,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I notice this appears to be mid-negotiation, but I don't have context about the specific negotiation topic, participants, positions, or what happened in Round 1. Without knowing what we're negotiating about, who the other parties are, or what strategies were attempted, I can't meaningfully reflect on what's working or what to change.\n\nCould you provide the negotiation context and details from Round 1 so I can offer strategic analysis?",
+          "timestamp": 1755507222.15637
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I need more context about what negotiation took place in Round 1 to provide meaningful reflection. Without knowing the specific positions, proposals, or dynamics that occurred, I cannot assess what strategies worked or suggest different approaches for future rounds.\n\nCould you provide details about what was discussed, proposed, or the positions taken by each party in Round 1?",
+          "timestamp": 1755507225.4484239
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be willing to consider trading Items 0 and 1, which seem less critical to my goals, in exchange for securing at least two of my preferred items. What items are you most focused on obtaining?",
+          "timestamp": 1755507228.984575,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my priorities for this negotiation. I'd be willing to consider a trade where I focus on these items while potentially offering you favorable terms on Items 0, 1, and 3. What items are you most drawn to, and do you see potential for a mutually beneficial arrangement?",
+          "timestamp": 1755507232.622283,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:54:25.750858",
+      "duration_seconds": 87.82758092880249,
+      "metrics": {
+        "mean_utility": 12.317262482363683,
+        "max_utility": 20.195193713900064,
+        "min_utility": 4.439331250827301,
+        "utility_spread": 15.755862463072763
+      }
+    },
+    {
+      "run_index": 9,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "claude_4_sonnet_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "claude_4_sonnet_1": "anthropic/claude-sonnet-4",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.946477515475632,
+          2.3403256140567352,
+          7.6913487727475305,
+          8.743131668593914,
+          7.388769947674784,
+          8.790056502020963
+        ],
+        [
+          4.739195108707953,
+          1.461187343834359,
+          7.526506177907257,
+          10.0,
+          5.041368728806796,
+          10.0
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "claude_4_sonnet_1": {
+          "item_0": 8.946477515475632,
+          "item_1": 2.3403256140567352,
+          "item_2": 7.6913487727475305,
+          "item_3": 8.743131668593914,
+          "item_4": 7.388769947674784,
+          "item_5": 8.790056502020963
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 4.739195108707953,
+          "item_1": 1.461187343834359,
+          "item_2": 7.526506177907257,
+          "item_3": 10.0,
+          "item_4": 5.041368728806796,
+          "item_5": 10.0
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9613571462869657
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "claude_4_sonnet_1": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "claude_4_sonnet_2": [
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "claude_4_sonnet_1": 13.914979388451208,
+          "claude_4_sonnet_2": 10.18474635389717
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm quite interested in Items 2, 4, and 5 - they seem to align well with my priorities. I'd be open to trading away Items 0 and 1 if you have strong preferences for those, and Item 3 could be negotiable depending on what you're looking for. What items are you most drawn to, and do you see any potential trades that could work for both of us?",
+          "timestamp": 1755507269.830936,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to trading Items 0 and 1, which have less value to me, in exchange for securing my priority items. Perhaps we could explore a deal where I take 2-3 of my preferred items while you get the remainder plus the items I'm willing to trade?",
+          "timestamp": 1755507274.152391,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_1",
+          "content": "I notice I don't have context about what negotiation just occurred or what positions were taken in Round 1. Without knowing the specific issues, parties involved, or outcomes from the first round, I cannot meaningfully assess what strategies worked or recommend changes.\n\nCould you provide details about the negotiation topic, the parties' positions, and what happened in Round 1 so I can offer strategic insights for moving forward?",
+          "timestamp": 1755507306.91304
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I notice I don't have context about what negotiation just occurred or what positions were taken in Round 1. Without knowing the specific issues, stakeholders, or proposals discussed, I can't meaningfully assess what strategies worked or suggest different approaches.\n\nCould you provide details about the negotiation topic, the parties involved, and what happened in Round 1? This would allow me to give you strategic advice for moving forward.",
+          "timestamp": 1755507310.5593789
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_1",
+          "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to a deal where I take those three items while you get Items 0, 1, and 3 - this could create a balanced split that works for both of us. What items are you most drawn to, and do you see potential for a mutually beneficial arrangement?",
+          "timestamp": 1755507314.175714,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I'm particularly interested in Items 2, 4, and 5 - they align well with my current priorities and would provide significant value to me. I'd be willing to consider trading Items 0, 1, and 3 if you have strong preferences for those, as I see potential for a mutually beneficial arrangement. What items are you most drawn to, and do you see any overlap or complementary interests we could build on?",
+          "timestamp": 1755507318.7728121,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T01:55:50.582900",
+      "duration_seconds": 84.82924199104309,
+      "metrics": {
+        "mean_utility": 12.049862871174188,
+        "max_utility": 13.914979388451208,
+        "min_utility": 10.18474635389717,
+        "utility_spread": 3.730233034554038
+      }
+    }
+  ],
+  "summary": {
+    "total_runs": 10,
+    "successful_runs": 10,
+    "consensus_rate": 1.0,
+    "avg_rounds": 1.8,
+    "avg_utility_spread": 6.918724427602998
+  }
+}

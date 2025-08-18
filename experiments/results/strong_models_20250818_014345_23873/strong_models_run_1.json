@@ -1,0 +1,109 @@
+{
+  "run_index": 1,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "qwen_3_235b_a22b_2507_1",
+    "gemini_pro_2"
+  ],
+  "agent_models": {
+    "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+    "gemini_pro_2": "google/gemini-2.5-pro"
+  },
+  "initial_preferences_matrix": [
+    [
+      6.913055937205993,
+      8.342261934387857,
+      1.448657116148534,
+      4.286433232077459,
+      1.3794871724737057,
+      9.260121612023664
+    ],
+    [
+      6.93128554193075,
+      5.852398653398598,
+      2.0529833600312957,
+      6.382147510266476,
+      4.739210124350876,
+      8.706818110560992
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "qwen_3_235b_a22b_2507_1": {
+      "item_0": 6.913055937205993,
+      "item_1": 8.342261934387857,
+      "item_2": 1.448657116148534,
+      "item_3": 4.286433232077459,
+      "item_4": 1.3794871724737057,
+      "item_5": 9.260121612023664
+    },
+    "gemini_pro_2": {
+      "item_0": 6.93128554193075,
+      "item_1": 5.852398653398598,
+      "item_2": 2.0529833600312957,
+      "item_3": 6.382147510266476,
+      "item_4": 4.739210124350876,
+      "item_5": 8.706818110560992
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.95
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "qwen_3_235b_a22b_2507_1": [
+        0,
+        1,
+        2
+      ],
+      "gemini_pro_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "qwen_3_235b_a22b_2507_1": 10.77438393534379,
+      "gemini_pro_2": 17.823506600055
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "I'm particularly interested in Item_0 and Item_3\u2014they're my top priorities. I'd be open to trading Item_1 or Item_4 in exchange for either of those, depending on what you're looking for. Let me know which items matter most to you so we can find a mutually beneficial arrangement.",
+      "timestamp": 1755507366.589477,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_2",
+      "content": "I'm still evaluating all the options, but my initial interest is in Item_1 and Item_4. I'm sure we can find a fair deal that is mutually beneficial. What items are you prioritizing?",
+      "timestamp": 1755507379.871377,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:56:59.295907",
+  "duration_seconds": 59.342057943344116,
+  "metrics": {
+    "mean_utility": 14.298945267699395,
+    "max_utility": 17.823506600055,
+    "min_utility": 10.77438393534379,
+    "utility_spread": 7.049122664711211
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "run_index": 4,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "llama_3_1_405b_1",
+    "llama_3_1_405b_2"
+  ],
+  "agent_models": {
+    "llama_3_1_405b_1": "meta-llama/llama-3.1-405b-instruct",
+    "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+  },
+  "initial_preferences_matrix": [
+    [
+      9.112658905742146,
+      0.6053408934046778,
+      7.459844702671549,
+      7.328873785223475,
+      6.0133190792885225,
+      8.736321705878133
+    ],
+    [
+      7.294942127288435,
+      3.8878211548449273,
+      10.0,
+      7.975457746933053,
+      4.879891456057854,
+      6.336284887750072
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "llama_3_1_405b_1": {
+      "item_0": 9.112658905742146,
+      "item_1": 0.6053408934046778,
+      "item_2": 7.459844702671549,
+      "item_3": 7.328873785223475,
+      "item_4": 6.0133190792885225,
+      "item_5": 8.736321705878133
+    },
+    "llama_3_1_405b_2": {
+      "item_0": 7.294942127288435,
+      "item_1": 3.8878211548449273,
+      "item_2": 10.0,
+      "item_3": 7.975457746933053,
+      "item_4": 4.879891456057854,
+      "item_5": 6.336284887750072
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9535480829808223
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "llama_3_1_405b_1": [
+        0,
+        1,
+        2
+      ],
+      "llama_3_1_405b_2": [
+        3,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "llama_3_1_405b_1": 20.115768005957733,
+      "llama_3_1_405b_2": 20.08185176064987
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_1",
+      "content": "I have a strong interest in Item_2 and Item_5, as they hold significant value for me. I'm open to negotiating a deal that involves either of these items, potentially pairing one with a lower-value item like Item_0 or Item_1. A trade involving Item_2 and Item_1, for instance, could be a mutually beneficial starting point.",
+      "timestamp": 1755506735.806131,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_2",
+      "content": "I am most interested in Item_2 and Item_4. I would be willing to trade Item_0, Item_1 or Item_3 in exchange for either of those. What items are you most keen on?",
+      "timestamp": 1755506737.927493,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T01:45:49.483135",
+  "duration_seconds": 16.41871476173401,
+  "metrics": {
+    "mean_utility": 20.0988098833038,
+    "max_utility": 20.115768005957733,
+    "min_utility": 20.08185176064987,
+    "utility_spread": 0.0339162453078643
+  }
+}
