@@ -101,8 +101,10 @@ async def run_strong_models_negotiation(
     )
     logger = logging.getLogger("StrongModels")
     
-    # Create results directory
-    results_dir = Path("experiments/results/strong_models")
+    # Create results directory with timestamp and PID to avoid conflicts in parallel runs
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    process_id = os.getpid()
+    results_dir = Path(f"experiments/results/strong_models_{timestamp}_{process_id}")
     results_dir.mkdir(parents=True, exist_ok=True)
     
     # Track all results

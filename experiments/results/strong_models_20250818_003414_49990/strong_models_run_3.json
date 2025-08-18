@@ -1,0 +1,173 @@
+{
+  "run_index": 3,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "gemini_pro_1",
+    "claude_4_sonnet_2"
+  ],
+  "agent_models": {
+    "gemini_pro_1": "google/gemini-2.5-pro",
+    "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+  },
+  "initial_preferences_matrix": [
+    [
+      6.879947290182562,
+      6.6781032796465665,
+      9.248703716984416,
+      0.940663665301561,
+      8.074753607220003,
+      9.617551073200158
+    ],
+    [
+      7.430732052912289,
+      4.795216064423779,
+      9.441622570936417,
+      5.659803029515866,
+      5.4442530984373,
+      10.0
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "gemini_pro_1": {
+      "item_0": 6.879947290182562,
+      "item_1": 6.6781032796465665,
+      "item_2": 9.248703716984416,
+      "item_3": 0.940663665301561,
+      "item_4": 8.074753607220003,
+      "item_5": 9.617551073200158
+    },
+    "claude_4_sonnet_2": {
+      "item_0": 7.430732052912289,
+      "item_1": 4.795216064423779,
+      "item_2": 9.441622570936417,
+      "item_3": 5.659803029515866,
+      "item_4": 5.4442530984373,
+      "item_5": 10.0
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9501012752147419
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 3,
+    "final_allocation": {
+      "gemini_pro_1": [
+        0,
+        2,
+        4
+      ],
+      "claude_4_sonnet_2": [
+        1,
+        3,
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_1": 10.382888578775326,
+      "claude_4_sonnet_2": 9.83564356870286
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "Hello! I'm looking at all the items, but Item_0 and Item_3 have caught my eye initially. I'm open to many possible deals, but I'm curious to learn what items you are most interested in.",
+      "timestamp": 1755503655.408832,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my priorities and could provide significant value to me. I'd be open to exploring a deal where I focus on these items while you take the lead on Items 0, 1, and 3 - this could create a mutually beneficial arrangement where we each get what we value most. What items are you most drawn to, and do you see potential for a complementary split?",
+      "timestamp": 1755503660.809192,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "My initial strategy of anchoring and information gathering has successfully revealed their key priorities. To break the current deadlock, I will now pivot to introducing new variables for creative trade-offs, shifting the focus from a single-issue haggle to a multi-issue package deal.",
+      "timestamp": 1755503715.281945
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "I need more context about what negotiation took place in Round 1 to provide a meaningful reflection. Without knowing the specific positions, offers, or dynamics that occurred, I can't assess what strategies worked or what should be adjusted for the next round.\n\nCould you provide details about what happened in Round 1 - the key positions taken, offers made, and points of disagreement?",
+      "timestamp": 1755503718.956932
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "gemini_pro_1",
+      "content": "My main focus is on Item_2 and Item_5, as they are the most critical for my needs. I'm open to a deal that gets me both, but I would also consider a split if you have a strong interest in one of them. What items are catching your eye?",
+      "timestamp": 1755503732.7080262,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "claude_4_sonnet_2",
+      "content": "I'm particularly interested in Items 1, 3, and 5 - they align well with my current priorities and would provide significant value to me. I'd be willing to consider a trade where I focus on those three items while you take the lead on Items 0, 2, and 4, though I'm open to discussing alternative arrangements that could work for both of us. What items are you most drawn to?",
+      "timestamp": 1755503737.1089642,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 2,
+      "from": "gemini_pro_1",
+      "content": "My clear rationale has established a firm baseline, but now I must pivot from defending my position to collaboratively exploring their underlying interests to unlock a creative, multi-issue solution.",
+      "timestamp": 1755503791.672111
+    },
+    {
+      "phase": "reflection",
+      "round": 2,
+      "from": "claude_4_sonnet_2",
+      "content": "My direct appeal for fairness and equal split seems to have resonated, but I need to be more strategic about timing and leverage. I should consider making a more concrete proposal that acknowledges the other party's concerns while still securing a reasonable outcome for myself.",
+      "timestamp": 1755503795.1835022
+    },
+    {
+      "phase": "discussion",
+      "round": 3,
+      "from": "gemini_pro_1",
+      "content": "My main interests lie with Item_2 and Item_3, as they are particularly valuable to me as a set. I am willing to be flexible on the other items, so perhaps we can structure a deal where I receive those two. What items are you targeting?",
+      "timestamp": 1755503806.349684,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 3,
+      "from": "claude_4_sonnet_2",
+      "content": "I'm particularly interested in Items 0, 2, and 4 - they align well with my strategic priorities. I'd be open to a deal where I focus on those three while you take Items 1, 3, and 5, though I'm flexible if you have strong preferences that overlap with mine. What items are you most drawn to?",
+      "timestamp": 1755503809.883125,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T00:58:04.798056",
+  "duration_seconds": 237.63222908973694,
+  "metrics": {
+    "mean_utility": 10.109266073739093,
+    "max_utility": 10.382888578775326,
+    "min_utility": 9.83564356870286,
+    "utility_spread": 0.5472450100724657
+  }
+}
