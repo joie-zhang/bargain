@@ -192,6 +192,15 @@ class ModularNegotiationRunner:
         
         messages = []
         
+        # Get previous round context if not first round
+        prev_round_context = None
+        if round_num > 1:
+            prev_round_context = {
+                "prev_proposals": next((p for p in self.proposals_history if p["round"] == round_num - 1), None),
+                "prev_votes": next((v for v in self.votes_history if v["round"] == round_num - 1), None),
+                "prev_discussion": [msg for msg in self.conversation_logs if msg.get("round") == round_num - 1 and msg.get("phase") == "discussion"]
+            }
+        
         for i, agent in enumerate(self.agents):
             # Build context
             agent_prefs = self.preferences["agent_preferences"].get(agent.agent_id, [])
@@ -205,8 +214,12 @@ class ModularNegotiationRunner:
                 turn_type="discussion"
             )
             
-            # Create discussion prompt
-            prompt = self._create_discussion_prompt(round_num, i, len(self.agents))
+            # Get what has been said so far in this round
+            current_round_messages = [msg for msg in messages if msg.get("round") == round_num]
+            
+            # Create discussion prompt with context
+            prompt = self._create_discussion_prompt(round_num, i, len(self.agents), 
+                                                   prev_round_context, current_round_messages)
             
             # Get response
             try:
@@ -236,6 +249,15 @@ class ModularNegotiationRunner:
         
         proposals = []
         
+        # Get this round's discussion for context
+        round_discussion = [msg for msg in self.conversation_logs 
+                           if msg.get("round") == round_num and msg.get("phase") == "discussion"]
+        
+        # Get previous proposals if any
+        prev_proposals = []
+        if round_num > 1:
+            prev_proposals = [p for p in self.proposals_history if p["round"] == round_num - 1]
+        
         for agent in self.agents:
             # Build context
             context = NegotiationContext(
@@ -248,8 +270,8 @@ class ModularNegotiationRunner:
                 turn_type="proposal"
             )
             
-            # Create proposal prompt
-            prompt = self._create_proposal_prompt(round_num)
+            # Create proposal prompt with discussion context
+            prompt = self._create_proposal_prompt(round_num, round_discussion, prev_proposals)
             
             try:
                 response = await agent.propose(context, prompt)
@@ -285,7 +307,11 @@ class ModularNegotiationRunner:
         
         votes = {agent.agent_id: {} for agent in self.agents}
         
-        # Format proposals for voting
+        # Get discussion context for informed voting
+        round_discussion = [msg for msg in self.conversation_logs 
+                           if msg.get("round") == round_num and msg.get("phase") == "discussion"]
+        
+        # Format proposals for voting with context
         proposals_text = self._format_proposals_for_voting(proposals)
         
         for agent in self.agents:
@@ -301,8 +327,8 @@ class ModularNegotiationRunner:
                 current_proposals=[p["allocation"] for p in proposals]
             )
             
-            # Create voting prompt
-            prompt = self._create_voting_prompt(proposals_text)
+            # Create voting prompt with context about proposals
+            prompt = self._create_voting_prompt(proposals_text, agent.agent_id, round_num, round_discussion)
             
             try:
                 response = await agent.vote(context, prompt)
@@ -329,6 +355,11 @@ class ModularNegotiationRunner:
         
         messages = []
         
+        # Get round summary for context
+        round_discussion = [msg for msg in self.conversation_logs if msg.get("round") == round_num and msg.get("phase") == "discussion"]
+        round_proposals = next((p for p in self.proposals_history if p["round"] == round_num), {"proposals": []})
+        round_votes = next((v for v in self.votes_history if v["round"] == round_num), {"votes": {}, "consensus": False})
+        
         for agent in self.agents:
             # Build context
             context = NegotiationContext(
@@ -341,8 +372,8 @@ class ModularNegotiationRunner:
                 turn_type="reflection"
             )
             
-            # Create reflection prompt
-            prompt = self._create_reflection_prompt(round_num)
+            # Create reflection prompt with round context
+            prompt = self._create_reflection_prompt(round_num, round_discussion, round_proposals, round_votes)
             
             try:
                 response = await agent.reflect(context, prompt)
@@ -363,58 +394,170 @@ class ModularNegotiationRunner:
         
         return messages
     
-    def _create_discussion_prompt(self, round_num: int, speaker_order: int, total_speakers: int) -> str:
-        """Create discussion phase prompt."""
+    def _create_discussion_prompt(self, round_num: int, speaker_order: int, total_speakers: int,
+                                 prev_round_context: Optional[Dict] = None,
+                                 current_round_messages: Optional[List[Dict]] = None) -> str:
+        """Create discussion phase prompt with context."""
         items_text = ", ".join([f"{i}:{item}" for i, item in enumerate(self.items)])
         
+        # Build context about previous round if available
+        prev_round_summary = ""
+        if prev_round_context and round_num > 1:
+            if prev_round_context.get("prev_votes", {}).get("consensus"):
+                prev_round_summary = "\n⚠️ Note: Consensus was almost reached last round - consider what prevented agreement.\n"
+            elif prev_round_context.get("prev_proposals"):
+                prev_round_summary = f"\nPrevious round: No consensus reached after {len(prev_round_context['prev_proposals'].get('proposals', []))} proposals.\n"
+        
+        # Add what others have said this round
+        current_discussion = ""
+        if current_round_messages:
+            current_discussion = "\nDiscussion so far this round:\n"
+            for msg in current_round_messages[-2:]:  # Show last 2 messages
+                agent = msg.get("from", "Unknown")
+                content = msg.get("content", "")[:80] + "..." if len(msg.get("content", "")) > 80 else msg.get("content", "")
+                current_discussion += f"- {agent}: {content}\n"
+        
         return f"""Round {round_num}/{self.max_rounds} - Discussion Phase
-Items: {items_text}
-Speaker {speaker_order}/{total_speakers}
+Items to negotiate: {items_text}
+You are speaker {speaker_order + 1} of {total_speakers}
+{prev_round_summary}{current_discussion}
+Strategic considerations:
+- You may be truthful or deceptive about your preferences
+- Consider what others have revealed (or hidden)
+- Time pressure increases each round (discount factor applies)
 
-Share your preferences strategically. You may be truthful or deceptive.
-What items interest you most? What deals might work?
-
-Respond in 2-3 sentences:"""
+Share your interests and potential deals (2-3 sentences):"""
     
-    def _create_proposal_prompt(self, round_num: int) -> str:
-        """Create proposal phase prompt."""
+    def _create_proposal_prompt(self, round_num: int, 
+                               discussion_logs: Optional[List[Dict]] = None,
+                               prev_proposals: Optional[List[Dict]] = None) -> str:
+        """Create proposal phase prompt with discussion context."""
         agent_ids = [a.agent_id for a in self.agents]
         items_text = ", ".join([f"{i}:{item}" for i, item in enumerate(self.items)])
         
+        # Summarize discussion insights
+        discussion_summary = ""
+        if discussion_logs:
+            discussion_summary = "\nKey points from discussion:\n"
+            for msg in discussion_logs:
+                agent = msg.get("from", "Unknown")
+                content = msg.get("content", "")
+                # Extract item preferences mentioned
+                if "Item" in content or "item" in content:
+                    summary = content[:100] + "..." if len(content) > 100 else content
+                    discussion_summary += f"- {agent}: {summary}\n"
+        
+        # Show why previous proposals failed if applicable
+        prev_proposal_context = ""
+        if prev_proposals and len(prev_proposals) > 0:
+            prev_proposal_context = f"\n⚠️ Previous round had {len(prev_proposals[0].get('proposals', []))} proposals but no consensus.\n"
+        
         return f"""Round {round_num}/{self.max_rounds} - Proposal Phase
-Items: {items_text}
-Agents: {', '.join(agent_ids)}
+Items to allocate: {items_text}
+Negotiating agents: {', '.join(agent_ids)}
+{discussion_summary}{prev_proposal_context}
+Guidelines:
+- Consider what each agent expressed interest in
+- Balance individual gains with group acceptance
+- Remember: unanimous approval needed for consensus
 
 Propose an allocation in this EXACT format:
-I propose this allocation: {{'agent_id': [item_indices], ...}} - [Your reasoning]
+I propose this allocation: {{'agent_id': [item_indices], ...}} - [Brief reasoning]
 
-Example:
-I propose this allocation: {{'agent_0': [0, 2], 'agent_1': [1], 'agent_2': [3, 4]}} - This balances everyone's needs.
+Example format:
+I propose this allocation: {{'{agent_ids[0]}': [0, 2], '{agent_ids[1] if len(agent_ids) > 1 else "agent_1"}': [1, 3]}} - Reflects stated preferences.
 
 Your proposal:"""
     
-    def _create_voting_prompt(self, proposals_text: str) -> str:
-        """Create voting phase prompt."""
-        return f"""Review these proposals and vote yes/no for each:
+    def _create_voting_prompt(self, proposals_text: str, agent_id: str, 
+                             round_num: int, discussion_logs: Optional[List[Dict]] = None) -> str:
+        """Create voting phase prompt with context."""
+        
+        # Extract what you said you wanted in discussion
+        your_stated_interests = ""
+        if discussion_logs:
+            for msg in discussion_logs:
+                if msg.get("from") == agent_id:
+                    content = msg.get("content", "")[:100]
+                    your_stated_interests = f"\nYour stated interests: {content}...\n"
+                    break
+        
+        # Add urgency if getting close to max rounds
+        urgency = ""
+        if round_num >= self.max_rounds - 1:
+            urgency = "\n⚠️ FINAL ROUNDS - Consider accepting reasonable proposals to avoid no-deal outcome!\n"
+        elif round_num >= self.max_rounds // 2:
+            urgency = f"\n⏰ Round {round_num}/{self.max_rounds} - Time pressure increasing (discount factor: {self.discount_factor ** round_num:.2f})\n"
+        
+        return f"""Round {round_num} - Voting Phase
+
+Review these proposals and decide whether to accept each one:
 
 {proposals_text}
+{your_stated_interests}{urgency}
+Voting considerations:
+- Does this proposal give you acceptable utility?
+- Is it better than likely alternatives in remaining rounds?
+- Remember: ALL agents must approve for consensus
+- No deal means everyone gets utility 0
 
-For EACH proposal, respond:
+For EACH proposal, vote yes/no with brief reasoning:
 Proposal 1: [yes/no] - [reason]
 Proposal 2: [yes/no] - [reason]
 etc.
 
 Your votes:"""
     
-    def _create_reflection_prompt(self, round_num: int) -> str:
-        """Create reflection phase prompt."""
-        return f"""Round {round_num} complete. No consensus yet.
+    def _create_reflection_prompt(self, round_num: int, discussion_logs: List[Dict], 
+                                 proposals: Dict, votes: Dict) -> str:
+        """Create reflection phase prompt with context about what happened."""
+        
+        # Summarize discussion points
+        discussion_summary = ""
+        if discussion_logs:
+            discussion_summary = "Discussion highlights:\n"
+            for msg in discussion_logs[:3]:  # Show first 3 messages
+                agent = msg.get("from", "Unknown")
+                content = msg.get("content", "")[:100] + "..." if len(msg.get("content", "")) > 100 else msg.get("content", "")
+                discussion_summary += f"- {agent}: {content}\n"
+        
+        # Summarize proposals
+        proposal_summary = ""
+        if proposals.get("proposals"):
+            proposal_summary = "\nProposals made:\n"
+            for prop in proposals["proposals"][:3]:  # Show first 3 proposals
+                agent = prop.get("agent_id", "Unknown")
+                allocation = prop.get("allocation", {})
+                proposal_summary += f"- {agent} proposed: {allocation}\n"
+        
+        # Summarize voting outcomes
+        vote_summary = ""
+        if votes.get("votes"):
+            vote_summary = "\nVoting results:\n"
+            consensus = votes.get("consensus", False)
+            vote_summary += f"- Consensus reached: {'Yes' if consensus else 'No'}\n"
+            # Show vote counts if available
+            vote_details = votes.get("votes", {})
+            if vote_details:
+                vote_summary += f"- {len(vote_details)} agents voted\n"
+        
+        # Add strategic guidance based on progress
+        strategic_guidance = ""
+        if round_num >= self.max_rounds - 2:
+            strategic_guidance = "\n⚠️ Critical: Only 1-2 rounds remain. Consider compromise to avoid no-deal.\n"
+        elif not votes.get("consensus") and round_num > self.max_rounds // 2:
+            strategic_guidance = "\n📊 Mid-game: No consensus yet. May need to adjust strategy or expectations.\n"
+        
+        return f"""Round {round_num} complete. Here's what happened:
 
-Reflect on the negotiation:
-- What strategies are working?
-- What should you try differently?
+{discussion_summary}{proposal_summary}{vote_summary}{strategic_guidance}
+Reflect on this round:
+- What strategies worked or didn't work?
+- What should you try differently in the next round?
+- What did you learn about other agents' preferences?
+- How can you build consensus given the time remaining?
 
-Brief reflection (1-2 sentences):"""
+Brief strategic reflection (2-3 sentences):"""
     
     def _parse_proposal(self, response: str, agent_id: str) -> Optional[Dict[str, List[int]]]:
         """Parse allocation from proposal response."""
