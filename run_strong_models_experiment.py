@@ -185,14 +185,17 @@ async def run_strong_models_negotiation(
             # Create item names
             items = [f"Item_{i}" for i in range(num_items)]
             
-            # Create negotiation runner
+            # Create negotiation runner - use the SAME preference data for consistency
             runner = ModularNegotiationRunner(
                 agents=agents,
-                preferences=preference_manager,  # Pass the PreferenceManager object to runner
+                preferences=preferences_data,  # Use the already-generated preference data, not the manager
                 items=items,
                 max_rounds=max_rounds,
                 discount_factor=0.9,
-                log_level="INFO"
+                log_level="INFO",
+                results_dir=str(results_dir),
+                enable_agent_logging=True,
+                run_id=str(run_idx)
             )
             
             # Run the negotiation

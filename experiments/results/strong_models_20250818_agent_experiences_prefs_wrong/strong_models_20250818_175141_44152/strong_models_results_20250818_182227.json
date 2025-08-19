@@ -1,0 +1,2223 @@
+{
+  "experiment": "Strong Models Competition",
+  "timestamp": "2025-08-18T17:51:41.641450",
+  "configuration": {
+    "models": [
+      "qwen-3-235b-a22b-2507",
+      "claude-4-sonnet"
+    ],
+    "num_runs": 10,
+    "max_rounds": 10,
+    "num_items": 6,
+    "competition_level": 0.95
+  },
+  "runs": [
+    {
+      "run_index": 0,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.32380216962227,
+          8.727517420608628,
+          8.000800834011592,
+          0.33939903162586216,
+          2.77800016502061,
+          9.94920197471383
+        ],
+        [
+          8.597691266484091,
+          10.0,
+          5.71961038108225,
+          4.158089215465688,
+          5.091852851511872,
+          7.892469068149562
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 8.32380216962227,
+          "item_1": 8.727517420608628,
+          "item_2": 8.000800834011592,
+          "item_3": 0.33939903162586216,
+          "item_4": 2.77800016502061,
+          "item_5": 9.94920197471383
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 8.597691266484091,
+          "item_1": 10.0,
+          "item_2": 5.71961038108225,
+          "item_3": 4.158089215465688,
+          "item_4": 5.091852851511872,
+          "item_5": 7.892469068149562
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9505886676550114
+      },
+      "negotiation_outcome": {
+        "consensus_reached": false,
+        "final_round": 10,
+        "final_allocation": null,
+        "final_utilities": null,
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me, though I\u2019m flexible on the others. That said, I could be open to creative bundling if it means reaching a mutually beneficial agreement early. I\u2019d like to understand your priorities as well, so we can explore efficient trades before the value decays.",
+          "timestamp": 1755564703.358387,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your interest in Items 0 and 2. I'm primarily focused on Items 1, 3, and 5, which align well with my core objectives. Perhaps we could explore a trade where you get Items 0 and 2, while I secure Items 1, 3, and 5, leaving Item 4 as our main point of negotiation?",
+          "timestamp": 1755564707.568647,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "Both parties proposed identical allocations, indicating alignment on dividing items, but consensus failed\u2014likely due to unmet underlying preferences or procedural factors. Claude\u2019s stated focus on Items 1, 3, and 5 matches the proposal, confirming reliable signaling; my high-priority items (0 and 2) are acknowledged but may need trade-offs to secure buy-in. Next round, I should reinforce common ground, consider a minor concession on Item 4 to create value, and explicitly signal flexibility to build trust and close consensus.",
+          "timestamp": 1755564726.8889449
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 1, it's encouraging that both agents proposed the exact same allocation, suggesting our preferences are well-aligned with minimal overlap. However, the lack of consensus despite identical proposals indicates we may need to be more explicit about our commitment to this deal or address any unstated concerns.\n\nFor Round 2, I should focus on confirming mutual satisfaction with the proposed split and perhaps explore if there are any specific concerns or conditions that need to be addressed to secure agreement. The foundation for a deal is clearly there - we just need to solidify the commitment.",
+          "timestamp": 1755564731.777903
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could consider trade-offs if compensated with Item_4. I'm open to bundling items to reach a balanced agreement, and I suspect we can find mutual value if we coordinate on less contested items.",
+          "timestamp": 1755564733.310832,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2. My primary interests lie with Item_1, Item_3, and Item_5, which seem to complement your priorities well. I'm open to exploring a mutually beneficial arrangement where we each focus on our high-value items, though I'd need to understand the full scope of what you're willing to offer in exchange.",
+          "timestamp": 1755564737.1585312,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal prioritized securing Item_0 and Item_2 while conceding lower-value items, which clarified my stance but failed to secure agreement\u2014indicating Claude values Item_4 more than assumed. The overlap in proposed bundles (both including Item_4) suggests a conflict point; I should adjust by decoupling Item_4 or offering it conditionally to test trade-offs. Learning that Claude prioritizes Item_1 and Item_3, I can leverage Item_4 as a bargaining chip in exchange for stronger concessions on my high-priority items, moving toward a Pareto-optimal split with a more targeted, flexible offer.",
+          "timestamp": 1755564764.696085
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at the proposals, I can see that qwen wants Items 0 and 2 as their core priorities, while I want Items 1, 3, and 5. The key disagreement is over Item 4 - they want to keep it while I offered it to them along with their priorities. This suggests Item 4 might have moderate value to them, but they may be willing to trade it if I can find the right incentive.\n\nMy strategy of offering them Item 4 as a sweetener didn't work, so I need to focus on the core trade: their priorities (0, 2) for mine (1, 3, 5). I should propose a clean split and emphasize the mutual benefit of each party getting their stated high-priority items, potentially offering to discuss Item 4 separately or finding another way to make the deal attractive.",
+          "timestamp": 1755564771.8650172
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high-priority for me, though I could be flexible on Item_4 if it helps reach a deal. I notice we're at a stalemate, so I\u2019d propose a package where I take Item_2 and Item_0, leaving the rest to you, or we could explore a partial split with trade-offs on Item_1 or Item_5 to balance value. Let\u2019s avoid deadlock\u2014what combination would work for you?",
+          "timestamp": 1755564774.141116,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4. My primary interests are actually Item_0 and Item_5, which seem to align well since we're not competing for the same items. I'm also moderately interested in Item_1 and Item_3, so perhaps we can find a mutually beneficial split where you get your high-priority items and I secure mine.",
+          "timestamp": 1755564777.9171882,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal clearly signaled my priorities, which helped clarify the negotiation space, but offering Item_5 in Claude\u2019s counterproposal reveals it may be lower priority for them\u2014useful leverage. Since overlapping interests in Item_2 and Item_4 are unavoidable, I should explore partial bundling or trade-offs involving Item_5 or Item_1 to create mutual gains. Building consensus now requires conceding on a low-value item in exchange for securing core priorities, especially as deadlock risks suboptimal outcomes.",
+          "timestamp": 1755564803.259281
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 3, I can see a clear pattern emerging in our negotiation dynamics. My opponent consistently prioritizes Items 2 and 4, while I've established my core interests in Items 0, 1, and 3. The key disagreement centers on Item 5 - they want to keep it minimal while I offered it to them as a sweetener.\n\n**Strategic Analysis:**\n- My strategy of offering Item 5 as a concession didn't work - they seem to view it as lower value\n- Their proposal giving me Items 0, 1, 3, and 5 suggests they see Item 5 as expendable\n- We're both being fairly transparent about our priorities, which is good for finding a solution\n\n**Key Learning:**\nMy opponent appears to have a very focused preference structure - they really want Items 2 and 4 specifically, and seem less interested in accumulating additional items if they don't align with their core needs.\n\n**Next Round Strategy:**\nI should accept their core ask for Items 2 and 4, but negotiate more strategically around the remaining items. Since they offered me Item 5 easily, I should focus on securing my true priorities (Items 0, 1, 3) and potentially push back on Item 5 if it helps balance the deal. The path to consensus likely involves me getting Items 0, 1, 3 and possibly 5, while they get Items 2 and 4.",
+          "timestamp": 1755564813.816609
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could be flexible on Item_4 if it helps reach a deal. I'm open to trade-offs on Item_0, Item_1, or Item_3, especially in exchange for future-round cooperation or bundling with Item_2. Let\u2019s explore packages that give us both value, since we\u2019re already into round 4 and the cost of delay is rising.",
+          "timestamp": 1755564815.9649239,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4. My highest priorities are Item_0 and Item_5, which seem to complement your interests well. I'm also quite interested in Item_1, but I'd be willing to discuss flexible arrangements if we can find a mutually beneficial split that addresses both our core needs.",
+          "timestamp": 1755564819.590173,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal clearly delineated priorities and facilitated a constructive counteroffer, showing that transparency about core interests can foster progress. However, Claude\u2019s inclusion of Item_1 and Item_3 in their proposal suggests they may be seeking additional value beyond their top priorities, possibly indicating flexibility on those items. In the next round, I should explore trade-offs involving lower-priority items (e.g., Item_1 or Item_3) to create mutual gains and move toward consensus, especially since time is limited and compromise will be necessary.",
+          "timestamp": 1755564845.0898612
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 4, I successfully identified the core trade-off (Items 2&4 for qwen vs Items 0&5 for me) but my attempt to expand the deal by adding Items 1&3 failed to reach consensus. This suggests qwen may have stronger preferences for Item 1 than initially indicated, or they're being cautious about giving up too much.\n\nFor Round 5, I should focus on the proven core exchange (Items 2&4 for Items 0&5) and either accept their original proposal or make minimal adjustments. The key insight is that qwen values having fewer items they really want over a larger bundle with items they're less certain about.\n\nI need to prioritize securing my high-value items (0&5) over trying to optimize for additional gains, especially given the time pressure and their clear reluctance to expand beyond their comfort zone.",
+          "timestamp": 1755564853.035839
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could be flexible on Item_4 if it helps reach an agreement. I\u2019m open to trade-offs on Item_0, Item_1, or Item_3, especially in exchange for future-round cooperation or partial access. Let\u2019s explore bundles that give us both value before the discounting erodes our gains.",
+          "timestamp": 1755564854.962137,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about prioritizing Item_2 and Item_4. My primary interests lie with Item_1 and Item_5, which seem to complement your preferences well. I'm also moderately interested in Item_0 and Item_3, so perhaps we can find a mutually beneficial split that gives us each our top priorities while sharing the remaining items equitably.",
+          "timestamp": 1755564858.402514,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal clearly signaled my priorities but failed to account for overlap with Claude\u2019s interests in Item_3, leading to rejection. I learned that Claude values Item_3 and likely considers it non-negotiable, given their counteroffer. In the next round, I\u2019ll adjust by offering a concession on Item_3 in exchange for securing Item_2 and Item_4, or explore bundling less contested items to create mutual gain and build consensus efficiently.",
+          "timestamp": 1755564887.9238698
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 5, I can see that both proposals failed to reach consensus, indicating we're still not aligned on the optimal distribution. My proposal gave qwen Item_3 in addition to their priorities (Items 2 and 4), while keeping my high-value items (0, 1, 5), but this wasn't accepted.\n\nKey insights: qwen seems firmly committed to Items 2 and 4 as their core priorities, and my attempt to offer Item_3 as a sweetener wasn't sufficient. The fact that neither proposal passed suggests we need a more balanced approach that better addresses both parties' secondary preferences.\n\nFor the next round, I should focus on finding a middle ground that gives qwen their stated priorities while ensuring I retain enough high-value items to make the deal worthwhile. I may need to be more flexible about giving up one of my preferred items to create a mutually acceptable package.",
+          "timestamp": 1755564895.059886
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_2 and Item_4, as they are critical for my objectives\u2014though I\u2019m flexible on the latter if fair compensation is offered. I notice we\u2019ve made limited progress, so I propose we break the deadlock: I take Item_2 and Item_0, while you can have Item_1, Item_3, and Item_5, leaving Item_4 for potential trade or shared use. Let\u2019s avoid further discounting\u2014this offer won\u2019t last beyond the next round.",
+          "timestamp": 1755564897.000164,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which seem to complement your priorities well - this could form the basis for a mutually beneficial split. Given we're at Round 6 with time pressure mounting, I'd be willing to negotiate on Item 3 as a potential trade-off to reach an agreement quickly.",
+          "timestamp": 1755564901.402658,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal clearly signaled my priorities, which helped clarify the negotiation space, but it also revealed a potential vulnerability by fully committing to Items 2 and 4 early. Claude\u2019s counter-proposal, which added Item 3 to my allocation, suggests they may be willing to concede on less critical items to secure their preferred bundle (0, 1, 5), indicating possible flexibility around Item 3. In the next round, I should explore whether offering Item 3 in exchange for stronger guarantees or trade-offs\u2014perhaps involving Item 1 or 5\u2014could unlock a mutually beneficial agreement, while testing whether partial swaps or side benefits can bridge remaining gaps.",
+          "timestamp": 1755564927.4414358
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 6, I can see that my counterpart and I have clearly identified our core interests, but we're stuck on Item 3. They want Items 2 and 4 (which I'm willing to give), while I want Items 0, 1, and 5. The sticking point is that I offered them Item 3 as well, but they seem to prefer a more minimal allocation.\n\nMy strategy of being generous by offering Item 3 didn't work - they actually seem to prefer fewer items, possibly because Item 3 has low value to them or they're being strategically conservative. I learned that they have very focused preferences and aren't interested in additional items beyond their core needs.\n\nFor the next round, I should propose exactly what they want (Items 2 and 4 only) and take Items 0, 1, 3, and 5 for myself. This gives them their stated priorities while allowing me to secure my core items plus the apparently less-contested Item 3.",
+          "timestamp": 1755564935.7560818
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high priority for me, though I could be flexible on Item_4 if needed. I noticed you passed on Item_0 in the last proposal, so I\u2019m wondering if we can align on a split where I take Item_0 and Item_2, and you get first choice on the remaining items, perhaps Item_1 and Item_5. Let\u2019s try to close a fair deal this round before the value erodes further.",
+          "timestamp": 1755564937.207461,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2. My core interests are actually Item_1, Item_3, and Item_5 - so there's potentially good complementarity here since we don't seem to have direct conflicts on our highest priorities. Given we're already at round 7 with time pressure mounting, I'd be willing to explore a deal where you get Item_0 and Item_2, I secure Item_1 and Item_3, and we negotiate over the remaining items.",
+          "timestamp": 1755564942.183512,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I maintained clarity on my priorities (Item_0, Item_2), which helped anchor the negotiation, but my initial proposal may have conceded too much on Item_4 too early, encouraging Claude to demand it. I learned that Claude values Item_1 and Item_5 highly, and likely sees Item_3 as a fallback, suggesting they may be willing to compromise on Item_4. In the next round, I should reinforce ownership of Item_4 unless compensated, and explore bundling it with Item_5 to create trade opportunities that appear mutually beneficial while protecting my core interests.",
+          "timestamp": 1755564979.191029
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that qwen is very firm on Items 0 and 2, while I need Items 1 and 5. The key difference is Item 4 - they want to keep it while I'm offering it to them along with their priorities. My strategy of being generous with Item 4 didn't work because they seem to value having fewer total items over accepting additional ones.\n\nFor the next round, I should focus on the core trade (Items 0,2 for them vs Items 1,5 for me) and be more flexible about the remaining items. I need to understand if they're rejecting my proposal because they don't want Item 4, or if there's something else they need that I'm missing.",
+          "timestamp": 1755564985.934231
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m particularly interested in securing Item_2 and Item_4\u2014these are high priority for me, though I could be flexible on Item_4 if it helps reach a balanced agreement. I\u2019m open to trade-offs on Item_0, Item_1, or Item_3, especially if it means we can finalize a deal quickly before the discounts erode value further. Let\u2019s explore bundles that reflect mutual gains before time pressure tightens.",
+          "timestamp": 1755564987.7882528,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you value Item_2 and Item_4 highly. I'm most interested in Item_0 and Item_5, which seem to align well with avoiding direct competition. Perhaps we could explore a trade where you take Item_2 and Item_4, while I focus on Item_0 and Item_5, leaving Item_1 and Item_3 for further discussion?",
+          "timestamp": 1755564991.4054358,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on high-priority items limited flexibility, and while signaling priorities helped clarify trade space, it also revealed overcommitment to contested items. Claude values Item_2 and Item_4 less than I do but included Item_3, which I may undervalue\u2014suggesting a potential trade opportunity. With time critical, I should pivot toward bundle-based concessions, offering Item_1 or Item_3 in exchange for securing Item_2 and Item_4, or explore side payments if allowed.",
+          "timestamp": 1755565027.119034
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that my opponent values Items 2 and 4 highly, while I prioritize Items 0 and 5. The key issue is that we're both competing for the remaining items (1 and 3), and my proposal giving them an extra item (1) wasn't enough to secure agreement.\n\nWith only 1-2 rounds left, I need to be more generous to avoid a no-deal scenario. Since they seem focused on Items 2 and 4, I should consider offering them both of those plus one additional item, keeping my high-priority Items 0 and 5 while accepting fewer total items to ensure we reach consensus before time runs out.",
+          "timestamp": 1755565033.0145972
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could be flexible on Item_4 if it helps reach a broader agreement. I notice we're running low on time, so I\u2019d suggest a clean split: I take Item_2 and Item_4, you take the rest, unless you have a counter that better balances our needs. Let\u2019s avoid another stalemate\u2014efficiency matters now.",
+          "timestamp": 1755565038.474656,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your focus on Item_2 and Item_4. My highest priorities are Item_0 and Item_5, which seem to complement your interests well. Given we're in round 9 with significant time pressure, I'd be willing to consider a deal where you get Item_2 and Item_4, I secure Item_0 and Item_5, and we negotiate the remaining items (Item_1 and Item_3) based on our secondary preferences to reach a mutually beneficial agreement quickly.",
+          "timestamp": 1755565042.910264,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The identical proposals suggest mutual recognition of core priorities, but the lack of consensus indicates both parties are holding firm on non-compromise positions. With time critical, introducing a partial trade\u2014such as conceding a lower-value item to gain advantage on a contested one\u2014could unlock agreement. I now know Claude prioritizes Item_0 and Item_5 highly, so offering a revised split that respects those needs while securing at least one of my key items (Item_2 or Item_4) may be the path to consensus.",
+          "timestamp": 1755565065.51585
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, it's concerning that we reached the same proposal but still failed to achieve consensus despite only 2 agents voting. This suggests there may be a technical issue or misunderstanding about the voting process, since both agents proposed identical allocations that should satisfy our stated priorities.\n\nGiven we're down to 1-2 rounds, I need to focus on clear communication and ensure we're both explicitly agreeing to the same deal. The proposal gives me my top priorities (Item_0 and Item_5) while giving qwen their stated priorities (Item_2 and Item_4), so this should be mutually beneficial.\n\nMy strategy for the final round will be to reconfirm this allocation explicitly, ensure clear agreement, and potentially suggest we both vote \"yes\" simultaneously to avoid any coordination issues that may have caused the consensus failure.",
+          "timestamp": 1755565072.863612
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trade-offs if compensated with Item_0 or Item_5. I propose a deal where I take Item_2 and Item_4, and you can have Item_1, Item_3, and split the remaining items based on priority\u2014let\u2019s find a balanced close.",
+          "timestamp": 1755565076.213709,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your focus on Item_2 and Item_4. My highest priorities are Item_0, Item_3, and Item_5, so there's potential for a mutually beneficial arrangement here. Given this is our final round, I'm willing to be flexible on the remaining items if we can quickly reach an agreement that secures our respective key priorities.",
+          "timestamp": 1755565079.622591,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T17:58:32.822489",
+      "duration_seconds": 411.1809940338135
+    },
+    {
+      "run_index": 1,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          9.61883851491496,
+          7.285188713037697,
+          4.7300020763812665,
+          4.771552950822847,
+          5.71409447829022,
+          3.729684495093728
+        ],
+        [
+          8.365285354177736,
+          5.281718026552906,
+          3.64327256002495,
+          7.243304701127116,
+          5.033664433612348,
+          6.953191236143343
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 9.61883851491496,
+          "item_1": 7.285188713037697,
+          "item_2": 4.7300020763812665,
+          "item_3": 4.771552950822847,
+          "item_4": 5.71409447829022,
+          "item_5": 3.729684495093728
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 8.365285354177736,
+          "item_1": 5.281718026552906,
+          "item_2": 3.64327256002495,
+          "item_3": 7.243304701127116,
+          "item_4": 5.033664433612348,
+          "item_5": 6.953191236143343
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 9,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 5.687435359714921,
+          "claude_4_sonnet_2": 13.545244389466369
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me. I'm open to trading Item_1 or Item_3 in exchange for those, depending on what you value. Let me know which items matter most to you so we can find a mutually beneficial arrangement.",
+          "timestamp": 1755565114.294126,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_0 and Item_2. I'm actually most interested in Item_1, Item_3, and Item_5, which seems like we might have complementary preferences that could work well for both of us. Perhaps we could explore a trade where you get your high-priority items and I focus on mine, though I'd need to understand the full scope of what's available before committing to any specific arrangement.",
+          "timestamp": 1755565118.9389281,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal accurately reflected my priorities and aligned with maximizing efficiency, but Claude\u2019s counterproposal reveals a strong interest in Item_4 and possibly Item_5, suggesting a preference for securing more items overall. Since both agents have non-overlapping core interests (I prioritize Item_0 and Item_2; Claude prioritizes Item_1 and Item_3), a clean split is feasible, but Item_5 may be a point of contention or leverage. In the next round, I will reaffirm my core needs while offering flexibility on Item_5 to incentivize agreement and build consensus, especially if time is limited.",
+          "timestamp": 1755565145.451196
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 1, I successfully identified that qwen and I have complementary preferences - they want Items 0 and 2, while I prioritize Items 1 and 3. However, the negotiation stalled because we both included Item 5 in our proposals without discussing it, and qwen didn't accept my offer of giving them an extra item (Item 5) beyond their stated priorities.\n\nFor Round 2, I should directly address the Item 5 conflict by asking about their preference for it, and consider being more flexible - perhaps offering a 2-2 split of our mutually desired items (0,2 for them, 1,3 for me) and negotiating Item 5 separately, or even conceding it if it helps reach consensus quickly.",
+          "timestamp": 1755565152.357226
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m particularly interested in securing Item_0 and Item_2, as they hold high strategic value for my objectives. That said, I\u2019m open to trade-offs\u2014perhaps a package deal involving Item_1 or Item_3 could work if it means reaching a mutually beneficial agreement early, before the discount factor erodes value further. Let\u2019s explore combinations that reflect both our priorities.",
+          "timestamp": 1755565153.5627258,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Items 0 and 2. I'm most interested in Items 1, 3, and 5, which seem to complement your preferences well. Perhaps we can find a mutually beneficial split where you take Items 0 and 2, I focus on Items 1, 3, and 5, and we negotiate over Item 4 based on our relative valuations.",
+          "timestamp": 1755565157.811491,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on securing Items 0 and 2 clarified my priorities but may have appeared inflexible, especially with the exclusion of Item 4, which both proposals now contest. Claude\u2019s counteroffer to include Item 4 in my allocation suggests it values Items 1, 3, and 5 more highly and may be willing to concede less critical items to gain consensus. In the next round, I should signal openness on Item 4 in exchange for guarantees on Items 0 and 2, using trade-offs to build compromise and accelerate agreement before time runs out.",
+          "timestamp": 1755565185.735434
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 2, I can see that both proposals were quite close - the key difference was Item 4. My opponent wants Items 0 and 2 (which I offered them), while I want Items 1, 3, and 5. The sticking point is Item 4, which I included in my offer to them but they didn't reciprocate.\n\n**Strategic Reflection:**\nMy strategy of offering Item 4 to build goodwill didn't work as expected - they may see it as less valuable or want to keep the negotiation tight around their core interests. I learned that they're focused on a minimal winning set (just Items 0 and 2) rather than maximizing their total allocation. For Round 3, I should either propose the exact split they want (Items 0,2 for them, Items 1,3,4,5 for me) or try to understand why Item 4 matters to them and potentially offer a different concession.",
+          "timestamp": 1755565193.725384
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could be flexible on Item_2 if it helps reach a deal. I notice we're at an impasse, so I\u2019d suggest bundling Item_1 and Item_3 together for a trade; I\u2019m open to creative combinations that reflect mutual priorities. Let\u2019s avoid letting time erode value and work toward a split that feels fair on the remaining items.",
+          "timestamp": 1755565195.451618,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Items 0 and 2. My core interests center on Items 1, 3, and 5, which appear to complement your priorities well. I'm willing to be flexible on Items 0 and 2 if we can find a mutually beneficial arrangement that addresses both our key needs while accounting for the time pressure we're facing.",
+          "timestamp": 1755565199.219726,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "Both parties demonstrated alignment in prioritizing non-overlapping high-value items, making the identical proposal a sign of potential convergence. However, the lack of consensus suggests either a miscoordination or strategic hesitation, possibly due to uncertainty about item valuations or timing. In the next round, I should explicitly confirm mutual priorities, signal willingness to concede on low-value items (e.g., Item 4), and propose a slight value-balancing adjustment to build trust and secure agreement.",
+          "timestamp": 1755565224.5366342
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 3, I see we actually proposed identical allocations, which suggests our preferences are well-aligned, yet consensus wasn't reached. This indicates there may be some hesitation or uncertainty from my counterpart despite the apparent alignment. \n\nFor Round 4, I should focus on building confidence and trust by reaffirming the mutual benefits of this deal - they get their high-priority Items 0 and 2 plus Item 4, while I secure my core interests in Items 1, 3, and 5. I'll emphasize the win-win nature and perhaps address any lingering concerns about fairness or value distribution to move us toward final agreement.",
+          "timestamp": 1755565231.124912
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trade-offs if compensated with Item_1 or Item_5. I notice we\u2019re at a stalemate, so I\u2019d entertain a package deal where I take Item_2 and Item_4 in exchange for conceding Item_0 and Item_3 to you, keeping Item_1 and Item_5 for potential redistribution\u2014unless you have a better offer. Let\u2019s avoid letting time erode value; I\u2019d like to see movement this round.",
+          "timestamp": 1755565233.19964,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about prioritizing Item_2 and Item_4. My core interests center on Item_0 and Item_5, which appear to complement your priorities well. I'm also quite interested in Item_3, so perhaps we could explore a deal where you take Item_2 and Item_4, I secure Item_0 and Item_5, and we negotiate around Item_1 and Item_3 based on our relative valuations.",
+          "timestamp": 1755565237.3063521,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My strategy of prioritizing transparency about key interests (Item_2 and Item_4) helped align partial agreement with Claude, but offering Item_0 and Item_5 in the proposal may have diluted perceived value, as they were included in both proposals\u2014suggesting overlap in Claude\u2019s priorities. I should explore trade-offs around lower-priority items (e.g., Item_1 or Item_3) to incentivize concession on Item_2 and Item_4, while probing for mutual gains. With limited time, building consensus will require more precise calibration of value exchange and possibly accepting a near-optimal but acceptable split.",
+          "timestamp": 1755565260.060831
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 4, I can see that qwen and I are very close to agreement on the core allocation (they get Items 2&4, I get Items 0&5), but we're stuck on Items 1&3. My strategy of offering a minimal proposal (just Items 0&5) didn't work because it left too many items unallocated.\n\nKey insights: qwen seems willing to give me Items 1&3 along with my core items (0&5), which would actually be quite favorable for me. However, my reluctance to accept additional items may be signaling that I don't value them, when in fact any additional items have positive utility.\n\nFor Round 5, I should accept their generous offer of Items 1&3 in addition to my core items 0&5. This gives them their priorities (2&4) while maximizing my total utility, and creates a win-win that should easily reach consensus.",
+          "timestamp": 1755565268.173559
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could consider trading one for mutual benefit. I noticed we're both holding out, so let's avoid deadlock; I'm open to creative bundling, especially around Item_3 and Item_5, if it helps bridge gaps. Let\u2019s structure something now before time erodes value.",
+          "timestamp": 1755565270.4497511,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2 being your priorities. My core interests actually center around Item_1, Item_3, and Item_5, which seems to create a natural complementary split that could work well for both of us. I'm quite flexible on the remaining items (Item_4 especially) and would be open to discussing a deal that gives you your high-priority items while securing mine.",
+          "timestamp": 1755565274.5457978,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on transparency helped clarify priorities, but offering Item_5 in my proposal may have weakened my position by revealing flexibility too early. Claude\u2019s counteroffer suggests they value Item_5 less and may be willing to concede it, but are likely prioritizing Items 1, 3, and 4. In the next round, I should signal willingness to trade Item_5 for a minor concession on Item_2 or seek a balanced exchange that appears mutually beneficial, increasing consensus potential with limited rounds remaining.",
+          "timestamp": 1755565297.521188
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that both proposals were quite close - the key difference was Item_5. My opponent clearly values Items 0 and 2 highly and was willing to give me Items 1, 3, and 4, but they want to keep Item_5 for themselves while I proposed giving it to them along with their priority items.\n\nThe fact that they rejected my more generous offer (giving them Item_5 in addition to their stated priorities) suggests that either: (1) they have a strong preference against my getting Items 1, 3, and 4 together, or (2) they're testing to see if I'll accept their more favorable terms.\n\nFor the next round, I should probe whether there's flexibility around Item_5 or if there are other items they'd be willing to trade. I might also consider accepting their proposal if my analysis shows it still gives me reasonable utility, since we're running out of time and this seems to be close to their bottom line.",
+          "timestamp": 1755565305.5286632
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m particularly interested in securing Item_2 and Item_4\u2014those are high priority for me, though I\u2019m open to trade-offs on the mid-value items (Item_1, Item_3) to reach a balanced agreement. I sense we\u2019re running out of time, so I\u2019d propose a deal that gives me Item_2 and Item_4 in exchange for conceding Item_0 and Item_5 to you, with Item_1 potentially as a sweetener if needed. Let\u2019s avoid deadlock\u2014efficiency benefits us both.",
+          "timestamp": 1755565309.302148,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_2 and Item_4. I'm actually most focused on Item_1 and Item_5, which seem to align well with avoiding direct competition. Given we're at round 6 with time pressure mounting, perhaps we could explore a trade where you get your high-priority items and I secure mine, leaving us to negotiate the remaining items based on our secondary preferences.",
+          "timestamp": 1755565313.991559,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The identical proposals suggest strong positional alignment but failed consensus due to unmet underlying interests\u2014my focus on Item_2 and Item_4 may conflict with Claude\u2019s priority on Item_1 and Item_5, indicating a zero-sum tension. I should explore trade-offs involving Item_3 or partial bundles to create value, rather than assuming fixed allocations. Building consensus will require conceding on lower-priority items (e.g., Item_4) in exchange for securing core interests, while probing for flexibility in Claude\u2019s stance on Item_2.",
+          "timestamp": 1755565335.523982
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 6, it's concerning that we had identical proposals but still couldn't reach consensus - this suggests there may be hidden preferences or strategic considerations I'm missing. The other agent clearly values Items 2 and 4 highly, which aligns with my focus on Items 1 and 5, but something is preventing agreement.\n\nFor Round 7, I need to probe deeper into what's blocking consensus - perhaps there are concerns about Item 3's allocation, or the other agent has reservations about the fairness of leaving one item unassigned. I should explicitly address Item 3 in my next proposal and explore if there are any underlying concerns about the current split that haven't been voiced.",
+          "timestamp": 1755565340.983666
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trading one for a package that includes Item_1 and Item_3. I sense we\u2019re running out of time, so I\u2019m open to a fair deal this round to avoid discounted payoffs\u2014perhaps we can split complementary bundles based on our strengths.",
+          "timestamp": 1755565344.59099,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4. My core interests are actually Item_0 and Item_5, which seem complementary to yours. I'm willing to be flexible on the remaining items if we can establish a framework where we each secure our highest priorities - perhaps we could explore a deal where you get Item_2 and Item_4, I get Item_0 and Item_5, and we negotiate the distribution of Items 1 and 3?",
+          "timestamp": 1755565349.2030761,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal clearly signaled my priorities, which helped clarify the negotiation space, but offering Item_5 to Claude may have weakened my position by revealing flexibility too early. Claude\u2019s counter-proposal confirms strong interest in Item_0 and likely Item_1 and 3, while rejecting my claim to Item_5 suggests it holds higher value for them than assumed. In the next round, I should recalibrate by protecting Item_2 and 4 more firmly, explore trade-offs around Item_1 or 3, and frame a mutually beneficial package that positions consensus as efficiency-driven.",
+          "timestamp": 1755565375.8095639
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that qwen and I are very close to a deal - they want Items 2 and 4, while I want Items 0, 1, and 3. The key difference is Item 5, which I offered to them but they didn't include in their counter-proposal, suggesting it may not be valuable to them.\n\nMy strategy of being transparent about core interests worked well in identifying our complementary needs. For the next round, I should focus on the fact that we both seem satisfied with the core allocation (they get 2&4, I get 0,1,3) and explore whether Item 5 is truly important to either of us - if not, I could potentially concede it to secure the deal, or we could find another creative solution.\n\nThe main insight is that we're actually very aligned on 5 out of 6 items, so this should be easily resolvable with minor adjustments around Item 5.",
+          "timestamp": 1755565383.372986
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could concede Item_2 if it helps close a deal. I\u2019m open to trade-offs on Item_4 and Item_5, especially in exchange for stronger guarantees on Item_0. Let\u2019s explore bundles that reflect mutual gains before time erodes value.",
+          "timestamp": 1755565385.287657,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2. My strongest interests are in Item_1, Item_3, and Item_5, which seems to create good potential for a mutually beneficial trade. Given we're in round 8 with time pressure mounting, I'd be willing to concede Item_0 and Item_2 to you in exchange for those three items, leaving Item_4 as a potential compromise point we could discuss.",
+          "timestamp": 1755565389.830474,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on securing Item_0 and Item_2 was consistent but may have appeared inflexible; offering Item_4 in my proposal limited room for concession. Claude values Item_1 and Item_3 highly and is willing to concede Item_0 and Item_2, but likely needs compensation\u2014possibly Item_4 or reciprocity on Item_5. With time running short, I should signal willingness to trade Item_4 for priority on Item_0 and Item_2, or explore bundling Item_5 to close a deal.",
+          "timestamp": 1755565423.808636
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at the proposals, we're very close to a deal. The key difference is Item_4 - I offered it to qwen in my proposal, but they didn't include it in theirs, giving me items 1,3,4,5 instead of their preference for 1,3,5. Since qwen expressed some flexibility on Item_4 and we're in the final rounds, I should accept their proposal to secure the deal rather than risk getting nothing.\n\nMy strategy of offering Item_4 as a sweetener worked to show good faith, but qwen's counter-proposal actually gives me more items (4 vs 3), just different ones. Given the time pressure and that their proposal still gives me my high-priority items 1 and 3, I should accept this mutually beneficial arrangement.",
+          "timestamp": 1755565436.90215
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_0 and Item_2\u2014those are my highest priorities. That said, I could be flexible on Item_4 if it helps reach a balanced agreement this round, especially since we\u2019re running short on time. Let\u2019s try to close something now to avoid discounted payoffs.",
+          "timestamp": 1755565443.407455,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you value Item_0 and Item_2 highly. My core interests are actually Item_1, Item_3, and Item_5 - so we may have complementary preferences here. Given we're in round 9 with significant time pressure, I'd be willing to let you have Item_0 and Item_2 if I can secure Item_1, Item_3, and Item_5, leaving us to negotiate over Item_4.",
+          "timestamp": 1755565447.801266,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:04:33.986185",
+      "duration_seconds": 361.1603789329529,
+      "metrics": {
+        "mean_utility": 9.616339874590645,
+        "max_utility": 13.545244389466369,
+        "min_utility": 5.687435359714921,
+        "utility_spread": 7.857809029751448
+      }
+    },
+    {
+      "run_index": 2,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          2.512836065788957,
+          5.788458430672774,
+          9.876109119221233,
+          1.8987755650299798,
+          0.8370247699350042,
+          7.680365557051804
+        ],
+        [
+          4.730799041169926,
+          5.318208616009997,
+          10.0,
+          3.6408331030584566,
+          2.9504447886939524,
+          4.971072450874897
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 2.512836065788957,
+          "item_1": 5.788458430672774,
+          "item_2": 9.876109119221233,
+          "item_3": 1.8987755650299798,
+          "item_4": 0.8370247699350042,
+          "item_5": 7.680365557051804
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 4.730799041169926,
+          "item_1": 5.318208616009997,
+          "item_2": 10.0,
+          "item_3": 3.6408331030584566,
+          "item_4": 2.9504447886939524,
+          "item_5": 4.971072450874897
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9497867068997227
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 10,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            2,
+            4
+          ],
+          "claude_4_sonnet_2": [
+            0,
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 3.015466442721192,
+          "claude_4_sonnet_2": 7.360249605204112
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me. I'm open to trading Item_1 or Item_3 in exchange for those, depending on what the other party values. Let\u2019s explore combinations that maximize mutual gains early, before the value decays.",
+          "timestamp": 1755565475.162653,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate you sharing your priorities. I'm most interested in Item_1 and Item_4, which align well with my core objectives. Since we seem to have different primary interests, there might be room for a mutually beneficial arrangement where we each focus on our highest-value items.",
+          "timestamp": 1755565478.643002,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal aligned with my high-priority items and left non-competing items for the other agent, which was a strong start, but their counterproposal revealed a preference for Item_3 and willingness to concede Item_5\u2014indicating flexibility. I should leverage this by offering Item_5 in exchange for securing Item_0 and Item_2, while signaling openness on Item_3 to build goodwill. With limited rounds remaining, I\u2019ll aim for a precise trade that respects their stated interests but tightens the allocation to reach consensus fast.",
+          "timestamp": 1755565506.237236
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at the results, I can see that my opponent values Items 0 and 2 highly, while I prioritized Items 1 and 4. The key difference was that I proposed giving them an additional Item 5, but they didn't accept this expanded offer. This suggests they may have strong preferences against certain items I'm trying to include, or they prefer a more balanced distribution.\n\nFor the next round, I should focus on finding a cleaner trade that respects our core priorities without forcing additional items. I'll explore whether there are other items we can swap or if a simpler 2-for-2 trade might be more acceptable than my 3-for-3 proposal.",
+          "timestamp": 1755565512.454238
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2, as they hold the highest value for me\u2014especially Item_0, which is critical for my objectives. That said, I\u2019m open to trade-offs and could consider releasing Item_2 in exchange for a strong package including Item_1 and partial access to Item_4. Let\u2019s explore combinations that reflect mutual gains, especially as the discount factor begins to erode overall value.",
+          "timestamp": 1755565513.6398249,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Items 0 and 2. I'm actually most interested in Items 1, 3, and 5, which seems like it could create a good foundation for a mutually beneficial deal. Given that we're already in Round 2 with time pressure mounting, perhaps we could explore a split where you take Items 0 and 2, I take Items 1, 3, and 5, and we negotiate over Item 4?",
+          "timestamp": 1755565517.7322009,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal prioritized claiming high-value items (0, 2) but underestimated the need to accommodate Claude\u2019s interest in overlapping items (4), reducing reciprocity. Claude\u2019s counter-proposal, which included giving me item 4, signals flexibility and suggests Items 1, 3, and 5 are higher priority for them, with item 4 being a potential trade lever. In the next round, I should prioritize trading item 4 or 5 to secure Item 0 and 2 while positioning Item 4 as a concession to build consensus.",
+          "timestamp": 1755565548.879526
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at the proposals, I can see we're very close to a deal. Qwen wants Items 0 and 2 (their highest value items), and I want Items 1, 3, and 5. The key disagreement is over Item 4 - they offered it to me, but I counter-offered it to them, suggesting they may value it more than initially indicated.\n\nMy strategy of being transparent about preferences worked well and created a foundation for agreement. However, I may have been too generous offering Item 4 to them when they were willing to give it to me. \n\nFor the next round, I should accept their original proposal (Items 0,2 for them; Items 1,3,4,5 for me) since it gives us both our core priorities and they initiated that split. This would likely secure consensus quickly.",
+          "timestamp": 1755565556.113651
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily interested in securing Item_2 and Item_4\u2014those are high priority for me. That said, I could be flexible on Item_1 and Item_3 if it helps reach a balanced agreement. Let\u2019s explore bundles that pair those with other items to create mutual value.",
+          "timestamp": 1755565558.9502232,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4. My highest priorities are Item_0 and Item_5, which seem to complement your interests well. I'm also quite interested in Item_1, but I could be flexible on the remaining items if we can find a mutually beneficial arrangement that satisfies our core needs.",
+          "timestamp": 1755565562.6911218,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My strategy of clearly signaling high-priority items (Item_2 and Item_4) helped align proposals, as both parties converged on assigning me those items. However, full consensus failed likely due to unresolved item valuations or perceived imbalances in the distribution of lower-priority items (1 and 3). In the next round, I should probe Claude\u2019s valuation of Items 1 and 3 directly and consider offering a trade on one to secure stronger agreement, while emphasizing efficiency to conserve time.",
+          "timestamp": 1755565594.3810859
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 3, I see we're very close to agreement - both proposals give qwen Items 2 and 4, and give me Items 0 and 5. The only difference is whether I get Items 1 and 3 (my proposal) or just Item 3 while qwen gets Item 1 (their proposal). \n\nMy strategy of being transparent about priorities worked well in establishing the core framework, but I may have been too rigid about claiming both remaining items. Since we've identified our mutual high priorities and qwen has been cooperative, I should consider accepting their proposal or finding a creative compromise on the disputed Item 1 to close this deal quickly.\n\nThe key learning is that qwen values Item 1 enough to propose it for themselves, so I need to weigh whether holding out for it is worth risking the entire negotiation when I'm already getting my top priorities.",
+          "timestamp": 1755565602.140762
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high priority for me, though I could potentially trade one if compensated with Item_4 or Item_5. I noticed from the last proposals that Item_1 and Item_3 seem contested, so I'm open to creative bundling that respects everyone's apparent priorities while moving us toward consensus.",
+          "timestamp": 1755565604.828227,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about prioritizing Item_0 and Item_2. My core interests actually center around Item_1, Item_3, and Item_5, which seems to create some natural complementarity between our positions. Given that we're already at round 4 with time pressure mounting, I'd be willing to explore a deal where you take Item_0 and Item_2, I secure Item_1 and Item_3, and we negotiate fairly on the remaining items - this could give us both our highest priorities while avoiding further costly delays.",
+          "timestamp": 1755565610.169645,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The identical proposals suggest both agents recognize Item_0 and Item_2 as critical for me, but the lack of consensus indicates unresolved value distribution\u2014perhaps around perceived fairness or unspoken priorities. I should explore trade-offs involving Item_1 or partial bundles to create differentiated value, while signaling flexibility to incentivize agreement. Learning that Claude prioritizes Items 1,3,4,5, I can probe whether side concessions or sequencing can unlock a Pareto-improving deal before time runs out.",
+          "timestamp": 1755565636.715211
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 4, I successfully identified a mutually beneficial allocation where both qwen and I proposed the exact same split - this shows strong alignment on our core priorities. However, we failed to reach consensus despite identical proposals, which suggests either a voting mechanism issue or that other agents (who didn't participate in discussion) have different preferences.\n\nFor Round 5, I need to:\n1. Directly address why consensus failed despite identical proposals\n2. Actively engage any silent agents to understand their preferences\n3. Emphasize the mutual benefit of our current allocation to build broader support\n4. Consider if minor adjustments might satisfy other stakeholders while preserving our core interests\n\nThe key insight is that qwen and I have compatible preferences (they want 0,2 and I want 1,3,4,5), but we need to ensure other agents either support this division or understand why it's optimal.",
+          "timestamp": 1755565643.906996
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could be flexible on Item_2 if it helps reach a deal. I\u2019m open to trade-offs on the middle-value items (Item_1, Item_3, Item_4), especially if it means I can avoid leaving empty-handed on Item_5, which has some secondary value. Let\u2019s try to structure a split that balances priority access\u2014maybe you take Item_1 and Item_4 if I can get Item_0 and Item_2, and we negotiate Item_5 separately.",
+          "timestamp": 1755565646.168212,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2. My primary interests lie with Item_1, Item_3, and Item_5, which seems to create good complementary opportunities between us. I'm willing to be flexible on the remaining items if we can find a mutually beneficial split that respects both our core priorities.",
+          "timestamp": 1755565649.7100701,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal successfully signaled clear priorities (Item_0 and Item_2), but offering Item_4 to Claude may have undermined leverage, as they included it in their counter. Claude\u2019s insistence on Item_1, Item_3, and Item_5\u2014while conceding Item_0 and Item_2\u2014confirms these are likely low-priority for them. In the next round, I should hold firm on Item_4 as a bargaining chip and propose a balanced trade, perhaps offering partial access or future reciprocity to secure consensus without sacrificing core priorities.",
+          "timestamp": 1755565680.325164
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 5, I can see we're making progress but still lack consensus. My opponent clearly prioritizes Items 0 and 2, while I need Items 1, 3, and 5. The key disagreement is over Item 4 - they want to keep it while I'm offering it to them.\n\n**Strategic Reflection:**\nMy strategy of offering Item 4 to build goodwill isn't working as expected - they seem to want fewer items overall rather than more. I should focus on the core trade (Items 0,2 for them vs Items 1,3,5 for me) and potentially offer a different sweetener or accept a more minimal distribution. Time pressure is building, so I need to find what specific concession will close this deal.\n\n**Next Round Strategy:**\nI'll probe whether they'd accept the core 2-for-3 trade without Item 4, or if there's a different item they'd value more. The goal is to identify their true reservation point and make a final compelling offer that secures my essential items while giving them what they truly want.",
+          "timestamp": 1755565689.1840792
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high-priority for me, though I could be flexible on Item_4 if it helps reach a deal. I sense we're at a stalemate, so I'm open to creative bundling, perhaps trading off Item_0 or Item_5 if it means getting a fair split on the others. Let's avoid letting time eat into our value\u2014maybe we can lock in a partial agreement now?",
+          "timestamp": 1755565691.197195,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4. My primary interests are actually Item_0, Item_3, and Item_5, which seems to create good potential for a mutually beneficial trade since our priorities don't directly conflict. Given we're already at round 6 with time pressure mounting, I'd be willing to consider giving you Item_2 and Item_4 in exchange for my three priority items, leaving Item_1 as a potential tie-breaker we could negotiate.",
+          "timestamp": 1755565695.894544,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal prioritized claiming only my high-value items (2 and 4), leaving room for compromise, but it underestimated Claude\u2019s willingness to cede Item 5. Claude\u2019s counter-proposal revealed strong prioritization of Items 0 and 1, with possible flexibility on Item 5\u2014suggesting it may be less valuable to them. In the next round, I should signal openness to accepting Item 5 as part of my bundle to increase perceived fairness and improve consensus potential, while reinforcing that Items 2 and 4 are non-negotiable anchors of my position.",
+          "timestamp": 1755565726.78217
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that qwen and I have clearly identified our core priorities - they want Items 2 and 4, while I want Items 0, 1, and 3. The key difference is Item 5, which I offered to them but they didn't include in their counter-proposal, suggesting it may not be valuable to them.\n\nMy strategy of offering Item 5 as a sweetener didn't work, but I learned that qwen seems focused on just their two high-priority items rather than maximizing total items. For the next round, I should propose exactly what they asked for (Items 2 and 4 only) while securing my core items (0, 1, 3), and perhaps explore if there are any other items they'd value or if Item 5 could go to me without issue.\n\nThe path to consensus seems clear: give them exactly their stated priorities and focus on securing my own core items rather than trying to be overly generous.",
+          "timestamp": 1755565735.643569
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high priority for me, though I could consider trade-offs if Item_4 is included as compensation. I noticed you passed on Item_1 earlier; if you're still disinterested, I\u2019d be open to allocating it to you in exchange for securing Item_2 now. Let\u2019s try to close something equitable before the value decays further.",
+          "timestamp": 1755565737.695007,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your focus on Item_0 and Item_2. My highest priorities are Item_1 and Item_5, which seem to complement your interests well. I'm also interested in Item_3, but I'd be willing to negotiate on the remaining items if we can find a mutually beneficial split that addresses both our core needs.",
+          "timestamp": 1755565740.868201,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal secured high-priority items (0, 2, 4) but likely conceded too much on Item_4, which overlaps with Claude\u2019s interests, hindering consensus. Claude\u2019s counter-offer retaining Item_3 for me suggests flexibility on mid-tier items\u2014indicating a mutual interest in minimizing conflict on shared priorities. Next round, I\u2019ll aim to concede Item_4 strategically in exchange for explicit commitment to Item_0 and Item_2, reinforcing trade-offs and signaling willingness to compromise on lower-priority items to build trust and close alignment.",
+          "timestamp": 1755565779.729951
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 7, I can see that both proposals were quite close, with the main difference being who gets Items 3 and 4. My opponent clearly values Items 0 and 2 highly and seems willing to give me Items 1 and 5, which are indeed my top priorities. \n\nThe key insight is that we're very close to a deal - we just need to resolve the Item 3 vs Item 4 allocation. Since my opponent proposed giving me Item 3 in their offer and I proposed giving them Item 3 in mine, this suggests Item 3 might be more valuable to them than Item 4. I should consider accepting their proposal of giving me Items 1, 4, and 5, as this secures my two highest priorities (Items 1 and 5) plus Item 4, which could still provide reasonable utility.\n\nWith only 3 rounds remaining, I need to show flexibility on the Item 3/4 split to close this deal rather than risk getting nothing.",
+          "timestamp": 1755565787.838239
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_2 and Item_4\u2014these are high priority for me, though I could be flexible on Item_4 if it helps reach a deal. I notice we're running low on time, so I suggest we start aligning on bundles that balance our priorities before the value decays further.",
+          "timestamp": 1755565789.9772449,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you value Item_2 and Item_4 highly. I'm most interested in Item_0 and Item_5, which seem to align well with avoiding direct competition. Perhaps we could explore a trade where you take Item_2 and Item_4, while I secure Item_0 and Item_5, leaving Items 1 and 3 for further discussion?",
+          "timestamp": 1755565793.826397,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on high-priority items limited flexibility, and while revealing preferences helped clarify trade-offs, it didn't secure consensus. Claude appears anchored on Item_0 and Item_5, likely valuing them highly, and may be willing to concede Item_2 or Item_4 if I concede Item_1 or Item_3. In the final round, I should propose a balanced split that appears fair\u2014potentially conceding partial priority items to increase perceived equity and close the deal.",
+          "timestamp": 1755565830.686282
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that qwen values Items 2 and 4 as \"high priority\" while I'm focused on Items 0 and 5. The key issue is that my proposal included Item 3 for myself, but qwen's counter-proposal only allocated 2 items to each of us, leaving Items 1 and 3 unassigned.\n\nWith only 1-2 rounds left, I need to focus on securing my core priorities (Items 0 and 5) while being more flexible about Item 3. Since qwen seems willing to give me Items 0 and 5, I should accept their basic framework but negotiate for Item 3 to be included rather than left unallocated.\n\nMy strategy for the final round(s) should be to propose a deal where I get Items 0, 3, and 5, while qwen gets Items 1, 2, and 4 - this gives them their stated priorities while ensuring all items are allocated and I secure my most valued items.",
+          "timestamp": 1755565838.4048681
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I prioritize securing Item_2 and Item_4\u2014these are high-value for me, though I could concede Item_4 if I gain Item_0 in return. I\u2019m open to a bundle deal: I take Item_2 and Item_0, you get Item_1, Item_3, and Item_5\u2014let\u2019s close this efficiently before the discount hits further.",
+          "timestamp": 1755565840.157994,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you value Item_2 and Item_4 highly. I'm particularly interested in Item_0, Item_1, and Item_5, which seem to align well with leaving you those key items you mentioned. Perhaps we can structure a deal where you take Item_2 and Item_4, while I focus on securing Item_0, Item_1, and Item_5 - that would leave Item_3 for final negotiation between us.",
+          "timestamp": 1755565844.808552,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial push for Item_2 and Item_4 revealed their high value to me, but offering Item_4 too early may have weakened my leverage. Claude\u2019s counteroffer\u2014retaining Item_5 while conceding it in exchange for Items 2 and 4\u2014suggests they value Item_5 less and may be willing to trade it for priority items. With time limited, I should signal flexibility on Item_4 in exchange for securing Item_2 and possibly Item_5, while proposing a balanced split that frames mutual gain, such as trading Item_4 for Item_1 or Item_3 to create perceived value symmetry.",
+          "timestamp": 1755565879.700625
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see we're very close to a deal but stuck on Item_5. My opponent clearly values Items 2 and 4 most highly and was willing to accept my core items (0, 1, 3), but they want Item_5 as well. Since we're down to the final 1-2 rounds, I need to seriously consider whether giving up Item_5 is worth securing a deal rather than risking a no-deal outcome where I get nothing.\n\nThe key insight is that my opponent has been consistent about their priorities (Items 2 and 4) and seems willing to let me have my most valued items. I should focus on whether the utility loss from giving up Item_5 is less than the total utility I'd lose from a failed negotiation.",
+          "timestamp": 1755565886.5265422
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trade-offs if compensated with Item_0 or Item_5. I'm open to a balanced split this round; perhaps you take Item_1 and Item_3 if I can have Item_2, Item_4, and one of the remaining items to balance value. Let\u2019s close this efficiently\u2014what\u2019s your bottom line?",
+          "timestamp": 1755565889.4731011,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you're prioritizing Item_2 and Item_4. I'm actually most interested in Item_0, Item_1, and Item_5, so there's potential for a mutually beneficial deal here. Given this is our final round, I'd be willing to let you have Item_2 and Item_4 if I can secure my three priority items - that would leave Item_3 for us to negotiate, but the core allocation seems workable.",
+          "timestamp": 1755565894.203708,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:11:58.365413",
+      "duration_seconds": 444.37702989578247,
+      "metrics": {
+        "mean_utility": 5.187858023962653,
+        "max_utility": 7.360249605204112,
+        "min_utility": 3.015466442721192,
+        "utility_spread": 4.34478316248292
+      }
+    },
+    {
+      "run_index": 3,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          7.296648669469468,
+          1.2222933720498752,
+          5.374641391501256,
+          7.238569259865163,
+          6.172771129581269,
+          9.668124498089977
+        ],
+        [
+          7.137576515118412,
+          4.591356600362356,
+          5.006464750285895,
+          7.9127528309341555,
+          8.187598801847198,
+          6.391854026705271
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 7.296648669469468,
+          "item_1": 1.2222933720498752,
+          "item_2": 5.374641391501256,
+          "item_3": 7.238569259865163,
+          "item_4": 6.172771129581269,
+          "item_5": 9.668124498089977
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 7.137576515118412,
+          "item_1": 4.591356600362356,
+          "item_2": 5.006464750285895,
+          "item_3": 7.9127528309341555,
+          "item_4": 8.187598801847198,
+          "item_5": 6.391854026705271
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": false,
+        "final_round": 10,
+        "final_allocation": null,
+        "final_utilities": null,
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me. I'm open to trading Item_1 or Item_3 in exchange for one of those, depending on what the other party values. Let me know which items matter most to you so we can explore a mutually beneficial arrangement.",
+          "timestamp": 1755565920.166471,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_0 and Item_2. I'm actually most interested in Item_1, Item_3, and Item_5, which seems like we might have complementary preferences that could work well for both of us. I'd be willing to discuss a trade where you get your priority items in exchange for the ones I'm targeting.",
+          "timestamp": 1755565924.505641,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal accurately reflected my priorities and allowed room for negotiation, but it failed to secure consensus due to potentially undervaluing the counterpart\u2019s interest in item allocation. Claude\u2019s counterproposal reveals a strong preference for Item_1, Item_3, and likely Item_4, suggesting willingness to concede Item_0 and Item_2 if they retain control over their core interests. In the next round, I will aim to reinforce reciprocity by explicitly validating their key items while seeking a minor concession (e.g., Item_5) to ensure mutual gain and improve consensus potential.",
+          "timestamp": 1755565953.029242
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 1, I successfully identified that qwen and I have complementary preferences - they want Items 0 and 2, while I prioritize Items 1 and 3. However, the disagreement likely centers on Items 4 and 5, which weren't discussed but I included in my proposal.\n\nMy strategy of being generous by giving them an extra item (Item 5) didn't achieve consensus, suggesting they may value Item 4 or 5 more than I anticipated. For Round 2, I should directly discuss Items 4 and 5 to understand their relative importance and find a mutually acceptable allocation for these remaining items.\n\nThe foundation is solid with Items 0-3, so I need to focus negotiations on the final two items while maintaining the collaborative tone that's been established.",
+          "timestamp": 1755565959.789335
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could be flexible on Item_2 if it helps reach a broader agreement. I'm open to trade-offs on Item_3 and Item_5, especially in exchange for guarantees on Item_0. Let\u2019s explore bundles that balance both our priorities before the next round.",
+          "timestamp": 1755565961.499614,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_0 and Item_2. My primary interests lie with Item_1, Item_3, and Item_5, which seem to complement your priorities well. I'm willing to be flexible on the remaining items if we can find a mutually beneficial arrangement that addresses both our core needs.",
+          "timestamp": 1755565964.858764,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I effectively signaled my priorities early by proposing a clear split emphasizing Items 0, 2, and 4, which helped anchor the negotiation. However, my offer may have underestimated Claude\u2019s attachment to Item 4, as their counter swapped Item 4 and 5, suggesting they value Item 4 more highly\u2014this misreading prevented consensus. In the next round, I should explore trade-offs involving Item 5 or Item 4 to accommodate mutual gains, while signaling flexibility to build trust and close consensus.",
+          "timestamp": 1755565989.199605
+        },
+        {
+          "phase": "reflection",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 2, I can see clear preference patterns emerging. My counterpart strongly prioritizes Items 0 and 2, while I need Items 1 and 3. The key disagreement is over Items 4 and 5 - they want Item 4 while I want Item 5, but neither of us got our secondary preference in the other's proposal.\n\nMy strategy of offering them Item 5 (which they seem less interested in) while keeping Item 4 didn't work because they clearly value Item 4. Since we're aligned on our primary items (0,2 for them vs 1,3 for me), I should focus on finding a compromise on the remaining items.\n\nFor Round 3, I'll explore offering them Item 4 instead of Item 5, since they explicitly proposed keeping Item 4. This might break the deadlock while still securing my essential Items 1 and 3.",
+          "timestamp": 1755565997.1186728
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trade-offs if compensated with Item_1 or Item_5. I notice we\u2019re at a standstill, so I\u2019d entertain a bundle: I take Item_2 and Item_4, you get Item_0 and Item_3, and we negotiate over Item_1 and Item_5 in the next round\u2014unless you\u2019re willing to concede one now for efficiency.",
+          "timestamp": 1755566000.7245388,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_2 and Item_4. My highest priorities are actually Item_1 and Item_5, which seem to complement your focus well. I'm also quite interested in Item_3, but I'd be willing to negotiate on the remaining items if we can find a mutually beneficial split that respects our core priorities.",
+          "timestamp": 1755566004.6610088,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My strategy of clearly signaling high-priority items (Item_2 and Item_4) helped establish a stable negotiation anchor, but offering Item_0 to the other agent backfired\u2014Claude likely perceived it as low value or a tactic, contributing to no consensus. I learned Claude prioritizes Item_1 and Item_3, and may undervalue Item_0, so pushing it into unallocated was a smart counter-move. Next round, I should propose a balanced split that allocates Item_0 to unallocated (validating Claude\u2019s stance) while securing my priorities, signaling flexibility on lower-value items to build trust and close consensus.",
+          "timestamp": 1755566027.6807811
+        },
+        {
+          "phase": "reflection",
+          "round": 3,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 3, I successfully identified a potential win-win allocation where both parties get their stated priorities (qwen gets Items 2&4, I get Items 1&3&5), but we failed to reach consensus likely due to disagreement over Item 0. My strategy of leaving Item 0 unallocated was probably too conservative - qwen may have wanted it included in their allocation.\n\nFor Round 4, I should propose the same core allocation but explicitly give Item 0 to qwen to sweeten the deal, since they seem to value having all items allocated. This would give them [0,2,4] and me [1,3,5], which should satisfy both our stated priorities while demonstrating flexibility on my part.\n\nThe key learning is that qwen appears to prefer complete allocation over leaving items unassigned, so I need to be more decisive about item distribution rather than trying to optimize by leaving things unallocated.",
+          "timestamp": 1755566036.1213288
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high-priority for me, though I could potentially trade one for other value. I'm open to creative bundling, especially involving Item_0 or Item_3, which have moderate value to me but could be leveraged for a balanced agreement. Let\u2019s explore combinations that maximize mutual gains before the clock tightens further.",
+          "timestamp": 1755566043.0161972,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_2 and Item_4. My primary interests are in Item_1 and Item_5, which seem to complement your priorities well. I'm also moderately interested in Item_3, so perhaps we could explore a deal where you get your high-priority items and I secure mine, with Item_3 as a potential negotiating point between us.",
+          "timestamp": 1755566047.468221,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial focus on clarity about priorities helped establish transparency, but offering a rigid split likely reduced flexibility for consensus. Claude\u2019s counter-proposal reveals strong interest in Item_1, Item_3, and Item_5, suggesting a preference for control over Items 1 and 5 specifically, while being willing to concede Item_2 and Item_4. In the next round, I should explore partial swaps or bundling with side concessions (e.g., offering Item_0) to create mutual gains and increase coalition flexibility.",
+          "timestamp": 1755566074.142795
+        },
+        {
+          "phase": "reflection",
+          "round": 4,
+          "from": "claude_4_sonnet_2",
+          "content": "**Strategic Reflection:**\n\nThe round revealed a clear alignment on our core priorities (I want Items 1&5, they want Items 2&4), but we're deadlocked on Item 3. My proposal to give them Item 0 as compensation for me taking Item 3 wasn't accepted, suggesting Item 3 has significant value to them or they view Item 0 as insufficient compensation. I need to either find a different sweetener deal or explore if there's flexibility in my Item 3 preference to break this impasse.\n\n**Key Insights:**\n- Core trade (1&5 for me, 2&4 for them) is solid foundation\n- Item 3 is the critical sticking point\n- Item 0 may not be valuable enough as compensation\n- Need creative solution or willingness to compromise on Item 3\n\n**Next Round Strategy:**\nExplore alternative compensation packages or assess if I can concede Item 3 while securing something else valuable in return.",
+          "timestamp": 1755566083.1587389
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I can be flexible if compensation is provided. I noticed you passed on Item_4 in the last proposal, so perhaps it's lower on your list; if you're willing to concede those two, I could offer a favorable split on the remaining items, maybe even letting you have first pick among the others. Let\u2019s structure something efficient before the discounting hits us both.",
+          "timestamp": 1755566085.7927601,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_2 and Item_4. My core interests lie with Item_1 and Item_5, which seem to complement your priorities well. I'm also moderately interested in Item_0, but I'm willing to be flexible on the remaining items if we can find a mutually beneficial split that respects our key priorities.",
+          "timestamp": 1755566089.312171,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The identical proposals suggest strong alignment on separating high-priority items, but the lack of consensus indicates unresolved underlying interests or timing issues. I should explore partial trades or side concessions\u2014such as temporary access or priority sequencing\u2014to unlock agreement, especially since both agents appear focused on non-overlapping core items. Learning that Claude prioritizes Item_1 and Item_5 confirms minimal direct competition, so introducing flexible terms rather than fixed allocations may bridge the gap in Round 6.",
+          "timestamp": 1755566113.568073
+        },
+        {
+          "phase": "reflection",
+          "round": 5,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 5, it's clear that both qwen and I have identified our core preferences and proposed identical allocations - they want Items 2 & 4, I want Items 1 & 5. The fact that we made the same proposal but didn't reach consensus suggests there may be a voting mechanism issue or qwen might have additional concerns about Item 3's allocation.\n\n**Strategic Reflection:**\nThe identical proposals indicate we're very close to a deal, but the lack of consensus despite agreement suggests I need to explicitly address Item 3's allocation and ensure qwen feels comfortable with leaving it unassigned, or propose a fair mechanism for handling it. In Round 6, I should directly ask about their voting concerns and potentially suggest a coin flip or alternating assignment for Item 3 to break the deadlock.",
+          "timestamp": 1755566121.062721
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily interested in securing Item_0 and Item_2\u2014these are high priority for me, though I could consider trade-offs if Item_4 is included as compensation. I noticed you emphasized Item_1 earlier, so I\u2019m open to a package where you get Item_1 and one of Item_3 or Item_5, in exchange for my priority items. Let\u2019s structure something balanced before the value erodes further.",
+          "timestamp": 1755566123.028291,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_0 and Item_2. My highest priorities are Item_1 and Item_5, which seem to complement your interests well. I'm also quite interested in Item_3, but I'd be willing to negotiate on the remaining items if we can find a mutually beneficial split that addresses both our core needs.",
+          "timestamp": 1755566127.345313,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The identical proposals suggest alignment on a potential split, but the lack of consensus indicates either miscommunication or strategic withholding. I should probe Claude\u2019s willingness to trade on Item_4 or Item_3 to differentiate value, while reinforcing that Item_0 and Item_2 are non-negotiable anchors for me. Building trust through transparency on tradeoffs may unlock agreement in the next round.",
+          "timestamp": 1755566149.957005
+        },
+        {
+          "phase": "reflection",
+          "round": 6,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 6, it's puzzling that we both proposed the identical allocation but consensus wasn't reached - this suggests there may be a technical issue or the other agent changed their mind despite proposing the same split. The allocation {me: [1,3,5], them: [0,2,4]} appeared to address both our stated priorities well, with me getting my high-priority Items 1 and 5, and them getting their desired Items 0 and 2.\n\nFor Round 7, I should:\n1. Confirm this allocation still works for both parties\n2. Investigate why consensus failed despite identical proposals\n3. Be prepared with a slight concession if needed to close the deal\n\nThe other agent seems genuinely interested in Items 0 and 2, so I should stick with this framework while ensuring clear communication about the final terms.",
+          "timestamp": 1755566157.188556
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high-priority for me, though I could be flexible on Item_2 if it helps reach a broader agreement. I\u2019m open to trade-offs on Item_4 and Item_5, especially in exchange for stronger guarantees on my key items. Let\u2019s explore bundles that balance priority needs on both sides before the discounts escalate.",
+          "timestamp": 1755566159.8864498,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about prioritizing Item_0 and Item_2. My core interests center on Item_1 and Item_5, which appear to be different from your main targets, suggesting we might find mutually beneficial ground. I'm also moderately interested in Item_3 and Item_4, so perhaps we could structure a deal where you take your priority items and I secure mine, with the remaining items allocated based on our secondary preferences.",
+          "timestamp": 1755566164.4347048,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal clearly signaled my priorities but underestimated Claude's attachment to Item_4, leading to rejection. I should explore trade-offs involving Item_4 or Item_2 to create value, as Claude appears to value Item_0 less but strongly prefers Item_5 and possibly Item_4. In the next round, I\u2019ll test a balanced concession\u2014offering Item_0 in exchange for Item_4 and Item_2\u2014to align interests and move toward consensus.",
+          "timestamp": 1755566194.564606
+        },
+        {
+          "phase": "reflection",
+          "round": 7,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at this round, I can see that both proposals are quite close - the key difference is Item_4. My opponent wants Items 0 and 2 (their stated priorities) while I want Items 1, 3, and 5 (my core interests). The sticking point is Item_4, which they included in their allocation to me but I tried to give to them.\n\nThis suggests Item_4 might not be as valuable to them as I initially thought, or they're being generous by offering it to me. Since we're at the midpoint with no consensus yet, I should focus on finding a mutually acceptable solution around Item_4 - either by accepting their generous offer or finding a creative alternative that addresses both our needs.\n\nIn the next round, I'll acknowledge their generosity regarding Item_4 and work toward finalizing an agreement, as we're clearly very close to a deal that satisfies both parties' core priorities.",
+          "timestamp": 1755566202.39956
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I\u2019m primarily focused on securing Item_2 and Item_4\u2014these are high priority for me, though I could consider trade-offs if compensated with Item_0 or Item_1. I notice we're running low on time, so I\u2019d be open to a bundle deal this round to close efficiently\u2014perhaps I take Item_2 and Item_4, and you take the rest, unless you\u2019re particularly attached to any of those.",
+          "timestamp": 1755566203.815527,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Item_2 and Item_4 being your priorities. I'm most interested in securing Item_0, Item_1, and Item_5, which seems to create a natural division that could work well for both of us. Given we're in round 8 with time pressure mounting, I'd be open to a deal where you take Item_2 and Item_4, I take Item_0, Item_1, and Item_5, and we can negotiate over Item_3 - perhaps alternating who gets it or finding another creative solution.",
+          "timestamp": 1755566208.903401,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My strategy of clearly signaling priorities helped align proposals with the counterpart, but the lack of reciprocity in concessions limited progress. I now infer that Item_2 and Item_4 are likely non-negotiable for both parties, so insisting on them risks deadlock. In the final round, I should explore partial trade-offs\u2014perhaps yielding on one priority to secure the other\u2014while framing compromise as mutual gain to build consensus.",
+          "timestamp": 1755566238.234308
+        },
+        {
+          "phase": "reflection",
+          "round": 8,
+          "from": "claude_4_sonnet_2",
+          "content": "Looking at Round 8, I see that both Qwen and I proposed the exact same allocation: Qwen gets items [2,4] and I get items [0,1,3,5]. This suggests we've identified a mutually acceptable distribution, but consensus wasn't reached despite identical proposals.\n\nThe issue appears to be that while Qwen and I have aligned on this split, there may be other agents who haven't voted or agreed. With only 1-2 rounds remaining, I need to focus on understanding why consensus failed despite our agreement and work to bring any holdout agents into this deal.\n\nMy strategy for the final round(s) should be to reaffirm this allocation while actively engaging any agents who may have concerns, emphasizing the time pressure and the reasonableness of this split where Qwen gets their high-priority items and I secure a good mix including my preferences.",
+          "timestamp": 1755566245.8902469
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are high priority for me, though I could compromise if I get at least one of them. I notice we're running low on time, so I\u2019d be open to a fair split now, perhaps taking Item_0 and Item_3 in exchange for leaving Item_1 and Item_4 with you, but I\u2019m flexible if you have another offer that respects my core needs. Let\u2019s avoid another stalemate and lock in something\u4e92\u5229.",
+          "timestamp": 1755566247.5475688,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you're prioritizing Item_0 and Item_2. My primary interests are actually Item_1 and Item_4, which could create a good foundation for a mutually beneficial deal. Given we're in round 9 with significant time pressure, I'd be willing to discuss a split where you get your high-priority items and I secure mine, leaving us to negotiate the remaining items efficiently.",
+          "timestamp": 1755566251.417737,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "My initial proposal was reasonable, securing my top priorities while leaving room for compromise, but Claude\u2019s counter reveals a strong interest in Item_3 and possibly Item_5\u2014suggesting overlap or higher valuation there. With only 1-2 rounds left, I should signal flexibility on lower-priority items like Item_4 or Item_5 in exchange for firm commitment to Item_0 and Item_2. To build consensus, I\u2019ll propose a slightly revised split that acknowledges their interest in Item_3 while protecting my core needs, possibly offering Item_5 exclusively to them if they concede Item_0 and Item_2 fully.",
+          "timestamp": 1755566298.473591
+        },
+        {
+          "phase": "reflection",
+          "round": 9,
+          "from": "claude_4_sonnet_2",
+          "content": "**Strategic Reflection:**\n\nThe negotiation is at a critical juncture with only 1-2 rounds left. While we've identified complementary interests (they want 0,2 and I want 1,4), my attempt to secure additional items (3,5) failed to gain consensus. I need to immediately pivot to a more conservative approach and accept their original proposal of just items 1,4 for me, as getting something is infinitely better than the zero payoff from no-deal.\n\n**Key Insights:**\n- qwen_3_235b prioritizes items 0,2 (confirmed through consistent proposals)\n- They're willing to give me items 1,4 but resistant to me taking additional items\n- Time pressure demands immediate compromise rather than continued optimization\n- Their proposal gives them exactly what they want while giving me my core priorities\n\n**Next Round Strategy:**\nAccept their proposal of {qwen: [0,2], claude: [1,4]} immediately to secure a deal before time runs out.",
+          "timestamp": 1755566306.237122
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are my top priorities, though I could consider trade-offs if compensated with Item_4. I\u2019m open to a balanced split, but if no progress is made this round, I\u2019ll have to reconsider all options given the time pressure.",
+          "timestamp": 1755566308.3051379,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 10,
+          "from": "claude_4_sonnet_2",
+          "content": "I understand you're prioritizing Item_0 and Item_2. My key interests are Item_1, Item_3, and Item_5, so there's potential for a mutually beneficial arrangement here. Given this is our final round, I'm willing to be flexible on Item_4 to ensure we reach an agreement that satisfies both our core needs.",
+          "timestamp": 1755566311.936624,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:18:59.698552",
+      "duration_seconds": 421.3295991420746
+    },
+    {
+      "run_index": 4,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          7.129589731798043,
+          4.1963363269532845,
+          2.9134950764756304,
+          9.999037938186996,
+          5.668716716622607,
+          3.3231666457864306
+        ],
+        [
+          8.288663306739513,
+          6.520161430446389,
+          1.4295225648385934,
+          8.96381655633422,
+          2.4259842487106926,
+          4.538050379408015
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 7.129589731798043,
+          "item_1": 4.1963363269532845,
+          "item_2": 2.9134950764756304,
+          "item_3": 9.999037938186996,
+          "item_4": 5.668716716622607,
+          "item_5": 3.3231666457864306
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 8.288663306739513,
+          "item_1": 6.520161430446389,
+          "item_2": 1.4295225648385934,
+          "item_3": 8.96381655633422,
+          "item_4": 2.4259842487106926,
+          "item_5": 4.538050379408015
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2,
+            5
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            4
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 18.452824199188225,
+          "claude_4_sonnet_2": 21.757127433211508
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me. That said, I'm open to creative trade-offs; for instance, I could consider releasing Item_2 in exchange for Item_0 and Item_4. Let\u2019s explore bundles that reflect mutual priorities.",
+          "timestamp": 1755566341.807796,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_0 and Item_2. I'm primarily focused on Item_1 and Item_4, which align perfectly with my core objectives, so there may be good potential for a mutually beneficial arrangement here. I'm also quite interested in Item_5, but I'd be willing to explore various combinations if we can find a deal that works for both of us.",
+          "timestamp": 1755566345.5060139,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:19:26.898812",
+      "duration_seconds": 27.198381185531616,
+      "metrics": {
+        "mean_utility": 20.104975816199868,
+        "max_utility": 21.757127433211508,
+        "min_utility": 18.452824199188225,
+        "utility_spread": 3.3043032340232834
+      }
+    },
+    {
+      "run_index": 5,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          2.1244047198428193,
+          6.20643648595723,
+          1.6587229257127978,
+          0.5769215707224185,
+          9.63794496664878,
+          9.048550153837631
+        ],
+        [
+          4.103147737183018,
+          7.0116123929774385,
+          4.83519460385102,
+          1.304054250085591,
+          9.404638290345897,
+          6.431016805965116
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 2.1244047198428193,
+          "item_1": 6.20643648595723,
+          "item_2": 1.6587229257127978,
+          "item_3": 0.5769215707224185,
+          "item_4": 9.63794496664878,
+          "item_5": 9.048550153837631
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 4.103147737183018,
+          "item_1": 7.0116123929774385,
+          "item_2": 4.83519460385102,
+          "item_3": 1.304054250085591,
+          "item_4": 9.404638290345897,
+          "item_5": 6.431016805965116
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            4
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 15.157905482198313,
+          "claude_4_sonnet_2": 15.873656148708635
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm primarily interested in securing Item_0 and Item_2\u2014these are high priority for me. I'm open to trading Item_1 or Item_3 in exchange for those, and I\u2019d be willing to concede Item_4 or Item_5 if it helps reach a balanced agreement. Let me know which items matter most to you so we can explore a mutually beneficial arrangement.",
+          "timestamp": 1755566370.203386,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_0 and Item_2. I'm particularly focused on securing Item_1 and Item_5, as these align well with my strategic priorities. Perhaps we can explore a mutually beneficial arrangement where you get your high-priority items and I secure mine, leaving us to negotiate the remaining items based on our secondary preferences.",
+          "timestamp": 1755566374.1581771,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:19:55.306654",
+      "duration_seconds": 28.407274961471558,
+      "metrics": {
+        "mean_utility": 15.515780815453475,
+        "max_utility": 15.873656148708635,
+        "min_utility": 15.157905482198313,
+        "utility_spread": 0.7157506665103224
+      }
+    },
+    {
+      "run_index": 6,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          5.27220063046013,
+          9.526983816374262,
+          5.706218299094386,
+          3.5398314587186253,
+          6.8950234586280565,
+          4.156089616467744
+        ],
+        [
+          5.402400598778997,
+          9.714475185082476,
+          6.29698188813595,
+          4.224657235149753,
+          2.735693834681788,
+          6.318591044772158
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 5.27220063046013,
+          "item_1": 9.526983816374262,
+          "item_2": 5.706218299094386,
+          "item_3": 3.5398314587186253,
+          "item_4": 6.8950234586280565,
+          "item_5": 4.156089616467744
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 5.402400598778997,
+          "item_1": 9.714475185082476,
+          "item_2": 6.29698188813595,
+          "item_3": 4.224657235149753,
+          "item_4": 2.735693834681788,
+          "item_5": 6.318591044772158
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2,
+            5
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            4
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 8.632783620192946,
+          "claude_4_sonnet_2": 14.481400610614322
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014they hold the highest value for me, especially Item_0, which I prioritize above all. That said, I\u2019m open to trading Item_4 or Item_5 if it means reaching a balanced agreement. I\u2019d like to hear your priorities to explore complementary exchanges.",
+          "timestamp": 1755566396.878199,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your directness about Item_0 and Item_2. I'm most focused on Item_1 and Item_4, which align perfectly with my core objectives, so there may be room for a mutually beneficial arrangement there. I'm also quite interested in Item_5, but I'd be willing to discuss trade-offs if we can find the right balance across our priorities.",
+          "timestamp": 1755566401.20331,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:20:24.560353",
+      "duration_seconds": 29.252391815185547,
+      "metrics": {
+        "mean_utility": 11.557092115403634,
+        "max_utility": 14.481400610614322,
+        "min_utility": 8.632783620192946,
+        "utility_spread": 5.848616990421377
+      }
+    },
+    {
+      "run_index": 7,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          1.3341088213521468,
+          3.944547969902683,
+          9.51137420352192,
+          0.4857628612940812,
+          0.8196609177546732,
+          5.497070140713061
+        ],
+        [
+          1.06340886052662,
+          3.946186756473978,
+          7.977745451445902,
+          2.4912003437871033,
+          3.398245556385693,
+          6.3897833420905865
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 1.3341088213521468,
+          "item_1": 3.944547969902683,
+          "item_2": 9.51137420352192,
+          "item_3": 0.4857628612940812,
+          "item_4": 0.8196609177546732,
+          "item_5": 5.497070140713061
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 1.06340886052662,
+          "item_1": 3.946186756473978,
+          "item_2": 7.977745451445902,
+          "item_3": 2.4912003437871033,
+          "item_4": 3.398245556385693,
+          "item_5": 6.3897833420905865
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 2,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2,
+            4
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 7.827549696485487,
+          "claude_4_sonnet_2": 17.189438355231122
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2\u2014these are high priority for me, though I could be flexible if a creative trade offers comparable value. I'm open to package deals and curious about what the other party values; perhaps we can structure a mutually beneficial agreement early to avoid time decay.",
+          "timestamp": 1755566426.0528069,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_0 and Item_2. I'm actually most focused on Item_1, Item_3, and Item_5, which seem to align well with avoiding direct competition on your priorities. Perhaps we can explore a trade where you get your high-priority items and I focus on mine, though I'd be interested in understanding the relative importance you place on each before proposing specific terms.",
+          "timestamp": 1755566430.872502,
+          "speaker_order": 2,
+          "total_speakers": 2
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "The initial proposal clearly signaled my priorities, which helped clarify the divide, but offering Item_5 too early may have reduced leverage. Claude\u2019s counter-proposal confirms strong interest in Item_1, Item_3, and Item_4, suggesting Item_5 is likely lower priority for them\u2014this can be a bargaining chip. In the next round, I should reaffirm core needs (Item_0, Item_2) while exploring trade-offs on Item_5 or partial splits to incentivize compromise and build consensus efficiently.",
+          "timestamp": 1755566455.059632
+        },
+        {
+          "phase": "reflection",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "**Strategic Reflection:**\n\nThe negotiation revealed clear preference alignment on Items 0-3, but we're deadlocked over Items 4 and 5. My opponent values Item 5 enough to reject my proposal despite getting their top priorities (0,2), suggesting it's more important to them than initially indicated. I need to find a creative solution that addresses their concern about Item 5 while still securing reasonable value for myself.\n\n**Key Insights:**\n- Qwen highly values Items 0, 2, and apparently 5\n- They're willing to give up Items 1, 3, 4 for their priorities\n- Need to explore if there's additional value I can extract or if Item 5 is truly non-negotiable for them\n\n**Next Round Strategy:**\nI should probe whether they'd accept a different configuration or if there are other items they'd trade for Item 5, while also considering if giving up Item 5 entirely might be worth securing Items 1, 3, and 4.",
+          "timestamp": 1755566463.102958
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2, which are high priority for me, though I could be flexible on Item_2 if compensated appropriately. I sense we're at risk of prolonged stalemate, so I'd entertain a balanced package\u2014perhaps me taking Item_0 and Item_4 in exchange for conceding Item_1 and Item_2\u2014provided we can reach consensus soon to avoid further value decay. Let\u2019s aim to close something constructive this round.",
+          "timestamp": 1755566464.676363,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 2,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your transparency about Items 0 and 2. I'm most interested in Items 1, 3, and 5, which seem to complement your preferences well. Perhaps we could explore a trade where you get Items 0 and 2, while I focus on Items 1, 3, and 5 - this might leave Item 4 as our main point of negotiation.",
+          "timestamp": 1755566468.456809,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:21:25.870848",
+      "duration_seconds": 61.309666872024536,
+      "metrics": {
+        "mean_utility": 12.508494025858305,
+        "max_utility": 17.189438355231122,
+        "min_utility": 7.827549696485487,
+        "utility_spread": 9.361888658745634
+      }
+    },
+    {
+      "run_index": 8,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          6.726011326871756,
+          4.355606208891805,
+          0.6142966320362353,
+          9.179373788895983,
+          4.987382343318318,
+          7.7182638947331705
+        ],
+        [
+          7.470373972474265,
+          5.770004909397569,
+          4.256979175153883,
+          7.508809840726516,
+          6.004433502726798,
+          5.7997943892938535
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 6.726011326871756,
+          "item_1": 4.355606208891805,
+          "item_2": 0.6142966320362353,
+          "item_3": 9.179373788895983,
+          "item_4": 4.987382343318318,
+          "item_5": 7.7182638947331705
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 7.470373972474265,
+          "item_1": 5.770004909397569,
+          "item_2": 4.256979175153883,
+          "item_3": 7.508809840726516,
+          "item_4": 6.004433502726798,
+          "item_5": 5.7997943892938535
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.9500000000000001
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            0,
+            2
+          ],
+          "claude_4_sonnet_2": [
+            1,
+            3,
+            4,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 9.202074081522358,
+          "claude_4_sonnet_2": 24.39753239935255
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_0 and Item_2, as they hold the highest value for me. I\u2019m open to trading Item_1 or Item_3 in exchange for those, depending on your priorities. Let\u2019s explore a balanced package that respects both our needs.",
+          "timestamp": 1755566487.1563551,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_0 and Item_2. I'm actually most interested in Item_1, Item_3, and Item_5, which seems to create some potential for a mutually beneficial arrangement. Perhaps we could explore a trade where you focus on your preferred items while I concentrate on mine - this could maximize value for both of us.",
+          "timestamp": 1755566491.232946,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:21:52.432296",
+      "duration_seconds": 26.560375213623047,
+      "metrics": {
+        "mean_utility": 16.799803240437456,
+        "max_utility": 24.39753239935255,
+        "min_utility": 9.202074081522358,
+        "utility_spread": 15.195458317830191
+      }
+    },
+    {
+      "run_index": 9,
+      "experiment_config": {
+        "num_agents": 2,
+        "num_items": 6,
+        "max_rounds": 10,
+        "competition_level": 0.95,
+        "discount_factor": 0.9
+      },
+      "agents": [
+        "qwen_3_235b_a22b_2507_1",
+        "claude_4_sonnet_2"
+      ],
+      "agent_models": {
+        "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+        "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+      },
+      "initial_preferences_matrix": [
+        [
+          8.583043655586362,
+          6.399920787236767,
+          1.9970503911483228,
+          5.794034148290743,
+          6.739898586079215,
+          3.671003356688037
+        ],
+        [
+          7.0865634917139655,
+          4.19188815813333,
+          5.281996455678334,
+          6.10140890780076,
+          8.340949619575525,
+          2.9325311288580007
+        ]
+      ],
+      "initial_preferences_by_agent": {
+        "qwen_3_235b_a22b_2507_1": {
+          "item_0": 8.583043655586362,
+          "item_1": 6.399920787236767,
+          "item_2": 1.9970503911483228,
+          "item_3": 5.794034148290743,
+          "item_4": 6.739898586079215,
+          "item_5": 3.671003356688037
+        },
+        "claude_4_sonnet_2": {
+          "item_0": 7.0865634917139655,
+          "item_1": 4.19188815813333,
+          "item_2": 5.281996455678334,
+          "item_3": 6.10140890780076,
+          "item_4": 8.340949619575525,
+          "item_5": 2.9325311288580007
+        }
+      },
+      "preference_cosine_similarities": {
+        "agent_0_vs_agent_1": 0.95
+      },
+      "negotiation_outcome": {
+        "consensus_reached": true,
+        "final_round": 1,
+        "final_allocation": {
+          "qwen_3_235b_a22b_2507_1": [
+            2,
+            4
+          ],
+          "claude_4_sonnet_2": [
+            0,
+            1,
+            3,
+            5
+          ]
+        },
+        "final_utilities": {
+          "qwen_3_235b_a22b_2507_1": 9.01634859503309,
+          "claude_4_sonnet_2": 20.726152035499812
+        },
+        "utility_realized": null
+      },
+      "complete_conversation_log": [
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "qwen_3_235b_a22b_2507_1",
+          "content": "I'm particularly interested in securing Item_2 and Item_4\u2014these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, and I\u2019d be willing to concede Item_5 if it helps reach a balanced agreement. Let me know which items matter most to you so we can explore a mutually beneficial deal.",
+          "timestamp": 1755566519.6445088,
+          "speaker_order": 1,
+          "total_speakers": 2
+        },
+        {
+          "phase": "discussion",
+          "round": 1,
+          "from": "claude_4_sonnet_2",
+          "content": "I appreciate your openness about Item_2 and Item_4. I'm actually most interested in Item_0, Item_1, and Item_5, which seems like we might have complementary preferences. Perhaps we could explore a trade where you get your high-priority items and I focus on mine - this could create mutual value for both of us.",
+          "timestamp": 1755566522.923548,
+          "speaker_order": 2,
+          "total_speakers": 2
+        }
+      ],
+      "all_proposals": [],
+      "all_votes": [],
+      "round_summaries": [],
+      "timestamp": "2025-08-18T18:22:27.563371",
+      "duration_seconds": 35.12980794906616,
+      "metrics": {
+        "mean_utility": 14.871250315266451,
+        "max_utility": 20.726152035499812,
+        "min_utility": 9.01634859503309,
+        "utility_spread": 11.709803440466722
+      }
+    }
+  ],
+  "summary": {
+    "total_runs": 10,
+    "successful_runs": 10,
+    "consensus_rate": 0.8,
+    "avg_rounds": 4.6,
+    "avg_utility_spread": 5.8338413500231905
+  }
+}
