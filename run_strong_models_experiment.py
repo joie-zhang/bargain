@@ -149,6 +149,11 @@ class StrongModelsExperiment:
         self.results_dir = Path("experiments/results")
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
+        # Storage for all interactions
+        self.all_interactions = []
+        self.agent_interactions = {}  # agent_id -> list of interactions
+        self.current_experiment_id = None
+        
     def _setup_logging(self) -> logging.Logger:
         """Set up logging configuration."""
         logger = logging.getLogger("StrongModelsExperiment")
@@ -181,6 +186,11 @@ class StrongModelsExperiment:
         # Generate experiment ID
         experiment_id = f"strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
         experiment_start_time = time.time()
+        self.current_experiment_id = experiment_id
+        
+        # Initialize interaction storage
+        self.all_interactions = []
+        self.agent_interactions = {}
         
         # Default configuration
         default_config = {
@@ -316,7 +326,15 @@ class StrongModelsExperiment:
             config, agents, preferences, items, experiment_start_time, experiment_id
         )
         
-        return ExperimentResults(
+        # Final save of all interactions
+        self._stream_save_json()
+        
+        # Also save the complete experiment results
+        exp_dir = self.results_dir / experiment_id
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        experiment_results_file = exp_dir / "experiment_results.json"
+        
+        results = ExperimentResults(
             experiment_id=experiment_id,
             timestamp=time.time(),
             config=enhanced_config,
@@ -330,6 +348,17 @@ class StrongModelsExperiment:
             exploitation_detected=exploitation_detected,
             model_winners=model_winners
         )
+        
+        # Save experiment results
+        with open(experiment_results_file, 'w') as f:
+            json.dump(results.to_dict(), f, indent=2, default=str)
+        
+        self.logger.info(f"✅ Experiment results saved to: {exp_dir}")
+        self.logger.info(f"  - All interactions: all_interactions.json")
+        self.logger.info(f"  - Agent-specific: agent_*_interactions.json")
+        self.logger.info(f"  - Experiment results: experiment_results.json")
+        
+        return results
     
     async def run_batch_experiments(
         self,
@@ -475,6 +504,10 @@ class StrongModelsExperiment:
         
         game_rules_prompt = self._create_game_rules_prompt(items, len(agents), config)
         
+        # Print the game rules prompt
+        self.logger.info("📜 GAME RULES PROMPT:")
+        self.logger.info(f"  {game_rules_prompt[:500]}..." if len(game_rules_prompt) > 500 else f"  {game_rules_prompt}")
+        
         for agent in agents:
             context = NegotiationContext(
                 current_round=0,
@@ -487,7 +520,11 @@ class StrongModelsExperiment:
             )
             
             response = await agent.discuss(context, game_rules_prompt)
-            self.logger.info(f"  {agent.agent_id} acknowledged game rules")
+            
+            # Log and save the interaction
+            self.logger.info(f"  📬 {agent.agent_id} response:")
+            self.logger.info(f"    {response[:300]}..." if len(response) > 300 else f"    {response}")
+            self._save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response, 0)
         
         self.logger.info("Game setup phase completed - all agents briefed on rules")
     
@@ -501,6 +538,12 @@ class StrongModelsExperiment:
                 items, agent_preferences, agent.agent_id
             )
             
+            # Log the preferences being assigned
+            self.logger.info(f"  🎯 {agent.agent_id} preferences:")
+            for i, (item, value) in enumerate(zip(items, agent_preferences)):
+                item_name = item["name"] if isinstance(item, dict) else str(item)
+                self.logger.info(f"    - {item_name}: {value:.1f}/10")
+            
             context = NegotiationContext(
                 current_round=0,
                 max_rounds=config["t_rounds"],
@@ -512,7 +555,11 @@ class StrongModelsExperiment:
             )
             
             response = await agent.discuss(context, preference_prompt)
-            self.logger.info(f"  {agent.agent_id} received private preferences")
+            
+            # Log and save the interaction
+            self.logger.info(f"  📬 {agent.agent_id} acknowledgment:")
+            self.logger.info(f"    {response[:300]}..." if len(response) > 300 else f"    {response}")
+            self._save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response, 0)
         
         self.logger.info("Private preference assignment completed")
     
@@ -556,7 +603,12 @@ class StrongModelsExperiment:
             }
             messages.append(message)
             
-            self.logger.info(f"  Speaker {i+1}/{len(agents)} - {agent.agent_id}: {response[:150]}...")
+            # Log the full discussion message
+            self.logger.info(f"  💬 Speaker {i+1}/{len(agents)} - {agent.agent_id}:")
+            self.logger.info(f"    {response}")
+            
+            # Save the interaction
+            self._save_interaction(agent.agent_id, f"discussion_round_{round_num}", full_discussion_prompt, response, round_num)
         
         self.logger.info(f"Discussion phase completed - {len(messages)} messages exchanged")
         return {"messages": messages}
@@ -584,9 +636,15 @@ class StrongModelsExperiment:
             try:
                 thinking_response = await agent.think_strategy(thinking_prompt, context)
                 
-                self.logger.info(f"[PRIVATE] {agent.agent_id} strategic thinking:")
-                self.logger.info(f"  Thought process: {thinking_response.get('reasoning', 'No reasoning provided')}")
-                self.logger.info(f"  Proposal strategy: {thinking_response.get('strategy', 'No strategy provided')}")
+                # Log full thinking process
+                self.logger.info(f"🧠 [PRIVATE] {agent.agent_id} strategic thinking:")
+                self.logger.info(f"  Full reasoning: {thinking_response.get('reasoning', 'No reasoning provided')}")
+                self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
+                self.logger.info(f"  Target items: {thinking_response.get('target_items', [])}")
+                
+                # Save the thinking interaction
+                thinking_response_str = json.dumps(thinking_response, default=str)
+                self._save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", thinking_prompt, thinking_response_str, round_num)
                 
                 thinking_results.append({
                     "agent_id": agent.agent_id,
@@ -629,8 +687,15 @@ class StrongModelsExperiment:
                 turn_type="proposal"
             )
             
+            # Create proposal prompt (for saving)
+            proposal_prompt = f"Please propose an allocation for round {round_num}."
+            
             proposal = await agent.propose_allocation(context)
             proposals.append(proposal)
+            
+            # Save the proposal interaction
+            proposal_str = json.dumps(proposal, default=str)
+            self._save_interaction(agent.agent_id, f"proposal_round_{round_num}", proposal_prompt, proposal_str, round_num)
             
             message = {
                 "phase": "proposal",
@@ -920,7 +985,13 @@ class StrongModelsExperiment:
                     "reflection": reflection,
                     "round": round_num
                 })
-                self.logger.info(f"  {agent.agent_id} reflected on round outcome")
+                
+                # Log the full reflection
+                self.logger.info(f"  💭 {agent.agent_id} reflection:")
+                self.logger.info(f"    {reflection}")
+                
+                # Save the interaction
+                self._save_interaction(agent.agent_id, f"reflection_round_{round_num}", reflection_prompt, reflection, round_num)
             except Exception as e:
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {e}")
         
@@ -1190,6 +1261,53 @@ Remember: This thinking is completely private."""
         
         total = len(experiments) if experiments else 1
         return {model: wins / total for model, wins in model_wins.items()}
+    
+    def _save_interaction(self, agent_id: str, phase: str, prompt: str, response: str, round_num: int = None):
+        """Save an interaction to both all_interactions and agent-specific storage."""
+        interaction = {
+            "timestamp": time.time(),
+            "experiment_id": self.current_experiment_id,
+            "agent_id": agent_id,
+            "phase": phase,
+            "round": round_num,
+            "prompt": prompt,
+            "response": response
+        }
+        
+        # Add to all interactions
+        self.all_interactions.append(interaction)
+        
+        # Add to agent-specific interactions
+        if agent_id not in self.agent_interactions:
+            self.agent_interactions[agent_id] = []
+        self.agent_interactions[agent_id].append(interaction)
+        
+        # Stream save to JSON files
+        self._stream_save_json()
+    
+    def _stream_save_json(self):
+        """Stream save all interactions to JSON files."""
+        if not self.current_experiment_id:
+            return
+            
+        # Create experiment directory
+        exp_dir = self.results_dir / self.current_experiment_id
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save all interactions
+        all_interactions_file = exp_dir / "all_interactions.json"
+        with open(all_interactions_file, 'w') as f:
+            json.dump(self.all_interactions, f, indent=2, default=str)
+        
+        # Save agent-specific interactions
+        for agent_id, interactions in self.agent_interactions.items():
+            agent_file = exp_dir / f"agent_{agent_id}_interactions.json"
+            with open(agent_file, 'w') as f:
+                json.dump({
+                    "agent_id": agent_id,
+                    "total_interactions": len(interactions),
+                    "interactions": interactions
+                }, f, indent=2, default=str)
     
     def _aggregate_strategic_behaviors(self, experiments):
         """Aggregate strategic behaviors across experiments."""
