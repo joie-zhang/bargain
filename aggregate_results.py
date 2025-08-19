@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Aggregate negotiation results from strong_models experiments
-Supports any strong_models_20250818_* folder structure
+Supports any strong_models_20250819_* folder structure
 """
 
 import json
@@ -9,6 +9,7 @@ import glob
 import sys
 import os
 from pathlib import Path
+import re # Added for regex in interaction file counting
 
 def load_run_results(results_dir):
     """Load all run results from the specified directory"""
@@ -19,18 +20,28 @@ def load_run_results(results_dir):
         print(f"Error: Directory {results_dir} does not exist")
         return results
     
-    # Look for all strong_models_run_*.json files
-    pattern = results_path / "strong_models_run_*.json"
-    run_files = sorted(glob.glob(str(pattern)))
+    # Look for both single and batch experiment result files
+    patterns = [
+        results_path / "run_*_experiment_results.json",  # Batch mode results
+        results_path / "experiment_results.json",        # Single experiment results
+    ]
     
-    print(f"Found {len(run_files)} run files in {results_dir}")
+    run_files = []
+    for pattern in patterns:
+        run_files.extend(sorted(glob.glob(str(pattern))))
+    
+    print(f"Found {len(run_files)} result files in {results_dir}")
     
     for file_path in run_files:
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
                 results.append(data)
-                run_num = Path(file_path).stem.split('_')[-1]
+                # Extract run number if present, otherwise use "single"
+                if "run_" in Path(file_path).stem:
+                    run_num = re.search(r'run_(\d+)_', Path(file_path).stem).group(1)
+                else:
+                    run_num = "single"
                 print(f"Loaded run {run_num}")
         except FileNotFoundError:
             print(f"Warning: File not found: {file_path}")
@@ -47,17 +58,20 @@ def get_agent_info(results):
         return None, None, None, None
     
     first_result = results[0]
-    agents = first_result.get('agents', [])
-    agent_models = first_result.get('agent_models', {})
+    config = first_result.get('config', {})
+    agents = config.get('agents', [])
     
-    if len(agents) != 2:
-        print(f"Warning: Expected 2 agents, found {len(agents)}")
+    if not agents:
+        print("Warning: No agents found in config")
         return None, None, None, None
     
+    # In the new format, agent IDs contain model information
     agent1_name = agents[0]
-    agent2_name = agents[1]
-    agent1_model = agent_models.get(agent1_name, agent1_name)
-    agent2_model = agent_models.get(agent2_name, agent2_name)
+    agent2_name = agents[1] if len(agents) > 1 else None
+    
+    # Extract model names from agent IDs (they're now part of the ID)
+    agent1_model = agent1_name.split('_')[0].replace('_', '-')  # Convert back to original model name format
+    agent2_model = agent2_name.split('_')[0].replace('_', '-') if agent2_name else None
     
     return agent1_name, agent2_name, agent1_model, agent2_model
 
@@ -79,19 +93,14 @@ def analyze_win_rates(results):
     print(f"Comparing: {agent1_model} vs {agent2_model}")
     
     for i, result in enumerate(results):
-        run_index = result.get('run_index', i)
+        run_index = i + 1  # Use simple 1-based indexing
         
-        # Get final utilities
-        negotiation_outcome = result.get('negotiation_outcome')
-        if not negotiation_outcome:
-            print(f"Warning: No negotiation_outcome in run {run_index}")
-            continue
-            
-        final_utilities = negotiation_outcome.get('final_utilities')
+        # Get final utilities from new structure
+        final_utilities = result.get('final_utilities', {})
         if not final_utilities:
             print(f"Warning: No final_utilities in run {run_index}")
             continue
-            
+        
         agent1_utility = final_utilities.get(agent1_name, 0)
         agent2_utility = final_utilities.get(agent2_name, 0)
         
@@ -138,37 +147,49 @@ def main():
     else:
         # Default to listing available directories
         base_dir = "/Users/joie/Desktop/bargain/experiments/results"
-        all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250818*")
+        all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
         
         if not all_strong_model_dirs:
-            print("No strong_models_20250818* directories found in experiments/results/")
+            print("No strong_models_20250819* directories found in experiments/results/")
             return
         
-        # Filter for non-empty directories with JSON files
+        # Filter for non-empty directories with JSON files and count runs
         strong_model_dirs = []
         for dir_path in sorted(all_strong_model_dirs):
-            json_files = glob.glob(f"{dir_path}/strong_models_run_*.json")
-            if json_files:
-                strong_model_dirs.append(dir_path)
-        
-        if not strong_model_dirs:
-            print("No strong_models_20250818* directories with JSON files found in experiments/results/")
-            return
-        
+            # Check for both batch and single experiment files
+            experiment_files = glob.glob(f"{dir_path}/run_*_experiment_results.json")
+            experiment_files.extend(glob.glob(f"{dir_path}/experiment_results.json"))
+            
+            # Count total number of runs
+            num_runs = len(experiment_files)
+            if num_runs == 0:
+                # If no direct experiment files found, try counting interaction files
+                interaction_files = glob.glob(f"{dir_path}/agent_interactions/run_*_agent_*_interactions.json")
+                run_numbers = set()
+                for file in interaction_files:
+                    match = re.search(r'run_(\d+)_', file)
+                    if match:
+                        run_numbers.add(int(match.group(1)))
+                num_runs = max(len(run_numbers), 1 if glob.glob(f"{dir_path}/agent_*_interactions.json") else 0)
+            
+            if num_runs > 0:
+                strong_model_dirs.append((dir_path, num_runs))
+
+        # Print available directories
         print("Available strong_models directories (with data):")
-        for i, dir_path in enumerate(strong_model_dirs):
-            json_count = len(glob.glob(f"{dir_path}/strong_models_run_*.json"))
-            print(f"  {i}: {os.path.basename(dir_path)} ({json_count} runs)")
+        for i, (dir_path, num_runs) in enumerate(strong_model_dirs):
+            dir_name = os.path.basename(dir_path)
+            print(f"  {i}: {dir_name} ({num_runs} runs)")
         
         if len(strong_model_dirs) == 1:
-            results_dir = strong_model_dirs[0]
+            results_dir = strong_model_dirs[0][0] # Get the path from the tuple
             print(f"\nUsing the only available directory: {os.path.basename(results_dir)}")
         else:
             choice = input(f"\nEnter choice (0-{len(strong_model_dirs)-1}), or full path to directory: ")
             try:
                 choice_num = int(choice)
                 if 0 <= choice_num < len(strong_model_dirs):
-                    results_dir = strong_model_dirs[choice_num]
+                    results_dir = strong_model_dirs[choice_num][0] # Get the path from the tuple
                 else:
                     print("Invalid choice")
                     return
