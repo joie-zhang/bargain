@@ -644,9 +644,9 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             proposal["round"] = context.current_round
             return proposal
         except (json.JSONDecodeError, ValueError) as e:
-            # Log the parsing issue for debugging
+            # Log the FULL parsing issue for debugging
             self.logger.debug(f"Direct JSON parsing failed for {self.agent_id}: {e}")
-            self.logger.debug(f"Raw response content: {response.content[:300]}...")
+            self.logger.debug(f"Raw response content: {response.content}")
             
             # Try to extract JSON from text response
             try:
@@ -710,7 +710,7 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 pass
             
             # Fallback: create a simple proposal
-            self.logger.warning(f"Failed to parse proposal JSON: {response.content[:200]}...")
+            self.logger.warning(f"Failed to parse proposal JSON. Full content: {response.content}")
             return {
                 "allocation": {self.agent_id: list(range(len(context.items)))},
                 "reasoning": "Failed to parse structured response",
@@ -831,11 +831,11 @@ Keep your response conversational and authentic. Respond as you would in a real 
                     self.total_cost += response.cost_estimate
                 self.response_times.append(response.response_time)
                 
-                # Store reflection in conversation memory
+                # Store FULL reflection in conversation memory
                 self.conversation_memory.append({
                     "type": "private_reflection",
                     "round": context.current_round,
-                    "content": response.content[:500] if response.content else "",  # Truncated for memory
+                    "content": response.content if response.content else "",  # Store full content
                     "timestamp": time.time()
                 })
                 
