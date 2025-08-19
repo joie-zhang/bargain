@@ -50,7 +50,6 @@ from .llm_agents import (
     BaseLLMAgent,
     AnthropicAgent,
     OpenAIAgent,
-    SimulatedAgent
 )
 
 from .agent_factory import (
@@ -59,7 +58,6 @@ from .agent_factory import (
     AgentFactory,
     create_o3_vs_haiku_experiment,
     create_cooperative_experiment,
-    create_simulated_experiment,
     create_scaling_study_experiment,
     agent_factory
 )
@@ -122,7 +120,6 @@ __all__ = [
     "BaseLLMAgent",
     "AnthropicAgent",
     "OpenAIAgent",
-    "SimulatedAgent",
     
     # Agent Factory components
     "AgentConfiguration",
@@ -130,7 +127,6 @@ __all__ = [
     "AgentFactory",
     "create_o3_vs_haiku_experiment",
     "create_cooperative_experiment", 
-    "create_simulated_experiment",
     "create_scaling_study_experiment",
     "agent_factory",
     
