@@ -1,0 +1,174 @@
+{
+  "run_index": 1,
+  "experiment_config": {
+    "num_agents": 4,
+    "num_items": 6,
+    "max_rounds": 15,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "gemini_pro_1",
+    "claude_3_5_sonnet_2",
+    "llama_3_1_405b_3",
+    "qwen_2_5_72b_4"
+  ],
+  "agent_models": {
+    "gemini_pro_1": "google/gemini-2.5-pro",
+    "claude_3_5_sonnet_2": "anthropic/claude-sonnet-4",
+    "llama_3_1_405b_3": "meta-llama/llama-3.1-405b-instruct",
+    "qwen_2_5_72b_4": "qwen/qwen3-235b-a22b-2507"
+  },
+  "initial_preferences_matrix": [
+    [
+      6.809999990373804,
+      5.2740520275377945,
+      9.329684518899413,
+      2.54689757694592,
+      0.5752972225540598,
+      2.8245080023845723
+    ],
+    [
+      6.7170242768730555,
+      6.411239053893999,
+      7.132257880061176,
+      5.132148310585519,
+      2.700730993086779,
+      2.3034407977385363
+    ],
+    [
+      6.897954574660343,
+      5.090617799626454,
+      7.25445082271892,
+      3.849591827661159,
+      3.200950968774204,
+      4.984131771756588
+    ],
+    [
+      8.009773855777855,
+      6.9068825274524706,
+      6.017397908186605,
+      4.0426239175306495,
+      0.798802322493226,
+      3.3134216686581546
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "gemini_pro_1": {
+      "item_0": 6.809999990373804,
+      "item_1": 5.2740520275377945,
+      "item_2": 9.329684518899413,
+      "item_3": 2.54689757694592,
+      "item_4": 0.5752972225540598,
+      "item_5": 2.8245080023845723
+    },
+    "claude_3_5_sonnet_2": {
+      "item_0": 6.7170242768730555,
+      "item_1": 6.411239053893999,
+      "item_2": 7.132257880061176,
+      "item_3": 5.132148310585519,
+      "item_4": 2.700730993086779,
+      "item_5": 2.3034407977385363
+    },
+    "llama_3_1_405b_3": {
+      "item_0": 6.897954574660343,
+      "item_1": 5.090617799626454,
+      "item_2": 7.25445082271892,
+      "item_3": 3.849591827661159,
+      "item_4": 3.200950968774204,
+      "item_5": 4.984131771756588
+    },
+    "qwen_2_5_72b_4": {
+      "item_0": 8.009773855777855,
+      "item_1": 6.9068825274524706,
+      "item_2": 6.017397908186605,
+      "item_3": 4.0426239175306495,
+      "item_4": 0.798802322493226,
+      "item_5": 3.3134216686581546
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.95,
+    "agent_0_vs_agent_2": 0.95,
+    "agent_0_vs_agent_3": 0.95,
+    "agent_1_vs_agent_2": 0.9691161507425144,
+    "agent_1_vs_agent_3": 0.9744809918967329,
+    "agent_2_vs_agent_3": 0.9583477487948261
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "gemini_pro_1": [
+        0,
+        1
+      ],
+      "claude_3_5_sonnet_2": [
+        2,
+        3
+      ],
+      "llama_3_1_405b_3": [
+        4
+      ],
+      "qwen_2_5_72b_4": [
+        5
+      ]
+    },
+    "final_utilities": {
+      "gemini_pro_1": 14.331882993345179,
+      "claude_3_5_sonnet_2": 6.338218411812292,
+      "llama_3_1_405b_3": 0.8455878139889426,
+      "qwen_2_5_72b_4": 8.567178294547531
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "gemini_pro_1",
+      "content": "Hello everyone. I have some initial interest in Item_1, Item_3, and Item_5, but my preferences are quite flexible. I'm open to discussing various package deals and am keen to hear what items are most important to the rest of you.",
+      "timestamp": 1755498762.4987662,
+      "speaker_order": 1,
+      "total_speakers": 4
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_3_5_sonnet_2",
+      "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my strategic objectives. I'd be open to exploring mutually beneficial arrangements where we could potentially bundle complementary items or create value through creative deal structures. What items are you most drawn to, and do you see any natural synergies between our interests?",
+      "timestamp": 1755498766.2039301,
+      "speaker_order": 2,
+      "total_speakers": 4
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_3",
+      "content": "I have a strong interest in Item_2 and Item_5, as they align with my long-term goals. I'd be open to negotiating a bundle deal for these two items, potentially offering concessions on Item_0 or Item_1 in exchange. A mutually beneficial agreement could be reached if the other parties are willing to collaborate.",
+      "timestamp": 1755498769.2315378,
+      "speaker_order": 3,
+      "total_speakers": 4
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_2_5_72b_4",
+      "content": "I'm particularly interested in Item_0 and Item_3\u2014they align closely with my current priorities. That said, I'm open to creative deals where I could trade one of these for another high-value item, especially if it helps reach a broader agreement. Item_1 and Item_5 seem less critical to me, so they could be bargaining chips.",
+      "timestamp": 1755498770.669078,
+      "speaker_order": 4,
+      "total_speakers": 4
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-17T23:33:58.578875",
+  "duration_seconds": 87.76504182815552,
+  "metrics": {
+    "mean_utility": 7.520716878423486,
+    "max_utility": 14.331882993345179,
+    "min_utility": 0.8455878139889426,
+    "utility_spread": 13.486295179356237
+  }
+}
