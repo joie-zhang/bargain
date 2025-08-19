@@ -16,6 +16,7 @@ from enum import Enum
 from .llm_agents import BaseLLMAgent, NegotiationContext
 from .preferences import BasePreferenceSystem
 from .utility_engine import UtilityEngine
+from .agent_experience_logger import ExperimentLogger, InteractionType
 
 
 @dataclass
@@ -53,7 +54,10 @@ class ModularNegotiationRunner:
                  items: List[str],
                  max_rounds: int = 10,
                  discount_factor: float = 0.9,
-                 log_level: str = "INFO"):
+                 log_level: str = "INFO",
+                 results_dir: Optional[str] = None,
+                 enable_agent_logging: bool = True,
+                 run_id: Optional[str] = None):
         """
         Initialize the negotiation runner.
         
@@ -64,6 +68,8 @@ class ModularNegotiationRunner:
             max_rounds: Maximum number of negotiation rounds
             discount_factor: Discount factor for utility per round
             log_level: Logging level
+            results_dir: Directory to save agent experience logs
+            enable_agent_logging: Whether to enable detailed agent experience logging
         """
         self.agents = agents
         self.items = items
@@ -107,6 +113,19 @@ class ModularNegotiationRunner:
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
+        
+        # Setup agent experience logging
+        self.enable_agent_logging = enable_agent_logging
+        self.experience_logger = None
+        if enable_agent_logging and results_dir:
+            import uuid
+            # Include run_id if provided to make unique experiment IDs per run
+            if run_id:
+                experiment_id = f"negotiation_{run_id}_{int(time.time())}_{str(uuid.uuid4())[:8]}"
+            else:
+                experiment_id = f"negotiation_{int(time.time())}_{str(uuid.uuid4())[:8]}"
+            agent_ids = [agent.agent_id for agent in self.agents]
+            self.experience_logger = ExperimentLogger(experiment_id, results_dir, agent_ids, run_id)
     
     async def run_negotiation(self) -> NegotiationOutcome:
         """
@@ -184,7 +203,62 @@ class ModularNegotiationRunner:
             strategic_metrics=self._analyze_strategic_behavior()
         )
         
+        # Log final outcomes to agent experience logs
+        if self.experience_logger:
+            final_outcome_data = {
+                "consensus_reached": consensus_reached,
+                "final_allocation": final_allocation,
+                "final_utilities": final_utilities,
+                "winner_agent_id": winner_agent_id,
+                "final_round": round_num
+            }
+            self.experience_logger.log_final_outcomes(final_outcome_data)
+        
         return outcome
+    
+    async def _log_agent_interaction(self, agent: BaseLLMAgent, interaction_type: InteractionType, 
+                                   round_num: int, prompt: str, context: NegotiationContext,
+                                   response: str, processed_response: Any = None,
+                                   response_time: float = 0.0, additional_context: Dict = None):
+        """Helper method to log agent interactions if logging is enabled."""
+        if not self.experience_logger:
+            return
+        
+        # Extract relevant context data with CORRECT preference mapping
+        # Get the correct agent preferences from the runner's preference data
+        correct_agent_prefs = []
+        if hasattr(self, 'preferences') and 'agent_preferences' in self.preferences:
+            correct_agent_prefs = self.preferences['agent_preferences'].get(agent.agent_id, [])
+        
+        context_data = {
+            "current_round": context.current_round,
+            "max_rounds": context.max_rounds,
+            "items": context.items if context.items else [],
+            "agent_preferences": correct_agent_prefs,  # Use the CORRECT preferences from the runner
+            "turn_type": context.turn_type if hasattr(context, 'turn_type') else "unknown",
+            "other_agents": [a for a in (context.agents or []) if a != agent.agent_id]
+        }
+        
+        # Add any additional context
+        if additional_context:
+            context_data.update(additional_context)
+        
+        # Get agent's logger and record interaction
+        agent_logger = self.experience_logger.get_logger(agent.agent_id)
+        agent_logger.log_interaction(
+            interaction_type=interaction_type,
+            round_number=round_num,
+            input_prompt=prompt,
+            context_data=context_data,
+            raw_response=response,
+            processed_response=processed_response or response,
+            response_time=response_time,
+            tokens_used=None,  # Could extract from agent response if available
+            model_used=getattr(agent, 'model_name', None),
+            other_agents=context_data["other_agents"],
+            current_proposals=additional_context.get("current_proposals") if additional_context else None,
+            previous_votes=additional_context.get("previous_votes") if additional_context else None
+        )
     
     async def _run_discussion_phase(self, round_num: int) -> List[Dict[str, Any]]:
         """Run the discussion phase where agents share information."""
@@ -223,7 +297,20 @@ class ModularNegotiationRunner:
             
             # Get response
             try:
+                start_time = time.time()
                 response = await agent.discuss(context, prompt)
+                response_time = time.time() - start_time
+                
+                # Log agent interaction
+                additional_context = {
+                    "speaker_order": i + 1,
+                    "total_speakers": len(self.agents),
+                    "previous_messages_this_round": current_round_messages
+                }
+                await self._log_agent_interaction(
+                    agent, InteractionType.DISCUSSION, round_num, prompt, 
+                    context, response, response, response_time, additional_context
+                )
                 
                 message = {
                     "phase": "discussion",
@@ -274,10 +361,22 @@ class ModularNegotiationRunner:
             prompt = self._create_proposal_prompt(round_num, round_discussion, prev_proposals)
             
             try:
+                start_time = time.time()
                 response = await agent.propose(context, prompt)
+                response_time = time.time() - start_time
                 
                 # Parse proposal from response
                 allocation = self._parse_proposal(response, agent.agent_id)
+                
+                # Log agent interaction
+                additional_context = {
+                    "round_discussion": round_discussion,
+                    "previous_proposals": prev_proposals
+                }
+                await self._log_agent_interaction(
+                    agent, InteractionType.PROPOSAL, round_num, prompt, 
+                    context, response, allocation, response_time, additional_context
+                )
                 
                 if allocation:
                     proposal = {
@@ -331,11 +430,24 @@ class ModularNegotiationRunner:
             prompt = self._create_voting_prompt(proposals_text, agent.agent_id, round_num, round_discussion)
             
             try:
+                start_time = time.time()
                 response = await agent.vote(context, prompt)
+                response_time = time.time() - start_time
                 
                 # Parse votes
                 agent_votes = self._parse_votes(response, len(proposals))
                 votes[agent.agent_id] = agent_votes
+                
+                # Log agent interaction
+                additional_context = {
+                    "current_proposals": proposals,
+                    "round_discussion": round_discussion,
+                    "proposals_text": proposals_text
+                }
+                await self._log_agent_interaction(
+                    agent, InteractionType.VOTING, round_num, prompt, 
+                    context, response, agent_votes, response_time, additional_context
+                )
                 
                 self.logger.info(f"    {agent.agent_id}: {agent_votes}")
                 
@@ -376,7 +488,20 @@ class ModularNegotiationRunner:
             prompt = self._create_reflection_prompt(round_num, round_discussion, round_proposals, round_votes)
             
             try:
+                start_time = time.time()
                 response = await agent.reflect(context, prompt)
+                response_time = time.time() - start_time
+                
+                # Log agent interaction
+                additional_context = {
+                    "round_discussion": round_discussion,
+                    "round_proposals": round_proposals,
+                    "round_votes": round_votes
+                }
+                await self._log_agent_interaction(
+                    agent, InteractionType.REFLECTION, round_num, prompt, 
+                    context, response, response, response_time, additional_context
+                )
                 
                 message = {
                     "phase": "reflection",
