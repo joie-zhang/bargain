@@ -153,6 +153,8 @@ class StrongModelsExperiment:
         self.all_interactions = []
         self.agent_interactions = {}  # agent_id -> list of interactions
         self.current_experiment_id = None
+        self.current_batch_id = None
+        self.current_run_number = None
         
     def _setup_logging(self) -> logging.Logger:
         """Set up logging configuration."""
@@ -183,8 +185,13 @@ class StrongModelsExperiment:
         Returns:
             ExperimentResults object with complete experiment data
         """
-        # Generate experiment ID
-        experiment_id = f"strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        # Generate experiment ID based on whether we're in batch mode
+        if hasattr(self, 'current_batch_id') and self.current_batch_id and hasattr(self, 'current_run_number') and self.current_run_number:
+            # In batch mode - use batch ID with run number
+            experiment_id = f"{self.current_batch_id}_run_{self.current_run_number}"
+        else:
+            # Single experiment mode
+            experiment_id = f"strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
         experiment_start_time = time.time()
         self.current_experiment_id = experiment_id
         
@@ -330,9 +337,16 @@ class StrongModelsExperiment:
         self._stream_save_json()
         
         # Also save the complete experiment results
-        exp_dir = self.results_dir / experiment_id
-        exp_dir.mkdir(parents=True, exist_ok=True)
-        experiment_results_file = exp_dir / "experiment_results.json"
+        if hasattr(self, 'current_batch_id') and self.current_batch_id and hasattr(self, 'current_run_number') and self.current_run_number:
+            # In batch mode - use batch directory with run-numbered file
+            exp_dir = self.results_dir / self.current_batch_id
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            experiment_results_file = exp_dir / f"run_{self.current_run_number}_experiment_results.json"
+        else:
+            # Single experiment mode
+            exp_dir = self.results_dir / experiment_id
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            experiment_results_file = exp_dir / "experiment_results.json"
         
         results = ExperimentResults(
             experiment_id=experiment_id,
@@ -354,9 +368,14 @@ class StrongModelsExperiment:
             json.dump(results.to_dict(), f, indent=2, default=str)
         
         self.logger.info(f"✅ Experiment results saved to: {exp_dir}")
-        self.logger.info(f"  - All interactions: all_interactions.json")
-        self.logger.info(f"  - Agent-specific: agent_*_interactions.json")
-        self.logger.info(f"  - Experiment results: experiment_results.json")
+        if hasattr(self, 'current_batch_id') and self.current_batch_id and hasattr(self, 'current_run_number') and self.current_run_number:
+            self.logger.info(f"  - All interactions: run_{self.current_run_number}_all_interactions.json")
+            self.logger.info(f"  - Agent-specific: agent_interactions/run_{self.current_run_number}_agent_*_interactions.json")
+            self.logger.info(f"  - Experiment results: run_{self.current_run_number}_experiment_results.json")
+        else:
+            self.logger.info(f"  - All interactions: all_interactions.json")
+            self.logger.info(f"  - Agent-specific: agent_*_interactions.json")
+            self.logger.info(f"  - Experiment results: experiment_results.json")
         
         return results
     
@@ -377,12 +396,20 @@ class StrongModelsExperiment:
         Returns:
             BatchResults object with aggregated statistics
         """
-        batch_id = f"batch_strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # Create batch ID and set up batch directory
+        batch_id = f"strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        self.current_batch_id = batch_id
         experiments = []
         
+        # Create batch directory
+        batch_dir = self.results_dir / batch_id
+        batch_dir.mkdir(parents=True, exist_ok=True)
+        
         self.logger.info(f"Starting batch experiment {batch_id} with {num_runs} runs")
+        self.logger.info(f"Batch directory: {batch_dir}")
         
         for i in range(num_runs):
+            self.current_run_number = i + 1
             self.logger.info(f"\n{'='*60}")
             self.logger.info(f"BATCH RUN {i+1}/{num_runs}")
             self.logger.info(f"{'='*60}")
@@ -391,8 +418,8 @@ class StrongModelsExperiment:
                 result = await self.run_single_experiment(models, experiment_config)
                 experiments.append(result)
                 
-                # Save intermediate result
-                self._save_experiment_result(result)
+                # Save intermediate result with run number
+                self._save_experiment_result_with_run_number(result, i + 1)
                 
             except Exception as e:
                 self.logger.error(f"Error in run {i+1}: {e}")
@@ -1290,24 +1317,49 @@ Remember: This thinking is completely private."""
         if not self.current_experiment_id:
             return
             
-        # Create experiment directory
-        exp_dir = self.results_dir / self.current_experiment_id
-        exp_dir.mkdir(parents=True, exist_ok=True)
+        # Determine the directory structure
+        if hasattr(self, 'current_batch_id') and self.current_batch_id and hasattr(self, 'current_run_number') and self.current_run_number:
+            # In batch mode - use batch directory with run-numbered files
+            exp_dir = self.results_dir / self.current_batch_id
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Create agent_interactions subdirectory
+            agent_interactions_dir = exp_dir / "agent_interactions"
+            agent_interactions_dir.mkdir(parents=True, exist_ok=True)
+            
+            # File names include run number
+            all_interactions_file = exp_dir / f"run_{self.current_run_number}_all_interactions.json"
+            
+            # Save agent-specific interactions in subdirectory
+            for agent_id, interactions in self.agent_interactions.items():
+                agent_file = agent_interactions_dir / f"run_{self.current_run_number}_agent_{agent_id}_interactions.json"
+                with open(agent_file, 'w') as f:
+                    json.dump({
+                        "agent_id": agent_id,
+                        "run_number": self.current_run_number,
+                        "batch_id": self.current_batch_id,
+                        "total_interactions": len(interactions),
+                        "interactions": interactions
+                    }, f, indent=2, default=str)
+        else:
+            # Single experiment mode - use original structure
+            exp_dir = self.results_dir / self.current_experiment_id
+            exp_dir.mkdir(parents=True, exist_ok=True)
+            all_interactions_file = exp_dir / "all_interactions.json"
+            
+            # Save agent-specific interactions
+            for agent_id, interactions in self.agent_interactions.items():
+                agent_file = exp_dir / f"agent_{agent_id}_interactions.json"
+                with open(agent_file, 'w') as f:
+                    json.dump({
+                        "agent_id": agent_id,
+                        "total_interactions": len(interactions),
+                        "interactions": interactions
+                    }, f, indent=2, default=str)
         
-        # Save all interactions
-        all_interactions_file = exp_dir / "all_interactions.json"
+        # Save all interactions file
         with open(all_interactions_file, 'w') as f:
             json.dump(self.all_interactions, f, indent=2, default=str)
-        
-        # Save agent-specific interactions
-        for agent_id, interactions in self.agent_interactions.items():
-            agent_file = exp_dir / f"agent_{agent_id}_interactions.json"
-            with open(agent_file, 'w') as f:
-                json.dump({
-                    "agent_id": agent_id,
-                    "total_interactions": len(interactions),
-                    "interactions": interactions
-                }, f, indent=2, default=str)
     
     def _aggregate_strategic_behaviors(self, experiments):
         """Aggregate strategic behaviors across experiments."""
@@ -1341,6 +1393,18 @@ Remember: This thinking is completely private."""
     def _save_experiment_result(self, result: ExperimentResults):
         """Save a single experiment result to file."""
         filename = self.results_dir / f"{result.experiment_id}.json"
+        with open(filename, 'w') as f:
+            json.dump(result.to_dict(), f, indent=2)
+        self.logger.info(f"Saved experiment result to {filename}")
+        
+    def _save_experiment_result_with_run_number(self, result: ExperimentResults, run_number: int):
+        """Save experiment result with run number in batch mode."""
+        if hasattr(self, 'current_batch_id') and self.current_batch_id:
+            batch_dir = self.results_dir / self.current_batch_id
+            filename = batch_dir / f"run_{run_number}_experiment_summary.json"
+        else:
+            filename = self.results_dir / f"{result.experiment_id}.json"
+        
         with open(filename, 'w') as f:
             json.dump(result.to_dict(), f, indent=2)
         self.logger.info(f"Saved experiment result to {filename}")
