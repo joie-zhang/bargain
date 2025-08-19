@@ -761,17 +761,24 @@ class StrongModelsExperiment:
             try:
                 # Vote on each proposal
                 for enum_proposal in enumerated_proposals:
+                    # Create proposal dict for vote_on_proposal
+                    proposal_for_voting = {
+                        "allocation": enum_proposal["allocation"],
+                        "proposed_by": enum_proposal["proposer"],
+                        "reasoning": enum_proposal.get("reasoning", ""),
+                        "round": round_num
+                    }
+                    
                     vote_result = await agent.vote_on_proposal(
                         voting_context,
-                        enum_proposal["allocation"],
-                        enum_proposal["proposer"]
+                        proposal_for_voting
                     )
                     
                     vote_entry = {
                         "voter_id": agent.agent_id,
                         "proposal_number": enum_proposal["proposal_number"],
-                        "vote": "accept" if vote_result else "reject",
-                        "reasoning": "Strategic voting decision",
+                        "vote": vote_result.get("vote", "reject"),
+                        "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
                         "round": round_num,
                         "timestamp": time.time()
                     }
