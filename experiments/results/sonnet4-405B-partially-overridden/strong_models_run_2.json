@@ -1,0 +1,109 @@
+{
+  "run_index": 2,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "claude_3_5_sonnet_1",
+    "llama_3_1_405b_2"
+  ],
+  "agent_models": {
+    "claude_3_5_sonnet_1": "anthropic/claude-sonnet-4",
+    "llama_3_1_405b_2": "meta-llama/llama-3.1-405b-instruct"
+  },
+  "initial_preferences_matrix": [
+    [
+      8.437496551617915,
+      0.389527528101542,
+      8.297921284195294,
+      1.8541781675629376,
+      8.842637985199493,
+      7.845004968367587
+    ],
+    [
+      9.155946496819409,
+      2.4093115053594714,
+      10.0,
+      4.279638645835451,
+      5.6980824002761,
+      5.936548071956539
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "claude_3_5_sonnet_1": {
+      "item_0": 8.437496551617915,
+      "item_1": 0.389527528101542,
+      "item_2": 8.297921284195294,
+      "item_3": 1.8541781675629376,
+      "item_4": 8.842637985199493,
+      "item_5": 7.845004968367587
+    },
+    "llama_3_1_405b_2": {
+      "item_0": 9.155946496819409,
+      "item_1": 2.4093115053594714,
+      "item_2": 10.0,
+      "item_3": 4.279638645835451,
+      "item_4": 5.6980824002761,
+      "item_5": 5.936548071956539
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9519610816179113
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "claude_3_5_sonnet_1": [
+        0,
+        1,
+        3
+      ],
+      "llama_3_1_405b_2": [
+        2,
+        4,
+        5
+      ]
+    },
+    "final_utilities": {
+      "claude_3_5_sonnet_1": 7.967431758943951,
+      "llama_3_1_405b_2": 15.058622179174002
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_3_5_sonnet_1",
+      "content": "I'm particularly interested in Items 2, 4, and 5, as they align well with my current priorities and would provide significant value to me. I'd be open to trading away Items 0 and 1, which are less critical for my needs, in exchange for securing at least two of my preferred items. Perhaps we could explore a deal where I get Items 2 and 4, while you take Items 1, 3, and 5, with Item 0 going to whoever values it more?",
+      "timestamp": 1755496918.020185,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "llama_3_1_405b_2",
+      "content": "I have a strong interest in Item_2 and Item_5, as I believe they hold significant value. I'm open to negotiating a bundle deal for these two items, potentially offering concessions on Item_0 or Item_1 in exchange. A mutually beneficial agreement could be reached if we prioritize creative trade-offs.",
+      "timestamp": 1755496921.264481,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-17T23:02:24.105436",
+  "duration_seconds": 31.259162664413452,
+  "metrics": {
+    "mean_utility": 11.513026969058977,
+    "max_utility": 15.058622179174002,
+    "min_utility": 7.967431758943951,
+    "utility_spread": 7.091190420230051
+  }
+}
