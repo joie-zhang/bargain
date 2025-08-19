@@ -491,7 +491,7 @@ Your proposal:"""
         
         return f"""Round {round_num} - Voting Phase
 
-Review these proposals and decide whether to accept each one:
+You are Agent {agent_id}. Review these proposals and decide whether to accept each one:
 
 {proposals_text}
 {your_stated_interests}{urgency}
@@ -500,6 +500,7 @@ Voting considerations:
 - Is it better than likely alternatives in remaining rounds?
 - Remember: ALL agents must approve for consensus
 - No deal means everyone gets utility 0
+- Note: If a proposal was made by you (Agent {agent_id}), consider whether you still support it
 
 For EACH proposal, vote yes/no with brief reasoning:
 Proposal 1: [yes/no] - [reason]
@@ -591,8 +592,9 @@ Brief strategic reflection (2-3 sentences):"""
         """Format proposals for voting prompt."""
         lines = []
         for i, prop in enumerate(proposals, 1):
-            lines.append(f"Proposal {i} (by {prop['agent_id']}):")
+            lines.append(f"Proposal {i} (proposed by Agent {prop['agent_id']}):")
             lines.append(f"  Allocation: {prop['allocation']}")
+            lines.append("")  # Add blank line for readability
         return "\n".join(lines)
     
     def _parse_votes(self, response: str, num_proposals: int) -> Dict[int, bool]:
