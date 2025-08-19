@@ -68,7 +68,7 @@ class OpenRouterAgent(BaseLLMAgent):
         super().__init__(agent_id, llm_config)
         self.llm_config = llm_config
         
-        self.config = OpenRouterConfig(api_key=api_key)
+        self.openrouter_config = OpenRouterConfig(api_key=api_key)
         self.session: Optional[aiohttp.ClientSession] = None
         
         # Initialize message history (required by BaseLLMAgent)
@@ -102,10 +102,10 @@ class OpenRouterAgent(BaseLLMAgent):
         await self._ensure_session()
         
         headers = {
-            "Authorization": f"Bearer {self.config.api_key}",
+            "Authorization": f"Bearer {self.openrouter_config.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": self.config.site_url or "",
-            "X-Title": self.config.site_name or ""
+            "HTTP-Referer": self.openrouter_config.site_url or "",
+            "X-Title": self.openrouter_config.site_name or ""
         }
         
         # Prepare request payload
@@ -120,15 +120,15 @@ class OpenRouterAgent(BaseLLMAgent):
         if self.llm_config.custom_parameters:
             payload.update(self.llm_config.custom_parameters)
         
-        url = f"{self.config.base_url}/chat/completions"
+        url = f"{self.openrouter_config.base_url}/chat/completions"
         
-        for attempt in range(self.config.max_retries):
+        for attempt in range(self.openrouter_config.max_retries):
             try:
                 async with self.session.post(
                     url,
                     headers=headers,
                     json=payload,
-                    timeout=aiohttp.ClientTimeout(total=self.config.timeout)
+                    timeout=aiohttp.ClientTimeout(total=self.openrouter_config.timeout)
                 ) as response:
                     if response.status == 200:
                         data = await response.json()
@@ -138,28 +138,28 @@ class OpenRouterAgent(BaseLLMAgent):
                         self.logger.error(f"OpenRouter API error: {response.status} - {error_text}")
                         
                         if response.status == 429:  # Rate limit
-                            await asyncio.sleep(self.config.retry_delay * (attempt + 1))
+                            await asyncio.sleep(self.openrouter_config.retry_delay * (attempt + 1))
                             continue
                         elif response.status >= 500:  # Server error
-                            await asyncio.sleep(self.config.retry_delay)
+                            await asyncio.sleep(self.openrouter_config.retry_delay)
                             continue
                         else:
                             raise Exception(f"OpenRouter API error: {response.status} - {error_text}")
                             
             except asyncio.TimeoutError:
-                self.logger.warning(f"Request timeout (attempt {attempt + 1}/{self.config.max_retries})")
-                if attempt < self.config.max_retries - 1:
-                    await asyncio.sleep(self.config.retry_delay)
+                self.logger.warning(f"Request timeout (attempt {attempt + 1}/{self.openrouter_config.max_retries})")
+                if attempt < self.openrouter_config.max_retries - 1:
+                    await asyncio.sleep(self.openrouter_config.retry_delay)
                 else:
                     raise
             except Exception as e:
                 self.logger.error(f"Request failed: {e}")
-                if attempt < self.config.max_retries - 1:
-                    await asyncio.sleep(self.config.retry_delay)
+                if attempt < self.openrouter_config.max_retries - 1:
+                    await asyncio.sleep(self.openrouter_config.retry_delay)
                 else:
                     raise
         
-        raise Exception(f"Failed after {self.config.max_retries} attempts")
+        raise Exception(f"Failed after {self.openrouter_config.max_retries} attempts")
     
     async def discuss(self, context: Any, prompt: str) -> str:
         """Participate in discussion phase."""
