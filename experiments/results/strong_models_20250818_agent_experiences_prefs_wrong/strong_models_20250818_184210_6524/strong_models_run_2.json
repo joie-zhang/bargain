@@ -1,0 +1,141 @@
+{
+  "run_index": 2,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "qwen_3_235b_a22b_2507_1",
+    "claude_4_sonnet_2"
+  ],
+  "agent_models": {
+    "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+    "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+  },
+  "initial_preferences_matrix": [
+    [
+      1.527482970994497,
+      6.536843740935145,
+      4.900200711214798,
+      2.6252153459262138,
+      8.411263489826426,
+      9.250714439793535
+    ],
+    [
+      2.5188145964078013,
+      9.231748544910085,
+      3.9481157204948096,
+      3.546560094817039,
+      4.780823625055145,
+      9.471047203697728
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "qwen_3_235b_a22b_2507_1": {
+      "item_0": 1.527482970994497,
+      "item_1": 6.536843740935145,
+      "item_2": 4.900200711214798,
+      "item_3": 2.6252153459262138,
+      "item_4": 8.411263489826426,
+      "item_5": 9.250714439793535
+    },
+    "claude_4_sonnet_2": {
+      "item_0": 2.5188145964078013,
+      "item_1": 9.231748544910085,
+      "item_2": 3.9481157204948096,
+      "item_3": 3.546560094817039,
+      "item_4": 4.780823625055145,
+      "item_5": 9.471047203697728
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.95
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 2,
+    "final_allocation": {
+      "qwen_3_235b_a22b_2507_1": [
+        0,
+        2,
+        4
+      ],
+      "claude_4_sonnet_2": [
+        1,
+        3,
+        5
+      ]
+    },
+    "final_utilities": {
+      "qwen_3_235b_a22b_2507_1": 11.088189880704109,
+      "claude_4_sonnet_2": 13.15643132416769
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "I'm particularly interested in securing Item_0 and Item_2, as they hold the highest value for me\u2014especially Item_0, which is critical for my objectives. That said, I'm open to trading Item_1 or Item_3 in exchange for stronger consideration on Item_0. I\u2019d like to understand your priorities to explore efficient, mutually beneficial exchanges early on, before time pressure mounts.",
+      "timestamp": 1755568486.999653,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "I appreciate your openness about Item_0 and Item_2. I'm most interested in Item_1 and Item_4, which seem to complement different strategic priorities than yours. Perhaps we can explore a trade where you focus on your preferred items while I secure mine, potentially leaving Items_3 and Item_5 for creative allocation based on our relative valuations.",
+      "timestamp": 1755568491.671849,
+      "speaker_order": 2,
+      "total_speakers": 2
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "My initial proposal clearly signaled my priorities, which helped clarify the negotiation space, but offering Item_5\u2014a non-core item\u2014was likely seen as insufficient by Claude, who may value Item_3 highly. I learned that Claude prioritizes Item_1 and Item_4, and possibly Item_3, making Item_2 or Item_0 potential trade leverage. In the next round, I should explore bundling lower-value items or proposing a side concession on Item_5 to incentivize agreement without sacrificing core value.",
+      "timestamp": 1755568510.019947
+    },
+    {
+      "phase": "reflection",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "Looking at Round 1, I successfully identified that qwen and I have complementary preferences - they want Items 0 and 2, while I want Items 1 and 4. However, my proposal to give them Item 5 as well (which they may not value highly) while keeping Item 3 for myself likely seemed unbalanced to them.\n\nFor Round 2, I should focus on creating a more equitable split that addresses both our core interests. Since we both got our top priorities in their initial proposal (Items 0,2 for them; Items 1,4 for me), I need to find a fair way to allocate the remaining items (3 and 5) or consider if a 2-2 split might work better than trying to claim 3 items each.\n\nThe key insight is that qwen values Items 0 and 2 most highly, so I should ensure they get those while securing my priorities of Items 1 and 4, then negotiate fairly on the remaining items.",
+      "timestamp": 1755568518.240245
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "I'm primarily focused on securing Item_0 and Item_2\u2014these are my highest priorities for value. That said, I'm open to creative bundles, especially if Item_1 or Item_3 are included to balance the distribution. Let\u2019s explore trades that maximize mutual gain before time discounts erode our options.",
+      "timestamp": 1755568521.0987499,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 2,
+      "from": "claude_4_sonnet_2",
+      "content": "I appreciate your directness about Item_0 and Item_2. My core interests actually center on Item_1 and Item_4, which seem to complement rather than conflict with your priorities. Perhaps we can explore a mutually beneficial arrangement where you secure your high-priority items while I focus on mine, leaving us to negotiate the remaining items based on our secondary preferences.",
+      "timestamp": 1755568525.137735,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T18:55:46.376632",
+  "duration_seconds": 62.09365510940552,
+  "metrics": {
+    "mean_utility": 12.122310602435899,
+    "max_utility": 13.15643132416769,
+    "min_utility": 11.088189880704109,
+    "utility_spread": 2.068241443463581
+  }
+}

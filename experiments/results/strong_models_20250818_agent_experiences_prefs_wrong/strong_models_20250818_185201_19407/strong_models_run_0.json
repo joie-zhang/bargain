@@ -1,0 +1,109 @@
+{
+  "run_index": 0,
+  "experiment_config": {
+    "num_agents": 2,
+    "num_items": 6,
+    "max_rounds": 10,
+    "competition_level": 0.95,
+    "discount_factor": 0.9
+  },
+  "agents": [
+    "qwen_3_235b_a22b_2507_1",
+    "claude_4_sonnet_2"
+  ],
+  "agent_models": {
+    "qwen_3_235b_a22b_2507_1": "qwen/qwen3-235b-a22b-2507",
+    "claude_4_sonnet_2": "anthropic/claude-sonnet-4"
+  },
+  "initial_preferences_matrix": [
+    [
+      4.117343352388662,
+      7.456765104040417,
+      2.5908901937529736,
+      9.551095892592505,
+      5.368125439667497,
+      3.445601461840516
+    ],
+    [
+      5.956950093500919,
+      6.854861148671251,
+      5.145450938400722,
+      6.544849821163081,
+      6.35753080106282,
+      4.3563343308528015
+    ]
+  ],
+  "initial_preferences_by_agent": {
+    "qwen_3_235b_a22b_2507_1": {
+      "item_0": 4.117343352388662,
+      "item_1": 7.456765104040417,
+      "item_2": 2.5908901937529736,
+      "item_3": 9.551095892592505,
+      "item_4": 5.368125439667497,
+      "item_5": 3.445601461840516
+    },
+    "claude_4_sonnet_2": {
+      "item_0": 5.956950093500919,
+      "item_1": 6.854861148671251,
+      "item_2": 5.145450938400722,
+      "item_3": 6.544849821163081,
+      "item_4": 6.35753080106282,
+      "item_5": 4.3563343308528015
+    }
+  },
+  "preference_cosine_similarities": {
+    "agent_0_vs_agent_1": 0.9499999999999997
+  },
+  "negotiation_outcome": {
+    "consensus_reached": true,
+    "final_round": 1,
+    "final_allocation": {
+      "qwen_3_235b_a22b_2507_1": [
+        0,
+        2,
+        4
+      ],
+      "claude_4_sonnet_2": [
+        1,
+        3,
+        5
+      ]
+    },
+    "final_utilities": {
+      "qwen_3_235b_a22b_2507_1": 4.631330472062357,
+      "claude_4_sonnet_2": 14.547996260837895
+    },
+    "utility_realized": null
+  },
+  "complete_conversation_log": [
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "qwen_3_235b_a22b_2507_1",
+      "content": "I'm particularly interested in securing Item_0 and Item_2\u2014they hold the highest value for me, especially Item_0, which I'd prioritize above all. I\u2019m open to trading Item_1 or Item_3 in exchange for stronger alignment on my key items, but I may adjust my stance depending on how others value these. Let\u2019s explore bundles that reflect mutual gains, especially around Items_1 and _4, which might be lower priority for me but could add value to the right package.",
+      "timestamp": 1755568323.919893,
+      "speaker_order": 1,
+      "total_speakers": 2
+    },
+    {
+      "phase": "discussion",
+      "round": 1,
+      "from": "claude_4_sonnet_2",
+      "content": "I appreciate your interest in Items 0 and 2. I'm actually most focused on Items 1, 3, and 5, which seem to complement different strategic priorities than yours. Perhaps we can find a mutually beneficial arrangement where you get your high-priority items and I secure mine - this could create value for both of us rather than competing directly.",
+      "timestamp": 1755568327.864654,
+      "speaker_order": 2,
+      "total_speakers": 2
+    }
+  ],
+  "all_proposals": [],
+  "all_votes": [],
+  "round_summaries": [],
+  "timestamp": "2025-08-18T18:52:25.914794",
+  "duration_seconds": 23.93135094642639,
+  "metrics": {
+    "mean_utility": 9.589663366450125,
+    "max_utility": 14.547996260837895,
+    "min_utility": 4.631330472062357,
+    "utility_spread": 9.916665788775537
+  }
+}
