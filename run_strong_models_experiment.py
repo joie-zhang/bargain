@@ -504,9 +504,9 @@ class StrongModelsExperiment:
         
         game_rules_prompt = self._create_game_rules_prompt(items, len(agents), config)
         
-        # Print the game rules prompt
+        # Print the FULL game rules prompt
         self.logger.info("📜 GAME RULES PROMPT:")
-        self.logger.info(f"  {game_rules_prompt[:500]}..." if len(game_rules_prompt) > 500 else f"  {game_rules_prompt}")
+        self.logger.info(f"  {game_rules_prompt}")
         
         for agent in agents:
             context = NegotiationContext(
@@ -521,9 +521,9 @@ class StrongModelsExperiment:
             
             response = await agent.discuss(context, game_rules_prompt)
             
-            # Log and save the interaction
+            # Log and save the FULL interaction
             self.logger.info(f"  📬 {agent.agent_id} response:")
-            self.logger.info(f"    {response[:300]}..." if len(response) > 300 else f"    {response}")
+            self.logger.info(f"    {response}")
             self._save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response, 0)
         
         self.logger.info("Game setup phase completed - all agents briefed on rules")
@@ -556,9 +556,9 @@ class StrongModelsExperiment:
             
             response = await agent.discuss(context, preference_prompt)
             
-            # Log and save the interaction
+            # Log and save the FULL interaction
             self.logger.info(f"  📬 {agent.agent_id} acknowledgment:")
-            self.logger.info(f"    {response[:300]}..." if len(response) > 300 else f"    {response}")
+            self.logger.info(f"    {response}")
             self._save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response, 0)
         
         self.logger.info("Private preference assignment completed")
