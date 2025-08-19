@@ -404,6 +404,10 @@ class StrongModelsExperiment:
         
         factory = AgentFactory()
         
+        # If only one model specified, create 3 agents of that model for negotiation
+        if len(models) == 1:
+            models = models * 3
+        
         for i, model_name in enumerate(models):
             if model_name not in STRONG_MODELS_CONFIG:
                 self.logger.warning(f"Unknown model: {model_name}, skipping")
