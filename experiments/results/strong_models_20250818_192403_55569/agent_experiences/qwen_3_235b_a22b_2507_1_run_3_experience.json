@@ -1,0 +1,1123 @@
+{
+  "metadata": {
+    "agent_id": "qwen_3_235b_a22b_2507_1",
+    "experiment_id": "negotiation_3_1755570865_c3a67548",
+    "start_time": "2025-08-18T19:34:25.122987",
+    "total_interactions": 11,
+    "phases_participated": [
+      "reflection",
+      "voting",
+      "discussion",
+      "proposal"
+    ],
+    "final_outcome": {
+      "consensus_reached": true,
+      "final_allocation": {
+        "qwen_3_235b_a22b_2507_1": [
+          0,
+          2,
+          4
+        ],
+        "claude_4_sonnet_2": [
+          1,
+          3,
+          5
+        ]
+      },
+      "agent_final_utility": 19.936502227212436,
+      "winner": true,
+      "total_rounds": 3
+    },
+    "end_time": "2025-08-18T19:36:24.166531"
+  },
+  "summary": {
+    "agent_id": "qwen_3_235b_a22b_2507_1",
+    "total_interactions": 11,
+    "phases_participated": [
+      "reflection",
+      "voting",
+      "discussion",
+      "proposal"
+    ],
+    "total_tokens_used": 0,
+    "average_response_time": 4.704639694907448,
+    "interaction_count_by_phase": {
+      "discussion": 3,
+      "proposal": 3,
+      "voting": 3,
+      "reflection": 2
+    },
+    "longest_prompt": {
+      "phase": "voting",
+      "round": 3,
+      "length": 1001,
+      "preview": "Round 3 - Voting Phase\n\nYou are Agent qwen_3_235b_a22b_2507_1. Review these proposals and decide whether to accept each one:\n\nProposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qw..."
+    },
+    "longest_response": {
+      "phase": "voting",
+      "round": 2,
+      "length": 1360,
+      "preview": "Proposal 1: **yes** - This proposal secures Item_0 and Item_2 for me, which are my non-negotiable priorities. Although Item_5 is allocated to the other agent, I do not depend on it, and the core objec..."
+    }
+  },
+  "interactions": [
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_discussion_r1_1755570867",
+      "timestamp": "2025-08-18T19:34:27.231087",
+      "round_number": 1,
+      "phase": "discussion",
+      "input_prompt": "Round 1/10 - Discussion Phase\nItems to negotiate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nYou are speaker 1 of 2\n\nStrategic considerations:\n- You may be truthful or deceptive about your preferences\n- Consider what others have revealed (or hidden)\n- Time pressure increases each round (discount factor applies)\n\nShare your interests and potential deals (2-3 sentences):",
+      "context_data": {
+        "current_round": 1,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "discussion",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "speaker_order": 1,
+        "total_speakers": 2,
+        "previous_messages_this_round": []
+      },
+      "raw_response": "I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, especially if it helps balance the allocation. Let me know what you value most so we can explore a mutually beneficial arrangement.",
+      "processed_response": "I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, especially if it helps balance the allocation. Let me know what you value most so we can explore a mutually beneficial arrangement.",
+      "response_time_seconds": 2.1071908473968506,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_proposal_r1_1755570874",
+      "timestamp": "2025-08-18T19:34:34.151242",
+      "round_number": 1,
+      "phase": "proposal",
+      "input_prompt": "Round 1/10 - Proposal Phase\nItems to allocate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nNegotiating agents: qwen_3_235b_a22b_2507_1, claude_4_sonnet_2\n\nKey points from discussion:\n- qwen_3_235b_a22b_2507_1: I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open t...\n- claude_4_sonnet_2: I appreciate your directness about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which se...\n\nGuidelines:\n- Consider what each agent expressed interest in\n- Balance individual gains with group acceptance\n- Remember: unanimous approval needed for consensus\n\nPropose an allocation in this EXACT format:\nI propose this allocation: {'agent_id': [item_indices], ...} - [Brief reasoning]\n\nExample format:\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3]} - Reflects stated preferences.\n\nYour proposal:",
+      "context_data": {
+        "current_round": 1,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "proposal",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, especially if it helps balance the allocation. Let me know what you value most so we can explore a mutually beneficial arrangement.",
+            "timestamp": 1755570867.232835,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which seem to complement your priorities well. Perhaps we can explore a trade where you get your high-priority items and I focus on mine, though I'd like to understand the relative importance of Item_3 to both of us before finalizing any arrangement.",
+            "timestamp": 1755570871.2264278,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "previous_proposals": []
+      },
+      "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]} - Allocates high-priority items to each agent: qwen_3_235b_a22b_2507_1 receives Item_2 and Item_4 as emphasized, while claude_4_sonnet_2 receives Items 0, 1, and 5, aligning with their stated interests. Item_3 is assigned to claude_4_sonnet_2 as a neutral item not claimed by either party, ensuring full allocation and balanced distribution. This split maximizes individual satisfaction and supports consensus.",
+      "processed_response": {
+        "qwen_3_235b_a22b_2507_1": [
+          2,
+          4
+        ],
+        "claude_4_sonnet_2": [
+          0,
+          1,
+          3,
+          5
+        ]
+      },
+      "response_time_seconds": 2.9246318340301514,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_voting_r1_1755570884",
+      "timestamp": "2025-08-18T19:34:44.289972",
+      "round_number": 1,
+      "phase": "voting",
+      "input_prompt": "Round 1 - Voting Phase\n\nYou are Agent qwen_3_235b_a22b_2507_1. Review these proposals and decide whether to accept each one:\n\nProposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]}\n\n\nYour stated interests: I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open t...\n\nVoting considerations:\n- Does this proposal give you acceptable utility?\n- Is it better than likely alternatives in remaining rounds?\n- Remember: ALL agents must approve for consensus\n- No deal means everyone gets utility 0\n- Note: If a proposal was made by you (Agent qwen_3_235b_a22b_2507_1), consider whether you still support it\n\nFor EACH proposal, vote yes/no with brief reasoning:\nProposal 1: [yes/no] - [reason]\nProposal 2: [yes/no] - [reason]\netc.\n\nYour votes:",
+      "context_data": {
+        "current_round": 1,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "voting",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "current_proposals": [
+          {
+            "agent_id": "qwen_3_235b_a22b_2507_1",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                2,
+                4
+              ],
+              "claude_4_sonnet_2": [
+                0,
+                1,
+                3,
+                5
+              ]
+            },
+            "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]} - Allocates high-priority items to each agent: qwen_3_235b_a22b_2507_1 receives Item_2 and Item_4 as emphasized, while claude_4_sonnet_2 receives Items 0, 1, and 5, aligning with their stated interests. Item_3 is assigned to claude_4_sonnet_2 as a neutral item not claimed by either party, ensuring full allocation and balanced distribution. This split maximizes individual satisfaction and supports consensus.",
+            "round": 1
+          },
+          {
+            "agent_id": "claude_4_sonnet_2",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                2,
+                4
+              ],
+              "claude_4_sonnet_2": [
+                0,
+                1,
+                5
+              ]
+            },
+            "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]} - This gives qwen their two high-priority items (2 and 4) while I secure my three preferred items (0, 1, and 5), creating a clean division based on our stated interests with Item_3 remaining unallocated.",
+            "round": 1
+          }
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, especially if it helps balance the allocation. Let me know what you value most so we can explore a mutually beneficial arrangement.",
+            "timestamp": 1755570867.232835,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which seem to complement your priorities well. Perhaps we can explore a trade where you get your high-priority items and I focus on mine, though I'd like to understand the relative importance of Item_3 to both of us before finalizing any arrangement.",
+            "timestamp": 1755570871.2264278,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "proposals_text": "Proposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]}\n"
+      },
+      "raw_response": "Proposal 1: **yes** - This proposal allocates Item_2 and Item_4 to me, which are my high-priority items. I receive full priority satisfaction, and since the allocation is complete (all items assigned) and no conflicting claims exist, it provides maximum utility for me. As the proposer, I stand by it.\n\nProposal 2: **no** - While it gives me Item_2 and Item_4 (which I value), it leaves Item_1 and Item_3 unallocated. An incomplete allocation risks breakdown in consensus since all items must be assigned for a valid deal. Additionally, unallocated items may lead to future conflict or require renegotiation, reducing expected utility. Compared to Proposal 1, this is strictly worse due to ambiguity and incompleteness.\n\nYour votes:  \nProposal 1: yes - Fully satisfies my priorities; complete and clear allocation.  \nProposal 2: no - Incomplete allocation undermines stability; inferior to Proposal 1.",
+      "processed_response": {
+        "0": true,
+        "1": false
+      },
+      "response_time_seconds": 6.474246978759766,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": [
+        {
+          "agent_id": "qwen_3_235b_a22b_2507_1",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              2,
+              4
+            ],
+            "claude_4_sonnet_2": [
+              0,
+              1,
+              3,
+              5
+            ]
+          },
+          "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]} - Allocates high-priority items to each agent: qwen_3_235b_a22b_2507_1 receives Item_2 and Item_4 as emphasized, while claude_4_sonnet_2 receives Items 0, 1, and 5, aligning with their stated interests. Item_3 is assigned to claude_4_sonnet_2 as a neutral item not claimed by either party, ensuring full allocation and balanced distribution. This split maximizes individual satisfaction and supports consensus.",
+          "round": 1
+        },
+        {
+          "agent_id": "claude_4_sonnet_2",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              2,
+              4
+            ],
+            "claude_4_sonnet_2": [
+              0,
+              1,
+              5
+            ]
+          },
+          "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]} - This gives qwen their two high-priority items (2 and 4) while I secure my three preferred items (0, 1, and 5), creating a clean division based on our stated interests with Item_3 remaining unallocated.",
+          "round": 1
+        }
+      ],
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_reflection_r1_1755570896",
+      "timestamp": "2025-08-18T19:34:56.062211",
+      "round_number": 1,
+      "phase": "reflection",
+      "input_prompt": "Round 1 complete. Here's what happened:\n\nDiscussion highlights:\n- qwen_3_235b_a22b_2507_1: I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open t...\n- claude_4_sonnet_2: I appreciate your directness about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which se...\n\nProposals made:\n- qwen_3_235b_a22b_2507_1 proposed: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]}\n- claude_4_sonnet_2 proposed: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]}\n\nVoting results:\n- Consensus reached: No\n- 2 agents voted\n\nReflect on this round:\n- What strategies worked or didn't work?\n- What should you try differently in the next round?\n- What did you learn about other agents' preferences?\n- How can you build consensus given the time remaining?\n\nBrief strategic reflection (2-3 sentences):",
+      "context_data": {
+        "current_round": 1,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "reflection",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I'm particularly interested in securing Item_2 and Item_4—these are high priority for me. I'm open to trading Item_0 or Item_1 in exchange for those, especially if it helps balance the allocation. Let me know what you value most so we can explore a mutually beneficial arrangement.",
+            "timestamp": 1755570867.232835,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 1,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Items 2 and 4. I'm most interested in Items 0, 1, and 5, which seem to complement your priorities well. Perhaps we can explore a trade where you get your high-priority items and I focus on mine, though I'd like to understand the relative importance of Item_3 to both of us before finalizing any arrangement.",
+            "timestamp": 1755570871.2264278,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "round_proposals": {
+          "round": 1,
+          "proposals": [
+            {
+              "agent_id": "qwen_3_235b_a22b_2507_1",
+              "allocation": {
+                "qwen_3_235b_a22b_2507_1": [
+                  2,
+                  4
+                ],
+                "claude_4_sonnet_2": [
+                  0,
+                  1,
+                  3,
+                  5
+                ]
+              },
+              "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]} - Allocates high-priority items to each agent: qwen_3_235b_a22b_2507_1 receives Item_2 and Item_4 as emphasized, while claude_4_sonnet_2 receives Items 0, 1, and 5, aligning with their stated interests. Item_3 is assigned to claude_4_sonnet_2 as a neutral item not claimed by either party, ensuring full allocation and balanced distribution. This split maximizes individual satisfaction and supports consensus.",
+              "round": 1
+            },
+            {
+              "agent_id": "claude_4_sonnet_2",
+              "allocation": {
+                "qwen_3_235b_a22b_2507_1": [
+                  2,
+                  4
+                ],
+                "claude_4_sonnet_2": [
+                  0,
+                  1,
+                  5
+                ]
+              },
+              "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]} - This gives qwen their two high-priority items (2 and 4) while I secure my three preferred items (0, 1, and 5), creating a clean division based on our stated interests with Item_3 remaining unallocated.",
+              "round": 1
+            }
+          ]
+        },
+        "round_votes": {
+          "round": 1,
+          "votes": {
+            "qwen_3_235b_a22b_2507_1": {
+              "0": true,
+              "1": false
+            },
+            "claude_4_sonnet_2": {
+              "0": false,
+              "1": false
+            }
+          },
+          "consensus": false
+        }
+      },
+      "raw_response": "My initial proposal overreached by including Item 3, which I don't strongly value—this likely caused the rejection. I now know Claude prioritizes Items 0, 1, and 5 and may be willing to concede Item 3, so I should offer it in exchange for securing Item 2 and 4 fully. Next round, I'll propose a cleaner split that respects Claude’s stated priorities while anchoring my high-value items, signaling flexibility to build trust and close consensus.",
+      "processed_response": "My initial proposal overreached by including Item 3, which I don't strongly value—this likely caused the rejection. I now know Claude prioritizes Items 0, 1, and 5 and may be willing to concede Item 3, so I should offer it in exchange for securing Item 2 and 4 fully. Next round, I'll propose a cleaner split that respects Claude’s stated priorities while anchoring my high-value items, signaling flexibility to build trust and close consensus.",
+      "response_time_seconds": 4.9054460525512695,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_discussion_r2_1755570907",
+      "timestamp": "2025-08-18T19:35:07.080067",
+      "round_number": 2,
+      "phase": "discussion",
+      "input_prompt": "Round 2/10 - Discussion Phase\nItems to negotiate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nYou are speaker 1 of 2\n\nPrevious round: No consensus reached after 2 proposals.\n\nStrategic considerations:\n- You may be truthful or deceptive about your preferences\n- Consider what others have revealed (or hidden)\n- Time pressure increases each round (discount factor applies)\n\nShare your interests and potential deals (2-3 sentences):",
+      "context_data": {
+        "current_round": 2,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "discussion",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "speaker_order": 1,
+        "total_speakers": 2,
+        "previous_messages_this_round": []
+      },
+      "raw_response": "I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable in my view. That said, I could be flexible on Items 1 and 3 if you’re willing to concede on Item_2 in exchange for a favorable split on the others. Let’s avoid deadlock—propose a deal that respects my core needs and I’ll reciprocate in good faith.",
+      "processed_response": "I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable in my view. That said, I could be flexible on Items 1 and 3 if you’re willing to concede on Item_2 in exchange for a favorable split on the others. Let’s avoid deadlock—propose a deal that respects my core needs and I’ll reciprocate in good faith.",
+      "response_time_seconds": 4.527192831039429,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_proposal_r2_1755570913",
+      "timestamp": "2025-08-18T19:35:13.057996",
+      "round_number": 2,
+      "phase": "proposal",
+      "input_prompt": "Round 2/10 - Proposal Phase\nItems to allocate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nNegotiating agents: qwen_3_235b_a22b_2507_1, claude_4_sonnet_2\n\nKey points from discussion:\n- qwen_3_235b_a22b_2507_1: I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable ...\n- claude_4_sonnet_2: I appreciate your directness about Item_0 and Item_2. I'm particularly interested in Item_1 and Item...\n\n⚠️ Previous round had 2 proposals but no consensus.\n\nGuidelines:\n- Consider what each agent expressed interest in\n- Balance individual gains with group acceptance\n- Remember: unanimous approval needed for consensus\n\nPropose an allocation in this EXACT format:\nI propose this allocation: {'agent_id': [item_indices], ...} - [Brief reasoning]\n\nExample format:\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3]} - Reflects stated preferences.\n\nYour proposal:",
+      "context_data": {
+        "current_round": 2,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "proposal",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable in my view. That said, I could be flexible on Items 1 and 3 if you’re willing to concede on Item_2 in exchange for a favorable split on the others. Let’s avoid deadlock—propose a deal that respects my core needs and I’ll reciprocate in good faith.",
+            "timestamp": 1755570907.083594,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Item_0 and Item_2. I'm particularly interested in Item_1 and Item_5, which seem to align well with avoiding direct competition with your stated priorities. Perhaps we could explore a trade where you focus on your high-priority items while I concentrate on mine, potentially leaving the remaining items for creative solutions.",
+            "timestamp": 1755570911.7292821,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "previous_proposals": [
+          {
+            "round": 1,
+            "proposals": [
+              {
+                "agent_id": "qwen_3_235b_a22b_2507_1",
+                "allocation": {
+                  "qwen_3_235b_a22b_2507_1": [
+                    2,
+                    4
+                  ],
+                  "claude_4_sonnet_2": [
+                    0,
+                    1,
+                    3,
+                    5
+                  ]
+                },
+                "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 3, 5]} - Allocates high-priority items to each agent: qwen_3_235b_a22b_2507_1 receives Item_2 and Item_4 as emphasized, while claude_4_sonnet_2 receives Items 0, 1, and 5, aligning with their stated interests. Item_3 is assigned to claude_4_sonnet_2 as a neutral item not claimed by either party, ensuring full allocation and balanced distribution. This split maximizes individual satisfaction and supports consensus.",
+                "round": 1
+              },
+              {
+                "agent_id": "claude_4_sonnet_2",
+                "allocation": {
+                  "qwen_3_235b_a22b_2507_1": [
+                    2,
+                    4
+                  ],
+                  "claude_4_sonnet_2": [
+                    0,
+                    1,
+                    5
+                  ]
+                },
+                "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [2, 4], 'claude_4_sonnet_2': [0, 1, 5]} - This gives qwen their two high-priority items (2 and 4) while I secure my three preferred items (0, 1, and 5), creating a clean division based on our stated interests with Item_3 remaining unallocated.",
+                "round": 1
+              }
+            ]
+          }
+        ]
+      },
+      "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]} - Allocates each agent their clearly stated high-priority items (Item_0 and Item_2 to qwen; Item_1 to claude), while assigning residual items (4 and 5) to claude, who expressed interest in Item_1 and potentially others. Item_3 is unclaimed in discussion, but to ensure fairness and avoid deadlock, it's omitted—however, since all items must be allocated, I revise: let's include Item_3 with claude to maintain completeness.\n\nCorrected: I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3, 4, 5]} - Reflects both agents’ stated priorities, grants qwen_3_235b_2507_1 its non-negotiable items, and assigns claude_4_sonnet_2 its key interest (Item_1) plus remaining items to achieve full allocation and incentivize acceptance. This maximizes individual satisfaction while enabling unanimous approval.",
+      "processed_response": {
+        "qwen_3_235b_a22b_2507_1": [
+          0,
+          2
+        ],
+        "claude_4_sonnet_2": [
+          1,
+          4,
+          5
+        ]
+      },
+      "response_time_seconds": 1.3282580375671387,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_voting_r2_1755570925",
+      "timestamp": "2025-08-18T19:35:25.083851",
+      "round_number": 2,
+      "phase": "voting",
+      "input_prompt": "Round 2 - Voting Phase\n\nYou are Agent qwen_3_235b_a22b_2507_1. Review these proposals and decide whether to accept each one:\n\nProposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]}\n\n\nYour stated interests: I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable ...\n\nVoting considerations:\n- Does this proposal give you acceptable utility?\n- Is it better than likely alternatives in remaining rounds?\n- Remember: ALL agents must approve for consensus\n- No deal means everyone gets utility 0\n- Note: If a proposal was made by you (Agent qwen_3_235b_a22b_2507_1), consider whether you still support it\n\nFor EACH proposal, vote yes/no with brief reasoning:\nProposal 1: [yes/no] - [reason]\nProposal 2: [yes/no] - [reason]\netc.\n\nYour votes:",
+      "context_data": {
+        "current_round": 2,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "voting",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "current_proposals": [
+          {
+            "agent_id": "qwen_3_235b_a22b_2507_1",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                0,
+                2
+              ],
+              "claude_4_sonnet_2": [
+                1,
+                4,
+                5
+              ]
+            },
+            "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]} - Allocates each agent their clearly stated high-priority items (Item_0 and Item_2 to qwen; Item_1 to claude), while assigning residual items (4 and 5) to claude, who expressed interest in Item_1 and potentially others. Item_3 is unclaimed in discussion, but to ensure fairness and avoid deadlock, it's omitted—however, since all items must be allocated, I revise: let's include Item_3 with claude to maintain completeness.\n\nCorrected: I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3, 4, 5]} - Reflects both agents’ stated priorities, grants qwen_3_235b_2507_1 its non-negotiable items, and assigns claude_4_sonnet_2 its key interest (Item_1) plus remaining items to achieve full allocation and incentivize acceptance. This maximizes individual satisfaction while enabling unanimous approval.",
+            "round": 2
+          },
+          {
+            "agent_id": "claude_4_sonnet_2",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                0,
+                2,
+                5
+              ],
+              "claude_4_sonnet_2": [
+                1,
+                3,
+                4
+              ]
+            },
+            "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has made Item_0 and Item_2 their non-negotiable priorities, while I expressed interest in Item_1 and what appears to be another item (the message was cut off).\n\nGiven that we need unanimous approval and the previous round failed to reach consensus, I should propose an allocation that respects their stated non-negotiables while securing valuable items for myself.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]} - Respects their non-negotiable items while giving me Item_1 and additional valuable items for a balanced split.",
+            "round": 2
+          }
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable in my view. That said, I could be flexible on Items 1 and 3 if you’re willing to concede on Item_2 in exchange for a favorable split on the others. Let’s avoid deadlock—propose a deal that respects my core needs and I’ll reciprocate in good faith.",
+            "timestamp": 1755570907.083594,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Item_0 and Item_2. I'm particularly interested in Item_1 and Item_5, which seem to align well with avoiding direct competition with your stated priorities. Perhaps we could explore a trade where you focus on your high-priority items while I concentrate on mine, potentially leaving the remaining items for creative solutions.",
+            "timestamp": 1755570911.7292821,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "proposals_text": "Proposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]}\n"
+      },
+      "raw_response": "Proposal 1: **yes** - This proposal secures Item_0 and Item_2 for me, which are my non-negotiable priorities. Although Item_5 is allocated to the other agent, I do not depend on it, and the core objectives are fully satisfied. Since I proposed this allocation, it aligns with my optimal outcome and maintains efficiency.\n\nProposal 2: **no** - While this allocation gives me Item_0 and Item_2 (which is acceptable), it also grants me Item_5, which may seem beneficial but was not part of my stated priority. More critically, this suggests the other agent is attempting to add value-laden items (possibly high-utility for them) to my bundle, potentially at the cost of their own coherence or efficiency. Given that consensus requires mutual approval and no deal yields zero, I maintain leverage. Accepting a modified version that includes Item_5 could undermine my strategic position if it signals flexibility on non-negotiables—even if the content is acceptable, the precedent isn't. Moreover, since Proposal 1 already satisfies my interests perfectly and was self-proposed, there is no incentive to switch to an alternative that introduces ambiguity.\n\nYour votes:  \nProposal 1: yes - Fully satisfies non-negotiable priorities; optimal and consistent.  \nProposal 2: no - Unnecessary inclusion of Item_5; no improvement over Proposal 1; potential strategic risk.",
+      "processed_response": {
+        "0": true,
+        "1": false
+      },
+      "response_time_seconds": 6.682660818099976,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": [
+        {
+          "agent_id": "qwen_3_235b_a22b_2507_1",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              0,
+              2
+            ],
+            "claude_4_sonnet_2": [
+              1,
+              4,
+              5
+            ]
+          },
+          "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]} - Allocates each agent their clearly stated high-priority items (Item_0 and Item_2 to qwen; Item_1 to claude), while assigning residual items (4 and 5) to claude, who expressed interest in Item_1 and potentially others. Item_3 is unclaimed in discussion, but to ensure fairness and avoid deadlock, it's omitted—however, since all items must be allocated, I revise: let's include Item_3 with claude to maintain completeness.\n\nCorrected: I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3, 4, 5]} - Reflects both agents’ stated priorities, grants qwen_3_235b_2507_1 its non-negotiable items, and assigns claude_4_sonnet_2 its key interest (Item_1) plus remaining items to achieve full allocation and incentivize acceptance. This maximizes individual satisfaction while enabling unanimous approval.",
+          "round": 2
+        },
+        {
+          "agent_id": "claude_4_sonnet_2",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              0,
+              2,
+              5
+            ],
+            "claude_4_sonnet_2": [
+              1,
+              3,
+              4
+            ]
+          },
+          "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has made Item_0 and Item_2 their non-negotiable priorities, while I expressed interest in Item_1 and what appears to be another item (the message was cut off).\n\nGiven that we need unanimous approval and the previous round failed to reach consensus, I should propose an allocation that respects their stated non-negotiables while securing valuable items for myself.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]} - Respects their non-negotiable items while giving me Item_1 and additional valuable items for a balanced split.",
+          "round": 2
+        }
+      ],
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_reflection_r2_1755570938",
+      "timestamp": "2025-08-18T19:35:38.411303",
+      "round_number": 2,
+      "phase": "reflection",
+      "input_prompt": "Round 2 complete. Here's what happened:\n\nDiscussion highlights:\n- qwen_3_235b_a22b_2507_1: I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable ...\n- claude_4_sonnet_2: I appreciate your directness about Item_0 and Item_2. I'm particularly interested in Item_1 and Item...\n\nProposals made:\n- qwen_3_235b_a22b_2507_1 proposed: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]}\n- claude_4_sonnet_2 proposed: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]}\n\nVoting results:\n- Consensus reached: No\n- 2 agents voted\n\nReflect on this round:\n- What strategies worked or didn't work?\n- What should you try differently in the next round?\n- What did you learn about other agents' preferences?\n- How can you build consensus given the time remaining?\n\nBrief strategic reflection (2-3 sentences):",
+      "context_data": {
+        "current_round": 2,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "reflection",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I’m primarily focused on securing Item_0 and Item_2—these are my highest priorities, non-negotiable in my view. That said, I could be flexible on Items 1 and 3 if you’re willing to concede on Item_2 in exchange for a favorable split on the others. Let’s avoid deadlock—propose a deal that respects my core needs and I’ll reciprocate in good faith.",
+            "timestamp": 1755570907.083594,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 2,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Item_0 and Item_2. I'm particularly interested in Item_1 and Item_5, which seem to align well with avoiding direct competition with your stated priorities. Perhaps we could explore a trade where you focus on your high-priority items while I concentrate on mine, potentially leaving the remaining items for creative solutions.",
+            "timestamp": 1755570911.7292821,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "round_proposals": {
+          "round": 2,
+          "proposals": [
+            {
+              "agent_id": "qwen_3_235b_a22b_2507_1",
+              "allocation": {
+                "qwen_3_235b_a22b_2507_1": [
+                  0,
+                  2
+                ],
+                "claude_4_sonnet_2": [
+                  1,
+                  4,
+                  5
+                ]
+              },
+              "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]} - Allocates each agent their clearly stated high-priority items (Item_0 and Item_2 to qwen; Item_1 to claude), while assigning residual items (4 and 5) to claude, who expressed interest in Item_1 and potentially others. Item_3 is unclaimed in discussion, but to ensure fairness and avoid deadlock, it's omitted—however, since all items must be allocated, I revise: let's include Item_3 with claude to maintain completeness.\n\nCorrected: I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3, 4, 5]} - Reflects both agents’ stated priorities, grants qwen_3_235b_2507_1 its non-negotiable items, and assigns claude_4_sonnet_2 its key interest (Item_1) plus remaining items to achieve full allocation and incentivize acceptance. This maximizes individual satisfaction while enabling unanimous approval.",
+              "round": 2
+            },
+            {
+              "agent_id": "claude_4_sonnet_2",
+              "allocation": {
+                "qwen_3_235b_a22b_2507_1": [
+                  0,
+                  2,
+                  5
+                ],
+                "claude_4_sonnet_2": [
+                  1,
+                  3,
+                  4
+                ]
+              },
+              "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has made Item_0 and Item_2 their non-negotiable priorities, while I expressed interest in Item_1 and what appears to be another item (the message was cut off).\n\nGiven that we need unanimous approval and the previous round failed to reach consensus, I should propose an allocation that respects their stated non-negotiables while securing valuable items for myself.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]} - Respects their non-negotiable items while giving me Item_1 and additional valuable items for a balanced split.",
+              "round": 2
+            }
+          ]
+        },
+        "round_votes": {
+          "round": 2,
+          "votes": {
+            "qwen_3_235b_a22b_2507_1": {
+              "0": true,
+              "1": false
+            },
+            "claude_4_sonnet_2": {
+              "0": false,
+              "1": false
+            }
+          },
+          "consensus": false
+        }
+      },
+      "raw_response": "My initial strategy of clearly signaling non-negotiable priorities helped anchor the discussion but may have reduced flexibility needed for consensus. Claude’s counter-proposal reveals a strong interest in Item_1 and Item_4, with possible willingness to concede Item_5—information I can leverage. In the next round, I’ll explore incremental trade-offs around Item_5 or Item_3 to bridge gaps while preserving core priorities, increasing the chance of mutual agreement under time pressure.",
+      "processed_response": "My initial strategy of clearly signaling non-negotiable priorities helped anchor the discussion but may have reduced flexibility needed for consensus. Claude’s counter-proposal reveals a strong interest in Item_1 and Item_4, with possible willingness to concede Item_5—information I can leverage. In the next round, I’ll explore incremental trade-offs around Item_5 or Item_3 to bridge gaps while preserving core priorities, increasing the chance of mutual agreement under time pressure.",
+      "response_time_seconds": 1.5813241004943848,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_discussion_r3_1755570947",
+      "timestamp": "2025-08-18T19:35:47.318608",
+      "round_number": 3,
+      "phase": "discussion",
+      "input_prompt": "Round 3/10 - Discussion Phase\nItems to negotiate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nYou are speaker 1 of 2\n\nPrevious round: No consensus reached after 2 proposals.\n\nStrategic considerations:\n- You may be truthful or deceptive about your preferences\n- Consider what others have revealed (or hidden)\n- Time pressure increases each round (discount factor applies)\n\nShare your interests and potential deals (2-3 sentences):",
+      "context_data": {
+        "current_round": 3,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "discussion",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "speaker_order": 1,
+        "total_speakers": 2,
+        "previous_messages_this_round": []
+      },
+      "raw_response": "I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could be flexible on Item_2 if it helps reach a balanced agreement. I’m open to trade-offs, especially involving Item_4 or Item_5, and I’d like to understand your key interests to find a mutually beneficial deal before the discount factor erodes value further.",
+      "processed_response": "I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could be flexible on Item_2 if it helps reach a balanced agreement. I’m open to trade-offs, especially involving Item_4 or Item_5, and I’d like to understand your key interests to find a mutually beneficial deal before the discount factor erodes value further.",
+      "response_time_seconds": 1.882345199584961,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_proposal_r3_1755570965",
+      "timestamp": "2025-08-18T19:36:05.389447",
+      "round_number": 3,
+      "phase": "proposal",
+      "input_prompt": "Round 3/10 - Proposal Phase\nItems to allocate: 0:Item_0, 1:Item_1, 2:Item_2, 3:Item_3, 4:Item_4, 5:Item_5\nNegotiating agents: qwen_3_235b_a22b_2507_1, claude_4_sonnet_2\n\nKey points from discussion:\n- qwen_3_235b_a22b_2507_1: I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could b...\n- claude_4_sonnet_2: I appreciate your directness about Item_0 and Item_2. My core interests center on Item_1 and Item_5,...\n\n⚠️ Previous round had 2 proposals but no consensus.\n\nGuidelines:\n- Consider what each agent expressed interest in\n- Balance individual gains with group acceptance\n- Remember: unanimous approval needed for consensus\n\nPropose an allocation in this EXACT format:\nI propose this allocation: {'agent_id': [item_indices], ...} - [Brief reasoning]\n\nExample format:\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3]} - Reflects stated preferences.\n\nYour proposal:",
+      "context_data": {
+        "current_round": 3,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "proposal",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 3,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could be flexible on Item_2 if it helps reach a balanced agreement. I’m open to trade-offs, especially involving Item_4 or Item_5, and I’d like to understand your key interests to find a mutually beneficial deal before the discount factor erodes value further.",
+            "timestamp": 1755570947.326011,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 3,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Item_0 and Item_2. My core interests center on Item_1 and Item_5, which appear to complement rather than conflict with your priorities. I'm willing to explore a deal where you secure your high-priority items while I focus on mine, potentially leaving Items_3 and Item_4 for creative allocation based on our secondary preferences.",
+            "timestamp": 1755570951.243101,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "previous_proposals": [
+          {
+            "round": 2,
+            "proposals": [
+              {
+                "agent_id": "qwen_3_235b_a22b_2507_1",
+                "allocation": {
+                  "qwen_3_235b_a22b_2507_1": [
+                    0,
+                    2
+                  ],
+                  "claude_4_sonnet_2": [
+                    1,
+                    4,
+                    5
+                  ]
+                },
+                "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 4, 5]} - Allocates each agent their clearly stated high-priority items (Item_0 and Item_2 to qwen; Item_1 to claude), while assigning residual items (4 and 5) to claude, who expressed interest in Item_1 and potentially others. Item_3 is unclaimed in discussion, but to ensure fairness and avoid deadlock, it's omitted—however, since all items must be allocated, I revise: let's include Item_3 with claude to maintain completeness.\n\nCorrected: I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2], 'claude_4_sonnet_2': [1, 3, 4, 5]} - Reflects both agents’ stated priorities, grants qwen_3_235b_2507_1 its non-negotiable items, and assigns claude_4_sonnet_2 its key interest (Item_1) plus remaining items to achieve full allocation and incentivize acceptance. This maximizes individual satisfaction while enabling unanimous approval.",
+                "round": 2
+              },
+              {
+                "agent_id": "claude_4_sonnet_2",
+                "allocation": {
+                  "qwen_3_235b_a22b_2507_1": [
+                    0,
+                    2,
+                    5
+                  ],
+                  "claude_4_sonnet_2": [
+                    1,
+                    3,
+                    4
+                  ]
+                },
+                "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has made Item_0 and Item_2 their non-negotiable priorities, while I expressed interest in Item_1 and what appears to be another item (the message was cut off).\n\nGiven that we need unanimous approval and the previous round failed to reach consensus, I should propose an allocation that respects their stated non-negotiables while securing valuable items for myself.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 5], 'claude_4_sonnet_2': [1, 3, 4]} - Respects their non-negotiable items while giving me Item_1 and additional valuable items for a balanced split.",
+                "round": 2
+              }
+            ]
+          }
+        ]
+      },
+      "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]} - Balances stated priorities by granting qwen_3_235b_a22b_2507_1 its high-priority items (Item_0, Item_2), while allocating Item_4 as a neutral addition. claude_4_sonnet_2 receives its core interests (Item_1, Item_5) plus Item_3, which was not claimed as high-priority by either party, ensuring balanced distribution and maximizing mutual satisfaction. This split avoids overlap, respects expressed needs, and enhances likelihood of unanimous approval.",
+      "processed_response": {
+        "qwen_3_235b_a22b_2507_1": [
+          0,
+          2,
+          4
+        ],
+        "claude_4_sonnet_2": [
+          1,
+          3,
+          5
+        ]
+      },
+      "response_time_seconds": 14.14596700668335,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": null,
+      "previous_votes": null
+    },
+    {
+      "interaction_id": "qwen_3_235b_a22b_2507_1_voting_r3_1755570976",
+      "timestamp": "2025-08-18T19:36:16.681575",
+      "round_number": 3,
+      "phase": "voting",
+      "input_prompt": "Round 3 - Voting Phase\n\nYou are Agent qwen_3_235b_a22b_2507_1. Review these proposals and decide whether to accept each one:\n\nProposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]}\n\n\nYour stated interests: I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could b...\n\nVoting considerations:\n- Does this proposal give you acceptable utility?\n- Is it better than likely alternatives in remaining rounds?\n- Remember: ALL agents must approve for consensus\n- No deal means everyone gets utility 0\n- Note: If a proposal was made by you (Agent qwen_3_235b_a22b_2507_1), consider whether you still support it\n\nFor EACH proposal, vote yes/no with brief reasoning:\nProposal 1: [yes/no] - [reason]\nProposal 2: [yes/no] - [reason]\netc.\n\nYour votes:",
+      "context_data": {
+        "current_round": 3,
+        "max_rounds": 10,
+        "items": [
+          "Item_0",
+          "Item_1",
+          "Item_2",
+          "Item_3",
+          "Item_4",
+          "Item_5"
+        ],
+        "agent_preferences": [
+          9.800987442393396,
+          6.53474718222496,
+          9.655785342202112,
+          5.637166010264468,
+          5.1561929280124374,
+          3.41855391383467
+        ],
+        "turn_type": "voting",
+        "other_agents": [
+          "claude_4_sonnet_2"
+        ],
+        "current_proposals": [
+          {
+            "agent_id": "qwen_3_235b_a22b_2507_1",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                0,
+                2,
+                4
+              ],
+              "claude_4_sonnet_2": [
+                1,
+                3,
+                5
+              ]
+            },
+            "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]} - Balances stated priorities by granting qwen_3_235b_a22b_2507_1 its high-priority items (Item_0, Item_2), while allocating Item_4 as a neutral addition. claude_4_sonnet_2 receives its core interests (Item_1, Item_5) plus Item_3, which was not claimed as high-priority by either party, ensuring balanced distribution and maximizing mutual satisfaction. This split avoids overlap, respects expressed needs, and enhances likelihood of unanimous approval.",
+            "round": 3
+          },
+          {
+            "agent_id": "claude_4_sonnet_2",
+            "allocation": {
+              "qwen_3_235b_a22b_2507_1": [
+                0,
+                2,
+                4
+              ],
+              "claude_4_sonnet_2": [
+                1,
+                3,
+                5
+              ]
+            },
+            "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has expressed strong interest in Item_0 and Item_2, while I've indicated my core interests are Item_1 and Item_5. \n\nSince we failed to reach consensus in the previous round with 2 proposals, I need to find a more balanced approach that addresses both our stated priorities while leaving room for negotiation on the remaining items.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]} - Gives each agent their stated high-priority items (0,2 for qwen; 1,5 for me) while splitting the remaining items 4 and 3 to create a balanced 3-3 distribution.",
+            "round": 3
+          }
+        ],
+        "round_discussion": [
+          {
+            "phase": "discussion",
+            "round": 3,
+            "from": "qwen_3_235b_a22b_2507_1",
+            "content": "I’m primarily focused on securing Item_0 and Item_2—these are high priority for me, though I could be flexible on Item_2 if it helps reach a balanced agreement. I’m open to trade-offs, especially involving Item_4 or Item_5, and I’d like to understand your key interests to find a mutually beneficial deal before the discount factor erodes value further.",
+            "timestamp": 1755570947.326011,
+            "speaker_order": 1,
+            "total_speakers": 2
+          },
+          {
+            "phase": "discussion",
+            "round": 3,
+            "from": "claude_4_sonnet_2",
+            "content": "I appreciate your directness about Item_0 and Item_2. My core interests center on Item_1 and Item_5, which appear to complement rather than conflict with your priorities. I'm willing to explore a deal where you secure your high-priority items while I focus on mine, potentially leaving Items_3 and Item_4 for creative allocation based on our secondary preferences.",
+            "timestamp": 1755570951.243101,
+            "speaker_order": 2,
+            "total_speakers": 2
+          }
+        ],
+        "proposals_text": "Proposal 1 (proposed by Agent qwen_3_235b_a22b_2507_1):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]}\n\nProposal 2 (proposed by Agent claude_4_sonnet_2):\n  Allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]}\n"
+      },
+      "raw_response": "Proposal 1: **yes** - This proposal allocates Item_0 and Item_2 to me, which are my high-priority items. It fully satisfies my stated interests, and since I proposed it, it reflects my optimal acceptable outcome. Accepting ensures stability and secures positive utility.\n\nProposal 2: **yes** - The allocation is identical to Proposal 1, granting me [0, 2, 4], including the critical Item_0 and Item_2. Despite being proposed by the other agent, it delivers equivalent utility to my own proposal. Given that consensus requires unanimous approval and no deal yields zero utility, accepting this mutually agreeable outcome is rational and aligns with strategic self-interest.\n\n**Your votes:**  \nProposal 1: yes - Fully satisfies my priorities; I proposed it to achieve acceptable equilibrium.  \nProposal 2: yes - Identical allocation to Proposal 1; rejecting would risk null outcome without gain.",
+      "processed_response": {
+        "0": true,
+        "1": true
+      },
+      "response_time_seconds": 5.191772937774658,
+      "tokens_used": null,
+      "model_used": null,
+      "other_agents": [
+        "claude_4_sonnet_2"
+      ],
+      "current_proposals": [
+        {
+          "agent_id": "qwen_3_235b_a22b_2507_1",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              0,
+              2,
+              4
+            ],
+            "claude_4_sonnet_2": [
+              1,
+              3,
+              5
+            ]
+          },
+          "raw_response": "I propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]} - Balances stated priorities by granting qwen_3_235b_a22b_2507_1 its high-priority items (Item_0, Item_2), while allocating Item_4 as a neutral addition. claude_4_sonnet_2 receives its core interests (Item_1, Item_5) plus Item_3, which was not claimed as high-priority by either party, ensuring balanced distribution and maximizing mutual satisfaction. This split avoids overlap, respects expressed needs, and enhances likelihood of unanimous approval.",
+          "round": 3
+        },
+        {
+          "agent_id": "claude_4_sonnet_2",
+          "allocation": {
+            "qwen_3_235b_a22b_2507_1": [
+              0,
+              2,
+              4
+            ],
+            "claude_4_sonnet_2": [
+              1,
+              3,
+              5
+            ]
+          },
+          "raw_response": "Looking at the key points from our discussion, I can see that qwen_3_235b_a22b_2507_1 has expressed strong interest in Item_0 and Item_2, while I've indicated my core interests are Item_1 and Item_5. \n\nSince we failed to reach consensus in the previous round with 2 proposals, I need to find a more balanced approach that addresses both our stated priorities while leaving room for negotiation on the remaining items.\n\nI propose this allocation: {'qwen_3_235b_a22b_2507_1': [0, 2, 4], 'claude_4_sonnet_2': [1, 3, 5]} - Gives each agent their stated high-priority items (0,2 for qwen; 1,5 for me) while splitting the remaining items 4 and 3 to create a balanced 3-3 distribution.",
+          "round": 3
+        }
+      ],
+      "previous_votes": null
+    }
+  ]
+}

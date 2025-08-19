@@ -207,18 +207,16 @@ async def run_strong_models_negotiation(
             serialized_prefs = None
             preference_details = {}
             
-            # Get the actual preference vectors from the generated data
-            if preferences_data and "agent_preferences" in preferences_data:
-                agent_prefs = preferences_data["agent_preferences"]
+            # Get the actual preference vectors from the runner's processed data
+            # The runner has already mapped the preferences to actual agent IDs
+            if hasattr(runner, 'preferences') and "agent_preferences" in runner.preferences:
+                agent_prefs = runner.preferences["agent_preferences"]
                 
-                # Map agent IDs from runner to preference data
-                # The preference system uses agent_0, agent_1, etc., but our agents have custom IDs
+                # Extract preferences using the runner's processed mapping
                 serialized_prefs = []
-                for i, agent in enumerate(agents):
-                    # Get preferences for agent_i (indexed position)
-                    agent_key = f"agent_{i}"
-                    if agent_key in agent_prefs:
-                        pref_vector = agent_prefs[agent_key]
+                for agent in agents:
+                    if agent.agent_id in agent_prefs:
+                        pref_vector = agent_prefs[agent.agent_id]
                         serialized_prefs.append(pref_vector)
                         
                         # Create detailed preference mapping
@@ -227,12 +225,14 @@ async def run_strong_models_negotiation(
                             for j, val in enumerate(pref_vector)
                         }
                     else:
-                        preference_details[agent.agent_id] = {"error": f"No preferences found for agent index {i}"}
+                        preference_details[agent.agent_id] = {"error": f"No preferences found for agent {agent.agent_id}"}
             
             # Also extract cosine similarities if available
             cosine_similarities = None
             if preferences_data and "cosine_similarities" in preferences_data:
                 cosine_similarities = preferences_data["cosine_similarities"]
+            elif hasattr(runner, 'preferences') and "cosine_similarities" in runner.preferences:
+                cosine_similarities = runner.preferences["cosine_similarities"]
             
             # Extract ALL conversation data from runner
             conversation_logs = []
