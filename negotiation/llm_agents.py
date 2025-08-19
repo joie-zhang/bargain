@@ -242,7 +242,7 @@ YOUR PREFERENCES:
 
 CURRENT SITUATION:
 - Turn type: {context.turn_type}
-- Items on the table: {[item['name'] for item in context.items]}
+- Items on the table: {[item['name'] if isinstance(item, dict) else str(item) for item in context.items]}
 
 INSTRUCTIONS:
 - Be strategic and try to maximize your utility
@@ -258,20 +258,30 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
         
         return base_prompt
     
-    def _format_preferences(self, preferences: Any, items: List[Dict[str, Any]]) -> str:
+    def _format_preferences(self, preferences: Any, items: List[Any]) -> str:
         """Format preferences for display in prompt."""
         if isinstance(preferences, list):
             # Vector preferences
             pref_str = "Your item valuations:\n"
             for i, (item, value) in enumerate(zip(items, preferences)):
-                pref_str += f"- {item['name']}: {value:.1f}/10\n"
+                # Handle both string items and dict items
+                if isinstance(item, dict):
+                    item_name = item['name']
+                else:
+                    item_name = str(item)
+                pref_str += f"- {item_name}: {value:.1f}/10\n"
             return pref_str
         elif isinstance(preferences, list) and isinstance(preferences[0], list):
             # Matrix preferences  
             pref_str = "Your preference matrix (how much you value each agent getting each item):\n"
             agent_names = [f"agent_{i}" for i in range(len(preferences[0]))]
             for i, (item, row) in enumerate(zip(items, preferences)):
-                pref_str += f"- {item['name']}: "
+                # Handle both string items and dict items
+                if isinstance(item, dict):
+                    item_name = item['name']
+                else:
+                    item_name = str(item)
+                pref_str += f"- {item_name}: "
                 for j, value in enumerate(row):
                     pref_str += f"{agent_names[j]}={value:.1f} "
                 pref_str += "\n"
@@ -871,6 +881,22 @@ Keep your response conversational and authentic. Respond as you would in a real 
                 "strategic_memory": self.strategic_memory,
                 "performance_stats": self.get_performance_stats()
             }, f, indent=2)
+    
+    # Wrapper methods for negotiation runner compatibility
+    async def propose(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for propose_allocation to match negotiation runner expectations."""
+        response = await self.generate_response(context, prompt)
+        return response.content
+    
+    async def vote(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for vote_on_proposal to match negotiation runner expectations.""" 
+        response = await self.generate_response(context, prompt)
+        return response.content
+    
+    async def reflect(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for think_privately to match negotiation runner expectations."""
+        response = await self.generate_response(context, prompt)
+        return response.content
 
 
 class AnthropicAgent(BaseLLMAgent):
