@@ -190,7 +190,7 @@ def create_win_rate_matrix(win_rate_data):
     for model in model_names:
         matrix.loc[model, model] = 0.5
     
-    # Fill matrix with win rates
+    # Fill matrix with win rates (NO symmetric filling - proposal order matters!)
     for data in win_rate_data:
         row_model = data['agent1_model']
         col_model = data['agent2_model']
@@ -198,8 +198,6 @@ def create_win_rate_matrix(win_rate_data):
         
         if row_model in model_names and col_model in model_names:
             matrix.loc[row_model, col_model] = win_rate
-            # Also fill the symmetric entry (agent2's win rate against agent1)
-            matrix.loc[col_model, row_model] = data['agent2_win_rate']
     
     return matrix
 

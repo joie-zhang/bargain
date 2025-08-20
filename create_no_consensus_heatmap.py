@@ -181,7 +181,7 @@ def create_no_consensus_matrix(no_consensus_data):
     for model in model_names:
         matrix.loc[model, model] = np.nan  # Will be filled if we have data
     
-    # Fill matrix with no consensus rates
+    # Fill matrix with no consensus rates (NO symmetric filling - proposal order matters!)
     for data in no_consensus_data:
         row_model = data['agent1_model']
         col_model = data['agent2_model']
@@ -189,8 +189,6 @@ def create_no_consensus_matrix(no_consensus_data):
         
         if row_model in model_names and col_model in model_names:
             matrix.loc[row_model, col_model] = no_consensus_rate
-            # Also fill the symmetric entry (should be the same rate)
-            matrix.loc[col_model, row_model] = no_consensus_rate
     
     return matrix
 
