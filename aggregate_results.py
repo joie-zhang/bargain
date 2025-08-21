@@ -159,8 +159,8 @@ def main():
         results_dir = sys.argv[1]
     else:
         # Default to listing available directories
-        base_dir = "/Users/joie/Desktop/bargain-qiyao/experiments/results"
-        all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
+        base_dir = "/Users/joie/Desktop/bargain/experiments/results"
+        all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_202508*")
         
         if not all_strong_model_dirs:
             print("No strong_models_20250819* directories found in experiments/results/")
