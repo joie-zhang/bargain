@@ -52,7 +52,7 @@ from negotiation import (
     NegotiationContext,
     NegotiationOutcome
 )
-from negotiation.llm_agents import ModelType, BaseLLMAgent
+from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LLMConfig
 from negotiation.openrouter_client import OpenRouterAgent
 
 
@@ -97,14 +97,14 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are Gemini 2.5 Pro. Use strategic thinking to achieve optimal outcomes in this negotiation."
     },
-    "gemini-2-0-flash": {
-        "name": "Gemini 2.0 Flash",
-        "model_id": "google/gemini-2-0-flash",
+    "gemini-2-5-flash": {
+        "name": "Gemini 2.5 Flash",
+        "model_id": "google/gemini-2.5-flash",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's fast Gemini Flash model",
+        "description": "Google's fast Gemini 2.5 Flash model",
         "temperature": 0.7,
-        "system_prompt": "You are Gemini Flash. Apply quick and efficient reasoning in this negotiation."
+        "system_prompt": "You are Gemini 2.5 Flash. Apply quick and efficient reasoning in this negotiation."
     },
     
     # OpenAI models (direct API)
@@ -139,7 +139,7 @@ STRONG_MODELS_CONFIG = {
     },
     "qwen-3-235b-a22b-2507": {
         "name": "Qwen 3 235B", 
-        "model_id": "qwen/qwen-110b-chat",
+        "model_id": "qwen/qwen3-235b-a22b-2507",
         "provider": "Alibaba",
         "api_type": "openrouter",
         "description": "Alibaba's strong multilingual model",
@@ -575,7 +575,6 @@ class StrongModelsExperiment:
                     continue
                     
                 # Use Anthropic API directly
-                from negotiation.llm_agents import AnthropicAgent, ModelType, LLMConfig
                 llm_config = LLMConfig(
                     model_type=ModelType.CLAUDE_3_5_SONNET if "sonnet" in model_name else ModelType.CLAUDE_3_HAIKU,
                     temperature=model_config["temperature"],
@@ -594,7 +593,6 @@ class StrongModelsExperiment:
                     continue
                     
                 # Use OpenAI API directly
-                from negotiation.llm_agents import OpenAIAgent, ModelType, LLMConfig
                 # Determine correct model type
                 if "gpt-4o" in model_name:
                     model_type = ModelType.GPT_4O
@@ -633,7 +631,6 @@ class StrongModelsExperiment:
                     system_prompt=model_config["system_prompt"],
                     custom_parameters={"model_id": model_config["model_id"]}
                 )
-                from negotiation.llm_agents import LLMConfig
                 llm_config = agent_config.to_llm_config()
                 agent = OpenRouterAgent(
                     agent_id=agent_id,
