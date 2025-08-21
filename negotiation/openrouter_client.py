@@ -12,6 +12,7 @@ import time
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
+import sys
 
 from .llm_agents import BaseLLMAgent, LLMConfig, ModelType
 
@@ -95,7 +96,11 @@ class OpenRouterAgent(BaseLLMAgent):
     async def _ensure_session(self):
         """Ensure aiohttp session exists."""
         if self.session is None:
-            self.session = aiohttp.ClientSession()
+            connector = aiohttp.TCPConnector(force_close=True)
+            self.session = aiohttp.ClientSession(
+                connector=connector,
+                json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
+            )
     
     async def _make_request(self, messages: List[Dict[str, str]]) -> str:
         """Make a request to OpenRouter API."""
@@ -131,8 +136,13 @@ class OpenRouterAgent(BaseLLMAgent):
                     timeout=aiohttp.ClientTimeout(total=self.openrouter_config.timeout)
                 ) as response:
                     if response.status == 200:
-                        data = await response.json()
-                        return data["choices"][0]["message"]["content"]
+                        # Ensure proper UTF-8 decoding
+                        data = await response.json(encoding='utf-8')
+                        content = data["choices"][0]["message"]["content"]
+                        # Ensure content is properly encoded
+                        if isinstance(content, bytes):
+                            content = content.decode('utf-8')
+                        return content
                     else:
                         error_text = await response.text()
                         self.logger.error(f"OpenRouter API error: {response.status} - {error_text}")
@@ -191,7 +201,7 @@ class OpenRouterAgent(BaseLLMAgent):
         if self.llm_config.system_prompt:
             messages.append({
                 "role": "system",
-                "content": self.llm_config.system_prompt
+                "content": str(self.llm_config.system_prompt)
             })
         
         # Add previous messages if available
@@ -200,7 +210,7 @@ class OpenRouterAgent(BaseLLMAgent):
                 role = "assistant" if msg.get("from") == self.agent_id else "user"
                 messages.append({
                     "role": role,
-                    "content": msg.get("content", "")
+                    "content": str(msg.get("content", ""))
                 })
         
         # Add current context
@@ -208,14 +218,14 @@ class OpenRouterAgent(BaseLLMAgent):
             # Use provided prompt directly
             messages.append({
                 "role": "user",
-                "content": prompt
+                "content": str(prompt)
             })
         else:
             # Build prompt from context
             prompt = self._build_prompt(context, message_type)
             messages.append({
                 "role": "user",
-                "content": prompt
+                "content": str(prompt)
             })
         
         # Make request
