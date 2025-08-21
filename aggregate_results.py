@@ -70,8 +70,21 @@ def get_agent_info(results):
     agent2_name = agents[1] if len(agents) > 1 else None
     
     # Extract model names from agent IDs (they're now part of the ID)
-    agent1_model = agent1_name.split('_')[0].replace('_', '-')  # Convert back to original model name format
-    agent2_model = agent2_name.split('_')[0].replace('_', '-') if agent2_name else None
+    # For names like "claude_3_5_haiku_1" or "claude_4_sonnet_2", extract everything except the final number
+    def extract_model_name(agent_name):
+        if not agent_name:
+            return None
+        # Split by underscore and remove the last part if it's a number
+        parts = agent_name.split('_')
+        if len(parts) > 1 and parts[-1].isdigit():
+            # Remove the final number and rejoin with hyphens
+            return '-'.join(parts[:-1]).replace('_', '-')
+        else:
+            # If no trailing number, just replace underscores with hyphens
+            return agent_name.replace('_', '-')
+    
+    agent1_model = extract_model_name(agent1_name)
+    agent2_model = extract_model_name(agent2_name)
     
     return agent1_name, agent2_name, agent1_model, agent2_model
 
@@ -146,7 +159,7 @@ def main():
         results_dir = sys.argv[1]
     else:
         # Default to listing available directories
-        base_dir = "/Users/joie/Desktop/bargain/experiments/results"
+        base_dir = "/Users/joie/Desktop/bargain-qiyao/experiments/results"
         all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
         
         if not all_strong_model_dirs:
