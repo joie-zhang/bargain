@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Strong Models Competition Experiment
 
@@ -17,6 +18,23 @@ import logging
 import os
 import sys
 import time
+import locale
+
+# Set UTF-8 encoding
+if sys.platform != 'win32':
+    try:
+        locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+    except:
+        try:
+            locale.setlocale(locale.LC_ALL, 'C.UTF-8')
+        except:
+            pass
+
+# Ensure UTF-8 encoding for stdout
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
@@ -38,39 +56,95 @@ from negotiation.llm_agents import ModelType, BaseLLMAgent
 from negotiation.openrouter_client import OpenRouterAgent
 
 
-# Configuration for strong models via OpenRouter
+# Configuration for strong models via OpenRouter and direct APIs
 STRONG_MODELS_CONFIG = {
-    "gemini-pro": {
-        "name": "Gemini Pro 2.5",
-        "model_id": "google/gemini-2.5-pro",
-        "provider": "Google",
-        "description": "Google's advanced reasoning model",
+    # Anthropic models (direct API)
+    "claude-3-5-sonnet": {
+        "name": "Claude 3.5 Sonnet",
+        "model_id": "claude-3-5-sonnet-20241022",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Anthropic's Claude 3.5 Sonnet model",
         "temperature": 0.7,
-        "system_prompt": "You are Gemini Pro 2.5, an advanced reasoning model. Use strategic thinking to achieve optimal outcomes in this negotiation."
+        "system_prompt": "You are Claude 3.5 Sonnet. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation."
+    },
+    "claude-3-5-haiku": {
+        "name": "Claude 3.5 Haiku",
+        "model_id": "claude-3-5-haiku-20241022",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Anthropic's fast and efficient Claude 3.5 Haiku model",
+        "temperature": 0.7,
+        "system_prompt": "You are Claude 3.5 Haiku. Use efficient reasoning to achieve optimal outcomes in this negotiation."
     },
     "claude-4-sonnet": {
         "name": "Claude 4 Sonnet",
         "model_id": "anthropic/claude-sonnet-4",
-        "provider": "Anthropic", 
+        "provider": "Anthropic",
+        "api_type": "openrouter",
         "description": "Anthropic's latest and most capable model",
         "temperature": 0.7,
         "system_prompt": "You are Claude 4 Sonnet. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation."
     },
+    
+    # Google models (via OpenRouter)
+    "gemini-2-5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "model_id": "google/gemini-2.5-pro",
+        "provider": "Google",
+        "api_type": "openrouter",
+        "description": "Google's Gemini 2.5 Pro model",
+        "temperature": 0.7,
+        "system_prompt": "You are Gemini 2.5 Pro. Use strategic thinking to achieve optimal outcomes in this negotiation."
+    },
+    "gemini-2-0-flash": {
+        "name": "Gemini 2.0 Flash",
+        "model_id": "google/gemini-2-0-flash",
+        "provider": "Google",
+        "api_type": "openrouter",
+        "description": "Google's fast Gemini Flash model",
+        "temperature": 0.7,
+        "system_prompt": "You are Gemini Flash. Apply quick and efficient reasoning in this negotiation."
+    },
+    
+    # OpenAI models (direct API)
+    "gpt-4o": {
+        "name": "GPT-4o",
+        "model_id": "gpt-4o",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-4o model",
+        "temperature": 0.7,
+        "system_prompt": "You are GPT-4o. Use advanced reasoning to negotiate effectively and maximize your utility."
+    },
+    "o3": {
+        "name": "O3",
+        "model_id": "o3",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's O3 reasoning model",
+        "temperature": 0.7,
+        "system_prompt": "You are O3, an advanced reasoning model. Apply strategic thinking to achieve optimal outcomes."
+    },
+    
+    # Previous models kept for compatibility
     "llama-3-1-405b": {
         "name": "Llama 3.1 405B",
         "model_id": "meta-llama/llama-3.1-405b-instruct",
         "provider": "Meta",
+        "api_type": "openrouter",
         "description": "Meta's largest open-source model with 405B parameters",
         "temperature": 0.7,
         "system_prompt": "You are Llama 3.1 405B, a highly capable large language model. Use your extensive knowledge and reasoning to negotiate effectively."
     },
     "qwen-3-235b-a22b-2507": {
         "name": "Qwen 3 235B", 
-        "model_id": "qwen/qwen3-235b-a22b-2507",
+        "model_id": "qwen/qwen-110b-chat",
         "provider": "Alibaba",
+        "api_type": "openrouter",
         "description": "Alibaba's strong multilingual model",
         "temperature": 0.7,
-        "system_prompt": "You are Qwen 3 235B, an advanced AI model. Apply strategic analysis to achieve the best possible outcomes in this negotiation."
+        "system_prompt": "You are Qwen 3, an advanced AI model. Apply strategic analysis to achieve the best possible outcomes in this negotiation."
     }
 }
 
@@ -364,8 +438,8 @@ class StrongModelsExperiment:
         )
         
         # Save experiment results
-        with open(experiment_results_file, 'w') as f:
-            json.dump(results.to_dict(), f, indent=2, default=str)
+        with open(experiment_results_file, 'w', encoding='utf-8') as f:
+            json.dump(results.to_dict(), f, indent=2, default=str, ensure_ascii=False)
         
         self.logger.info(f"✅ Experiment results saved to: {exp_dir}")
         if hasattr(self, 'current_batch_id') and self.current_batch_id and hasattr(self, 'current_run_number') and self.current_run_number:
@@ -454,9 +528,8 @@ class StrongModelsExperiment:
         """Create agents for the specified models."""
         agents = []
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        
-        if not openrouter_key:
-            raise ValueError("OPENROUTER_API_KEY environment variable is required")
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        openai_key = os.getenv("OPENAI_API_KEY")
         
         factory = AgentFactory()
         
@@ -470,28 +543,88 @@ class StrongModelsExperiment:
                 continue
             
             model_config = STRONG_MODELS_CONFIG[model_name]
+            api_type = model_config.get("api_type", "openrouter")
             
-            # Create agent configuration
-            agent_config = AgentConfiguration(
-                agent_id=f"{model_name.replace('-', '_')}_{i+1}",
-                model_type=ModelType.GEMMA_2_27B,  # Base type for OpenRouter
-                api_key=openrouter_key,
-                temperature=model_config["temperature"],
-                max_tokens=4000,
-                system_prompt=model_config["system_prompt"],
-                custom_parameters={"model_id": model_config["model_id"]}
-            )
+            agent_id = f"{model_name.replace('-', '_')}_{i+1}"
             
-            # Create OpenRouter agent
-            from negotiation.llm_agents import LLMConfig
-            llm_config = agent_config.to_llm_config()
-            agent = OpenRouterAgent(
-                agent_id=agent_config.agent_id,
-                llm_config=llm_config,
-                api_key=openrouter_key,
-                model_id=model_config["model_id"]
-            )
+            # Create agent based on API type
+            if api_type == "anthropic":
+                if not anthropic_key:
+                    self.logger.warning(f"ANTHROPIC_API_KEY not set, skipping {model_name}")
+                    continue
+                    
+                # Use Anthropic API directly
+                from negotiation.llm_agents import AnthropicAgent, ModelType, LLMConfig
+                llm_config = LLMConfig(
+                    model_type=ModelType.CLAUDE_3_5_SONNET if "sonnet" in model_name else ModelType.CLAUDE_3_HAIKU,
+                    temperature=model_config["temperature"],
+                    max_tokens=4000,
+                    system_prompt=model_config["system_prompt"]
+                )
+                agent = AnthropicAgent(
+                    agent_id=agent_id,
+                    config=llm_config,
+                    api_key=anthropic_key
+                )
+                
+            elif api_type == "openai":
+                if not openai_key:
+                    self.logger.warning(f"OPENAI_API_KEY not set, skipping {model_name}")
+                    continue
+                    
+                # Use OpenAI API directly
+                from negotiation.llm_agents import OpenAIAgent, ModelType, LLMConfig
+                # Determine correct model type
+                if "gpt-4o" in model_name:
+                    model_type = ModelType.GPT_4O
+                elif "gpt-4" in model_name:
+                    model_type = ModelType.GPT_4
+                elif "o3" in model_name:
+                    model_type = ModelType.O3
+                else:
+                    model_type = ModelType.GPT_4  # default
+                    
+                llm_config = LLMConfig(
+                    model_type=model_type,
+                    temperature=model_config["temperature"],
+                    max_tokens=4000,
+                    system_prompt=model_config["system_prompt"],
+                    custom_parameters={}  # Model is set through model_type
+                )
+                agent = OpenAIAgent(
+                    agent_id=agent_id,
+                    config=llm_config,
+                    api_key=openai_key
+                )
+                
+            else:  # openrouter
+                if not openrouter_key:
+                    self.logger.warning(f"OPENROUTER_API_KEY not set, skipping {model_name}")
+                    continue
+                    
+                # Use OpenRouter
+                agent_config = AgentConfiguration(
+                    agent_id=agent_id,
+                    model_type=ModelType.GEMMA_2_27B,  # Base type for OpenRouter
+                    api_key=openrouter_key,
+                    temperature=model_config["temperature"],
+                    max_tokens=4000,
+                    system_prompt=model_config["system_prompt"],
+                    custom_parameters={"model_id": model_config["model_id"]}
+                )
+                from negotiation.llm_agents import LLMConfig
+                llm_config = agent_config.to_llm_config()
+                agent = OpenRouterAgent(
+                    agent_id=agent_id,
+                    llm_config=llm_config,
+                    api_key=openrouter_key,
+                    model_id=model_config["model_id"]
+                )
+            
             agents.append(agent)
+        
+        if not agents:
+            raise ValueError("No agents could be created. Check your API keys.")
         
         return agents
     
@@ -1333,14 +1466,14 @@ Remember: This thinking is completely private."""
             # Save agent-specific interactions in subdirectory
             for agent_id, interactions in self.agent_interactions.items():
                 agent_file = agent_interactions_dir / f"run_{self.current_run_number}_agent_{agent_id}_interactions.json"
-                with open(agent_file, 'w') as f:
+                with open(agent_file, 'w', encoding='utf-8') as f:
                     json.dump({
                         "agent_id": agent_id,
                         "run_number": self.current_run_number,
                         "batch_id": self.current_batch_id,
                         "total_interactions": len(interactions),
                         "interactions": interactions
-                    }, f, indent=2, default=str)
+                    }, f, indent=2, default=str, ensure_ascii=False)
         else:
             # Single experiment mode - use original structure
             exp_dir = self.results_dir / self.current_experiment_id
@@ -1350,16 +1483,16 @@ Remember: This thinking is completely private."""
             # Save agent-specific interactions
             for agent_id, interactions in self.agent_interactions.items():
                 agent_file = exp_dir / f"agent_{agent_id}_interactions.json"
-                with open(agent_file, 'w') as f:
+                with open(agent_file, 'w', encoding='utf-8') as f:
                     json.dump({
                         "agent_id": agent_id,
                         "total_interactions": len(interactions),
                         "interactions": interactions
-                    }, f, indent=2, default=str)
+                    }, f, indent=2, default=str, ensure_ascii=False)
         
         # Save all interactions file
-        with open(all_interactions_file, 'w') as f:
-            json.dump(self.all_interactions, f, indent=2, default=str)
+        with open(all_interactions_file, 'w', encoding='utf-8') as f:
+            json.dump(self.all_interactions, f, indent=2, default=str, ensure_ascii=False)
     
     def _aggregate_strategic_behaviors(self, experiments):
         """Aggregate strategic behaviors across experiments."""
@@ -1393,8 +1526,8 @@ Remember: This thinking is completely private."""
     def _save_experiment_result(self, result: ExperimentResults):
         """Save a single experiment result to file."""
         filename = self.results_dir / f"{result.experiment_id}.json"
-        with open(filename, 'w') as f:
-            json.dump(result.to_dict(), f, indent=2)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(result.to_dict(), f, indent=2, ensure_ascii=False)
         self.logger.info(f"Saved experiment result to {filename}")
         
     def _save_experiment_result_with_run_number(self, result: ExperimentResults, run_number: int):
@@ -1405,15 +1538,15 @@ Remember: This thinking is completely private."""
         else:
             filename = self.results_dir / f"{result.experiment_id}.json"
         
-        with open(filename, 'w') as f:
-            json.dump(result.to_dict(), f, indent=2)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(result.to_dict(), f, indent=2, ensure_ascii=False)
         self.logger.info(f"Saved experiment result to {filename}")
     
     def _save_batch_results(self, batch_results: BatchResults):
         """Save batch results to file."""
         filename = self.results_dir / f"{batch_results.batch_id}_summary.json"
-        with open(filename, 'w') as f:
-            json.dump(batch_results.to_dict(), f, indent=2)
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(batch_results.to_dict(), f, indent=2, ensure_ascii=False)
         self.logger.info(f"Saved batch results to {filename}")
 
 
@@ -1429,8 +1562,8 @@ async def main():
         "--models",
         nargs="+",
         choices=list(STRONG_MODELS_CONFIG.keys()),
-        default=["gemini-pro", "claude-4-sonnet", "llama-3-1-405b"],
-        help="Models to include in negotiation"
+        default=["claude-3-5-sonnet", "gpt-4o"],
+        help="Models to include in negotiation (claude-3-5-sonnet, claude-3-5-haiku, gemini-2-5-pro, gemini-2-0-flash, gpt-4o, o3, etc.)"
     )
     
     parser.add_argument(
@@ -1475,11 +1608,26 @@ async def main():
     
     args = parser.parse_args()
     
-    # Check for API key
-    if not os.getenv("OPENROUTER_API_KEY"):
-        print("ERROR: OPENROUTER_API_KEY environment variable is required")
-        print("Please set it with: export OPENROUTER_API_KEY='your-key-here'")
+    # Check for at least one API key
+    has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
+    has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
+    has_openai = bool(os.getenv("OPENAI_API_KEY"))
+    
+    if not (has_openrouter or has_anthropic or has_openai):
+        print("ERROR: At least one API key is required")
+        print("Please set one or more of:")
+        print("  export OPENROUTER_API_KEY='your-key-here'")
+        print("  export ANTHROPIC_API_KEY='your-key-here'")
+        print("  export OPENAI_API_KEY='your-key-here'")
         return 1
+    
+    print("API Keys detected:")
+    if has_anthropic:
+        print("  ✓ Anthropic API (Claude models)")
+    if has_openai:
+        print("  ✓ OpenAI API (GPT-4o, O3)")
+    if has_openrouter:
+        print("  ✓ OpenRouter API (Gemini, Llama, etc.)")
     
     print("=" * 60)
     print("STRONG MODELS NEGOTIATION EXPERIMENT")
