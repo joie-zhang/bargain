@@ -164,8 +164,11 @@ class ExperimentResults:
     agent_performance: Dict[str, Any]
     exploitation_detected: bool
     
-    # Model-specific winner tracking
+    # Model-specific winner tracking (kept for backwards compatibility but will be renamed)
     model_winners: Dict[str, bool] = field(default_factory=dict)
+    # New fields for clearer tracking
+    proposal_winners: Dict[str, bool] = field(default_factory=dict)  # Who got their proposal accepted
+    utility_winners: Dict[str, bool] = field(default_factory=dict)   # Who achieved highest utility
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -181,7 +184,9 @@ class ExperimentResults:
             "conversation_logs": self.conversation_logs,
             "agent_performance": self.agent_performance,
             "exploitation_detected": self.exploitation_detected,
-            "model_winners": self.model_winners
+            "model_winners": self.model_winners,
+            "proposal_winners": self.proposal_winners,
+            "utility_winners": self.utility_winners
         }
 
 
@@ -395,12 +400,26 @@ class StrongModelsExperiment:
         strategic_behaviors = self._analyze_strategic_behaviors(conversation_logs)
         agent_performance = self._analyze_agent_performance(agents, final_utilities)
         
-        # Determine model winners
-        model_winners = {}
+        # Determine model winners (multiple ways)
+        model_winners = {}  # Keep for backwards compatibility (same as proposal_winners)
+        proposal_winners = {}  # Who got their proposal accepted
+        utility_winners = {}  # Who achieved highest utility
+        
+        # Track proposal winners (who got their proposal accepted)
         if winner_agent_id and final_utilities:
             for agent in agents:
                 model_name = self._get_model_name(agent.agent_id)
-                model_winners[model_name] = (agent.agent_id == winner_agent_id)
+                is_proposal_winner = (agent.agent_id == winner_agent_id)
+                model_winners[model_name] = is_proposal_winner  # Backwards compatibility
+                proposal_winners[model_name] = is_proposal_winner
+        
+        # Track utility winners (who achieved highest utility)
+        if final_utilities:
+            max_utility = max(final_utilities.values())
+            for agent in agents:
+                model_name = self._get_model_name(agent.agent_id)
+                agent_utility = final_utilities.get(agent.agent_id, 0)
+                utility_winners[model_name] = (agent_utility == max_utility)
         
         # Create enhanced config for results
         enhanced_config = self._create_enhanced_config(
@@ -434,7 +453,9 @@ class StrongModelsExperiment:
             conversation_logs=conversation_logs,
             agent_performance=agent_performance,
             exploitation_detected=exploitation_detected,
-            model_winners=model_winners
+            model_winners=model_winners,
+            proposal_winners=proposal_winners,
+            utility_winners=utility_winners
         )
         
         # Save experiment results
