@@ -226,6 +226,20 @@ class BaseLLMAgent(ABC):
         """Get information about the model. Must be implemented by subclasses."""
         pass
     
+    def update_max_tokens(self, max_tokens: Optional[int]) -> None:
+        """Update the maximum tokens for API calls.
+        
+        Args:
+            max_tokens: New maximum token limit, or None for unlimited
+        """
+        if max_tokens is None:
+            # Use effectively unlimited value
+            self.config.max_tokens = 999999
+            self.logger.debug(f"Updated max_tokens to unlimited for {self.agent_id}")
+        else:
+            self.config.max_tokens = max_tokens
+            self.logger.debug(f"Updated max_tokens to {max_tokens} for {self.agent_id}")
+    
     def _build_system_prompt(self, context: NegotiationContext) -> str:
         """Build system prompt for the agent."""
         base_prompt = f"""You are {context.agent_id}, a negotiating agent in a multi-agent negotiation.
