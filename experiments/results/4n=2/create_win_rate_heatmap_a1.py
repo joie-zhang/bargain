@@ -156,7 +156,7 @@ def calculate_win_rate(results):
 
 def collect_all_win_rates():
     """Collect win rates from all strong_models experiments"""
-    base_dir = "/Users/joie/Desktop/bargain/experiments/results"
+    base_dir = "/Users/joie/Desktop/bargain/experiments/results/4n=2"
     all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
     
     if not all_strong_model_dirs:
@@ -194,7 +194,7 @@ def create_win_rate_matrix(win_rate_data):
     for data in win_rate_data:
         row_model = data['agent1_model']
         col_model = data['agent2_model']
-        win_rate = data['agent2_win_rate']  # Showing agent2's win rate
+        win_rate = data['agent1_win_rate']
         
         if row_model in model_names and col_model in model_names:
             matrix.loc[row_model, col_model] = win_rate
@@ -213,13 +213,13 @@ def create_heatmap(matrix, output_path='win_rate_heatmap.png'):
         center=0.5,  # Center colormap at 0.5 (tie)
         square=True, 
         linewidths=0.5,
-        cbar_kws={'label': 'Agent #2 Win Rate'},
+        cbar_kws={'label': 'Agent #1Win Rate'},
         fmt='.3f',  # Show 3 decimal places
         vmin=0, 
         vmax=1
     )
     
-    plt.title('Strong Model Negotiation Agent #2 Win Rates\n(Row vs Column)', fontsize=16, pad=20)
+    plt.title('Strong Model Negotiation Agent #1 Win Rates\n(Row vs Column)', fontsize=16, pad=20)
     plt.xlabel('Agent #2 (Column)', fontsize=12)
     plt.ylabel('Agent #1 (Row)', fontsize=12)
     
@@ -257,7 +257,7 @@ def main():
     print("\nCreating win rate matrix...")
     matrix = create_win_rate_matrix(win_rate_data)
     
-    print("\nAgent #2 Win Rate Matrix:")
+    print("\nAgent #1 Win Rate Matrix:")
     print(matrix)
     
     # Create and save heatmap

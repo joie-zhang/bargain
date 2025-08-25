@@ -156,7 +156,7 @@ def calculate_win_rate(results):
 
 def collect_all_win_rates():
     """Collect win rates from all strong_models experiments"""
-    base_dir = "/Users/joie/Desktop/bargain/experiments/results"
+    base_dir = "/Users/joie/Desktop/bargain/experiments/results/4n=2"
     all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
     
     if not all_strong_model_dirs:
