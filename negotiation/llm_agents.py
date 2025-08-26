@@ -922,11 +922,11 @@ class AnthropicAgent(BaseLLMAgent):
         
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
         
-        # Check for custom model_id first, then fall back to default mapping
-        if config.custom_parameters and "model_id" in config.custom_parameters:
-            self.model_name = config.custom_parameters["model_id"]
+        # Check if we have an actual model ID stored (for newer models)
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
         else:
-            # Model name mapping (fallback)
+            # Model name mapping (standard enum types)
             if config.model_type == ModelType.CLAUDE_3_OPUS:
                 self.model_name = "claude-3-opus-20240229"
             elif config.model_type == ModelType.CLAUDE_3_SONNET:
@@ -959,24 +959,46 @@ class AnthropicAgent(BaseLLMAgent):
             "max_tokens": self.config.max_tokens,  # Required by Anthropic API
             "system": system_message,
             "messages": user_messages,
+            "stream": True,  # Enable streaming for long requests
             **self.config.custom_parameters,
             **kwargs
         }
         
-        response = await self.client.messages.create(**api_params)
+        # Use streaming to handle long requests
+        stream = await self.client.messages.create(**api_params)
+        
+        # Collect the streamed response
+        full_text = ""
+        input_tokens = 0
+        output_tokens = 0
+        stop_reason = None
+        
+        async for event in stream:
+            if hasattr(event, 'type'):
+                if event.type == 'content_block_delta':
+                    full_text += event.delta.text
+                elif event.type == 'message_start':
+                    if hasattr(event.message, 'usage'):
+                        input_tokens = event.message.usage.input_tokens
+                elif event.type == 'message_delta':
+                    if hasattr(event, 'usage'):
+                        output_tokens = event.usage.output_tokens
+                    if hasattr(event.delta, 'stop_reason'):
+                        stop_reason = event.delta.stop_reason
         
         response_time = time.time() - start_time
+        total_tokens = input_tokens + output_tokens
         
         return AgentResponse(
-            content=response.content[0].text,
+            content=full_text,
             model_used=self.model_name,
             response_time=response_time,
-            tokens_used=response.usage.input_tokens + response.usage.output_tokens,
-            cost_estimate=self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens),
+            tokens_used=total_tokens,
+            cost_estimate=self._estimate_cost(input_tokens, output_tokens),
             metadata={
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-                "stop_reason": response.stop_reason
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "stop_reason": stop_reason
             }
         )
     
@@ -1023,11 +1045,11 @@ class OpenAIAgent(BaseLLMAgent):
         
         self.client = openai.AsyncOpenAI(api_key=api_key)
         
-        # Check for custom model_id first, then fall back to default mapping
-        if config.custom_parameters and "model_id" in config.custom_parameters:
-            self.model_name = config.custom_parameters["model_id"]
+        # Check if we have an actual model ID stored (for newer models)
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
         else:
-            # Model name mapping (fallback)
+            # Model name mapping (standard enum types)
             if config.model_type == ModelType.GPT_4:
                 self.model_name = "gpt-4"
             elif config.model_type == ModelType.GPT_4_TURBO:
@@ -1059,9 +1081,9 @@ class OpenAIAgent(BaseLLMAgent):
             # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature
         
-        # Add custom parameters but exclude any max_tokens variants and model_id
+        # Add custom parameters but exclude any max_tokens variants
         custom_params = {k: v for k, v in self.config.custom_parameters.items() 
-                        if k not in ['max_tokens', 'max_completion_tokens', 'model_id']}
+                        if k not in ['max_tokens', 'max_completion_tokens']}
         
         response = await self.client.chat.completions.create(
             **api_params,
