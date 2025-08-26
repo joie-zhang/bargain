@@ -28,7 +28,7 @@ STRONG_MODELS=(
 )
 
 # Competition levels
-COMPETITION_LEVELS=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
 
 # Base parameters
 NUM_ITEMS=5
