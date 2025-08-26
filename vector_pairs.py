@@ -61,16 +61,24 @@ v1_a_nn = np.array([10, 0, 0, 0, 0])
 v1_b_nn = np.array([0, 10, 10, 10, 10])
 
 # Pair 2: Cosine similarity = 0.25
+# Need: dot(a,b)/(||a|| * ||b||) = 0.25
+# Using a = [1, 0, 0, 0, 0] (norm = 1) and finding b such that dot/norm_b = 0.25
+# If b = [0.25, sqrt(0.9375), 0, 0, 0], then dot = 0.25, norm_b = 1, cos = 0.25
+# Scaling up: a = [10, 0, 0, 0, 0], b = [2.5, 9.682458366, 0, 0, 0]
 v2_a_nn = np.array([10, 0, 0, 0, 0])
-v2_b_nn = np.array([5, 10, 10, 5, 0])  # dot=50, norm_a=10, norm_b=20, cos=0.25
+v2_b_nn = np.array([2.5, 9.682458366, 0, 0, 0])  # dot=25, norm_a=10, norm_b=10, cos=0.25
 
 # Pair 3: Cosine similarity = 0.5
 v3_a_nn = np.array([10, 10, 0, 0, 0])
 v3_b_nn = np.array([10, 0, 10, 0, 0])  # dot=100, norm_a=10√2, norm_b=10√2, cos=0.5
 
 # Pair 4: Cosine similarity = 0.75
-v4_a_nn = np.array([10, 10, 10, 0, 0])
-v4_b_nn = np.array([10, 10, 5, 5, 0])  # Adjusted for cos_sim ≈ 0.75
+# Need: dot(a,b)/(||a|| * ||b||) = 0.75
+# Using a = [1, 0, 0, 0, 0] (norm = 1) and finding b such that dot/norm_b = 0.75
+# If b = [0.75, sqrt(0.4375), 0, 0, 0], then dot = 0.75, norm_b = 1, cos = 0.75
+# Scaling up: a = [10, 0, 0, 0, 0], b = [7.5, 6.614378278, 0, 0, 0]
+v4_a_nn = np.array([10, 0, 0, 0, 0])
+v4_b_nn = np.array([7.5, 6.614378278, 0, 0, 0])  # dot=75, norm_a=10, norm_b=10, cos=0.75
 
 # Pair 5: Cosine similarity = 1 (parallel vectors)
 v5_a_nn = np.array([2, 4, 6, 8, 10])
