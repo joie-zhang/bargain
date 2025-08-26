@@ -922,17 +922,21 @@ class AnthropicAgent(BaseLLMAgent):
         
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
         
-        # Model name mapping
-        if config.model_type == ModelType.CLAUDE_3_OPUS:
-            self.model_name = "claude-3-opus-20240229"
-        elif config.model_type == ModelType.CLAUDE_3_SONNET:
-            self.model_name = "claude-3-sonnet-20240229"
-        elif config.model_type == ModelType.CLAUDE_3_HAIKU:
-            self.model_name = "claude-3-haiku-20240307"
-        elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
-            self.model_name = "claude-3-5-sonnet-20241022"
+        # Check for custom model_id first, then fall back to default mapping
+        if config.custom_parameters and "model_id" in config.custom_parameters:
+            self.model_name = config.custom_parameters["model_id"]
         else:
-            raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
+            # Model name mapping (fallback)
+            if config.model_type == ModelType.CLAUDE_3_OPUS:
+                self.model_name = "claude-3-opus-20240229"
+            elif config.model_type == ModelType.CLAUDE_3_SONNET:
+                self.model_name = "claude-3-sonnet-20240229"
+            elif config.model_type == ModelType.CLAUDE_3_HAIKU:
+                self.model_name = "claude-3-haiku-20240307"
+            elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
+                self.model_name = "claude-3-5-sonnet-20241022"
+            else:
+                raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call Anthropic API."""
@@ -1019,19 +1023,23 @@ class OpenAIAgent(BaseLLMAgent):
         
         self.client = openai.AsyncOpenAI(api_key=api_key)
         
-        # Model name mapping
-        if config.model_type == ModelType.GPT_4:
-            self.model_name = "gpt-4"
-        elif config.model_type == ModelType.GPT_4_TURBO:
-            self.model_name = "gpt-4-turbo"
-        elif config.model_type == ModelType.GPT_4O:
-            self.model_name = "gpt-4o"
-        elif config.model_type == ModelType.O3_MINI:
-            self.model_name = "o3-mini"
-        elif config.model_type == ModelType.O3:
-            self.model_name = "o3"
+        # Check for custom model_id first, then fall back to default mapping
+        if config.custom_parameters and "model_id" in config.custom_parameters:
+            self.model_name = config.custom_parameters["model_id"]
         else:
-            raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
+            # Model name mapping (fallback)
+            if config.model_type == ModelType.GPT_4:
+                self.model_name = "gpt-4"
+            elif config.model_type == ModelType.GPT_4_TURBO:
+                self.model_name = "gpt-4-turbo"
+            elif config.model_type == ModelType.GPT_4O:
+                self.model_name = "gpt-4o"
+            elif config.model_type == ModelType.O3_MINI:
+                self.model_name = "o3-mini"
+            elif config.model_type == ModelType.O3:
+                self.model_name = "o3"
+            else:
+                raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call OpenAI API."""
@@ -1051,9 +1059,9 @@ class OpenAIAgent(BaseLLMAgent):
             # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature
         
-        # Add custom parameters but exclude any max_tokens variants
+        # Add custom parameters but exclude any max_tokens variants and model_id
         custom_params = {k: v for k, v in self.config.custom_parameters.items() 
-                        if k not in ['max_tokens', 'max_completion_tokens']}
+                        if k not in ['max_tokens', 'max_completion_tokens', 'model_id']}
         
         response = await self.client.chat.completions.create(
             **api_params,
