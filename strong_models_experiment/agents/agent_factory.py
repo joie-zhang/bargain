@@ -84,13 +84,40 @@ class StrongModelAgentFactory:
             self.logger.warning(f"ANTHROPIC_API_KEY not set, skipping {model_name}")
             return None
         
+        # Map model names to ModelType enum values
+        # For models not in the enum, we'll use the default and pass actual model via custom_parameters
+        model_type_map = {
+            "claude-3-opus": ModelType.CLAUDE_3_OPUS,
+            "claude-3-sonnet": ModelType.CLAUDE_3_SONNET,
+            "claude-3-haiku": ModelType.CLAUDE_3_HAIKU,
+            "claude-3-5-sonnet": ModelType.CLAUDE_3_5_SONNET,
+            "claude-3-5-haiku": ModelType.CLAUDE_3_HAIKU,  # Map to closest available
+        }
+        
+        # Use the enum if available, otherwise use a default
+        model_type = model_type_map.get(model_name, ModelType.CLAUDE_3_5_SONNET)
+        
+        # Set appropriate max_tokens based on model type
+        # Haiku models have a 4096 token limit, others can go higher
+        if "haiku" in model_name.lower():
+            actual_max_tokens = min(max_tokens, 4096)
+        elif "opus" in model_name.lower():
+            actual_max_tokens = min(max_tokens, 4096)
+        else:
+            actual_max_tokens = min(max_tokens, 8192)
+        
+        # Don't pass model_id in custom_parameters to avoid API errors
         llm_config = LLMConfig(
-            model_type=ModelType.CLAUDE_3_5_SONNET if "sonnet" in model_name else ModelType.CLAUDE_3_HAIKU,
+            model_type=model_type,
             temperature=model_config["temperature"],
-            max_tokens=max_tokens,
+            max_tokens=actual_max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={"model_id": model_config["model_id"]}
+            custom_parameters={}
         )
+        
+        # Store the actual model_id for the agent to use
+        if model_name not in model_type_map:
+            llm_config._actual_model_id = model_config["model_id"]
         
         return AnthropicAgent(
             agent_id=agent_id,
@@ -120,8 +147,11 @@ class StrongModelAgentFactory:
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={"model_id": model_config["model_id"]}
+            custom_parameters={}
         )
+        
+        # Store the actual model_id for the agent to use
+        llm_config._actual_model_id = model_config["model_id"]
         
         return OpenAIAgent(
             agent_id=agent_id,
