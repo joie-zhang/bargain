@@ -88,7 +88,8 @@ class StrongModelAgentFactory:
             model_type=ModelType.CLAUDE_3_5_SONNET if "sonnet" in model_name else ModelType.CLAUDE_3_HAIKU,
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
-            system_prompt=model_config["system_prompt"]
+            system_prompt=model_config["system_prompt"],
+            custom_parameters={"model_id": model_config["model_id"]}
         )
         
         return AnthropicAgent(
@@ -119,7 +120,7 @@ class StrongModelAgentFactory:
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={}
+            custom_parameters={"model_id": model_config["model_id"]}
         )
         
         return OpenAIAgent(
