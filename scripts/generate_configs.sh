@@ -9,15 +9,12 @@ mkdir -p "${CONFIG_DIR}"
 
 # Model definitions
 WEAK_MODELS=(
-    "gpt-4o"
     "claude-3-opus"
+    "gpt-4o"
     "gemini-1-5-pro"
 )
 
 STRONG_MODELS=(
-    "gemini-2-0-flash"
-    "gemini-2-5-flash"
-    "gemini-2-5-pro"
     "claude-3-5-haiku"
     "claude-3-5-sonnet"
     "claude-4-sonnet"
@@ -26,6 +23,9 @@ STRONG_MODELS=(
     "o4-mini"
     "o3"
     "gpt-5"
+    "gemini-2-0-flash"
+    "gemini-2-5-flash"
+    "gemini-2-5-pro"
 )
 
 # Competition levels

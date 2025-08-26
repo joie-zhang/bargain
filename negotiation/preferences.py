@@ -12,6 +12,12 @@ import random
 import numpy as np
 from abc import ABC, abstractmethod
 import json
+import sys
+from pathlib import Path
+
+# Import predefined vectors
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from vector_pairs import pairs_v2  # Use non-negative vectors
 
 
 class PreferenceType(Enum):
@@ -134,24 +140,43 @@ class VectorPreferenceSystem(BasePreferenceSystem):
         return preferences
     
     def _generate_with_target_similarity(self, agent_ids: List[str]) -> Dict[str, List[float]]:
-        """Generate preferences with target cosine similarity."""
+        """Generate preferences with target cosine similarity using predefined vectors."""
         preferences = {}
         
-        # Generate first vector randomly (matching generate_vectors_with_cosine_similarity.py)
-        v1 = self.rng.randn(self.config.m_items)
-        v1 = v1 / np.linalg.norm(v1)  # Normalize to unit vector
-        # Scale vector to have random magnitude
-        v1 = v1 * self.rng.uniform(1, 10)
-        # Ensure values are within bounds
-        v1 = np.clip(v1, self.config.min_value, self.config.max_value)
-        preferences[agent_ids[0]] = v1.tolist()
+        # Map target similarity to the closest predefined pair
+        target_sim = self.config.target_cosine_similarity
         
-        # Generate other agents with target similarity to first
-        for agent_id in agent_ids[1:]:
-            target_vector = self._generate_similar_vector(
-                v1, self.config.target_cosine_similarity
-            )
-            preferences[agent_id] = target_vector.tolist()
+        # Find the closest predefined pair based on target similarity
+        # pairs_v2 has vectors for cosine similarities: 0.0, 0.25, 0.5, 0.75, 1.0
+        similarity_targets = [0.0, 0.25, 0.5, 0.75, 1.0]
+        closest_idx = np.argmin([abs(target_sim - s) for s in similarity_targets])
+        
+        # Get the corresponding vector pair
+        vector_a, vector_b, _ = pairs_v2[closest_idx]
+        
+        # Check if we have exactly 2 agents and 5 items (matching predefined vectors)
+        if self.config.n_agents == 2 and self.config.m_items == 5:
+            # Use predefined vectors directly
+            preferences[agent_ids[0]] = vector_a.tolist()
+            preferences[agent_ids[1]] = vector_b.tolist()
+        else:
+            # If different number of agents or items, adapt the vectors
+            # For now, use the old method as fallback
+            # Generate first vector randomly
+            v1 = self.rng.randn(self.config.m_items)
+            v1 = v1 / np.linalg.norm(v1)  # Normalize to unit vector
+            # Scale vector to have random magnitude
+            v1 = v1 * self.rng.uniform(1, 10)
+            # Ensure values are within bounds
+            v1 = np.clip(v1, self.config.min_value, self.config.max_value)
+            preferences[agent_ids[0]] = v1.tolist()
+            
+            # Generate other agents with target similarity to first
+            for agent_id in agent_ids[1:]:
+                target_vector = self._generate_similar_vector(
+                    v1, self.config.target_cosine_similarity
+                )
+                preferences[agent_id] = target_vector.tolist()
         
         return preferences
     
