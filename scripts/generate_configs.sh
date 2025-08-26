@@ -19,16 +19,17 @@ STRONG_MODELS=(
     "gemini-2-5-flash"
     "gemini-2-5-pro"
     "claude-3-5-haiku"
+    "claude-3-5-sonnet"
     "claude-4-sonnet"
-    "claude-4-opus"
+    "claude-4-1-opus"
     "o3-mini"
     "o4-mini"
     "o3"
-    "chatgpt-5"
+    "gpt-5"
 )
 
 # Competition levels
-COMPETITION_LEVELS=(0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9)
+COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
 
 # Base parameters
 NUM_ITEMS=5
