@@ -42,6 +42,11 @@ echo "[$(date)] Starting experiment ${JOB_ID}: ${WEAK_MODEL} vs ${STRONG_MODEL} 
 # Run the actual experiment
 cd "${BASE_DIR}"
 
+# Activate virtual environment if it exists
+if [ -f ~/.venv/bin/activate ]; then
+    source ~/.venv/bin/activate
+fi
+
 # Build the command
 CMD="python3 run_strong_models_experiment.py \
     --models ${WEAK_MODEL} ${STRONG_MODEL} \

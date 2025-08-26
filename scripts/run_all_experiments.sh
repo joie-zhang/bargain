@@ -38,6 +38,12 @@ print_header() {
 check_requirements() {
     print_header "Checking Requirements"
     
+    # Activate virtual environment if it exists
+    if [ -f ~/.venv/bin/activate ]; then
+        source ~/.venv/bin/activate
+        echo "✅ Virtual environment activated"
+    fi
+    
     # Check for Python
     if ! command -v python3 &> /dev/null; then
         echo "❌ Python3 is required but not installed."

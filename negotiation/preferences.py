@@ -137,18 +137,19 @@ class VectorPreferenceSystem(BasePreferenceSystem):
         """Generate preferences with target cosine similarity."""
         preferences = {}
         
-        # Generate first agent randomly
-        base_vector = self.rng.uniform(
-            self.config.min_value, 
-            self.config.max_value, 
-            self.config.m_items
-        )
-        preferences[agent_ids[0]] = base_vector.tolist()
+        # Generate first vector randomly (matching generate_vectors_with_cosine_similarity.py)
+        v1 = self.rng.randn(self.config.m_items)
+        v1 = v1 / np.linalg.norm(v1)  # Normalize to unit vector
+        # Scale vector to have random magnitude
+        v1 = v1 * self.rng.uniform(1, 10)
+        # Ensure values are within bounds
+        v1 = np.clip(v1, self.config.min_value, self.config.max_value)
+        preferences[agent_ids[0]] = v1.tolist()
         
         # Generate other agents with target similarity to first
         for agent_id in agent_ids[1:]:
             target_vector = self._generate_similar_vector(
-                base_vector, self.config.target_cosine_similarity
+                v1, self.config.target_cosine_similarity
             )
             preferences[agent_id] = target_vector.tolist()
         
@@ -157,34 +158,28 @@ class VectorPreferenceSystem(BasePreferenceSystem):
     def _generate_similar_vector(self, base_vector: np.ndarray, 
                                target_similarity: float) -> np.ndarray:
         """Generate a vector with target cosine similarity to base vector."""
-        # Start with random vector
-        random_vector = self.rng.uniform(
-            self.config.min_value, 
-            self.config.max_value, 
-            len(base_vector)
-        )
+        # Normalize base vector to unit vector
+        v1 = base_vector / np.linalg.norm(base_vector)
         
-        # Normalize vectors
-        base_norm = base_vector / np.linalg.norm(base_vector)
-        random_norm = random_vector / np.linalg.norm(random_vector)
+        # Generate a random orthogonal vector
+        random_vec = self.rng.randn(len(base_vector))
+        # Make it orthogonal to v1 using Gram-Schmidt
+        v_orthogonal = random_vec - np.dot(random_vec, v1) * v1
+        v_orthogonal = v_orthogonal / np.linalg.norm(v_orthogonal)  # Normalize
         
-        # Create orthogonal component
-        orthogonal = random_norm - np.dot(random_norm, base_norm) * base_norm
-        orthogonal = orthogonal / np.linalg.norm(orthogonal)
+        # Calculate angle from desired cosine similarity
+        angle = np.arccos(np.clip(target_similarity, -1, 1))
         
-        # Combine base and orthogonal components to achieve target similarity
-        alpha = target_similarity
-        beta = np.sqrt(1 - alpha**2)
+        # Construct v2 using the angle
+        v2 = np.cos(angle) * v1 + np.sin(angle) * v_orthogonal
         
-        similar_vector = alpha * base_norm + beta * orthogonal
-        
-        # Scale back to original range
-        similar_vector = similar_vector * np.linalg.norm(base_vector)
+        # Scale vectors to have random magnitudes (matching generate_vectors_with_cosine_similarity.py)
+        v2 = v2 * self.rng.uniform(1, 10)
         
         # Ensure values are within bounds
-        similar_vector = np.clip(similar_vector, self.config.min_value, self.config.max_value)
+        v2 = np.clip(v2, self.config.min_value, self.config.max_value)
         
-        return similar_vector
+        return v2
     
     def _calculate_pairwise_cosine_similarities(self, 
                                               preferences: Dict[str, List[float]]) -> Dict[str, float]:
