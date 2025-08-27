@@ -55,41 +55,36 @@ print("VERSION 2: NON-NEGATIVE NUMBERS ONLY")
 print("=" * 60)
 
 # Vector pairs with non-negative values only
+# UPDATED: All vectors now sum to 30 for equal maximum utilities
 
 # Pair 1: Cosine similarity = 0 (orthogonal vectors)
-v1_a_nn = np.array([10, 0, 0, 0, 0])
-v1_b_nn = np.array([0, 10, 10, 10, 10])
+v1_a_nn = np.array([15.0, 15.0, 0.0, 0.0, 0.0])
+v1_b_nn = np.array([0.0, 0.0, 10.0, 10.0, 10.0])
 
-# Pair 2: Cosine similarity = 0.25
-# Need: dot(a,b)/(||a|| * ||b||) = 0.25
-# Using a = [1, 0, 0, 0, 0] (norm = 1) and finding b such that dot/norm_b = 0.25
-# If b = [0.25, sqrt(0.9375), 0, 0, 0], then dot = 0.25, norm_b = 1, cos = 0.25
-# Scaling up: a = [10, 0, 0, 0, 0], b = [2.5, 9.682458366, 0, 0, 0]
-v2_a_nn = np.array([10, 0, 0, 0, 0])
-v2_b_nn = np.array([2.5, 9.682458366, 0, 0, 0])  # dot=25, norm_a=10, norm_b=10, cos=0.25
+# Pair 2: Cosine similarity ≈ 0.25 (actual = 0.2495, error = 0.0005)
+v2_a_nn = np.array([13.0, 9.9, 5.0, 1.0, 1.1])
+v2_b_nn = np.array([1.1, 1.0, 5.0, 9.9, 13.0])
 
-# Pair 3: Cosine similarity = 0.5
-v3_a_nn = np.array([10, 10, 0, 0, 0])
-v3_b_nn = np.array([10, 0, 10, 0, 0])  # dot=100, norm_a=10√2, norm_b=10√2, cos=0.5
+# Pair 3: Cosine similarity ≈ 0.5 (actual = 0.4940, error = 0.0060)
+v3_a_nn = np.array([14.1, 9.1, 3.2, 2.3, 1.3])
+v3_b_nn = np.array([3.2, 3.1, 5.9, 9.9, 7.9])
 
-# Pair 4: Cosine similarity = 0.75
-# Need: dot(a,b)/(||a|| * ||b||) = 0.75
-# Using a = [1, 0, 0, 0, 0] (norm = 1) and finding b such that dot/norm_b = 0.75
-# If b = [0.75, sqrt(0.4375), 0, 0, 0], then dot = 0.75, norm_b = 1, cos = 0.75
-# Scaling up: a = [10, 0, 0, 0, 0], b = [7.5, 6.614378278, 0, 0, 0]
-v4_a_nn = np.array([10, 0, 0, 0, 0])
-v4_b_nn = np.array([7.5, 6.614378278, 0, 0, 0])  # dot=75, norm_a=10, norm_b=10, cos=0.75
+# Pair 4: Cosine similarity ≈ 0.75 (actual = 0.7494, error = 0.0006)
+v4_a_nn = np.array([13.1, 7.2, 6.2, 1.3, 2.2])
+v4_b_nn = np.array([5.1, 8.0, 6.0, 8.9, 2.0])
 
 # Pair 5: Cosine similarity = 1 (parallel vectors)
-v5_a_nn = np.array([2, 4, 6, 8, 10])
-v5_b_nn = np.array([1, 2, 3, 4, 5])
+v5_a_nn = np.array([10.0, 8.0, 6.0, 4.0, 2.0])
+v5_b_nn = np.array([10.0, 8.0, 6.0, 4.0, 2.0])
 
+# All vectors sum to 30 (equal max utilities)
+# All cosine similarities within 0.01 of target
 pairs_v2 = [
-    (v1_a_nn, v1_b_nn, 0.00),
-    (v2_a_nn, v2_b_nn, 0.25),
-    (v3_a_nn, v3_b_nn, 0.50),
-    (v4_a_nn, v4_b_nn, 0.75),
-    (v5_a_nn, v5_b_nn, 1.00)
+    (np.array([15.0, 15.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 10.0, 10.0, 10.0]), 0.00),
+    (np.array([13.0, 9.9, 5.0, 1.0, 1.1]), np.array([1.1, 1.0, 5.0, 9.9, 13.0]), 0.25),
+    (np.array([14.1, 9.1, 3.2, 2.3, 1.3]), np.array([3.2, 3.1, 5.9, 9.9, 7.9]), 0.50),
+    (np.array([13.1, 7.2, 6.2, 1.3, 2.2]), np.array([5.1, 8.0, 6.0, 8.9, 2.0]), 0.75),
+    (np.array([10.0, 8.0, 6.0, 4.0, 2.0]), np.array([10.0, 8.0, 6.0, 4.0, 2.0]), 1.00)
 ]
 
 for i, (a, b, target) in enumerate(pairs_v2, 1):
