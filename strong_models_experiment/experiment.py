@@ -271,7 +271,8 @@ class StrongModelsExperiment:
         self,
         models: List[str],
         num_runs: int = 10,
-        experiment_config: Optional[Dict[str, Any]] = None
+        experiment_config: Optional[Dict[str, Any]] = None,
+        job_id: Optional[int] = None
     ) -> BatchResults:
         """
         Run multiple experiments and aggregate results.
@@ -280,12 +281,17 @@ class StrongModelsExperiment:
             models: List of model names to use
             num_runs: Number of experiments to run
             experiment_config: Optional configuration overrides
+            job_id: Optional job/config ID from batch scheduler
             
         Returns:
             BatchResults object with aggregated statistics
         """
-        # Create batch ID
-        batch_id = f"strong_models_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        # Create batch ID - include job_id if provided
+        timestamp_pid = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+        if job_id is not None:
+            batch_id = f"strong_models_{timestamp_pid}_config{job_id:03d}"
+        else:
+            batch_id = f"strong_models_{timestamp_pid}"
         self.current_batch_id = batch_id
         experiments = []
         

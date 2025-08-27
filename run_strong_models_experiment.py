@@ -93,6 +93,13 @@ async def main():
         help="Random seed for reproducibility"
     )
     
+    parser.add_argument(
+        "--job-id",
+        type=int,
+        default=None,
+        help="Job ID from batch scheduler (for tracking config number)"
+    )
+    
     # Token control arguments for different phases
     parser.add_argument(
         "--max-tokens-discussion",
@@ -219,10 +226,13 @@ async def main():
     try:
         if args.batch:
             print(f"\n--- Batch Experiment ({args.batch_size} runs) ---")
+            if args.job_id is not None:
+                print(f"Job ID (Config #): {args.job_id}")
             batch_results = await experiment.run_batch_experiments(
                 models=args.models,
                 num_runs=args.batch_size,
-                experiment_config=experiment_config
+                experiment_config=experiment_config,
+                job_id=args.job_id
             )
             
             print(f"\n📈 Batch Results Summary:")

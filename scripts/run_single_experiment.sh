@@ -47,7 +47,7 @@ if [ -f ~/.venv/bin/activate ]; then
     source ~/.venv/bin/activate
 fi
 
-# Build the command
+# Build the command - include job ID for tracking
 CMD="python3 run_strong_models_experiment.py \
     --models ${WEAK_MODEL} ${STRONG_MODEL} \
     --competition-level ${COMP_LEVEL} \
@@ -55,7 +55,8 @@ CMD="python3 run_strong_models_experiment.py \
     --max-rounds ${MAX_ROUNDS} \
     --random-seed ${RANDOM_SEED} \
     --batch \
-    --batch-size 5"
+    --batch-size 5 \
+    --job-id ${JOB_ID}"
 
 echo "[$(date)] Running command: ${CMD}" >> "${LOG_FILE}"
 
