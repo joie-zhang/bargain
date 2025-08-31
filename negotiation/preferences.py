@@ -103,7 +103,7 @@ class VectorPreferenceSystem(BasePreferenceSystem):
     Vector-based preference system for competitive scenarios.
     
     Each agent has an m-dimensional preference vector where each dimension
-    represents their valuation for a specific item (0-10 scale).
+    represents their valuation for a specific item.
     """
     
     def generate_preferences(self) -> Dict[str, Any]:
@@ -145,8 +145,8 @@ class VectorPreferenceSystem(BasePreferenceSystem):
         # Use RandomVectorGenerator to create vectors with exact cosine similarity
         generator = RandomVectorGenerator(random_seed=self.config.random_seed)
         
-        # Calculate total utility based on config
-        max_utility = self.config.m_items * (self.config.max_value - self.config.min_value) / 2
+        # Vectors should sum to 100 for clear utility calculations
+        max_utility = 100.0
         
         if self.config.n_agents == 2:
             # Generate two vectors with target similarity

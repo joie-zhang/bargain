@@ -62,8 +62,9 @@ for weak_model in "${WEAK_MODELS[@]}"; do
             # Create config file
             CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID}.json"
             
-            # Calculate seed for this experiment
-            SEED=$((BASE_SEED + EXPERIMENT_ID))
+            # Use consistent seed based on competition level only (not experiment ID)
+            # This ensures all model pairs at the same competition level get same preferences
+            SEED=${BASE_SEED}
             
             # Write configuration as JSON - WEAK MODEL FIRST
             cat > "${CONFIG_FILE}" << EOF
@@ -96,8 +97,9 @@ for weak_model in "${WEAK_MODELS[@]}"; do
             # Create config file
             CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID}.json"
             
-            # Calculate seed for this experiment
-            SEED=$((BASE_SEED + EXPERIMENT_ID))
+            # Use consistent seed based on competition level only (not experiment ID)
+            # This ensures all model pairs at the same competition level get same preferences
+            SEED=${BASE_SEED}
             
             # Write configuration as JSON - STRONG MODEL FIRST
             cat > "${CONFIG_FILE}" << EOF

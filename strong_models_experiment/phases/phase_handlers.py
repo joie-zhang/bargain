@@ -80,7 +80,7 @@ class PhaseHandler:
             self.logger.info(f"  🎯 {agent.agent_id} preferences:")
             for i, (item, value) in enumerate(zip(items, agent_preferences)):
                 item_name = item["name"] if isinstance(item, dict) else str(item)
-                self.logger.info(f"    - {item_name}: {value:.1f}/10")
+                self.logger.info(f"    - {item_name}: {value:.1f}")
             
             context = NegotiationContext(
                 current_round=0,

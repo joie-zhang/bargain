@@ -92,7 +92,7 @@ class NegotiationPhases:
             self.logger.info(f"  🎯 {agent.agent_id} preferences:")
             for i, (item, value) in enumerate(zip(items, agent_preferences)):
                 item_name = item["name"] if isinstance(item, dict) else str(item)
-                self.logger.info(f"    - {item_name}: {value:.1f}/10")
+                self.logger.info(f"    - {item_name}: {value:.1f}")
             
             context = NegotiationContext(
                 current_round=0,
@@ -650,7 +650,7 @@ You are participating in a strategic negotiation with {num_agents} agents over {
 - Each round follows a structured sequence of phases
 
 **YOUR PRIVATE PREFERENCES:**
-You have been assigned private preferences for each item (values 0-10). These preferences are SECRET.
+You have been assigned private preferences for each item. These preferences are SECRET.
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposal
@@ -670,7 +670,7 @@ Please acknowledge that you understand these rules and are ready to participate!
         for i, item in enumerate(items):
             preference_value = agent_preferences[i] if isinstance(agent_preferences, list) else agent_preferences.get(i, 0)
             priority_level = self._get_priority_level(preference_value)
-            preference_details.append(f"  {i}: {item['name']} → {preference_value:.2f}/10 ({priority_level})")
+            preference_details.append(f"  {i}: {item['name']} → {preference_value:.2f} ({priority_level})")
         
         preferences_text = "\n".join(preference_details)
         

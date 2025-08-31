@@ -281,7 +281,7 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     item_name = item['name']
                 else:
                     item_name = str(item)
-                pref_str += f"- {item_name}: {value:.1f}/10\n"
+                pref_str += f"- {item_name}: {value:.1f}\n"
             return pref_str
         elif isinstance(preferences, list) and isinstance(preferences[0], list):
             # Matrix preferences  
