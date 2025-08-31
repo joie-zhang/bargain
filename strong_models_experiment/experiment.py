@@ -308,8 +308,15 @@ class StrongModelsExperiment:
             self.logger.info(f"BATCH RUN {i+1}/{num_runs}")
             self.logger.info(f"{'='*60}")
             
+            # Use different seed for each run to get different preference vectors
+            run_config = experiment_config.copy() if experiment_config else {}
+            if 'random_seed' in run_config:
+                run_config['random_seed'] = run_config['random_seed'] + i
+            else:
+                run_config['random_seed'] = 42 + i  # Default seed + offset
+            
             try:
-                result = await self.run_single_experiment(models, experiment_config)
+                result = await self.run_single_experiment(models, run_config)
                 experiments.append(result)
                 
                 # Save intermediate result
