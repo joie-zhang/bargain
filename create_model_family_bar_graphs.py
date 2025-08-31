@@ -19,32 +19,32 @@ BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
 # Define strong models by family
 MODEL_FAMILIES = {
     'Claude': ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet'],
-    'Gemini': ['gemini-2-0-flash', 'gemini-2-5-flash', 'gemini-2-5-pro'],
-    'GPT/O-Series': ['gpt-5', 'o3', 'o3-mini', 'o4-mini']
+    'Gemini/Gemma': ['gemini-2-0-flash', 'gemini-2-5-pro', 'gemma-3-27b'],
+    'GPT/O-Series': ['gpt-4o-latest', 'gpt-4o-mini', 'o1', 'o3']
 }
 
 # Model display names (shorter for better visualization)
 MODEL_DISPLAY_NAMES = {
     'claude-3-opus': 'Claude 3 Opus',
     'gemini-1-5-pro': 'Gemini 1.5 Pro',
-    'gpt-4o': 'GPT-4o',
+    'gpt-4o': 'GPT-4o (May)',
     'claude-3-5-haiku': '3.5 Haiku',
     'claude-3-5-sonnet': '3.5 Sonnet',
     'claude-4-1-opus': '4.1 Opus',
     'claude-4-sonnet': '4 Sonnet',
     'gemini-2-0-flash': '2.0 Flash',
-    'gemini-2-5-flash': '2.5 Flash',
     'gemini-2-5-pro': '2.5 Pro',
-    'gpt-5': 'GPT-5',
-    'o3': 'O3',
-    'o3-mini': 'O3 Mini',
-    'o4-mini': 'O4 Mini'
+    'gemma-3-27b': 'Gemma 3',
+    'gpt-4o-latest': 'GPT-4o (Nov)',
+    'gpt-4o-mini': '4o Mini',
+    'o1': 'O1',
+    'o3': 'O3'
 }
 
 # Color palette for families
 FAMILY_COLORS = {
     'Claude': '#8B4789',  # Purple
-    'Gemini': '#4285F4',  # Blue
+    'Gemini/Gemma': '#4285F4',  # Blue
     'GPT/O-Series': '#34A853'  # Green
 }
 

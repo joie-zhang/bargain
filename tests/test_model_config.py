@@ -25,19 +25,22 @@ print("=" * 60)
 
 # Check specific models mentioned in the experiment
 test_models = [
+    # Weak models
     "gpt-4o",
     "claude-3-opus", 
     "gemini-1-5-pro",
+    # Strong models
     "gemini-2-0-flash",
-    "gemini-2-5-flash",
     "gemini-2-5-pro",
+    "gemma-3-27b",
     "claude-3-5-haiku",
+    "claude-3-5-sonnet",
     "claude-4-sonnet",
-    "claude-4-opus",
-    "o3-mini",
-    "o4-mini",
-    "o3",
-    "chatgpt-5"
+    "claude-4-1-opus",
+    "gpt-4o-latest",
+    "gpt-4o-mini",
+    "o1",
+    "o3"
 ]
 
 print("\nChecking experiment models:")

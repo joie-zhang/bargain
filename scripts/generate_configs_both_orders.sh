@@ -9,24 +9,31 @@ CONFIG_DIR="${BASE_DIR}/experiments/results/scaling_experiment/configs"
 mkdir -p "${CONFIG_DIR}"
 
 # Model definitions
+# Weak models - baseline models for exploitation experiments
 WEAK_MODELS=(
     "claude-3-opus"
-    "gpt-4o"
     "gemini-1-5-pro"
+    "gpt-4o"  # May 2024 version
 )
 
+# Strong models - newer/more capable models that may exploit weak models
 STRONG_MODELS=(
+    # Claude models
     "claude-3-5-haiku"
     "claude-3-5-sonnet"
     "claude-4-sonnet"
     "claude-4-1-opus"
-    "o3-mini"
-    "o4-mini"
+    
+    # OpenAI models
+    "gpt-4o-latest"  # Nov 2024 version
+    "gpt-4o-mini"
+    "o1"
     "o3"
-    "gpt-5"
+    
+    # Google models
     "gemini-2-0-flash"
-    "gemini-2-5-flash"
     "gemini-2-5-pro"
+    "gemma-3-27b"
 )
 
 # Competition levels
@@ -136,7 +143,7 @@ Total experiments: ${EXPERIMENT_ID}
   - Strong model first: ${STRONG_FIRST_COUNT} (IDs ${WEAK_FIRST_COUNT}-$((EXPERIMENT_ID-1)))
 
 Weak models (3): ${WEAK_MODELS[@]}
-Strong models (11): ${STRONG_MODELS[@]}
+Strong models (12): ${STRONG_MODELS[@]}
 Competition levels (5): ${COMPETITION_LEVELS[@]}
 
 Items per negotiation: ${NUM_ITEMS}
