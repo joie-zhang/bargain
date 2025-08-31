@@ -96,18 +96,20 @@ def load_baseline_victory_data(results_dir):
                         model1 = None
                         model2 = None
                         
-                        # Check which models are involved
-                        for baseline in BASELINE_MODELS:
-                            if baseline.replace('-', '_') in agent1.lower():
-                                model1 = baseline
-                            if baseline.replace('-', '_') in agent2.lower():
-                                model2 = baseline
+                        # Extract model names from agent IDs
+                        def extract_model_name(agent_name):
+                            """Extract model name from agent ID like 'claude_3_opus_1' -> 'claude-3-opus'"""
+                            if not agent_name:
+                                return None
+                            # Remove the trailing agent number (e.g., "_1", "_2")
+                            parts = agent_name.split('_')
+                            if len(parts) > 1 and parts[-1].isdigit():
+                                parts = parts[:-1]
+                            # Join with hyphens instead of underscores
+                            return '-'.join(parts)
                         
-                        for strong in STRONG_MODELS:
-                            if strong.replace('-', '_') in agent1.lower():
-                                model1 = strong
-                            if strong.replace('-', '_') in agent2.lower():
-                                model2 = strong
+                        model1 = extract_model_name(agent1)
+                        model2 = extract_model_name(agent2)
                         
                         if not (model1 and model2):
                             continue
@@ -456,7 +458,7 @@ def print_summary_statistics(results_by_competition):
 def main():
     """Main function to create beautiful baseline victory heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
     
     results_by_competition = load_baseline_victory_data(results_dir)
     
