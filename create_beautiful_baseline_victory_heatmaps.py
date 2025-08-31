@@ -20,26 +20,26 @@ sns.set_palette("husl")
 
 # Define baseline (weak) and strong models
 BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
-STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 
-                 'claude-4-sonnet', 'gemini-2-0-flash', 'gemini-2-5-flash', 
-                 'gemini-2-5-pro', 'gpt-5', 'o3', 'o3-mini', 'o4-mini']
+STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus',
+                 'claude-4-sonnet', 'gemini-2-0-flash', 'gemini-2-5-pro',
+                 'gemma-3-27b', 'gpt-4o-latest', 'gpt-4o-mini', 'o1', 'o3']
 
 # Model display names (clean, professional labels)
 MODEL_DISPLAY_NAMES = {
     'claude-3-opus': 'Claude 3 Opus',
     'gemini-1-5-pro': 'Gemini 1.5 Pro',
-    'gpt-4o': 'GPT-4o',
+    'gpt-4o': 'GPT-4o (May 2024)',
     'claude-3-5-haiku': 'Claude 3.5 Haiku',
     'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
     'claude-4-1-opus': 'Claude 4.1 Opus',
     'claude-4-sonnet': 'Claude 4 Sonnet',
     'gemini-2-0-flash': 'Gemini 2.0 Flash',
-    'gemini-2-5-flash': 'Gemini 2.5 Flash',
     'gemini-2-5-pro': 'Gemini 2.5 Pro',
-    'gpt-5': 'GPT-5',
-    'o3': 'O3',
-    'o3-mini': 'O3 Mini',
-    'o4-mini': 'O4 Mini'
+    'gemma-3-27b': 'Gemma 3 27B',
+    'gpt-4o-latest': 'GPT-4o (Nov 2024)',
+    'gpt-4o-mini': 'GPT-4o Mini',
+    'o1': 'O1',
+    'o3': 'O3'
 }
 
 # Competition level buckets with nice labels
