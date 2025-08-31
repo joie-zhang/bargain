@@ -74,27 +74,25 @@ def load_experiment_results(results_dir):
                         model1 = None
                         model2 = None
                         
-                        for baseline in BASELINE_MODELS:
-                            if agent1 and baseline.replace('-', '_') in agent1.lower():
-                                model1 = baseline
-                                break
+                        def extract_model_name(agent_name):
+                            """Extract model name from agent ID like 'claude_3_opus_1' -> 'claude-3-opus'"""
+                            if not agent_name:
+                                return None
+                            # Remove the trailing agent number (e.g., "_1", "_2")
+                            parts = agent_name.split('_')
+                            if len(parts) > 1 and parts[-1].isdigit():
+                                parts = parts[:-1]
+                            # Join with hyphens instead of underscores
+                            return '-'.join(parts)
                         
-                        for strong in STRONG_MODELS:
-                            if agent2 and strong.replace('-', '_') in agent2.lower():
-                                model2 = strong
-                                break
+                        agent1_model = extract_model_name(agent1)
+                        agent2_model = extract_model_name(agent2)
                         
-                        # Also check reverse order
-                        if not model1 or not model2:
-                            for strong in STRONG_MODELS:
-                                if agent1 and strong.replace('-', '_') in agent1.lower():
-                                    model2 = strong
-                                    break
-                            
-                            for baseline in BASELINE_MODELS:
-                                if agent2 and baseline.replace('-', '_') in agent2.lower():
-                                    model1 = baseline
-                                    break
+                        # Check which are baseline and which are strong
+                        if agent1_model in BASELINE_MODELS and agent2_model in STRONG_MODELS:
+                            model1, model2 = agent1_model, agent2_model
+                        elif agent2_model in BASELINE_MODELS and agent1_model in STRONG_MODELS:
+                            model1, model2 = agent2_model, agent1_model
                         
                         if model1 and model2:
                             # Determine winner based on final utilities
@@ -105,17 +103,29 @@ def load_experiment_results(results_dir):
                                 util1 = final_utilities.get(agents[0], 0)
                                 util2 = final_utilities.get(agents[1], 0)
                                 
-                                # Determine winner based on highest utility
-                                agent1_won = util1 > util2
+                                # Handle ties properly - treat as 0.5 wins for each agent
+                                if util1 > util2:
+                                    agent1_won = True
+                                elif util2 > util1:
+                                    agent1_won = False
+                                else:  # util1 == util2 (tie)
+                                    # For ties, we'll add 0.5 to both agents' win counts
+                                    tie_result = 0.5
+                                    
+                                    # Store tie result for both perspectives
+                                    if model1 in BASELINE_MODELS and model2 in STRONG_MODELS:
+                                        results[model1][model2].append(tie_result)
+                                    elif model2 in BASELINE_MODELS and model1 in STRONG_MODELS:
+                                        results[model2][model1].append(tie_result)
+                                    continue  # Skip the normal win/loss processing below
                                 
-                                # Store result based on which is baseline and which is strong
+                                # Store result based on which is baseline and which is strong (for clear wins/losses)
                                 if model1 in BASELINE_MODELS and model2 in STRONG_MODELS:
                                     baseline_won = agent1_won
                                     results[model1][model2].append(1 if baseline_won else 0)
                                 elif model2 in BASELINE_MODELS and model1 in STRONG_MODELS:
                                     baseline_won = not agent1_won  # agent2 won
-                                    results[model2][model1].append(1 if baseline_won else 0)
-                
+                                    results[model2][model1].append(1 if baseline_won else 0)                
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             continue
@@ -182,7 +192,7 @@ def main():
     """Main function to generate heatmaps."""
     # Load results
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
     results = load_experiment_results(results_dir)
     
     # Print summary statistics

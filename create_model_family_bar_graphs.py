@@ -74,29 +74,27 @@ def load_experiment_results(results_dir):
                         model1 = None
                         model2 = None
                         
-                        for baseline in BASELINE_MODELS:
-                            if agent1 and baseline.replace('-', '_') in agent1.lower():
-                                model1 = baseline
-                                break
+                        def extract_model_name(agent_name):
+                            """Extract model name from agent ID like 'claude_3_opus_1' -> 'claude-3-opus'"""
+                            if not agent_name:
+                                return None
+                            # Remove the trailing agent number (e.g., "_1", "_2")
+                            parts = agent_name.split('_')
+                            if len(parts) > 1 and parts[-1].isdigit():
+                                parts = parts[:-1]
+                            # Join with hyphens instead of underscores
+                            return '-'.join(parts)
                         
-                        # Check all strong models
+                        agent1_model = extract_model_name(agent1)
+                        agent2_model = extract_model_name(agent2)
+                        
+                        # Check which are baseline and which are strong
                         all_strong_models = [m for family_models in MODEL_FAMILIES.values() for m in family_models]
-                        for strong in all_strong_models:
-                            if agent2 and strong.replace('-', '_') in agent2.lower():
-                                model2 = strong
-                                break
                         
-                        # Also check reverse order
-                        if not model1 or not model2:
-                            for strong in all_strong_models:
-                                if agent1 and strong.replace('-', '_') in agent1.lower():
-                                    model2 = strong
-                                    break
-                            
-                            for baseline in BASELINE_MODELS:
-                                if agent2 and baseline.replace('-', '_') in agent2.lower():
-                                    model1 = baseline
-                                    break
+                        if agent1_model in BASELINE_MODELS and agent2_model in all_strong_models:
+                            model1, model2 = agent1_model, agent2_model
+                        elif agent2_model in BASELINE_MODELS and agent1_model in all_strong_models:
+                            model1, model2 = agent2_model, agent1_model
                         
                         if model1 and model2:
                             # Determine winner based on final utilities
@@ -238,7 +236,7 @@ def main():
     """Main function to generate grouped bar charts."""
     # Load results
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
     results = load_experiment_results(results_dir)
     
     # Print summary statistics
