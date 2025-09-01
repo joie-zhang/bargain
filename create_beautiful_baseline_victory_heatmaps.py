@@ -458,7 +458,7 @@ def print_summary_statistics(results_by_competition):
 def main():
     """Main function to create beautiful baseline victory heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results'
     
     results_by_competition = load_baseline_victory_data(results_dir)
     

@@ -270,7 +270,7 @@ def main():
     """Main function to generate disaggregated heatmaps."""
     # Load results
     print("Loading experiment results...")
-    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results'
     results_by_competition, bidirectional_pairs = load_experiment_results(results_dir)
     
     # Print summary statistics

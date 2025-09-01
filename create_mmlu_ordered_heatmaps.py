@@ -1,0 +1,452 @@
+#!/usr/bin/env python3
+"""
+Create heatmaps with models ordered by MMLU-Pro performance.
+Y-axis: Competition level (0 to 1)
+X-axis: Models ordered by MMLU-Pro score (low to high)
+Values: Utility differences (Strong model - Baseline model)
+"""
+
+import json
+import os
+from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import defaultdict
+import pandas as pd
+
+# MMLU-Pro scores from the provided data
+MMLU_PRO_SCORES = {
+    # Strong models we're looking for
+    'claude-3-5-haiku': 64.1,
+    'claude-3-5-sonnet': 78.4,  # Using "claude-3-5-sonnet-20241022" -> "Claude 3.5 Sonnet Latest"
+    'claude-4-1-opus': 87.8,
+    'claude-4-sonnet': 79.4,
+    'gemma-3-27b': 67.5,  # from HF leaderboard
+    'gemini-2-0-flash': 77.4,
+    'gemini-2-5-pro': 84.1,  # Using "Gemini 2.5 Pro Exp"
+    'gpt-4o-mini': 62.7,
+    'gpt-4o-2024-11-20': 69.1,
+    'o1': 83.5,
+    'o3': 85.6,
+    
+    # Baseline models
+    'gpt-4o-2024-05-13': 72.55,  # from HF leaderboard
+    'gemini-1-5-pro': 75.3,  # Using "Gemini 1.5 Pro (002)"
+    'claude-3-opus': 68.45,  # from HF leaderboard
+}
+
+# Define the models we want to include
+STRONG_MODELS_REQUESTED = [
+    'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
+    'gemma-3-27b', 'gemini-2-0-flash', 'gemini-2-5-pro',
+    'gpt-4o-mini', 'gpt-4o-2024-11-20', 'o1', 'o3'
+]
+
+BASELINE_MODELS = ['gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus']
+
+# Model display names
+MODEL_DISPLAY_NAMES = {
+    'claude-3-5-haiku': 'Claude 3.5\nHaiku',
+    'claude-3-5-sonnet': 'Claude 3.5\nSonnet',
+    'claude-4-1-opus': 'Claude 4.1\nOpus',
+    'claude-4-sonnet': 'Claude 4\nSonnet',
+    'gemma-3-27b': 'Gemma 3\n27B',
+    'gemini-2-0-flash': 'Gemini 2.0\nFlash',
+    'gemini-2-5-pro': 'Gemini 2.5\nPro',
+    'gpt-4o-mini': 'GPT-4o\nMini',
+    'gpt-4o-2024-11-20': 'GPT-4o\n(Nov 2024)',
+    'o1': 'O1',
+    'o3': 'O3',
+    'gpt-4o-2024-05-13': 'GPT-4o\n(May 2024)',
+    'gemini-1-5-pro': 'Gemini 1.5\nPro',
+    'claude-3-opus': 'Claude 3\nOpus'
+}
+
+# Competition levels for y-axis
+COMPETITION_LEVELS = [0.0, 0.25, 0.5, 0.75, 1.0]
+
+def extract_model_name(agent_name):
+    """Extract model name from agent ID like 'claude_3_opus_1' -> 'claude-3-opus'"""
+    if not agent_name:
+        return None
+    # Remove the trailing agent number (e.g., "_1", "_2")
+    parts = agent_name.split('_')
+    if len(parts) > 1 and parts[-1].isdigit():
+        parts = parts[:-1]
+    # Join with hyphens instead of underscores
+    return '-'.join(parts)
+
+def normalize_model_name(model_name):
+    """Normalize model names to match our target set"""
+    # Handle GPT-4o variants
+    if model_name == 'gpt-4o-2024-05-13' or model_name == 'gpt-4o' or model_name == 'gpt-4o-may':
+        return 'gpt-4o-2024-05-13'  # Baseline model (May 2024)
+    elif model_name == 'gpt-4o-2024-11-20' or model_name == 'gpt-4o-nov':
+        return 'gpt-4o-2024-11-20'  # Strong model (Nov 2024)
+    # Handle Claude variants
+    elif model_name == 'claude-3-5-sonnet-20241022' or model_name == 'claude-3-5-sonnet':
+        return 'claude-3-5-sonnet'
+    elif model_name == 'claude-3-opus' or model_name == 'claude-3-opus-20240229':
+        return 'claude-3-opus'
+    # Handle Gemini variants
+    elif model_name == 'gemini-1-5-pro-002' or model_name == 'gemini-1-5-pro':
+        return 'gemini-1-5-pro'
+    elif model_name == 'gemini-2-0-flash-001' or model_name == 'gemini-2-0-flash':
+        return 'gemini-2-0-flash'
+    elif model_name == 'gemini-2-5-pro-exp' or model_name == 'gemini-2-5-pro':
+        return 'gemini-2-5-pro'
+    return model_name
+
+def categorize_competition_level(comp_level):
+    """Categorize competition level into buckets."""
+    if comp_level is None:
+        return None
+    # Round to nearest standard competition level
+    return min(COMPETITION_LEVELS, key=lambda x: abs(x - comp_level))
+
+def load_experiment_results(results_dir):
+    """Load all experiment results from the results directory, organized by competition level and model pairs."""
+    results_by_competition = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    
+    # Look for summary JSON files
+    results_path = Path(results_dir)
+    
+    print("Scanning for experiment files...")
+    processed_files = 0
+    
+    for file_path in results_path.glob('**/*_summary.json'):
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            
+            # Check if it has experiments list
+            if 'experiments' in data and data['experiments']:
+                for exp in data['experiments']:
+                    if 'config' in exp and 'agents' in exp['config']:
+                        agents = exp['config']['agents']
+                        
+                        # Get competition level
+                        comp_level = exp['config'].get('competition_level', None)
+                        comp_bucket = categorize_competition_level(comp_level)
+                        
+                        if comp_bucket is None:
+                            continue
+                        
+                        # Extract model names
+                        agent1 = agents[0] if len(agents) > 0 else None
+                        agent2 = agents[1] if len(agents) > 1 else None
+                        
+                        agent1_model = normalize_model_name(extract_model_name(agent1))
+                        agent2_model = normalize_model_name(extract_model_name(agent2))
+                        
+                        # Check if we have a baseline vs strong model pair
+                        baseline_model = None
+                        strong_model = None
+                        baseline_agent = None
+                        strong_agent = None
+                        
+                        if agent1_model in BASELINE_MODELS and agent2_model in STRONG_MODELS_REQUESTED:
+                            baseline_model, strong_model = agent1_model, agent2_model
+                            baseline_agent, strong_agent = agent1, agent2
+                        elif agent2_model in BASELINE_MODELS and agent1_model in STRONG_MODELS_REQUESTED:
+                            baseline_model, strong_model = agent2_model, agent1_model
+                            baseline_agent, strong_agent = agent2, agent1
+                        
+                        if baseline_model and strong_model:
+                            # Get final utilities
+                            final_utilities = exp.get('final_utilities', {})
+                            
+                            if final_utilities and baseline_agent and strong_agent:
+                                baseline_utility = final_utilities.get(baseline_agent, 0)
+                                strong_utility = final_utilities.get(strong_agent, 0)
+                                
+                                # Store the utility difference (strong - baseline)
+                                utility_diff = strong_utility - baseline_utility
+                                
+                                results_by_competition[comp_bucket][baseline_model][strong_model].append({
+                                    'utility_diff': utility_diff,
+                                    'baseline_utility': baseline_utility,
+                                    'strong_utility': strong_utility
+                                })
+                
+                processed_files += 1
+                if processed_files % 50 == 0:
+                    print(f"Processed {processed_files} files...")
+                    
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}")
+            continue
+    
+    print(f"Finished processing {processed_files} files.")
+    return results_by_competition
+
+def get_models_with_data(results_by_competition):
+    """Get the list of strong models that actually have data, ordered by MMLU-Pro score."""
+    models_with_data = set()
+    for comp_level in results_by_competition:
+        for baseline in results_by_competition[comp_level]:
+            for strong in results_by_competition[comp_level][baseline]:
+                if results_by_competition[comp_level][baseline][strong]:  # has data
+                    models_with_data.add(strong)
+    
+    # Filter to only include models we have MMLU scores for and sort by score
+    models_with_scores = []
+    for model in models_with_data:
+        if model in MMLU_PRO_SCORES and MMLU_PRO_SCORES[model] is not None:
+            models_with_scores.append((model, MMLU_PRO_SCORES[model]))
+    
+    # Sort by MMLU-Pro score (ascending - worst to best)
+    models_with_scores.sort(key=lambda x: x[1])
+    
+    return [model for model, score in models_with_scores]
+
+def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models, plot_mode='diff'):
+    """Create a heatmap for a specific baseline model."""
+    
+    # Create data matrix: rows = competition levels, cols = strong models
+    data = np.full((len(COMPETITION_LEVELS), len(ordered_strong_models)), np.nan)
+    
+    for i, comp_level in enumerate(COMPETITION_LEVELS):
+        for j, strong_model in enumerate(ordered_strong_models):
+            if (comp_level in results_by_competition and 
+                baseline_model in results_by_competition[comp_level] and
+                strong_model in results_by_competition[comp_level][baseline_model]):
+                
+                experiments = results_by_competition[comp_level][baseline_model][strong_model]
+                if experiments:
+                    if plot_mode == 'diff':
+                        # Use utility difference (strong - baseline)
+                        values = [exp['utility_diff'] for exp in experiments]
+                    elif plot_mode == 'strong_only':
+                        # Use only strong model utility
+                        values = [exp['strong_utility'] for exp in experiments]
+                    else:  # plot_mode == 'split'
+                        # For split mode, we'll handle this differently
+                        values = [exp['utility_diff'] for exp in experiments]
+                    
+                    data[i, j] = np.mean(values)
+    
+    return data
+
+def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff'):
+    """Plot heatmaps for each baseline model."""
+    
+    # Print MMLU-Pro scores
+    print("\n=== MMLU-Pro Scores of Models in Analysis ===")
+    print("Models ordered from lowest to highest MMLU-Pro performance:")
+    for i, model in enumerate(ordered_strong_models):
+        score = MMLU_PRO_SCORES[model]
+        print(f"{i+1:2d}. {MODEL_DISPLAY_NAMES[model]:<20} | MMLU-Pro: {score}%")
+    
+    print(f"\nBaseline Models:")
+    for baseline in BASELINE_MODELS:
+        if baseline in MMLU_PRO_SCORES and MMLU_PRO_SCORES[baseline] is not None:
+            score = MMLU_PRO_SCORES[baseline]
+            print(f"    {MODEL_DISPLAY_NAMES[baseline]:<20} | MMLU-Pro: {score}%")
+    
+    # Create figure with subplots for each baseline
+    baselines_with_data = []
+    for baseline in BASELINE_MODELS:
+        # Check if this baseline has any data
+        has_data = False
+        for comp_level in results_by_competition:
+            if baseline in results_by_competition[comp_level]:
+                for strong in results_by_competition[comp_level][baseline]:
+                    if results_by_competition[comp_level][baseline][strong]:
+                        has_data = True
+                        break
+                if has_data:
+                    break
+        if has_data:
+            baselines_with_data.append(baseline)
+    
+    if not baselines_with_data:
+        print("No baseline models found with data!")
+        return
+    
+    fig, axes = plt.subplots(len(baselines_with_data), 1, figsize=(16, 6*len(baselines_with_data)))
+    if len(baselines_with_data) == 1:
+        axes = [axes]
+    
+    # Create MMLU-Pro score colorbar data
+    mmlu_scores = [MMLU_PRO_SCORES[model] for model in ordered_strong_models]
+    
+    for idx, baseline in enumerate(baselines_with_data):
+        ax = axes[idx]
+        
+        # Get data for this baseline
+        data = create_heatmap_for_baseline(results_by_competition, baseline, ordered_strong_models, plot_mode)
+        
+        # Create mask for missing data
+        mask = np.isnan(data)
+        
+        # Create heatmap
+        if plot_mode == 'diff':
+            # Center colormap at 0 for utility differences
+            vmax = max(abs(np.nanmin(data)), abs(np.nanmax(data))) if not np.all(mask) else 1
+            im = sns.heatmap(data, 
+                           annot=True, 
+                           fmt='.1f',
+                           cmap='RdBu_r',  # Red = negative (baseline wins), Blue = positive (strong wins)
+                           mask=mask,
+                           cbar_kws={'label': 'Utility Difference (Adversary - Baseline)'},
+                           vmin=-vmax, 
+                           vmax=vmax,
+                           center=0,
+                           linewidths=0.5,
+                           linecolor='gray',
+                           ax=ax,
+                           square=False)
+            title_suffix = "Utility Difference (Adversary - Baseline)"
+        elif plot_mode == 'strong_only':
+            im = sns.heatmap(data, 
+                           annot=True, 
+                           fmt='.1f',
+                           cmap='viridis',
+                           mask=mask,
+                           cbar_kws={'label': 'Adversary Model Utility'},
+                           linewidths=0.5,
+                           linecolor='gray',
+                           ax=ax,
+                           square=False)
+            title_suffix = "Adversary Model Final Utility"
+        
+        # Set labels
+        ax.set_xlabel('Adversary Models (ordered by MMLU-Pro performance)', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Competition Level', fontsize=12, fontweight='bold')
+        ax.set_title(f'{MODEL_DISPLAY_NAMES[baseline]} vs Adversary Models\n{title_suffix}', 
+                    fontsize=14, fontweight='bold', pad=20)
+        
+        # Set tick labels
+        ax.set_xticklabels([MODEL_DISPLAY_NAMES[model] for model in ordered_strong_models], 
+                          rotation=45, ha='right', fontsize=10)
+        ax.set_yticklabels([f'{level:.2f}' for level in COMPETITION_LEVELS], 
+                          rotation=0, fontsize=10)
+    
+    # Add MMLU-Pro performance bar at the bottom
+    fig.subplots_adjust(bottom=0.5)  # More space for the complete layout
+    
+    # Get the position of the main heatmap to align everything properly
+    # Assuming the heatmap uses the standard matplotlib positioning
+    heatmap_left = 0.05  # Left edge of heatmap
+    heatmap_width = 0.75  # Width of heatmap area
+    
+    # Create the MMLU-Pro performance bar (make it thicker and properly aligned)
+    mmlu_bar_height = 0.02  # Make thicker to match legend thickness
+    mmlu_ax = fig.add_axes([heatmap_left, -0.02, heatmap_width, mmlu_bar_height])
+    
+    # Create a colorbar showing MMLU-Pro scores
+    mmlu_data = np.array(mmlu_scores).reshape(1, -1)
+    mmlu_im = mmlu_ax.imshow(mmlu_data, cmap='plasma', aspect='auto', extent=[0, len(ordered_strong_models), 0, 1])
+    
+    mmlu_ax.set_xticks([])  # Remove ticks from the bar itself
+    mmlu_ax.set_yticks([])
+    mmlu_ax.set_xlabel('MMLU-Pro Performance →', fontsize=10, fontweight='bold')
+    
+    # Create a separate axis for the MMLU score labels, positioned directly under the bar
+    mmlu_labels_ax = fig.add_axes([heatmap_left, -0.08, heatmap_width, 0.04])
+    mmlu_labels_ax.set_xlim(0, len(ordered_strong_models))
+    mmlu_labels_ax.set_ylim(0, 1)
+    
+    # Add the percentage labels, properly centered under each model column
+    for i, score in enumerate(mmlu_scores):
+        mmlu_labels_ax.text(i + 0.5, 0.5, f'{score}%', ha='center', va='center', 
+                           rotation=45, fontsize=8)
+    
+    mmlu_labels_ax.set_xticks([])
+    mmlu_labels_ax.set_yticks([])
+    mmlu_labels_ax.axis('off')  # Hide the axis borders
+    
+    # Add the separate legend colorbar at the very bottom
+    mmlu_cbar = plt.colorbar(mmlu_im, ax=mmlu_ax, orientation='horizontal', 
+                            shrink=8, aspect=25, pad=0.25,
+                            anchor=(0.0, 0.0))  # Anchor to align properly
+    mmlu_cbar.set_label('MMLU-Pro Score (%)', fontsize=9)
+    
+    plt.tight_layout()
+    
+    # Save figure
+    if plot_mode == 'diff':
+        filename = 'mmlu_ordered_utility_difference_heatmaps.png'
+    elif plot_mode == 'strong_only':
+        filename = 'mmlu_ordered_strong_utility_heatmaps.png'
+    else:
+        filename = 'mmlu_ordered_split_heatmaps.png'
+    
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.show()
+    print(f"Saved heatmap to {filename}")
+
+def print_summary_statistics(results_by_competition, ordered_strong_models):
+    """Print summary of the data."""
+    print("\n=== Data Summary ===")
+    
+    total_experiments = 0
+    for comp_level in COMPETITION_LEVELS:
+        level_total = 0
+        print(f"\nCompetition Level {comp_level}:")
+        
+        for baseline in BASELINE_MODELS:
+            for strong in ordered_strong_models:
+                if (comp_level in results_by_competition and 
+                    baseline in results_by_competition[comp_level] and
+                    strong in results_by_competition[comp_level][baseline]):
+                    
+                    experiments = results_by_competition[comp_level][baseline][strong]
+                    count = len(experiments)
+                    if count > 0:
+                        avg_diff = np.mean([exp['utility_diff'] for exp in experiments])
+                        print(f"  {MODEL_DISPLAY_NAMES[baseline]} vs {MODEL_DISPLAY_NAMES[strong]}: "
+                              f"{count} experiments, avg diff: {avg_diff:.1f}")
+                        level_total += count
+        
+        if level_total > 0:
+            print(f"  Level subtotal: {level_total} experiments")
+            total_experiments += level_total
+    
+    print(f"\nTotal experiments across all conditions: {total_experiments}")
+
+def main():
+    """Main function to generate MMLU-ordered heatmaps."""
+    print("Loading experiment results...")
+    results_dir = '/root/bargain/experiments/results'
+    results_by_competition = load_experiment_results(results_dir)
+    
+    # Debug: Check which models have no data
+    print("\n=== Debugging: Checking which models have data ===")
+    models_with_data = set()
+    for comp_level in results_by_competition:
+        for baseline in results_by_competition[comp_level]:
+            for strong in results_by_competition[comp_level][baseline]:
+                if results_by_competition[comp_level][baseline][strong]:
+                    models_with_data.add(strong)
+    
+    print(f"Models found with data: {models_with_data}")
+    print(f"\nModels in STRONG_MODELS_REQUESTED: {set(STRONG_MODELS_REQUESTED)}")
+    missing_models = set(STRONG_MODELS_REQUESTED) - models_with_data
+    if missing_models:
+        print(f"Missing models (no data found): {missing_models}")
+    
+    # Get models that have data, ordered by MMLU-Pro score
+    ordered_strong_models = get_models_with_data(results_by_competition)
+    
+    if not ordered_strong_models:
+        print("No strong models found with both data and MMLU-Pro scores!")
+        return
+    
+    print(f"\nFound {len(ordered_strong_models)} strong models with data and MMLU-Pro scores.")
+    
+    # Print summary statistics
+    print_summary_statistics(results_by_competition, ordered_strong_models)
+    
+    # Create the main heatmap (utility difference)
+    print("\nCreating utility difference heatmaps...")
+    plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff')
+    
+    # Optionally create strong-only utility heatmap
+    print("\nCreating strong model utility heatmaps...")
+    plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='strong_only')
+
+if __name__ == "__main__":
+    main()
