@@ -60,10 +60,10 @@ async def main():
     )
     
     parser.add_argument(
-        "--batch-size",
+        "--num-runs",
         type=int,
         default=10,
-        help="Number of experiments in batch"
+        help="Number of negotiation games to run (used with --batch)"
     )
     
     parser.add_argument(
@@ -225,12 +225,12 @@ async def main():
     
     try:
         if args.batch:
-            print(f"\n--- Batch Experiment ({args.batch_size} runs) ---")
+            print(f"\n--- Batch Experiment ({args.num_runs} runs) ---")
             if args.job_id is not None:
                 print(f"Job ID (Config #): {args.job_id}")
             batch_results = await experiment.run_batch_experiments(
                 models=args.models,
-                num_runs=args.batch_size,
+                num_runs=args.num_runs,
                 experiment_config=experiment_config,
                 job_id=args.job_id
             )
