@@ -14,113 +14,129 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+from collections import defaultdict
 
-def get_model_name_from_agent_id(agent_id):
-    """Extract model name from agent ID"""
-    # Convert from agent ID format to display format
-    model_mappings = {
-        'claude_4_sonnet': 'claude-4-sonnet',
-        'gemini_2.5_pro': 'gemini-2.5-pro', 
-        'llama_3.1_405b_instruct': 'llama-3.1-405b-instruct',
-        'qwen_3_235b_a22b_2507': 'qwen-3-235b-a22b-2507'
-    }
-    
-    # Try exact matches first
-    for internal, display in model_mappings.items():
-        if agent_id.startswith(internal):
-            return display
-    
-    # Fallback: extract first part before underscore/number
-    base_name = agent_id.split('_')[0] if '_' in agent_id else agent_id
-    
-    # Handle known variations
-    if 'claude' in base_name.lower():
-        return 'claude-4-sonnet'
-    elif 'gemini' in base_name.lower():
-        return 'gemini-2.5-pro'
-    elif 'llama' in base_name.lower():
-        return 'llama-3.1-405b-instruct'
-    elif 'qwen' in base_name.lower():
-        return 'qwen-3-235b-a22b-2507'
-    
-    return base_name
+def extract_model_name(agent_name):
+    """Extract model name from agent ID like 'claude_3_opus_1' -> 'claude-3-opus'"""
+    if not agent_name:
+        return None
+    # Remove the trailing agent number (e.g., "_1", "_2")
+    parts = agent_name.split('_')
+    if len(parts) > 1 and parts[-1].isdigit():
+        parts = parts[:-1]
+    # Join with hyphens instead of underscores
+    return '-'.join(parts)
 
-def load_run_results(results_dir):
-    """Load all run results from the specified directory"""
-    results = []
+def normalize_model_name(model_name):
+    """Normalize model names to match our target set"""
+    # Handle GPT-4o variants
+    if model_name == 'gpt-4o-2024-05-13' or model_name == 'gpt-4o' or model_name == 'gpt-4o-may':
+        return 'gpt-4o-2024-05-13'  # Baseline model (May 2024)
+    elif model_name == 'gpt-4o-2024-11-20' or model_name == 'gpt-4o-nov':
+        return 'gpt-4o-2024-11-20'  # Strong model (Nov 2024)
+    # Handle Claude variants
+    elif model_name == 'claude-3-5-sonnet-20241022' or model_name == 'claude-3-5-sonnet':
+        return 'claude-3-5-sonnet'
+    elif model_name == 'claude-3-opus' or model_name == 'claude-3-opus-20240229':
+        return 'claude-3-opus'
+    # Handle Gemini variants
+    elif model_name == 'gemini-1-5-pro-002' or model_name == 'gemini-1-5-pro':
+        return 'gemini-1-5-pro'
+    elif model_name == 'gemini-2-0-flash-001' or model_name == 'gemini-2-0-flash':
+        return 'gemini-2-0-flash'
+    elif model_name == 'gemini-2-5-pro-exp' or model_name == 'gemini-2-5-pro':
+        return 'gemini-2-5-pro'
+    return model_name
+
+def load_experiment_results(results_dir):
+    """Load all experiment results from the results directory, organized by model pairs."""
+    results_by_pairs = defaultdict(list)
+    
+    # Look for summary JSON files
     results_path = Path(results_dir)
     
-    if not results_path.exists():
-        print(f"Warning: Directory {results_dir} does not exist")
-        return results
+    print("Scanning for experiment files...")
+    processed_files = 0
     
-    # Look for both single and batch experiment result files
-    patterns = [
-        results_path / "run_*_experiment_results.json",  # Batch mode results
-        results_path / "experiment_results.json",        # Single experiment results
-    ]
-    
-    run_files = []
-    for pattern in patterns:
-        run_files.extend(sorted(glob.glob(str(pattern))))
-    
-    if not run_files:
-        print(f"Warning: No result files found in {results_dir}")
-        return results
-    
-    print(f"Found {len(run_files)} result files in {results_dir}")
-    
-    for file_path in run_files:
+    for file_path in results_path.glob('**/*_summary.json'):
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
-                results.append(data)
+            
+            # Check if it has experiments list
+            if 'experiments' in data and data['experiments']:
+                for exp in data['experiments']:
+                    if 'config' in exp and 'agents' in exp['config']:
+                        agents = exp['config']['agents']
+                        
+                        # Extract model names
+                        agent1 = agents[0] if len(agents) > 0 else None
+                        agent2 = agents[1] if len(agents) > 1 else None
+                        
+                        agent1_model = normalize_model_name(extract_model_name(agent1))
+                        agent2_model = normalize_model_name(extract_model_name(agent2))
+                        
+                        if agent1_model and agent2_model:
+                            # Store the experiment data
+                            results_by_pairs[(agent1_model, agent2_model)].append(exp)
+                
+                processed_files += 1
+                if processed_files % 50 == 0:
+                    print(f"Processed {processed_files} files...")
+                    
         except Exception as e:
-            print(f"Warning: Error loading {file_path}: {e}")
+            print(f"Error processing {file_path}: {e}")
+            continue
     
-    return results
+    print(f"Finished processing {processed_files} files.")
+    return results_by_pairs
 
-def get_agent_info(results):
-    """Extract agent information from the first result"""
-    if not results:
-        return None, None, None, None
-    
-    first_result = results[0]
-    config = first_result.get('config', {})
-    agents = config.get('agents', [])
-    
-    if len(agents) < 2:
-        print("Warning: Less than 2 agents found in config")
-        return None, None, None, None
-    
-    agent1_name = agents[0]
-    agent2_name = agents[1]
-    
-    # Extract model names from agent IDs
-    agent1_model = get_model_name_from_agent_id(agent1_name)
-    agent2_model = get_model_name_from_agent_id(agent2_name)
-    
-    return agent1_name, agent2_name, agent1_model, agent2_model
+# Define the models we want to analyze
+STRONG_MODELS_REQUESTED = [
+    'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
+    'gemma-3-27b', 'gemini-2-0-flash', 'gemini-2-5-pro',
+    'gpt-4o-mini', 'gpt-4o-2024-11-20', 'o1', 'o3'
+]
 
-def calculate_no_consensus_rate(results):
-    """Calculate no consensus rates for a pair of models"""
-    if not results:
-        return None
-    
-    agent1_name, agent2_name, agent1_model, agent2_model = get_agent_info(results)
-    
-    if not all([agent1_name, agent2_name, agent1_model, agent2_model]):
-        print(f"Warning: Could not determine agent names for directory")
+BASELINE_MODELS = ['gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus']
+
+# Model display names
+MODEL_DISPLAY_NAMES = {
+    'claude-3-5-haiku': 'Claude 3.5 Haiku',
+    'claude-3-5-sonnet': 'Claude 3.5 Sonnet',
+    'claude-4-1-opus': 'Claude 4.1 Opus',
+    'claude-4-sonnet': 'Claude 4 Sonnet',
+    'gemma-3-27b': 'Gemma 3 27B',
+    'gemini-2-0-flash': 'Gemini 2.0 Flash',
+    'gemini-2-5-pro': 'Gemini 2.5 Pro',
+    'gpt-4o-mini': 'GPT-4o Mini',
+    'gpt-4o-2024-11-20': 'GPT-4o (Nov 2024)',
+    'o1': 'O1',
+    'o3': 'O3',
+    'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
+    'gemini-1-5-pro': 'Gemini 1.5 Pro',
+    'claude-3-opus': 'Claude 3 Opus'
+}
+
+def calculate_no_consensus_rate(experiments):
+    """Calculate no consensus rates for a list of experiments"""
+    if not experiments:
         return None
     
     no_consensus_count = 0
-    total_games = len(results)
+    total_games = len(experiments)
     
-    print(f"  Analyzing: {agent1_model} vs {agent2_model} ({total_games} games)")
-    
-    for result in results:
+    for exp in experiments:
+        # Get agent names from config
+        agents = exp.get('config', {}).get('agents', [])
+        if len(agents) < 2:
+            continue
+            
+        agent1_name = agents[0]
+        agent2_name = agents[1]
+        
         # Get final utilities from result
-        final_utilities = result.get('final_utilities', {})
+        final_utilities = exp.get('final_utilities', {})
         
         # If no final utilities, this was a no-deal/no-consensus scenario
         if not final_utilities:
@@ -138,48 +154,59 @@ def calculate_no_consensus_rate(results):
     no_consensus_rate = no_consensus_count / total_games if total_games > 0 else 0
     
     return {
-        'agent1_model': agent1_model,
-        'agent2_model': agent2_model,
         'no_consensus_count': no_consensus_count,
         'total_games': total_games,
         'no_consensus_rate': no_consensus_rate
     }
 
 def collect_all_no_consensus_rates():
-    """Collect no consensus rates from all strong_models experiments"""
-    base_dir = "/Users/joie/Desktop/bargain/experiments/results/4n=2"
-    all_strong_model_dirs = glob.glob(f"{base_dir}/strong_models_20250819*")
+    """Collect no consensus rates from all experiments"""
+    results_dir = '/root/bargain/experiments/results'
+    results_by_pairs = load_experiment_results(results_dir)
     
-    if not all_strong_model_dirs:
-        print("No strong_models_20250819* directories found!")
+    if not results_by_pairs:
+        print("No experiment data found!")
         return []
     
     no_consensus_data = []
     
-    for dir_path in sorted(all_strong_model_dirs):
-        print(f"\nProcessing {os.path.basename(dir_path)}...")
-        results = load_run_results(dir_path)
+    # Process each model pair
+    for (model1, model2), experiments in results_by_pairs.items():
+        # Check if this is a pair we're interested in
+        # (strong vs strong, baseline vs baseline, or strong vs baseline)
+        all_models = STRONG_MODELS_REQUESTED + BASELINE_MODELS
         
-        if not results:
-            continue
+        if model1 in all_models and model2 in all_models:
+            print(f"  Analyzing: {model1} vs {model2} ({len(experiments)} games)")
             
-        no_consensus_info = calculate_no_consensus_rate(results)
-        if no_consensus_info:
-            no_consensus_data.append(no_consensus_info)
+            no_consensus_info = calculate_no_consensus_rate(experiments)
+            if no_consensus_info:
+                no_consensus_info['agent1_model'] = model1
+                no_consensus_info['agent2_model'] = model2
+                no_consensus_data.append(no_consensus_info)
     
     return no_consensus_data
 
 def create_no_consensus_matrix(no_consensus_data):
     """Create a matrix of no consensus rates for the heatmap"""
-    # Define model names in desired order
-    model_names = ['claude-4-sonnet', 'gemini-2.5-pro', 'llama-3.1-405b-instruct', 'qwen-3-235b-a22b-2507']
+    # Combine all models for the matrix
+    all_models = STRONG_MODELS_REQUESTED + BASELINE_MODELS
+    
+    # Get unique models that actually have data
+    models_with_data = set()
+    for data in no_consensus_data:
+        models_with_data.add(data['agent1_model'])
+        models_with_data.add(data['agent2_model'])
+    
+    # Filter to only models we have data for
+    model_names = [m for m in all_models if m in models_with_data]
+    
+    if not model_names:
+        print("No models found with data!")
+        return pd.DataFrame()
     
     # Initialize matrix with NaN (will show as white/missing data)
     matrix = pd.DataFrame(index=model_names, columns=model_names, dtype=float)
-    
-    # Fill diagonal with same-model interaction rates (if available)
-    for model in model_names:
-        matrix.loc[model, model] = np.nan  # Will be filled if we have data
     
     # Fill matrix with no consensus rates (NO symmetric filling - proposal order matters!)
     for data in no_consensus_data:
@@ -194,7 +221,15 @@ def create_no_consensus_matrix(no_consensus_data):
 
 def create_heatmap(matrix, output_path='no_consensus_heatmap.png'):
     """Create and save the heatmap"""
-    plt.figure(figsize=(10, 8))
+    if matrix.empty:
+        print("Cannot create heatmap - no data available")
+        return
+        
+    plt.figure(figsize=(14, 10))
+    
+    # Get display names for models
+    row_labels = [MODEL_DISPLAY_NAMES.get(m, m) for m in matrix.index]
+    col_labels = [MODEL_DISPLAY_NAMES.get(m, m) for m in matrix.columns]
     
     # Create heatmap with custom colormap
     ax = sns.heatmap(
@@ -207,10 +242,12 @@ def create_heatmap(matrix, output_path='no_consensus_heatmap.png'):
         fmt='.3f',  # Show 3 decimal places
         vmin=0, 
         vmax=1,
-        mask=matrix.isna()  # Mask NaN values
+        mask=matrix.isna(),  # Mask NaN values
+        xticklabels=col_labels,
+        yticklabels=row_labels
     )
     
-    plt.title('Strong Model Negotiation No Consensus Rates\n(Agent 1 vs Agent 2)', fontsize=16, pad=20)
+    plt.title('Model Negotiation No Consensus Rates\n(Agent 1 vs Agent 2)', fontsize=16, pad=20)
     plt.xlabel('Agent #2 (Column)', fontsize=12)
     plt.ylabel('Agent #1 (Row)', fontsize=12)
     
@@ -240,7 +277,9 @@ def main():
     
     print(f"\nCollected {len(no_consensus_data)} model pair results:")
     for data in no_consensus_data:
-        print(f"  {data['agent1_model']} vs {data['agent2_model']}: "
+        agent1_display = MODEL_DISPLAY_NAMES.get(data['agent1_model'], data['agent1_model'])
+        agent2_display = MODEL_DISPLAY_NAMES.get(data['agent2_model'], data['agent2_model'])
+        print(f"  {agent1_display} vs {agent2_display}: "
               f"{data['no_consensus_rate']:.3f} no consensus rate "
               f"({data['no_consensus_count']}/{data['total_games']} games)")
     
