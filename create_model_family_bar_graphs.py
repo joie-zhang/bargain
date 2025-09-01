@@ -236,7 +236,7 @@ def main():
     """Main function to generate grouped bar charts."""
     # Load results
     print("Loading experiment results...")
-    results_dir = '/Users/joie/Desktop/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results'
     results = load_experiment_results(results_dir)
     
     # Print summary statistics
