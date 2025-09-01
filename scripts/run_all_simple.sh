@@ -9,7 +9,7 @@ LOGS_DIR="${RESULTS_DIR}/logs"
 CONFIG_DIR="${RESULTS_DIR}/configs"
 
 # Configuration
-MAX_PARALLEL=${1:-4}
+MAX_PARALLEL_JOBS=${1:-4}
 
 # Create directories
 mkdir -p "${RESULTS_DIR}" "${LOGS_DIR}" "${CONFIG_DIR}"
@@ -17,7 +17,7 @@ mkdir -p "${RESULTS_DIR}" "${LOGS_DIR}" "${CONFIG_DIR}"
 echo "============================================================"
 echo "SIMPLE EXPERIMENT RUNNER (No Timeouts)"
 echo "============================================================"
-echo "Max parallel jobs: ${MAX_PARALLEL}"
+echo "Max parallel jobs: ${MAX_PARALLEL_JOBS}"
 echo "Strategy: Just run them all, let Python handle retries"
 echo ""
 
@@ -33,7 +33,7 @@ echo "Total experiments: ${TOTAL_JOBS}"
 echo ""
 
 # Step 3: Run them all
-echo "Starting parallel execution with ${MAX_PARALLEL} workers..."
+echo "Starting parallel execution with ${MAX_PARALLEL_JOBS} workers..."
 START_TIME=$(date +%s)
 
 # Function to run jobs
@@ -53,7 +53,7 @@ export -f run_job
 export LOGS_DIR SCRIPTS_DIR
 
 # Run all jobs in parallel with xargs (simple and efficient)
-seq 0 $((TOTAL_JOBS - 1)) | xargs -P ${MAX_PARALLEL} -I {} bash -c 'run_job {}'
+seq 0 $((TOTAL_JOBS - 1)) | xargs -P ${MAX_PARALLEL_JOBS} -I {} bash -c 'run_job {}'
 
 # Step 4: Summary
 END_TIME=$(date +%s)
@@ -75,7 +75,7 @@ echo "Failed: ${FAILED}"
 if [ ${FAILED} -gt 0 ]; then
     echo ""
     echo "To retry failed experiments:"
-    echo "  ${SCRIPTS_DIR}/run_all_simple.sh ${MAX_PARALLEL}"
+    echo "  ${SCRIPTS_DIR}/run_all_simple.sh ${MAX_PARALLEL_JOBS}"
     echo "(It will skip completed experiments automatically)"
 fi
 

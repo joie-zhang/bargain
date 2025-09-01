@@ -1073,10 +1073,11 @@ class OpenAIAgent(BaseLLMAgent):
             "messages": messages,
         }
         
-        if "o3" in self.model_name.lower():
-            # O3 models use max_completion_tokens and only support temperature=1
+        if "o3" in self.model_name.lower() or "o1" in self.model_name.lower():
+            # O3 and O1 models don't support temperature parameter
+            # O3 only supports temperature=1, O1 doesn't support it at all
             # Remove max_completion_tokens to allow unlimited generation
-            api_params["temperature"] = 1  # O3 only supports temperature=1
+            pass  # Don't set temperature for these models
         else:
             # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature

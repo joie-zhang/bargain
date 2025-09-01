@@ -42,6 +42,7 @@ if [ -f ~/.venv/bin/activate ]; then
 fi
 
 # Build command
+# Note: --num-runs 1 means run 1 negotiation game in this Python process
 CMD="python3 run_strong_models_experiment.py \
     --models ${WEAK_MODEL} ${STRONG_MODEL} \
     --competition-level ${COMP_LEVEL} \
@@ -49,7 +50,7 @@ CMD="python3 run_strong_models_experiment.py \
     --max-rounds ${MAX_ROUNDS} \
     --random-seed ${RANDOM_SEED} \
     --batch \
-    --batch-size 5 \
+    --num-runs 1 \
     --job-id ${JOB_ID}"
 
 echo "[$(date)] Running: ${CMD}" >> "${LOG_FILE}"
