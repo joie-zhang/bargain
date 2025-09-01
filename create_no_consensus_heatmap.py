@@ -30,22 +30,43 @@ def extract_model_name(agent_name):
 def normalize_model_name(model_name):
     """Normalize model names to match our target set"""
     # Handle GPT-4o variants
-    if model_name == 'gpt-4o-2024-05-13' or model_name == 'gpt-4o' or model_name == 'gpt-4o-may':
+    if 'gpt-4o-latest' in model_name or 'gpt_4o_latest' in model_name:
+        return 'gpt-4o-2024-11-20'  # Latest is Nov 2024
+    elif 'gpt-4o-mini' in model_name or 'gpt_4o_mini' in model_name:
+        return 'gpt-4o-mini'
+    elif model_name == 'gpt-4o-2024-05-13' or model_name == 'gpt-4o-may':
         return 'gpt-4o-2024-05-13'  # Baseline model (May 2024)
     elif model_name == 'gpt-4o-2024-11-20' or model_name == 'gpt-4o-nov':
         return 'gpt-4o-2024-11-20'  # Strong model (Nov 2024)
+    elif model_name == 'gpt-4o' or 'gpt_4o' in model_name:
+        # Plain gpt-4o defaults to the baseline May version
+        return 'gpt-4o-2024-05-13'
     # Handle Claude variants
-    elif model_name == 'claude-3-5-sonnet-20241022' or model_name == 'claude-3-5-sonnet':
+    elif 'claude-3-5-haiku' in model_name or 'claude_3_5_haiku' in model_name:
+        return 'claude-3-5-haiku'
+    elif model_name == 'claude-3-5-sonnet-20241022' or model_name == 'claude-3-5-sonnet' or 'claude_3_5_sonnet' in model_name:
         return 'claude-3-5-sonnet'
-    elif model_name == 'claude-3-opus' or model_name == 'claude-3-opus-20240229':
+    elif 'claude-4-1-opus' in model_name or 'claude_4_1_opus' in model_name:
+        return 'claude-4-1-opus'
+    elif 'claude-4-sonnet' in model_name or 'claude_4_sonnet' in model_name:
+        return 'claude-4-sonnet'
+    elif model_name == 'claude-3-opus' or model_name == 'claude-3-opus-20240229' or 'claude_3_opus' in model_name:
         return 'claude-3-opus'
     # Handle Gemini variants
-    elif model_name == 'gemini-1-5-pro-002' or model_name == 'gemini-1-5-pro':
+    elif model_name == 'gemini-1-5-pro-002' or model_name == 'gemini-1-5-pro' or 'gemini_1_5_pro' in model_name:
         return 'gemini-1-5-pro'
-    elif model_name == 'gemini-2-0-flash-001' or model_name == 'gemini-2-0-flash':
+    elif model_name == 'gemini-2-0-flash-001' or model_name == 'gemini-2-0-flash' or 'gemini_2_0_flash' in model_name:
         return 'gemini-2-0-flash'
-    elif model_name == 'gemini-2-5-pro-exp' or model_name == 'gemini-2-5-pro':
+    elif model_name == 'gemini-2-5-pro-exp' or model_name == 'gemini-2-5-pro' or 'gemini_2_5_pro' in model_name:
         return 'gemini-2-5-pro'
+    # Handle O1 and O3
+    elif model_name == 'o1' or 'o1_' in model_name:
+        return 'o1'
+    elif model_name == 'o3' or 'o3_' in model_name:
+        return 'o3'
+    # Handle Gemma
+    elif 'gemma-3-27b' in model_name or 'gemma_3_27b' in model_name:
+        return 'gemma-3-27b'
     return model_name
 
 def load_experiment_results(results_dir):
