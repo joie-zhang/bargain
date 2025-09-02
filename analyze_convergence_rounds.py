@@ -13,20 +13,29 @@ import seaborn as sns
 from collections import defaultdict
 import pandas as pd
 
-# Define baseline (weak) and strong models
+# Define baseline (weak) and strong models - matching configs.py
 BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
-STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 
-                 'claude-4-sonnet', 'gemini-2-0-flash', 'gemini-2-5-flash', 
-                 'gemini-2-5-pro', 'gpt-5', 'o3', 'o3-mini', 'o4-mini']
+STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-sonnet', 
+                 'claude-4-1-opus', 'gemini-2-5-pro', 'gemini-2-0-flash', 
+                 'gemma-3-27b', 'gpt-4o-latest', 'gpt-4o-mini', 'o1', 
+                 'gpt-5-mini', 'gpt-5-nano', 'o3', 'gpt-5']
 
 # Competition level buckets
 COMPETITION_LEVELS = [0.0, 0.25, 0.5, 0.75, 1.0]
 
 def categorize_competition_level(comp_level):
-    """Categorize competition level into buckets."""
+    """Categorize competition level into buckets with strict boundaries."""
     if comp_level is None:
         return None
-    return min(COMPETITION_LEVELS, key=lambda x: abs(x - comp_level))
+    
+    # Use strict boundaries - only categorize if within 0.05 of the target
+    tolerance = 0.05
+    for bucket in COMPETITION_LEVELS:
+        if abs(comp_level - bucket) <= tolerance:
+            return bucket
+    
+    # If not within tolerance of any bucket, return None (exclude from analysis)
+    return None
 
 def load_convergence_data(results_dir):
     """Load convergence data from experiment results."""
@@ -34,6 +43,8 @@ def load_convergence_data(results_dir):
     convergence_by_model_pair = defaultdict(lambda: defaultdict(list))
     tie_counts = defaultdict(int)
     winner_counts = defaultdict(lambda: defaultdict(int))
+    api_timeout_counts = defaultdict(int)  # Track actual API timeouts/errors
+    excluded_count = 0  # Track experiments excluded due to competition level
     
     results_path = Path(results_dir)
     
@@ -50,6 +61,7 @@ def load_convergence_data(results_dir):
                         comp_bucket = categorize_competition_level(comp_level)
                         
                         if comp_bucket is None:
+                            excluded_count += 1
                             continue
                         
                         # Get number of rounds
@@ -93,11 +105,13 @@ def load_convergence_data(results_dir):
                         
                         # Record convergence data
                         if final_round is not None:
+                            # A negotiation either reaches consensus OR times out (reaches max rounds without consensus)
+                            reached_timeout = final_round >= max_rounds and not consensus_reached
                             convergence_by_competition[comp_bucket].append({
                                 'rounds': final_round,
                                 'consensus': consensus_reached,
                                 'max_rounds': max_rounds,
-                                'reached_limit': final_round >= max_rounds
+                                'reached_timeout': reached_timeout
                             })
                             
                             if model1 and model2:
@@ -108,9 +122,34 @@ def load_convergence_data(results_dir):
             print(f"Error processing {file_path}: {e}")
             continue
     
-    return convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts
+    # Now scan log files for actual API timeout errors
+    logs_path = results_path / 'scaling_experiment' / 'logs'
+    if logs_path.exists():
+        for log_file in logs_path.glob('*.log'):
+            try:
+                with open(log_file, 'r') as f:
+                    content = f.read()
+                    # Check for "Failed after 3 attempts" which indicates API timeout/error
+                    if "Failed after 3 attempts" in content:
+                        # Try to extract competition level from the log
+                        for line in content.split('\n'):
+                            if 'competition=' in line:
+                                try:
+                                    comp_str = line.split('competition=')[1].split(')')[0]
+                                    comp_level = float(comp_str)
+                                    comp_bucket = categorize_competition_level(comp_level)
+                                    if comp_bucket is not None:
+                                        api_timeout_counts[comp_bucket] += 1
+                                    break
+                                except:
+                                    pass
+            except Exception as e:
+                print(f"Error processing log {log_file}: {e}")
+                continue
+    
+    return convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts, excluded_count
 
-def create_convergence_visualizations(convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts):
+def create_convergence_visualizations(convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts):
     """Create visualizations for convergence analysis."""
     
     # Figure 1: Box plots of rounds to convergence by competition level
@@ -126,7 +165,7 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
         if data:
             rounds = [d['rounds'] for d in data]
             consensus_rate = sum(1 for d in data if d['consensus']) / len(data) * 100
-            timeout_rate = sum(1 for d in data if d['reached_limit']) / len(data) * 100
+            timeout_rate = sum(1 for d in data if d['reached_timeout']) / len(data) * 100
             
             # Create box plot
             bp = ax.boxplot(rounds, patch_artist=True)
@@ -148,18 +187,28 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
                    verticalalignment='top', fontsize=10)
             ax.text(0.05, 0.74, f'Consensus: {consensus_rate:.1f}%', transform=ax.transAxes, 
                    verticalalignment='top', fontsize=10, color='green')
-            ax.text(0.05, 0.67, f'Timeout: {timeout_rate:.1f}%', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10, color='red')
-            ax.text(0.05, 0.60, f'n={len(data)}', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10)
+            ax.text(0.05, 0.67, f'No Consensus: {timeout_rate:.1f}%', transform=ax.transAxes, 
+                   verticalalignment='top', fontsize=10, color='orange')
+            
+            # Add API timeout info if available
+            api_timeouts = api_timeout_counts.get(comp_level, 0)
+            if api_timeouts > 0:
+                ax.text(0.05, 0.60, f'API Errors: {api_timeouts}', transform=ax.transAxes, 
+                       verticalalignment='top', fontsize=10, color='red')
+                ax.text(0.05, 0.53, f'n={len(data)}', transform=ax.transAxes, 
+                       verticalalignment='top', fontsize=10)
+            else:
+                ax.text(0.05, 0.60, f'n={len(data)}', transform=ax.transAxes, 
+                       verticalalignment='top', fontsize=10)
             
             # Tie statistics
             ties = tie_counts[comp_level]
             total = ties + winner_counts[comp_level]['agent1'] + winner_counts[comp_level]['agent2']
             if total > 0:
                 tie_rate = ties / total * 100
-                ax.text(0.05, 0.53, f'Ties: {tie_rate:.1f}%', transform=ax.transAxes, 
-                       verticalalignment='top', fontsize=10, color='orange')
+                y_pos = 0.46 if api_timeouts > 0 else 0.53
+                ax.text(0.05, y_pos, f'Ties: {tie_rate:.1f}%', transform=ax.transAxes, 
+                       verticalalignment='top', fontsize=10, color='blue')
         
         ax.set_title(f'Competition Level: {comp_level}', fontsize=12)
         ax.set_ylabel('Rounds to End', fontsize=10)
@@ -172,9 +221,9 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     fig.delaxes(axes_flat[5])
     
     plt.tight_layout()
-    plt.savefig('convergence_analysis_by_competition.png', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_analysis_by_competition.pdf', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence analysis to convergence_analysis_by_competition.png")
+    print("Saved convergence analysis to convergence_analysis_by_competition.pdf")
     
     # Figure 2: Histogram of convergence rounds across all competition levels
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -197,9 +246,9 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('convergence_distribution.png', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_distribution.pdf', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence distribution to convergence_distribution.png")
+    print("Saved convergence distribution to convergence_distribution.pdf")
     
     # Figure 3: Heatmap of average rounds by model pairs (for competition level 0.5 as example)
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
@@ -235,16 +284,20 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.set_yticklabels(BASELINE_MODELS, rotation=0)
     
     plt.tight_layout()
-    plt.savefig('convergence_heatmap_example.png', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_heatmap_example.pdf', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence heatmap to convergence_heatmap_example.png")
+    print("Saved convergence heatmap to convergence_heatmap_example.pdf")
 
-def print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts):
+def print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts, api_timeout_counts, excluded_count):
     """Print detailed statistics about convergence."""
     
     print("\n" + "="*60)
     print("CONVERGENCE STATISTICS BY COMPETITION LEVEL")
     print("="*60)
+    
+    if excluded_count > 0:
+        print(f"\n⚠️  Note: {excluded_count} experiments excluded (competition level not within ±0.05 of standard buckets)")
+        print(f"  Standard buckets: {COMPETITION_LEVELS}")
     
     for comp_level in COMPETITION_LEVELS:
         data = convergence_by_competition[comp_level]
@@ -253,7 +306,7 @@ def print_convergence_statistics(convergence_by_competition, tie_counts, winner_
             
         rounds = [d['rounds'] for d in data]
         consensus_count = sum(1 for d in data if d['consensus'])
-        timeout_count = sum(1 for d in data if d['reached_limit'])
+        timeout_count = sum(1 for d in data if d['reached_timeout'])
         
         print(f"\n📊 Competition Level: {comp_level}")
         print("-" * 40)
@@ -265,7 +318,14 @@ def print_convergence_statistics(convergence_by_competition, tie_counts, winner_
         print(f"  - Max: {np.max(rounds)}")
         print(f"  - Std Dev: {np.std(rounds):.2f}")
         print(f"Consensus reached: {consensus_count}/{len(data)} ({consensus_count/len(data)*100:.1f}%)")
-        print(f"Reached time limit: {timeout_count}/{len(data)} ({timeout_count/len(data)*100:.1f}%)")
+        print(f"No consensus (max rounds): {timeout_count}/{len(data)} ({timeout_count/len(data)*100:.1f}%)")
+        print(f"Total (should be 100%): {(consensus_count + timeout_count)/len(data)*100:.1f}%")
+        
+        # API timeout analysis
+        api_timeouts = api_timeout_counts.get(comp_level, 0)
+        if api_timeouts > 0:
+            print(f"\n⚠️  API Errors/Timeouts: {api_timeouts} experiments failed")
+            print(f"  (These are separate from negotiation outcomes)")
         
         # Tie analysis
         ties = tie_counts[comp_level]
@@ -279,10 +339,22 @@ def print_convergence_statistics(convergence_by_competition, tie_counts, winner_
             print(f"  - Agent 1 wins: {agent1_wins}/{total} ({agent1_wins/total*100:.1f}%)")
             print(f"  - Agent 2 wins: {agent2_wins}/{total} ({agent2_wins/total*100:.1f}%)")
     
-    # Overall tie analysis
+    # Overall statistics
     print("\n" + "="*60)
-    print("IMPORTANT: TIE HANDLING")
+    print("OVERALL STATISTICS")
     print("="*60)
+    
+    # API errors summary
+    total_api_errors = sum(api_timeout_counts.values())
+    if total_api_errors > 0:
+        print(f"⚠️  Total API Errors/Timeouts: {total_api_errors} experiments")
+        print("  Distribution by competition level:")
+        for comp_level in COMPETITION_LEVELS:
+            if api_timeout_counts[comp_level] > 0:
+                print(f"    - Competition {comp_level}: {api_timeout_counts[comp_level]} errors")
+    
+    # Tie analysis
+    print("\nTIE HANDLING:")
     print("Current implementation treats ties as wins for Agent 2!")
     print("This means when util1 == util2, Agent 2 is declared the winner.")
     total_ties = sum(tie_counts.values())
@@ -293,16 +365,16 @@ def print_convergence_statistics(convergence_by_competition, tie_counts, winner_
 def main():
     """Main function to analyze convergence."""
     print("Loading experiment results for convergence analysis...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     
-    convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts = load_convergence_data(results_dir)
+    convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts, excluded_count = load_convergence_data(results_dir)
     
     # Print statistics
-    print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts)
+    print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts, api_timeout_counts, excluded_count)
     
     # Create visualizations
     print("\nCreating convergence visualizations...")
-    create_convergence_visualizations(convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts)
+    create_convergence_visualizations(convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts)
     
     print("\n✅ Analysis complete!")
 

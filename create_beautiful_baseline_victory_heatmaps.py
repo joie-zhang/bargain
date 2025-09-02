@@ -20,9 +20,12 @@ sns.set_palette("husl")
 
 # Define baseline (weak) and strong models
 BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
+# STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus',
+#                  'claude-4-sonnet', 'gemini-2-0-flash', 'gemini-2-5-pro',
+#                  'gemma-3-27b', 'gpt-4o-latest', 'gpt-4o-mini', 'o1', 'o3']
 STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus',
                  'claude-4-sonnet', 'gemini-2-0-flash', 'gemini-2-5-pro',
-                 'gemma-3-27b', 'gpt-4o-latest', 'gpt-4o-mini', 'o1', 'o3']
+                 'gpt-4o-latest', 'o1', 'o3']
 
 # Model display names (clean, professional labels)
 MODEL_DISPLAY_NAMES = {
@@ -458,7 +461,7 @@ def print_summary_statistics(results_by_competition):
 def main():
     """Main function to create beautiful baseline victory heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     
     results_by_competition = load_baseline_victory_data(results_dir)
     

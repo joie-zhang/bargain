@@ -37,10 +37,15 @@ MMLU_PRO_SCORES = {
 }
 
 # Define the models we want to include
+# STRONG_MODELS_REQUESTED = [
+#     'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
+#     'gemma-3-27b', 'gemini-2-0-flash', 'gemini-2-5-pro',
+#     'gpt-4o-mini', 'gpt-4o-2024-11-20', 'o1', 'o3'
+# ]
 STRONG_MODELS_REQUESTED = [
     'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
-    'gemma-3-27b', 'gemini-2-0-flash', 'gemini-2-5-pro',
-    'gpt-4o-mini', 'gpt-4o-2024-11-20', 'o1', 'o3'
+    'gemini-2-0-flash', 'gemini-2-5-pro',
+    'gpt-4o-2024-11-20', 'o1', 'o3'
 ]
 
 BASELINE_MODELS = ['gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus']
@@ -410,7 +415,7 @@ def print_summary_statistics(results_by_competition, ordered_strong_models):
 def main():
     """Main function to generate MMLU-ordered heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     results_by_competition = load_experiment_results(results_dir)
     
     # Debug: Check which models have no data
