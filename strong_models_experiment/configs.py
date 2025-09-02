@@ -143,6 +143,26 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are O1, a reasoning model. Apply systematic thinking to achieve optimal outcomes in this negotiation.",
         "model_category": "strong"
     },
+    "gpt-5-mini": {
+        "name": "GPT-5 Mini",
+        "model_id": "gpt-5-mini-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5 Mini model (STRONG MODEL)",
+        "temperature": 1.0,
+        "system_prompt": "You are GPT-5 Mini, an advanced reasoning model. Apply strategic thinking to achieve optimal outcomes.",
+        "model_category": "strong"
+    },
+    "gpt-5-nano": {
+        "name": "GPT-5 Nano",
+        "model_id": "gpt-5-nano-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5 Nano model (STRONG MODEL)",
+        "temperature": 1.0,
+        "system_prompt": "You are GPT-5 Nano, an advanced reasoning model. Apply strategic thinking to achieve optimal outcomes.",
+        "model_category": "strong"
+    },
     "o3": {
         "name": "O3",
         "model_id": "o3-2025-04-16",
