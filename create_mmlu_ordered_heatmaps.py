@@ -206,6 +206,149 @@ def get_models_with_data(results_by_competition):
     
     return [model for model, score in models_with_scores]
 
+def plot_individual_heatmap(results_by_competition, baseline_model, ordered_strong_models, plot_mode='diff'):
+    """Plot a single heatmap for a specific baseline model with MMLU-Pro bar."""
+    
+    # Get data for this baseline
+    data = create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models, plot_mode)
+    
+    # Create mask for missing data
+    mask = np.isnan(data)
+    
+    # Create figure without subplot (we'll position it manually)
+    fig = plt.figure(figsize=(16, 7))
+    # Manually create the axis with specific position [left, bottom, width, height]
+    # This gives us control over the exact placement
+    ax = fig.add_axes([0.125, 0.35, 0.65, 0.55])  # Move heatmap up and make it smaller vertically
+    
+    # Create MMLU-Pro score data for color bar
+    mmlu_scores = [MMLU_PRO_SCORES[model] for model in ordered_strong_models]
+    
+    # Create heatmap
+    if plot_mode == 'diff':
+        im = sns.heatmap(data, 
+                       annot=True, 
+                       fmt='.1f',
+                       cmap='RdBu_r',
+                       mask=mask,
+                       cbar_kws={'label': 'Utility Difference (Adversary - Baseline)'},
+                       annot_kws={'fontsize': 11},
+                       vmin=-100, 
+                       vmax=100,
+                       center=0,
+                       linewidths=0.5,
+                       linecolor='gray',
+                       ax=ax,
+                       square=False)
+        title_suffix = "Utility Difference"
+        filename_suffix = "utility_difference"
+    elif plot_mode == 'strong_only':
+        im = sns.heatmap(data, 
+                       annot=True, 
+                       fmt='.1f',
+                       cmap='viridis',
+                       mask=mask,
+                       cbar_kws={'label': 'Adversary Model Utility'},
+                       annot_kws={'fontsize': 11},
+                       vmin=0,
+                       vmax=100,
+                       linewidths=0.5,
+                       linecolor='gray',
+                       ax=ax,
+                       square=False)
+        title_suffix = "Adversary Utility"
+        filename_suffix = "strong_utility"
+    elif plot_mode == 'sum':
+        im = sns.heatmap(data, 
+                       annot=True, 
+                       fmt='.1f',
+                       cmap='plasma',
+                       mask=mask,
+                       cbar_kws={'label': 'Fraction of Maximum Possible Welfare (%)'},
+                       annot_kws={'fontsize': 11},
+                       vmin=0,
+                       vmax=100,
+                       linewidths=0.5,
+                       linecolor='gray',
+                       ax=ax,
+                       square=False)
+        title_suffix = "Cooperative Efficiency (% of Max Welfare)"
+        filename_suffix = "sum_utility"
+    elif plot_mode == 'baseline_only':
+        im = sns.heatmap(data, 
+                       annot=True, 
+                       fmt='.1f',
+                       cmap='coolwarm_r',
+                       mask=mask,
+                       cbar_kws={'label': 'Baseline Model Utility'},
+                       annot_kws={'fontsize': 11},
+                       vmin=0,
+                       vmax=100,
+                       linewidths=0.5,
+                       linecolor='gray',
+                       ax=ax,
+                       square=False)
+        title_suffix = "Baseline Utility"
+        filename_suffix = "baseline_utility"
+    
+    # Set colorbar label font size
+    cbar = ax.collections[0].colorbar
+    if cbar:
+        cbar.ax.tick_params(labelsize=12)
+        cbar.set_label(cbar.ax.get_ylabel(), fontsize=14)
+    
+    # Set labels
+    ax.set_xlabel('Adversary Models Ordered by MMLU-Pro Performance →', fontsize=16, fontweight='bold')
+    ax.set_xticklabels([MODEL_DISPLAY_NAMES[model] for model in ordered_strong_models], 
+                      rotation=0, ha='center', fontsize=14)
+    ax.set_ylabel('Competition Level', fontsize=16, fontweight='bold')
+    ax.set_title(f'{MODEL_DISPLAY_NAMES[baseline_model]}: {title_suffix}', 
+                fontsize=14, fontweight='bold', pad=15)
+    
+    # Reverse the labels to match the reversed data (0 at bottom, 1 at top)
+    ax.set_yticklabels([f'{level:.2f}' for level in reversed(COMPETITION_LEVELS)], 
+                      rotation=0, fontsize=14)
+    
+    # Get the position of the main heatmap to align MMLU bar properly
+    heatmap_left = 0.125
+    heatmap_width = 0.65
+    
+    # Create the MMLU-Pro performance bar with more space from the heatmap
+    mmlu_bar_height = 0.03  # Make bar slightly taller for better visibility
+    # Position bar lower to create clear separation from x-axis labels
+    mmlu_ax = fig.add_axes([heatmap_left, 0.10, heatmap_width, mmlu_bar_height])
+    
+    # Create a colorbar showing MMLU-Pro scores
+    mmlu_data = np.array(mmlu_scores).reshape(1, -1)
+    mmlu_im = mmlu_ax.imshow(mmlu_data, cmap='plasma', aspect='auto', extent=[0, len(ordered_strong_models), 0, 1])
+    
+    mmlu_ax.set_xticks([])
+    mmlu_ax.set_yticks([])
+    
+    # Create a separate axis for the MMLU score labels below the bar
+    mmlu_labels_ax = fig.add_axes([heatmap_left, 0.05, heatmap_width, 0.03])
+    mmlu_labels_ax.set_xlim(0, len(ordered_strong_models))
+    mmlu_labels_ax.set_ylim(0, 1)
+    
+    # Add the percentage labels
+    for i, score in enumerate(mmlu_scores):
+        mmlu_labels_ax.text(i + 0.5, 0.5, f'{score}%', ha='center', va='center', 
+                           rotation=0, fontsize=14, fontweight='bold')
+    
+    mmlu_labels_ax.set_xticks([])
+    mmlu_labels_ax.set_yticks([])
+    mmlu_labels_ax.axis('off')
+    
+    # Don't use tight_layout since we're manually positioning everything
+    
+    # Save figure
+    baseline_name = baseline_model.replace('-', '_')
+    filename = f'mmlu_ordered_{baseline_name}_{filename_suffix}_heatmap.pdf'
+    plt.savefig(filename, dpi=300, bbox_inches='tight')
+    plt.show()
+    print(f"Saved individual heatmap to {filename}")
+    plt.close()
+
 def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models, plot_mode='diff'):
     """Create a heatmap for a specific baseline model."""
     
