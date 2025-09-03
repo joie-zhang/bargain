@@ -87,7 +87,7 @@ def normalize_model_name(model_name):
     # Handle GPT-4o variants
     if model_name == 'gpt-4o-2024-05-13' or model_name == 'gpt-4o' or model_name == 'gpt-4o-may':
         return 'gpt-4o-2024-05-13'  # Baseline model (May 2024)
-    elif model_name == 'gpt-4o-2024-11-20' or model_name == 'gpt-4o-nov':
+    elif model_name == 'gpt-4o-2024-11-20' or model_name == 'gpt-4o-nov' or model_name == 'gpt-4o-latest':
         return 'gpt-4o-2024-11-20'  # Strong model (Nov 2024)
     # Handle Claude variants
     elif model_name == 'claude-3-5-sonnet-20241022' or model_name == 'claude-3-5-sonnet':
@@ -209,10 +209,21 @@ def get_models_with_data(results_by_competition):
 def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models, plot_mode='diff'):
     """Create a heatmap for a specific baseline model."""
     
-    # Create data matrix: rows = competition levels, cols = strong models
-    data = np.full((len(COMPETITION_LEVELS), len(ordered_strong_models)), np.nan)
+    # Maximum possible welfare at each competition level
+    MAX_WELFARE = {
+        0.0: 200.0,   # No competition: both agents can get 100
+        0.25: 177.0,  # Slight competition
+        0.5: 157.0,   # Moderate competition
+        0.75: 138.0,  # High competition
+        1.0: 100.0    # Full competition (constant-sum game)
+    }
     
-    for i, comp_level in enumerate(COMPETITION_LEVELS):
+    # Create data matrix: rows = competition levels, cols = strong models
+    # Reverse the order of competition levels so 0 is at bottom, 1 at top
+    reversed_competition_levels = list(reversed(COMPETITION_LEVELS))
+    data = np.full((len(reversed_competition_levels), len(ordered_strong_models)), np.nan)
+    
+    for i, comp_level in enumerate(reversed_competition_levels):
         for j, strong_model in enumerate(ordered_strong_models):
             if (comp_level in results_by_competition and 
                 baseline_model in results_by_competition[comp_level] and
@@ -226,8 +237,16 @@ def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_
                     elif plot_mode == 'strong_only':
                         # Use only strong model utility
                         values = [exp['strong_utility'] for exp in experiments]
-                    else:  # plot_mode == 'split'
-                        # For split mode, we'll handle this differently
+                    elif plot_mode == 'sum':
+                        # Use sum of utilities (baseline + strong), normalized by max possible welfare
+                        raw_values = [exp['baseline_utility'] + exp['strong_utility'] for exp in experiments]
+                        # Normalize by the maximum possible welfare at this competition level
+                        max_welfare = MAX_WELFARE.get(comp_level, 100.0)
+                        values = [(val / max_welfare) * 100.0 for val in raw_values]
+                    elif plot_mode == 'baseline_only':
+                        # Use only baseline model utility
+                        values = [exp['baseline_utility'] for exp in experiments]
+                    else:  # other modes
                         values = [exp['utility_diff'] for exp in experiments]
                     
                     data[i, j] = np.mean(values)
@@ -235,7 +254,7 @@ def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_
     return data
 
 def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff'):
-    """Plot heatmaps for each baseline model."""
+    """Plot combined heatmaps for all baseline models."""
     
     # Print MMLU-Pro scores
     print("\n=== MMLU-Pro Scores of Models in Analysis ===")
@@ -270,7 +289,7 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
         print("No baseline models found with data!")
         return
     
-    fig, axes = plt.subplots(len(baselines_with_data), 1, figsize=(16, 6*len(baselines_with_data)))
+    fig, axes = plt.subplots(len(baselines_with_data), 1, figsize=(16, 5*len(baselines_with_data)))
     if len(baselines_with_data) == 1:
         axes = [axes]
     
@@ -286,24 +305,24 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
         # Create mask for missing data
         mask = np.isnan(data)
         
-        # Create heatmap
+        # Create heatmap with consistent 0-100 range for all plots
         if plot_mode == 'diff':
-            # Center colormap at 0 for utility differences
-            vmax = max(abs(np.nanmin(data)), abs(np.nanmax(data))) if not np.all(mask) else 1
+            # For difference plot, use -100 to 100 range centered at 0
             im = sns.heatmap(data, 
                            annot=True, 
                            fmt='.1f',
                            cmap='RdBu_r',  # Red = negative (baseline wins), Blue = positive (strong wins)
                            mask=mask,
                            cbar_kws={'label': 'Utility Difference (Adversary - Baseline)'},
-                           vmin=-vmax, 
-                           vmax=vmax,
+                           annot_kws={'fontsize': 11},
+                           vmin=-100, 
+                           vmax=100,
                            center=0,
                            linewidths=0.5,
                            linecolor='gray',
                            ax=ax,
                            square=False)
-            title_suffix = "Utility Difference (Adversary - Baseline)"
+            title_suffix = "Utility Difference"
         elif plot_mode == 'strong_only':
             im = sns.heatmap(data, 
                            annot=True, 
@@ -311,23 +330,70 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
                            cmap='viridis',
                            mask=mask,
                            cbar_kws={'label': 'Adversary Model Utility'},
+                           annot_kws={'fontsize': 11},
+                           vmin=0,
+                           vmax=100,
                            linewidths=0.5,
                            linecolor='gray',
                            ax=ax,
                            square=False)
-            title_suffix = "Adversary Model Final Utility"
+            title_suffix = "Adversary Utility"
+        elif plot_mode == 'sum':
+            # Now showing percentage of maximum possible welfare (0-100%)
+            im = sns.heatmap(data, 
+                           annot=True, 
+                           fmt='.1f',
+                           cmap='plasma',
+                           mask=mask,
+                           cbar_kws={'label': 'Fraction of Maximum Possible Welfare (%)'},
+                           annot_kws={'fontsize': 11},
+                           vmin=0,
+                           vmax=100,
+                           linewidths=0.5,
+                           linecolor='gray',
+                           ax=ax,
+                           square=False)
+            title_suffix = "Cooperative Efficiency (% of Max Welfare)"
+        elif plot_mode == 'baseline_only':
+            im = sns.heatmap(data, 
+                           annot=True, 
+                           fmt='.1f',
+                           cmap='coolwarm_r',
+                           mask=mask,
+                           cbar_kws={'label': 'Baseline Model Utility'},
+                           annot_kws={'fontsize': 11},
+                           vmin=0,
+                           vmax=100,
+                           linewidths=0.5,
+                           linecolor='gray',
+                           ax=ax,
+                           square=False)
+            title_suffix = "Baseline Utility"
         
-        # Set labels
-        ax.set_xlabel('Adversary Models (ordered by MMLU-Pro performance)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Competition Level', fontsize=12, fontweight='bold')
-        ax.set_title(f'{MODEL_DISPLAY_NAMES[baseline]} vs Adversary Models\n{title_suffix}', 
-                    fontsize=14, fontweight='bold', pad=20)
+        # Set colorbar label font size
+        cbar = ax.collections[0].colorbar
+        if cbar:
+            cbar.ax.tick_params(labelsize=12)
+            cbar.set_label(cbar.ax.get_ylabel(), fontsize=14)
         
-        # Set tick labels
-        ax.set_xticklabels([MODEL_DISPLAY_NAMES[model] for model in ordered_strong_models], 
-                          rotation=45, ha='right', fontsize=10)
-        ax.set_yticklabels([f'{level:.2f}' for level in COMPETITION_LEVELS], 
-                          rotation=0, fontsize=10)
+        # Set labels - only add x-axis label for the bottom plot
+        if idx == len(baselines_with_data) - 1:
+            ax.set_xlabel('Adversary Models Ordered by MMLU-Pro Performance →', fontsize=16, fontweight='bold')
+            # Keep x-tick labels for bottom plot
+            ax.set_xticklabels([MODEL_DISPLAY_NAMES[model] for model in ordered_strong_models], 
+                              rotation=0, ha='center', fontsize=14)
+        else:
+            # Remove x-axis label and tick labels for top two plots
+            ax.set_xlabel('')
+            ax.set_xticklabels([])
+        
+        ax.set_ylabel('Competition Level', fontsize=16, fontweight='bold')
+        ax.set_title(f'{MODEL_DISPLAY_NAMES[baseline]}: {title_suffix}', 
+                    fontsize=14, fontweight='bold', pad=15)
+        
+        # Reverse the labels to match the reversed data (0 at bottom, 1 at top)
+        ax.set_yticklabels([f'{level:.2f}' for level in reversed(COMPETITION_LEVELS)], 
+                          rotation=0, fontsize=14)
     
     # Add MMLU-Pro performance bar at the bottom
     fig.subplots_adjust(bottom=0.5)  # More space for the complete layout
@@ -347,37 +413,41 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
     
     mmlu_ax.set_xticks([])  # Remove ticks from the bar itself
     mmlu_ax.set_yticks([])
-    mmlu_ax.set_xlabel('MMLU-Pro Performance →', fontsize=10, fontweight='bold')
+    # mmlu_ax.set_xlabel('MMLU-Pro Performance →', fontsize=10, fontweight='bold')
     
     # Create a separate axis for the MMLU score labels, positioned directly under the bar
-    mmlu_labels_ax = fig.add_axes([heatmap_left, -0.08, heatmap_width, 0.04])
+    mmlu_labels_ax = fig.add_axes([heatmap_left, -0.04, heatmap_width, 0.02])
     mmlu_labels_ax.set_xlim(0, len(ordered_strong_models))
     mmlu_labels_ax.set_ylim(0, 1)
     
     # Add the percentage labels, properly centered under each model column
     for i, score in enumerate(mmlu_scores):
         mmlu_labels_ax.text(i + 0.5, 0.5, f'{score}%', ha='center', va='center', 
-                           rotation=45, fontsize=8)
+                           rotation=0, fontsize=14, fontweight='bold')
     
     mmlu_labels_ax.set_xticks([])
     mmlu_labels_ax.set_yticks([])
     mmlu_labels_ax.axis('off')  # Hide the axis borders
     
     # Add the separate legend colorbar at the very bottom
-    mmlu_cbar = plt.colorbar(mmlu_im, ax=mmlu_ax, orientation='horizontal', 
-                            shrink=8, aspect=25, pad=0.25,
-                            anchor=(0.0, 0.0))  # Anchor to align properly
-    mmlu_cbar.set_label('MMLU-Pro Score (%)', fontsize=9)
+    # mmlu_cbar = plt.colorbar(mmlu_im, ax=mmlu_ax, orientation='horizontal', 
+    #                         shrink=8, aspect=25, pad=0.25,
+    #                         anchor=(0.0, 0.0))  # Anchor to align properly
+    # mmlu_cbar.set_label('MMLU-Pro Score (%)', fontsize=9)
     
     plt.tight_layout()
     
     # Save figure
     if plot_mode == 'diff':
-        filename = 'mmlu_ordered_utility_difference_heatmaps.png'
+        filename = 'mmlu_ordered_utility_difference_heatmaps.pdf'
     elif plot_mode == 'strong_only':
-        filename = 'mmlu_ordered_strong_utility_heatmaps.png'
+        filename = 'mmlu_ordered_strong_utility_heatmaps.pdf'
+    elif plot_mode == 'sum':
+        filename = 'mmlu_ordered_sum_utility_heatmaps.pdf'
+    elif plot_mode == 'baseline_only':
+        filename = 'mmlu_ordered_baseline_utility_heatmaps.pdf'
     else:
-        filename = 'mmlu_ordered_split_heatmaps.png'
+        filename = 'mmlu_ordered_heatmaps.pdf'
     
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.show()
@@ -445,13 +515,61 @@ def main():
     # Print summary statistics
     print_summary_statistics(results_by_competition, ordered_strong_models)
     
+    # Get baselines that have data
+    baselines_with_data = []
+    for baseline in BASELINE_MODELS:
+        has_data = False
+        for comp_level in results_by_competition:
+            if baseline in results_by_competition[comp_level]:
+                for strong in results_by_competition[comp_level][baseline]:
+                    if results_by_competition[comp_level][baseline][strong]:
+                        has_data = True
+                        break
+                if has_data:
+                    break
+        if has_data:
+            baselines_with_data.append(baseline)
+    
+    # Generate individual heatmaps for each baseline
+    print("\n=== Creating Individual Heatmaps for Each Baseline ===")
+    
+    for baseline in baselines_with_data:
+        print(f"\n--- Creating heatmaps for {MODEL_DISPLAY_NAMES[baseline]} ---")
+        
+        # Create utility difference heatmap
+        print(f"Creating utility difference heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='diff')
+        
+        # Create strong-only utility heatmap
+        print(f"Creating strong model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='strong_only')
+        
+        # Create sum of utilities heatmap
+        print(f"Creating sum of utilities heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='sum')
+        
+        # Create baseline-only utility heatmap
+        print(f"Creating baseline model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='baseline_only')
+    
+    # Also create the combined heatmaps as before
+    print("\n=== Creating Combined Heatmaps (All Baselines) ===")
+    
     # Create the main heatmap (utility difference)
-    print("\nCreating utility difference heatmaps...")
+    print("\nCreating combined utility difference heatmaps...")
     plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff')
     
-    # Optionally create strong-only utility heatmap
-    print("\nCreating strong model utility heatmaps...")
+    # Create strong-only utility heatmap
+    print("\nCreating combined strong model utility heatmaps...")
     plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='strong_only')
+    
+    # Create sum of utilities heatmap
+    print("\nCreating combined sum of utilities heatmaps...")
+    plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='sum')
+    
+    # Create baseline-only utility heatmap
+    print("\nCreating combined baseline model utility heatmaps...")
+    plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='baseline_only')
 
 if __name__ == "__main__":
     main()
