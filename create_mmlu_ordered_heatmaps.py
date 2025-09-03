@@ -63,9 +63,9 @@ MODEL_DISPLAY_NAMES = {
     'gpt-4o-2024-11-20': 'GPT-4o\n(Nov 2024)',
     'o1': 'O1',
     'o3': 'O3',
-    'gpt-4o-2024-05-13': 'GPT-4o\n(May 2024)',
-    'gemini-1-5-pro': 'Gemini 1.5\nPro',
-    'claude-3-opus': 'Claude 3\nOpus'
+    'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
+    'gemini-1-5-pro': 'Gemini 1.5 Pro',
+    'claude-3-opus': 'Claude 3 Opus'
 }
 
 # Competition levels for y-axis
@@ -288,7 +288,7 @@ def plot_individual_heatmap(results_by_competition, baseline_model, ordered_stro
                        linecolor='gray',
                        ax=ax,
                        square=False)
-        title_suffix = "Baseline Utility"
+        title_suffix = "Baseline Final Utility"
         filename_suffix = "baseline_utility"
     
     # Set colorbar label font size
@@ -396,8 +396,13 @@ def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_
     
     return data
 
-def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff'):
-    """Plot combined heatmaps for all baseline models."""
+def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff', baseline_order=None):
+    """Plot combined heatmaps for all baseline models.
+    
+    Args:
+        baseline_order: List of baseline models in the order they should appear.
+                       If None, uses BASELINE_MODELS order.
+    """
     
     # Print MMLU-Pro scores
     print("\n=== MMLU-Pro Scores of Models in Analysis ===")
@@ -406,15 +411,18 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
         score = MMLU_PRO_SCORES[model]
         print(f"{i+1:2d}. {MODEL_DISPLAY_NAMES[model]:<20} | MMLU-Pro: {score}%")
     
+    # Use provided baseline order or default
+    baselines_to_check = baseline_order if baseline_order else BASELINE_MODELS
+    
     print(f"\nBaseline Models:")
-    for baseline in BASELINE_MODELS:
+    for baseline in baselines_to_check:
         if baseline in MMLU_PRO_SCORES and MMLU_PRO_SCORES[baseline] is not None:
             score = MMLU_PRO_SCORES[baseline]
             print(f"    {MODEL_DISPLAY_NAMES[baseline]:<20} | MMLU-Pro: {score}%")
     
     # Create figure with subplots for each baseline
     baselines_with_data = []
-    for baseline in BASELINE_MODELS:
+    for baseline in baselines_to_check:
         # Check if this baseline has any data
         has_data = False
         for comp_level in results_by_competition:
@@ -511,7 +519,7 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
                            linecolor='gray',
                            ax=ax,
                            square=False)
-            title_suffix = "Baseline Utility"
+            title_suffix = "Baseline Final Utility"
         
         # Set colorbar label font size
         cbar = ax.collections[0].colorbar
@@ -581,6 +589,17 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
     plt.tight_layout()
     
     # Save figure
+    # For baseline_only mode, add suffix based on baseline order
+    order_suffix = ''
+    if plot_mode == 'baseline_only' and baseline_order:
+        # Identify which baseline is at the bottom (last in the list)
+        if baseline_order[-1] == 'gpt-4o-2024-05-13':
+            order_suffix = '_gpt4o_bottom'
+        elif baseline_order[-1] == 'gemini-1-5-pro':
+            order_suffix = '_gemini_bottom'
+        elif baseline_order[-1] == 'claude-3-opus':
+            order_suffix = '_claude_bottom'
+    
     if plot_mode == 'diff':
         filename = 'mmlu_ordered_utility_difference_heatmaps.pdf'
     elif plot_mode == 'strong_only':
@@ -588,7 +607,7 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
     elif plot_mode == 'sum':
         filename = 'mmlu_ordered_sum_utility_heatmaps.pdf'
     elif plot_mode == 'baseline_only':
-        filename = 'mmlu_ordered_baseline_utility_heatmaps.pdf'
+        filename = f'mmlu_ordered_baseline_utility_heatmaps{order_suffix}.pdf'
     else:
         filename = 'mmlu_ordered_heatmaps.pdf'
     
@@ -695,7 +714,7 @@ def main():
         print(f"Creating baseline model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
         plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='baseline_only')
     
-    # Also create the combined heatmaps as before
+    # Create the combined heatmaps
     print("\n=== Creating Combined Heatmaps (All Baselines) ===")
     
     # Create the main heatmap (utility difference)
@@ -710,9 +729,24 @@ def main():
     print("\nCreating combined sum of utilities heatmaps...")
     plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='sum')
     
-    # Create baseline-only utility heatmap
-    print("\nCreating combined baseline model utility heatmaps...")
-    plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='baseline_only')
+    # Create THREE versions of baseline-only utility heatmap with different orderings
+    print("\n=== Creating Baseline Final Utility Heatmaps - Three Orderings ===")
+    
+    # Define the three different baseline orders
+    baseline_orders = [
+        # Version 1: GPT-4o at the bottom (furthest from title)
+        ('claude-3-opus', 'gemini-1-5-pro', 'gpt-4o-2024-05-13'),
+        # Version 2: Original order (Claude at the bottom)
+        ('gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus'),
+        # Version 3: Gemini at the bottom
+        ('gpt-4o-2024-05-13', 'claude-3-opus', 'gemini-1-5-pro')
+    ]
+    
+    order_names = ['GPT-4o at bottom', 'Claude-3-Opus at bottom (original)', 'Gemini-1.5-Pro at bottom']
+    
+    for order_idx, baseline_order in enumerate(baseline_orders):
+        print(f"\nCreating baseline final utility heatmap - {order_names[order_idx]}...")
+        plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='baseline_only', baseline_order=list(baseline_order))
 
 if __name__ == "__main__":
     main()

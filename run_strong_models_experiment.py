@@ -88,6 +88,13 @@ async def main():
     )
     
     parser.add_argument(
+        "--gamma-discount",
+        type=float,
+        default=0.9,
+        help="Discount factor for rewards per round (0-1, default: 0.9)"
+    )
+    
+    parser.add_argument(
         "--random-seed",
         type=int,
         help="Random seed for reproducibility"
@@ -173,6 +180,7 @@ async def main():
     print(f"Max Rounds: {args.max_rounds}")
     print(f"Items: {args.num_items}")
     print(f"Competition Level: {args.competition_level}")
+    print(f"Discount Factor: {args.gamma_discount}")
     if args.random_seed:
         print(f"Random Seed: {args.random_seed}")
     
@@ -203,6 +211,7 @@ async def main():
         "m_items": args.num_items,
         "t_rounds": args.max_rounds,
         "competition_level": args.competition_level,
+        "gamma_discount": args.gamma_discount,
         "random_seed": args.random_seed,
     }
     

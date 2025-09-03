@@ -17,7 +17,7 @@ import pandas as pd
 BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
 STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-sonnet', 
                  'claude-4-1-opus', 'gemini-2-5-pro', 'gemini-2-0-flash', 
-                 'gemma-3-27b', 'gpt-4o-latest', 'gpt-4o-mini', 'o1', 
+                 'gpt-4o-latest', 'o1', 
                  'gpt-5-mini', 'gpt-5-nano', 'o3', 'gpt-5']
 
 # Competition level buckets
@@ -152,73 +152,58 @@ def load_convergence_data(results_dir):
 def create_convergence_visualizations(convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts):
     """Create visualizations for convergence analysis."""
     
-    # Figure 1: Box plots of rounds to convergence by competition level
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+    # Figure 1: Single row of violin plots for all competition levels
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
     fig.suptitle('Negotiation Convergence Analysis by Competition Level', fontsize=16, fontweight='bold')
     
-    axes_flat = axes.flatten()
+    # Add legend next to title
+    fig.text(0.85, 0.96, 'Green: Consensus %', fontsize=9, color='green', transform=fig.transFigure)
+    fig.text(0.85, 0.93, 'Gray: Sample size', fontsize=9, color='gray', transform=fig.transFigure)
+    
+    # Prepare data for all competition levels
+    all_data = []
+    positions = []
+    labels = []
+    consensus_info = []
     
     for idx, comp_level in enumerate(COMPETITION_LEVELS):
-        ax = axes_flat[idx]
-        
         data = convergence_by_competition[comp_level]
         if data:
             rounds = [d['rounds'] for d in data]
+            all_data.append(rounds)
+            positions.append(idx + 1)
+            labels.append(f'{comp_level}')
+            
+            # Calculate consensus rate for annotation
             consensus_rate = sum(1 for d in data if d['consensus']) / len(data) * 100
-            timeout_rate = sum(1 for d in data if d['reached_timeout']) / len(data) * 100
-            
-            # Create box plot
-            bp = ax.boxplot(rounds, patch_artist=True)
-            for patch in bp['boxes']:
-                patch.set_facecolor('lightblue')
-            
-            # Add violin plot overlay
-            parts = ax.violinplot(rounds, positions=[1], widths=0.7, showmeans=True, showextrema=False)
-            for pc in parts['bodies']:
-                pc.set_facecolor('skyblue')
-                pc.set_alpha(0.5)
-            
-            # Add statistics
-            ax.text(0.05, 0.95, f'Mean: {np.mean(rounds):.1f}', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10)
-            ax.text(0.05, 0.88, f'Median: {np.median(rounds):.1f}', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10)
-            ax.text(0.05, 0.81, f'Std: {np.std(rounds):.1f}', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10)
-            ax.text(0.05, 0.74, f'Consensus: {consensus_rate:.1f}%', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10, color='green')
-            ax.text(0.05, 0.67, f'No Consensus: {timeout_rate:.1f}%', transform=ax.transAxes, 
-                   verticalalignment='top', fontsize=10, color='orange')
-            
-            # Add API timeout info if available
-            api_timeouts = api_timeout_counts.get(comp_level, 0)
-            if api_timeouts > 0:
-                ax.text(0.05, 0.60, f'API Errors: {api_timeouts}', transform=ax.transAxes, 
-                       verticalalignment='top', fontsize=10, color='red')
-                ax.text(0.05, 0.53, f'n={len(data)}', transform=ax.transAxes, 
-                       verticalalignment='top', fontsize=10)
-            else:
-                ax.text(0.05, 0.60, f'n={len(data)}', transform=ax.transAxes, 
-                       verticalalignment='top', fontsize=10)
-            
-            # Tie statistics
-            ties = tie_counts[comp_level]
-            total = ties + winner_counts[comp_level]['agent1'] + winner_counts[comp_level]['agent2']
-            if total > 0:
-                tie_rate = ties / total * 100
-                y_pos = 0.46 if api_timeouts > 0 else 0.53
-                ax.text(0.05, y_pos, f'Ties: {tie_rate:.1f}%', transform=ax.transAxes, 
-                       verticalalignment='top', fontsize=10, color='blue')
-        
-        ax.set_title(f'Competition Level: {comp_level}', fontsize=12)
-        ax.set_ylabel('Rounds to End', fontsize=10)
-        ax.set_ylim(0, 12)
-        ax.grid(True, alpha=0.3)
-        ax.set_xticks([1])
-        ax.set_xticklabels([''])
+            consensus_info.append((idx + 1, consensus_rate, len(data)))
     
-    # Remove the 6th subplot
-    fig.delaxes(axes_flat[5])
+    # Create violin plots only
+    if all_data:
+        parts = ax.violinplot(all_data, positions=positions, widths=0.7, showmeans=False, showextrema=False)
+        for pc in parts['bodies']:
+            pc.set_facecolor('skyblue')
+            pc.set_alpha(0.8)
+        
+        # Add mean lines that stay within violin bounds
+        for i, (data_points, pos) in enumerate(zip(all_data, positions)):
+            mean_val = np.mean(data_points)
+            # Draw a shorter horizontal line for the mean (40% of violin width)
+            ax.hlines(mean_val, pos - 0.14, pos + 0.14, colors='black', linewidth=1.5)
+    
+    # Add consensus rate and sample size at top of plot area
+    for pos, consensus_rate, n in consensus_info:
+        ax.text(pos, 10.7, f'{consensus_rate:.0f}%', ha='center', va='top', fontsize=9, color='green')
+        ax.text(pos, 10.3, f'n={n}', ha='center', va='top', fontsize=8, color='gray')
+    
+    # Formatting
+    ax.set_xlabel('Competition Level', fontsize=12)
+    ax.set_ylabel('Rounds to End', fontsize=12)
+    ax.set_ylim(0, 11)
+    ax.set_xlim(0.5, len(COMPETITION_LEVELS) + 0.5)
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels)
+    ax.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
     plt.savefig('convergence_analysis_by_competition.pdf', dpi=300, bbox_inches='tight')

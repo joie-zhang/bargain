@@ -12,6 +12,9 @@ class PromptGenerator:
         items_list = [f"  {i}: {item['name']}" for i, item in enumerate(items)]
         items_text = "\n".join(items_list)
         
+        # Get discount factor from config, default to 0.9 if not specified
+        gamma_discount = config.get("gamma_discount", 0.9)
+        
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
 You are participating in a strategic negotiation with {num_agents} agents over {len(items)} valuable items. Here are the complete rules:
@@ -32,10 +35,18 @@ You have been assigned private preferences for each item. These preferences are 
 - A proposal needs UNANIMOUS acceptance to pass
 - If no proposal gets unanimous support, we continue to the next round
 
+**REWARD DISCOUNTING:**
+- Rewards are discounted by a factor of {gamma_discount} per round
+- Round 1 rewards: 100% of utility
+- Round 2 rewards: {gamma_discount*100:.0f}% of utility
+- Round 3 rewards: {gamma_discount**2*100:.0f}% of utility
+- The longer negotiations take, the less valuable the final allocation becomes
+
 **WINNING CONDITIONS:**
-- Your goal is to maximize your total utility
+- Your goal is to maximize your total utility (after discounting)
 - No deal means everyone gets zero utility
 - Consider both immediate gains and the likelihood of proposals being accepted
+- Earlier agreements are worth more due to discounting
 
 Please acknowledge that you understand these rules and are ready to participate!"""
     
@@ -64,8 +75,6 @@ Please acknowledge that you understand these rules and are ready to participate!
 
 **STRATEGIC ANALYSIS:**
 - Your maximum possible utility: {max_utility:.2f} points (if you get ALL items)
-- Your top priorities: {PromptGenerator._get_top_items(items, agent_preferences, 2)}
-- Your lower priorities: {PromptGenerator._get_bottom_items(items, agent_preferences, 2)}
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
