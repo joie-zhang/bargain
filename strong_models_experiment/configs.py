@@ -101,14 +101,14 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are Gemini 2.0 Flash. Use rapid strategic thinking to achieve optimal outcomes in this negotiation.",
         "model_category": "strong"
     },
-    "gemma-3-27b": {
-        "name": "Gemma 3 27B",
-        "model_id": "google/gemma-3-27b-it:free",
+    "gemini-2-0-flash-lite": {
+        "name": "Gemini 2.0 Flash Lite",
+        "model_id": "google/gemini-2.0-flash-lite-001",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's Gemma 3 27B instruct model (STRONG MODEL)",
+        "description": "Google's Gemini 2.0 Flash Lite model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are Gemma 3, an advanced language model. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are Gemini 2.0 Flash Lite, an advanced language model. Apply strategic reasoning to negotiate effectively and maximize your utility.",
         "model_category": "strong"
     },
     

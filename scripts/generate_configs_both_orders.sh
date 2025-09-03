@@ -13,30 +13,29 @@ mkdir -p "${CONFIG_DIR}"
 # Weak models - baseline models for exploitation experiments
 WEAK_MODELS=(
     "claude-3-opus"
-    # "gemini-1-5-pro"
-    # "gpt-4o"  # May 2024 version
+    "gemini-1-5-pro"
+    "gpt-4o"  # May 2024 version
 )
 
 # Strong models - newer/more capable models that may exploit weak models
 STRONG_MODELS=(
-    # # Claude models
-    # "claude-3-5-haiku"
+    # Claude models
+    "claude-3-5-haiku"
     # "claude-3-5-sonnet"
-    # "claude-4-sonnet"
+    "claude-4-sonnet"
     # "claude-4-1-opus"
     
     # OpenAI models
     # "gpt-4o-latest"  # Nov 2024 version
-    # "gpt-4o-mini"
     "gpt-5-nano"
     "gpt-5-mini"
     # "o1"
     # "o3"
     
-    # # Google models
+    # Google models
     # "gemini-2-0-flash"
-    # "gemini-2-5-pro"
-    # "gemma-3-27b"
+    "gemini-2-0-flash-lite"
+    "gemini-2-5-pro"
 )
 
 # Competition levels
@@ -45,10 +44,10 @@ COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
 # Base parameters
 NUM_ITEMS=5
 MAX_ROUNDS=10
-NUM_RUNS=3  # Number of runs per configuration
+NUM_RUNS=5  # Number of runs per configuration
 
 # Seeds for each run (consistent across model pairs)
-RUN_SEEDS=(42 123 456)
+RUN_SEEDS=(42 123 456 789 101112)
 
 echo "Generating experiment configurations with multiple runs..."
 echo "  Weak models: ${#WEAK_MODELS[@]}"

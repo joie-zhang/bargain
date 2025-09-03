@@ -24,7 +24,7 @@ echo ""
 # Step 1: Generate configs if needed
 if [ ! -f "${CONFIG_DIR}/config_0.json" ]; then
     echo "Generating experiment configurations..."
-    "${SCRIPTS_DIR}/generate_configs.sh"
+    "${SCRIPTS_DIR}/generate_configs_both_orders.sh"
 fi
 
 # Step 2: Count experiments
