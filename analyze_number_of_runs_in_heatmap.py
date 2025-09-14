@@ -337,7 +337,7 @@ def print_detailed_statistics(results_by_competition, ordered_strong_models):
 def main():
     """Main function to analyze heatmap statistics."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     results_by_competition = load_experiment_results(results_dir)
     
     # Get models that have data, ordered by MMLU-Pro score
