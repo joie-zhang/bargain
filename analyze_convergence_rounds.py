@@ -206,9 +206,9 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
-    plt.savefig('convergence_analysis_by_competition.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_analysis_by_competition.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence analysis to convergence_analysis_by_competition.pdf")
+    print("Saved convergence analysis to convergence_analysis_by_competition.png")
     
     # Figure 2: Histogram of convergence rounds across all competition levels
     fig, ax = plt.subplots(1, 1, figsize=(10, 6))
@@ -231,9 +231,9 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('convergence_distribution.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_distribution.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence distribution to convergence_distribution.pdf")
+    print("Saved convergence distribution to convergence_distribution.png")
     
     # Figure 3: Heatmap of average rounds by model pairs (for competition level 0.5 as example)
     fig, ax = plt.subplots(1, 1, figsize=(14, 8))
@@ -269,9 +269,9 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.set_yticklabels(BASELINE_MODELS, rotation=0)
     
     plt.tight_layout()
-    plt.savefig('convergence_heatmap_example.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig('convergence_heatmap_example.png', dpi=300, bbox_inches='tight')
     plt.show()
-    print("Saved convergence heatmap to convergence_heatmap_example.pdf")
+    print("Saved convergence heatmap to convergence_heatmap_example.png")
 
 def print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts, api_timeout_counts, excluded_count):
     """Print detailed statistics about convergence."""
@@ -350,7 +350,7 @@ def print_convergence_statistics(convergence_by_competition, tie_counts, winner_
 def main():
     """Main function to analyze convergence."""
     print("Loading experiment results for convergence analysis...")
-    results_dir = '/root/bargain/experiments/results_current'
+    results_dir = '/root/bargain/experiments/results'
     
     convergence_by_competition, convergence_by_model_pair, tie_counts, winner_counts, api_timeout_counts, excluded_count = load_convergence_data(results_dir)
     
