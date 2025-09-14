@@ -292,14 +292,35 @@ async def main():
     if args.max_tokens_default is not None:
         experiment_config["max_tokens_default"] = args.max_tokens_default
     
-    # Initialize experiment runner
-    experiment = StrongModelsExperiment(output_dir=args.output_dir)
+    # Create output directory name if not provided
+    if args.output_dir:
+        output_dir = args.output_dir
+    else:
+        # Build descriptive directory name
+        model1, model2 = args.models[0], args.models[1] if len(args.models) > 1 else args.models[0]
+        comp_str = f"comp{args.competition_level}".replace(".", "_")
+
+        if args.job_id is not None:
+            config_str = f"config{args.job_id:03d}"
+        else:
+            config_str = "config_unknown"
+
+        if args.run_number is not None:
+            run_str = f"run{args.run_number}"
+        else:
+            run_str = f"runs{args.num_runs}"
+
+        output_dir = f"experiments/results/{model1}_vs_{model2}_{config_str}_{run_str}_{comp_str}"
+
+    # Initialize experiment runner with custom output directory
+    experiment = StrongModelsExperiment(output_dir=output_dir)
 
     try:
         if args.batch:
             print(f"\n--- Batch Experiment ({args.num_runs} runs) ---")
             if args.job_id is not None:
                 print(f"Job ID (Config #): {args.job_id}")
+            print(f"Output Directory: {output_dir}")
             batch_results = await experiment.run_batch_experiments(
                 models=args.models,
                 num_runs=args.num_runs,
