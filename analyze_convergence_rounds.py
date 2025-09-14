@@ -269,9 +269,10 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.set_yticklabels(BASELINE_MODELS, rotation=0)
     
     plt.tight_layout()
-    plt.savefig('convergence_heatmap_example.png', dpi=300, bbox_inches='tight')
-    plt.show()
-    print("Saved convergence heatmap to convergence_heatmap_example.png")
+    # I don't think this plot is useful so I'm not saving it
+    # plt.savefig('convergence_heatmap_example.png', dpi=300, bbox_inches='tight')
+    # plt.show()
+    # print("Saved convergence heatmap to convergence_heatmap_example.png")
 
 def print_convergence_statistics(convergence_by_competition, tie_counts, winner_counts, api_timeout_counts, excluded_count):
     """Print detailed statistics about convergence."""
