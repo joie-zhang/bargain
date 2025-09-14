@@ -29,6 +29,8 @@ MMLU_PRO_SCORES = {
     'gpt-4o-2024-11-20': 69.1,
     'o1': 83.5,
     'o3': 85.6,
+    'gpt-5-mini': 83.7,
+    'gpt-5-nano': 78.0,
     
     # Baseline models
     'gpt-4o-2024-05-13': 72.55,  # from HF leaderboard
@@ -45,7 +47,7 @@ MMLU_PRO_SCORES = {
 STRONG_MODELS_REQUESTED = [
     'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
     'gemini-2-0-flash', 'gemini-2-5-pro',
-    'gpt-4o-2024-11-20', 'o1', 'o3'
+    'gpt-4o-2024-11-20', 'o1', 'o3', 'gpt-5-nano', 'gpt-5-mini'
 ]
 
 BASELINE_MODELS = ['gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus']
@@ -61,6 +63,8 @@ MODEL_DISPLAY_NAMES = {
     'gemini-2-5-pro': 'Gemini 2.5\nPro',
     'gpt-4o-mini': 'GPT-4o\nMini',
     'gpt-4o-2024-11-20': 'GPT-4o\n(Nov 2024)',
+    'gpt-5-nano': 'GPT-5\nNano',
+    'gpt-5-mini': 'GPT-5\nMini',
     'o1': 'O1',
     'o3': 'O3',
     'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
@@ -111,8 +115,7 @@ def categorize_competition_level(comp_level):
     return min(COMPETITION_LEVELS, key=lambda x: abs(x - comp_level))
 
 def load_experiment_results(results_dir):
-    """Load all experiment results from the results directory, organized by competition level and model pairs.
-    This version filters out experiments where consensus was reached on round 10 (final round)."""
+    """Load all experiment results from the results directory, organized by competition level and model pairs."""
     results_by_competition = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     
     # Look for summary JSON files
@@ -120,7 +123,6 @@ def load_experiment_results(results_dir):
     
     print("Scanning for experiment files...")
     processed_files = 0
-    discarded_final_round = 0
     
     for file_path in results_path.glob('**/*_summary.json'):
         try:
@@ -132,13 +134,6 @@ def load_experiment_results(results_dir):
                 for exp in data['experiments']:
                     if 'config' in exp and 'agents' in exp['config']:
                         agents = exp['config']['agents']
-                        
-                        # Check if consensus was reached on round 10 (final round) and skip if so
-                        consensus_reached = exp.get('consensus_reached', False)
-                        final_round = exp.get('final_round', None)
-                        if consensus_reached and final_round == 10:
-                            discarded_final_round += 1
-                            continue
                         
                         # Get competition level
                         comp_level = exp['config'].get('competition_level', None)
@@ -193,7 +188,6 @@ def load_experiment_results(results_dir):
             continue
     
     print(f"Finished processing {processed_files} files.")
-    print(f"Discarded {discarded_final_round} experiments where consensus was reached on final round (round 10).")
     return results_by_competition
 
 def get_models_with_data(results_by_competition):
@@ -353,7 +347,7 @@ def plot_individual_heatmap(results_by_competition, baseline_model, ordered_stro
     
     # Save figure
     baseline_name = baseline_model.replace('-', '_')
-    filename = f'mmlu_ordered_{baseline_name}_{filename_suffix}_filtered_heatmap.pdf'
+    filename = f'figures/mmlu_ordered_{baseline_name}_{filename_suffix}_heatmap.pdf'
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.show()
     print(f"Saved individual heatmap to {filename}")
@@ -611,15 +605,15 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
             order_suffix = '_claude_bottom'
     
     if plot_mode == 'diff':
-        filename = 'mmlu_ordered_utility_difference_heatmaps_filtered.pdf'
+        filename = 'figures/mmlu_ordered_utility_difference_heatmaps.pdf'
     elif plot_mode == 'strong_only':
-        filename = 'mmlu_ordered_strong_utility_heatmaps_filtered.pdf'
+        filename = 'figures/mmlu_ordered_strong_utility_heatmaps.pdf'
     elif plot_mode == 'sum':
-        filename = 'mmlu_ordered_sum_utility_heatmaps_filtered.pdf'
+        filename = 'figures/mmlu_ordered_sum_utility_heatmaps.pdf'
     elif plot_mode == 'baseline_only':
-        filename = f'mmlu_ordered_baseline_utility_heatmaps_filtered{order_suffix}.pdf'
+        filename = f'figures/mmlu_ordered_baseline_utility_heatmaps{order_suffix}.pdf'
     else:
-        filename = 'mmlu_ordered_heatmaps_filtered.pdf'
+        filename = 'figures/mmlu_ordered_heatmaps.pdf'
     
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.show()

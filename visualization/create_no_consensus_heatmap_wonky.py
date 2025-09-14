@@ -240,7 +240,7 @@ def create_no_consensus_matrix(no_consensus_data):
     
     return matrix
 
-def create_heatmap(matrix, output_path='no_consensus_heatmap_wonky.png'):
+def create_heatmap(matrix, output_path='figures/no_consensus_heatmap_wonky.png'):
     """Create and save the heatmap"""
     if matrix.empty:
         print("Cannot create heatmap - no data available")
