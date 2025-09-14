@@ -660,7 +660,6 @@ You have been assigned private preferences for each item. These preferences are 
 **WINNING CONDITIONS:**
 - Your goal is to maximize your total utility
 - No deal means everyone gets zero utility
-- Consider both immediate gains and the likelihood of proposals being accepted
 
 Please acknowledge that you understand these rules and are ready to participate!"""
     
@@ -696,6 +695,7 @@ Please acknowledge that you understand these rules and are ready to participate!
 2. You may choose to reveal some preferences truthfully or misleadingly
 3. Consider which agents might have complementary preferences
 4. Remember: you need ALL agents to accept a proposal
+5. Consider both immediate gains and the likelihood of proposals being accepted
 
 Please acknowledge that you understand your private preferences."""
     
