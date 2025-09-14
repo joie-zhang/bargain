@@ -29,6 +29,8 @@ MMLU_PRO_SCORES = {
     'gpt-4o-2024-11-20': 69.1,
     'o1': 83.5,
     'o3': 85.6,
+    'gpt-5-mini': 83.7,
+    'gpt-5-nano': 78.0,
     
     # Baseline models
     'gpt-4o-2024-05-13': 72.55,  # from HF leaderboard
@@ -45,7 +47,7 @@ MMLU_PRO_SCORES = {
 STRONG_MODELS_REQUESTED = [
     'claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-1-opus', 'claude-4-sonnet',
     'gemini-2-0-flash', 'gemini-2-5-pro',
-    'gpt-4o-2024-11-20', 'o1', 'o3'
+    'gpt-4o-2024-11-20', 'o1', 'o3', 'gpt-5-nano', 'gpt-5-mini'
 ]
 
 BASELINE_MODELS = ['gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus']
@@ -61,6 +63,8 @@ MODEL_DISPLAY_NAMES = {
     'gemini-2-5-pro': 'Gemini 2.5\nPro',
     'gpt-4o-mini': 'GPT-4o\nMini',
     'gpt-4o-2024-11-20': 'GPT-4o\n(Nov 2024)',
+    'gpt-5-nano': 'GPT-5\nNano',
+    'gpt-5-mini': 'GPT-5\nMini',
     'o1': 'O1',
     'o3': 'O3',
     'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
@@ -647,7 +651,7 @@ def print_summary_statistics(results_by_competition, ordered_strong_models):
 def main():
     """Main function to generate MMLU-ordered heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results_current'
+    results_dir = '/root/bargain/experiments/results'
     results_by_competition = load_experiment_results(results_dir)
     
     # Debug: Check which models have no data

@@ -131,7 +131,6 @@ class StrongModelsExperiment:
         # Initialize tracking variables
         consensus_reached = False
         final_round = 0
-        winner_agent_id = None
         final_utilities = {}
         strategic_behaviors = {}
         conversation_logs = []
@@ -150,17 +149,25 @@ class StrongModelsExperiment:
                 self.logger.info(f"ROUND {round_num}/{config['t_rounds']}")
                 self.logger.info(f"{'='*60}")
                 
-                # Phase 2: Public Discussion
-                discussion_result = await self.phase_handler.run_discussion_phase(
-                    agents, items, preferences, round_num, config["t_rounds"]
-                )
-                conversation_logs.extend(discussion_result.get("messages", []))
+                # Phase 2: Public Discussion (optional)
+                discussion_result = {"messages": []}
+                if not config.get("disable_discussion", False):
+                    discussion_result = await self.phase_handler.run_discussion_phase(
+                        agents, items, preferences, round_num, config["t_rounds"]
+                    )
+                    conversation_logs.extend(discussion_result.get("messages", []))
+                else:
+                    self.logger.info(f"⏭️  Skipping discussion phase (disabled)")
                 
-                # Phase 3: Private Thinking
-                thinking_result = await self.phase_handler.run_private_thinking_phase(
-                    agents, items, preferences, round_num, config["t_rounds"],
-                    discussion_result.get("messages", [])
-                )
+                # Phase 3: Private Thinking (optional)
+                thinking_result = {}
+                if not config.get("disable_thinking", False):
+                    thinking_result = await self.phase_handler.run_private_thinking_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        discussion_result.get("messages", [])
+                    )
+                else:
+                    self.logger.info(f"⏭️  Skipping private thinking phase (disabled)")
                 
                 # Phase 4A: Proposal Submission
                 proposal_result = await self.phase_handler.run_proposal_phase(
@@ -194,16 +201,19 @@ class StrongModelsExperiment:
                 if tabulation_result.get("consensus_reached", False):
                     consensus_reached = True
                     final_round = round_num
-                    winner_agent_id = tabulation_result.get("winner_agent_id")
                     final_utilities = tabulation_result.get("final_utilities", {})
                     self.logger.info(f"✅ CONSENSUS REACHED in round {round_num}!")
                     break
                 
-                # Phase 6: Individual Reflection
-                reflection_result = await self.phase_handler.run_individual_reflection_phase(
-                    agents, items, preferences, round_num, config["t_rounds"],
-                    tabulation_result
-                )
+                # Phase 6: Individual Reflection (optional)
+                reflection_result = {}
+                if not config.get("disable_reflection", False):
+                    reflection_result = await self.phase_handler.run_individual_reflection_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        tabulation_result
+                    )
+                else:
+                    self.logger.info(f"⏭️  Skipping individual reflection phase (disabled)")
             
             # Calculate final utilities if no consensus
             if not consensus_reached:
@@ -218,11 +228,6 @@ class StrongModelsExperiment:
         exploitation_detected = self.analyzer.detect_exploitation(conversation_logs)
         strategic_behaviors = self.analyzer.analyze_strategic_behaviors(conversation_logs)
         agent_performance = self.analyzer.analyze_agent_performance(agents, final_utilities)
-        
-        # Determine winners
-        model_winners, proposal_winners, utility_winners = self.analyzer.determine_winners(
-            agents, winner_agent_id, final_utilities
-        )
         
         # Create enhanced config
         enhanced_config = self.utils.create_enhanced_config(
@@ -246,15 +251,11 @@ class StrongModelsExperiment:
             config=enhanced_config,
             consensus_reached=consensus_reached,
             final_round=final_round,
-            winner_agent_id=winner_agent_id,
             final_utilities=final_utilities,
             strategic_behaviors=strategic_behaviors,
             conversation_logs=conversation_logs,
             agent_performance=agent_performance,
-            exploitation_detected=exploitation_detected,
-            model_winners=model_winners,
-            proposal_winners=proposal_winners,
-            utility_winners=utility_winners
+            exploitation_detected=exploitation_detected
         )
         
         # Save experiment results
@@ -332,7 +333,6 @@ class StrongModelsExperiment:
                 continue
         
         # Calculate aggregate statistics
-        model_win_rates = self.analyzer.calculate_model_win_rates(experiments, models)
         consensus_rate = sum(1 for exp in experiments if exp.consensus_reached) / len(experiments) if experiments else 0
         average_rounds = sum(exp.final_round for exp in experiments) / len(experiments) if experiments else 0
         exploitation_rate = sum(1 for exp in experiments if exp.exploitation_detected) / len(experiments) if experiments else 0
@@ -344,7 +344,6 @@ class StrongModelsExperiment:
             batch_id=batch_id,
             num_runs=len(experiments),
             experiments=experiments,
-            model_win_rates=model_win_rates,
             consensus_rate=consensus_rate,
             average_rounds=average_rounds,
             exploitation_rate=exploitation_rate,
