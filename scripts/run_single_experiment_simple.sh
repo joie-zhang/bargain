@@ -45,7 +45,7 @@ fi
 # Build command
 # Note: --num-runs 1 means run 1 negotiation game in this Python process
 # --run-number passes the actual run number from the config for correct output naming
-# --output-dir uses the directory specified in the config
+# The Python script will automatically generate a descriptive output directory name
 CMD="python3 run_strong_models_experiment.py \
     --models ${WEAK_MODEL} ${STRONG_MODEL} \
     --competition-level ${COMP_LEVEL} \
@@ -55,8 +55,7 @@ CMD="python3 run_strong_models_experiment.py \
     --batch \
     --num-runs 1 \
     --run-number ${RUN_NUMBER} \
-    --job-id ${JOB_ID} \
-    --output-dir ${FULL_OUTPUT_DIR}"
+    --job-id ${JOB_ID}"
 
 echo "[$(date)] Running: ${CMD}" >> "${LOG_FILE}"
 
