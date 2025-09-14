@@ -35,6 +35,7 @@ class ModelProvider(Enum):
     """Supported LLM providers."""
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    OPENROUTER = "openrouter"  # OpenRouter for multiple models
     TEST = "test"  # For testing with real minimal models
 
 
@@ -53,9 +54,13 @@ class ModelType(Enum):
     O3_MINI = "o3-mini"
     O3 = "o3"
     
+    # Gemma models (via OpenRouter)
+    GEMMA_2B = "gemma-2b"
+    GEMMA_7B = "gemma-7b"
+    GEMMA_2_9B = "gemma-2-9b"
+    GEMMA_2_27B = "gemma-2-27b"
+    
     # Test models (using simulated agents for testing)
-    TEST_STRONG = "test-strong-model"  # Simulated strong agent
-    TEST_WEAK = "test-weak-model"  # Simulated weak agent
 
 
 @dataclass
@@ -221,6 +226,20 @@ class BaseLLMAgent(ABC):
         """Get information about the model. Must be implemented by subclasses."""
         pass
     
+    def update_max_tokens(self, max_tokens: Optional[int]) -> None:
+        """Update the maximum tokens for API calls.
+        
+        Args:
+            max_tokens: New maximum token limit, or None for unlimited
+        """
+        if max_tokens is None:
+            # Use effectively unlimited value
+            self.config.max_tokens = 999999
+            self.logger.debug(f"Updated max_tokens to unlimited for {self.agent_id}")
+        else:
+            self.config.max_tokens = max_tokens
+            self.logger.debug(f"Updated max_tokens to {max_tokens} for {self.agent_id}")
+    
     def _build_system_prompt(self, context: NegotiationContext) -> str:
         """Build system prompt for the agent."""
         base_prompt = f"""You are {context.agent_id}, a negotiating agent in a multi-agent negotiation.
@@ -235,7 +254,7 @@ YOUR PREFERENCES:
 
 CURRENT SITUATION:
 - Turn type: {context.turn_type}
-- Items on the table: {[item['name'] for item in context.items]}
+- Items on the table: {[item['name'] if isinstance(item, dict) else str(item) for item in context.items]}
 
 INSTRUCTIONS:
 - Be strategic and try to maximize your utility
@@ -251,20 +270,30 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
         
         return base_prompt
     
-    def _format_preferences(self, preferences: Any, items: List[Dict[str, Any]]) -> str:
+    def _format_preferences(self, preferences: Any, items: List[Any]) -> str:
         """Format preferences for display in prompt."""
         if isinstance(preferences, list):
             # Vector preferences
             pref_str = "Your item valuations:\n"
             for i, (item, value) in enumerate(zip(items, preferences)):
-                pref_str += f"- {item['name']}: {value:.1f}/10\n"
+                # Handle both string items and dict items
+                if isinstance(item, dict):
+                    item_name = item['name']
+                else:
+                    item_name = str(item)
+                pref_str += f"- {item_name}: {value:.1f}\n"
             return pref_str
         elif isinstance(preferences, list) and isinstance(preferences[0], list):
             # Matrix preferences  
             pref_str = "Your preference matrix (how much you value each agent getting each item):\n"
             agent_names = [f"agent_{i}" for i in range(len(preferences[0]))]
             for i, (item, row) in enumerate(zip(items, preferences)):
-                pref_str += f"- {item['name']}: "
+                # Handle both string items and dict items
+                if isinstance(item, dict):
+                    item_name = item['name']
+                else:
+                    item_name = str(item)
+                pref_str += f"- {item_name}: "
                 for j, value in enumerate(row):
                     pref_str += f"{agent_names[j]}={value:.1f} "
                 pref_str += "\n"
@@ -629,9 +658,9 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             proposal["round"] = context.current_round
             return proposal
         except (json.JSONDecodeError, ValueError) as e:
-            # Log the parsing issue for debugging
+            # Log the FULL parsing issue for debugging
             self.logger.debug(f"Direct JSON parsing failed for {self.agent_id}: {e}")
-            self.logger.debug(f"Raw response content: {response.content[:300]}...")
+            self.logger.debug(f"Raw response content: {response.content}")
             
             # Try to extract JSON from text response
             try:
@@ -695,7 +724,7 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 pass
             
             # Fallback: create a simple proposal
-            self.logger.warning(f"Failed to parse proposal JSON: {response.content[:200]}...")
+            self.logger.warning(f"Failed to parse proposal JSON. Full content: {response.content}")
             return {
                 "allocation": {self.agent_id: list(range(len(context.items)))},
                 "reasoning": "Failed to parse structured response",
@@ -816,11 +845,11 @@ Keep your response conversational and authentic. Respond as you would in a real 
                     self.total_cost += response.cost_estimate
                 self.response_times.append(response.response_time)
                 
-                # Store reflection in conversation memory
+                # Store FULL reflection in conversation memory
                 self.conversation_memory.append({
                     "type": "private_reflection",
                     "round": context.current_round,
-                    "content": response.content[:500] if response.content else "",  # Truncated for memory
+                    "content": response.content if response.content else "",  # Store full content
                     "timestamp": time.time()
                 })
                 
@@ -864,6 +893,22 @@ Keep your response conversational and authentic. Respond as you would in a real 
                 "strategic_memory": self.strategic_memory,
                 "performance_stats": self.get_performance_stats()
             }, f, indent=2)
+    
+    # Wrapper methods for negotiation runner compatibility
+    async def propose(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for propose_allocation to match negotiation runner expectations."""
+        response = await self.generate_response(context, prompt)
+        return response.content
+    
+    async def vote(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for vote_on_proposal to match negotiation runner expectations.""" 
+        response = await self.generate_response(context, prompt)
+        return response.content
+    
+    async def reflect(self, context: NegotiationContext, prompt: str) -> str:
+        """Wrapper for think_privately to match negotiation runner expectations."""
+        response = await self.generate_response(context, prompt)
+        return response.content
 
 
 class AnthropicAgent(BaseLLMAgent):
@@ -877,17 +922,21 @@ class AnthropicAgent(BaseLLMAgent):
         
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
         
-        # Model name mapping
-        if config.model_type == ModelType.CLAUDE_3_OPUS:
-            self.model_name = "claude-3-opus-20240229"
-        elif config.model_type == ModelType.CLAUDE_3_SONNET:
-            self.model_name = "claude-3-sonnet-20240229"
-        elif config.model_type == ModelType.CLAUDE_3_HAIKU:
-            self.model_name = "claude-3-haiku-20240307"
-        elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
-            self.model_name = "claude-3-5-sonnet-20241022"
+        # Check if we have an actual model ID stored (for newer models)
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
         else:
-            raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
+            # Model name mapping (standard enum types)
+            if config.model_type == ModelType.CLAUDE_3_OPUS:
+                self.model_name = "claude-3-opus-20240229"
+            elif config.model_type == ModelType.CLAUDE_3_SONNET:
+                self.model_name = "claude-3-sonnet-20240229"
+            elif config.model_type == ModelType.CLAUDE_3_HAIKU:
+                self.model_name = "claude-3-haiku-20240307"
+            elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
+                self.model_name = "claude-3-5-sonnet-20241022"
+            else:
+                raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call Anthropic API."""
@@ -910,24 +959,46 @@ class AnthropicAgent(BaseLLMAgent):
             "max_tokens": self.config.max_tokens,  # Required by Anthropic API
             "system": system_message,
             "messages": user_messages,
+            "stream": True,  # Enable streaming for long requests
             **self.config.custom_parameters,
             **kwargs
         }
         
-        response = await self.client.messages.create(**api_params)
+        # Use streaming to handle long requests
+        stream = await self.client.messages.create(**api_params)
+        
+        # Collect the streamed response
+        full_text = ""
+        input_tokens = 0
+        output_tokens = 0
+        stop_reason = None
+        
+        async for event in stream:
+            if hasattr(event, 'type'):
+                if event.type == 'content_block_delta':
+                    full_text += event.delta.text
+                elif event.type == 'message_start':
+                    if hasattr(event.message, 'usage'):
+                        input_tokens = event.message.usage.input_tokens
+                elif event.type == 'message_delta':
+                    if hasattr(event, 'usage'):
+                        output_tokens = event.usage.output_tokens
+                    if hasattr(event.delta, 'stop_reason'):
+                        stop_reason = event.delta.stop_reason
         
         response_time = time.time() - start_time
+        total_tokens = input_tokens + output_tokens
         
         return AgentResponse(
-            content=response.content[0].text,
+            content=full_text,
             model_used=self.model_name,
             response_time=response_time,
-            tokens_used=response.usage.input_tokens + response.usage.output_tokens,
-            cost_estimate=self._estimate_cost(response.usage.input_tokens, response.usage.output_tokens),
+            tokens_used=total_tokens,
+            cost_estimate=self._estimate_cost(input_tokens, output_tokens),
             metadata={
-                "input_tokens": response.usage.input_tokens,
-                "output_tokens": response.usage.output_tokens,
-                "stop_reason": response.stop_reason
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "stop_reason": stop_reason
             }
         )
     
@@ -974,19 +1045,23 @@ class OpenAIAgent(BaseLLMAgent):
         
         self.client = openai.AsyncOpenAI(api_key=api_key)
         
-        # Model name mapping
-        if config.model_type == ModelType.GPT_4:
-            self.model_name = "gpt-4"
-        elif config.model_type == ModelType.GPT_4_TURBO:
-            self.model_name = "gpt-4-turbo"
-        elif config.model_type == ModelType.GPT_4O:
-            self.model_name = "gpt-4o"
-        elif config.model_type == ModelType.O3_MINI:
-            self.model_name = "o3-mini"
-        elif config.model_type == ModelType.O3:
-            self.model_name = "o3"
+        # Check if we have an actual model ID stored (for newer models)
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
         else:
-            raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
+            # Model name mapping (standard enum types)
+            if config.model_type == ModelType.GPT_4:
+                self.model_name = "gpt-4"
+            elif config.model_type == ModelType.GPT_4_TURBO:
+                self.model_name = "gpt-4-turbo"
+            elif config.model_type == ModelType.GPT_4O:
+                self.model_name = "gpt-4o"
+            elif config.model_type == ModelType.O3_MINI:
+                self.model_name = "o3-mini"
+            elif config.model_type == ModelType.O3:
+                self.model_name = "o3"
+            else:
+                raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call OpenAI API."""
@@ -998,10 +1073,11 @@ class OpenAIAgent(BaseLLMAgent):
             "messages": messages,
         }
         
-        if "o3" in self.model_name.lower():
-            # O3 models use max_completion_tokens and only support temperature=1
+        if "o3" in self.model_name.lower() or "o1" in self.model_name.lower():
+            # O3 and O1 models don't support temperature parameter
+            # O3 only supports temperature=1, O1 doesn't support it at all
             # Remove max_completion_tokens to allow unlimited generation
-            api_params["temperature"] = 1  # O3 only supports temperature=1
+            pass  # Don't set temperature for these models
         else:
             # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature
@@ -1075,189 +1151,86 @@ class OpenAIAgent(BaseLLMAgent):
             return 16_000  # Default
 
 
-class SimulatedAgent(BaseLLMAgent):
-    """
-    Simulated LLM agent for testing and development.
+class XAIAgent(BaseLLMAgent):
+    """LLM agent using XAI Grok models."""
     
-    Uses deterministic response patterns rather than external APIs,
-    enabling rapid testing and development without API costs.
-    """
-    
-    def __init__(self, agent_id: str, config: LLMConfig, 
-                 strategic_level: str = "balanced"):
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
         super().__init__(agent_id, config)
         
-        # Configure strategic behavior
-        if strategic_level == "aggressive":
-            self.cooperation_tendency = 0.2
-            self.strategic_sophistication = 0.9
-            self.response_style = "competitive"
-        elif strategic_level == "cooperative":
-            self.cooperation_tendency = 0.8
-            self.strategic_sophistication = 0.6
-            self.response_style = "collaborative"
-        else:  # balanced
-            self.cooperation_tendency = 0.5
-            self.strategic_sophistication = 0.7
-            self.response_style = "strategic"
+        try:
+            from xai_sdk import Client as XAIClient
+            from xai_sdk.chat import user, system
+            self.XAI_AVAILABLE = True
+            self.user = user
+            self.system = system
+        except ImportError:
+            self.XAI_AVAILABLE = False
+            raise ImportError("xai_sdk package not available. Install with: pip install xai-sdk")
         
-        # Response templates for different scenarios
-        self.response_templates = self._initialize_response_templates()
-    
-    def _initialize_response_templates(self) -> Dict[str, List[str]]:
-        """Initialize response templates based on strategic level."""
-        if self.response_style == "competitive":
-            return {
-                "proposal": [
-                    "I believe this allocation maximizes efficiency given the current market conditions.",
-                    "Based on my analysis, this distribution creates the optimal outcome for all parties.",
-                    "This proposal reflects careful consideration of everyone's stated positions."
-                ],
-                "vote_accept": [
-                    "This proposal aligns with my strategic objectives.",
-                    "I can support this allocation given the current circumstances.",
-                    "This represents a reasonable compromise."
-                ],
-                "vote_reject": [
-                    "I believe we can achieve a more balanced outcome with further discussion.",
-                    "This allocation doesn't fully address the concerns raised earlier.",
-                    "I think there's room for improvement in this proposal."
-                ],
-                "discussion": [
-                    "We should consider the long-term implications of our decisions here.",
-                    "Has anyone analyzed how this might affect future negotiations?",
-                    "I'm curious about the reasoning behind some of the earlier proposals."
-                ]
-            }
-        elif self.response_style == "collaborative":
-            return {
-                "proposal": [
-                    "I'd like to propose an allocation that I think benefits everyone fairly.",
-                    "Here's a distribution that tries to balance all our interests.",
-                    "This proposal aims to create value for the entire group."
-                ],
-                "vote_accept": [
-                    "I think this is a fair proposal that works for everyone.",
-                    "This allocation seems to address most of our concerns.",
-                    "I'm happy to support this collaborative solution."
-                ],
-                "vote_reject": [
-                    "I wonder if we could adjust this slightly to better serve everyone.",
-                    "Perhaps we could explore some alternatives that work better for all of us.",
-                    "I'd like to discuss how we might improve this proposal."
-                ],
-                "discussion": [
-                    "How can we make sure everyone's needs are being met?",
-                    "I want to understand what's most important to each of you.",
-                    "Let's work together to find a solution that benefits us all."
-                ]
-            }
-        else:  # strategic
-            return {
-                "proposal": [
-                    "This allocation reflects my assessment of the current negotiation dynamics.",
-                    "I've structured this proposal to create mutual benefits while addressing key concerns.",
-                    "This distribution balances immediate needs with strategic positioning."
-                ],
-                "vote_accept": [
-                    "This proposal offers a good balance of risk and reward.",
-                    "I can see the strategic value in this allocation.",
-                    "This aligns well with my objectives for this negotiation."
-                ],
-                "vote_reject": [
-                    "I think we have an opportunity to create more value with a different approach.",
-                    "While this has merit, I believe we can do better.",
-                    "I'd like to explore some alternative structures."
-                ],
-                "discussion": [
-                    "What are the key factors driving everyone's decision-making here?",
-                    "I'm interested in understanding the strategic considerations at play.",
-                    "How do we balance individual interests with collective outcomes?"
-                ]
-            }
+        self.client = XAIClient(api_key=api_key)
+        
+        # Check if we have an actual model ID stored
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
+        else:
+            # Default model name
+            self.model_name = "grok-3"
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Simulate API call with structured responses."""
+        """Call XAI Grok API."""
         start_time = time.time()
         
-        # Add realistic delay
-        import asyncio
-        await asyncio.sleep(random.uniform(0.3, 1.5))
-        
-        # Analyze the prompt to determine response type
-        last_message = messages[-1]["content"].lower()
-        
-        if "vote" in last_message and "proposal" in last_message:
-            content = self._generate_vote_response(messages)
-        elif "propose" in last_message and "allocation" in last_message:
-            content = self._generate_proposal_response(messages)
-        else:
-            content = self._generate_discussion_response(messages)
-        
-        response_time = time.time() - start_time
-        
-        return AgentResponse(
-            content=content,
-            model_used=f"simulated-{self.response_style}",
-            response_time=response_time,
-            tokens_used=len(content.split()),
-            cost_estimate=0.0,  # Simulated is free
-            metadata={
-                "strategic_level": self.response_style,
-                "cooperation_tendency": self.cooperation_tendency,
-                "strategic_sophistication": self.strategic_sophistication
-            }
-        )
+        try:
+            # Create chat with model and temperature
+            chat = self.client.chat.create(
+                model=self.model_name,
+                temperature=self.config.temperature
+            )
+            
+            # Add messages to chat
+            for msg in messages:
+                if msg['role'] == 'system':
+                    chat.append(self.system(msg['content']))
+                elif msg['role'] == 'user':
+                    chat.append(self.user(msg['content']))
+                # Skip assistant messages for now as they're part of context
+            
+            # Sample response synchronously (wrapped in async)
+            import asyncio
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                chat.sample
+            )
+            
+            response_time = time.time() - start_time
+            
+            return AgentResponse(
+                content=response.content,
+                model_used=self.model_name,
+                response_time=response_time,
+                tokens_used=None,  # XAI SDK might not provide usage info
+                cost_estimate=None,
+                metadata={
+                    "thinking": kwargs.get("include_thinking", False) and hasattr(response, 'thinking') and response.thinking or None,
+                    "raw_response": str(response)
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"XAI API error: {e}")
+            raise
     
-    def _generate_proposal_response(self, messages: List[Dict[str, str]]) -> str:
-        """Generate a structured proposal response."""
-        # Simple allocation strategy based on agent behavior
-        if self.response_style == "competitive":
-            # Try to get high-value items for self
-            allocation = {self.agent_id: [0, 1]}  # Take first items
-            reasoning = random.choice(self.response_templates["proposal"])
-        elif self.response_style == "collaborative":
-            # Try to distribute fairly
-            allocation = {self.agent_id: [0]}  # Take one item
-            reasoning = random.choice(self.response_templates["proposal"])
-        else:  # strategic
-            # Mixed approach
-            allocation = {self.agent_id: [0, 2]}  # Strategic selection
-            reasoning = random.choice(self.response_templates["proposal"])
-        
-        return json.dumps({
-            "allocation": allocation,
-            "reasoning": reasoning
-        })
-    
-    def _generate_vote_response(self, messages: List[Dict[str, str]]) -> str:
-        """Generate a structured vote response."""
-        # Decision based on cooperation tendency
-        if random.random() < self.cooperation_tendency:
-            vote = "accept"
-            reasoning = random.choice(self.response_templates["vote_accept"])
-        else:
-            vote = "reject"
-            reasoning = random.choice(self.response_templates["vote_reject"])
-        
-        return json.dumps({
-            "vote": vote,
-            "reasoning": reasoning
-        })
-    
-    def _generate_discussion_response(self, messages: List[Dict[str, str]]) -> str:
-        """Generate a discussion response."""
-        return random.choice(self.response_templates["discussion"])
+    def _get_context_limit(self) -> int:
+        """Get the context limit for XAI models."""
+        # All Grok models support 128k context
+        return 128_000
     
     def get_model_info(self) -> Dict[str, Any]:
-        """Get simulated model information."""
+        """Get XAI model information."""
         return {
-            "provider": "simulated",
+            "provider": "xai",
             "model_type": self.config.model_type.value,
-            "model_name": f"simulated-{self.response_style}",
-            "context_window": 100_000,  # Unlimited for simulated
-            "capabilities": ["text_generation", "json_mode", "strategic_simulation"],
-            "strategic_level": self.response_style,
-            "cooperation_tendency": self.cooperation_tendency,
-            "strategic_sophistication": self.strategic_sophistication
+            "model_name": self.model_name,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens
         }

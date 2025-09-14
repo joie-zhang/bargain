@@ -1,0 +1,71 @@
+{
+  "experiment_name": "Strategic Behavior Study",
+  "description": "Test negotiation dynamics using simulated agents with different strategic profiles",
+  "agents": [
+    {
+      "agent_id": "sim_agent_0",
+      "model_type": "claude-3-haiku-20240307",
+      "temperature": 0.7,
+      "max_tokens": 1000,
+      "timeout": 30.0,
+      "requests_per_minute": 60,
+      "tokens_per_minute": 10000,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "system_prompt": null,
+      "custom_parameters": {},
+      "strategic_level": "aggressive",
+      "api_key_env_var": "SIM_AGENT_0_API_KEY"
+    },
+    {
+      "agent_id": "sim_agent_1",
+      "model_type": "claude-3-haiku-20240307",
+      "temperature": 0.7,
+      "max_tokens": 1000,
+      "timeout": 30.0,
+      "requests_per_minute": 60,
+      "tokens_per_minute": 10000,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "system_prompt": null,
+      "custom_parameters": {},
+      "strategic_level": "cooperative",
+      "api_key_env_var": "SIM_AGENT_1_API_KEY"
+    },
+    {
+      "agent_id": "sim_agent_2",
+      "model_type": "claude-3-haiku-20240307",
+      "temperature": 0.7,
+      "max_tokens": 1000,
+      "timeout": 30.0,
+      "requests_per_minute": 60,
+      "tokens_per_minute": 10000,
+      "max_retries": 3,
+      "retry_delay": 1.0,
+      "system_prompt": null,
+      "custom_parameters": {},
+      "strategic_level": "balanced",
+      "api_key_env_var": "SIM_AGENT_2_API_KEY"
+    }
+  ],
+  "environment": {
+    "m_items": 5,
+    "n_agents": 3,
+    "t_rounds": 6,
+    "gamma_discount": 0.9
+  },
+  "preferences": {
+    "preference_type": "vector",
+    "competition_level": 0.8,
+    "known_to_all": false
+  },
+  "metadata": {
+    "random_seed": null,
+    "expected_duration_minutes": 15,
+    "tags": [
+      "simulation",
+      "strategic_profiles",
+      "testing"
+    ]
+  }
+}

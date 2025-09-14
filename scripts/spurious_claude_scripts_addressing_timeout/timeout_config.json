@@ -1,0 +1,104 @@
+{
+  "timeout_prone_models": {
+    "weak_models": {
+      "gemini-1-5-pro": {
+        "base_timeout": 900,
+        "timeout_rate": 0.43,
+        "notes": "Most timeout-prone weak model, especially with Claude models"
+      },
+      "gpt-4o": {
+        "base_timeout": 900,
+        "timeout_rate": 0.36,
+        "notes": "Second most timeout-prone, issues with Gemini-2.5 models"
+      },
+      "claude-3-opus": {
+        "base_timeout": 600,
+        "timeout_rate": 0.21,
+        "notes": "Moderate timeout rate, mostly with newer Claude models"
+      }
+    },
+    "strong_models": {
+      "claude-3-5-haiku": {
+        "additional_timeout": 300,
+        "timeout_count": 12,
+        "notes": "Causes most timeouts across all weak models"
+      },
+      "claude-4-sonnet": {
+        "additional_timeout": 300,
+        "timeout_count": 11,
+        "notes": "Second highest timeout rate"
+      },
+      "claude-3-5-sonnet": {
+        "additional_timeout": 200,
+        "timeout_count": 9,
+        "notes": "Moderate timeout issues"
+      },
+      "gemini-2-5-pro": {
+        "additional_timeout": 200,
+        "timeout_count": 8,
+        "notes": "Issues mainly with GPT-4o and Gemini-1.5-Pro"
+      },
+      "gemini-2-5-flash": {
+        "additional_timeout": 200,
+        "timeout_count": 7,
+        "notes": "Similar pattern to Gemini-2.5-Pro"
+      }
+    },
+    "problematic_pairs": [
+      {
+        "weak": "claude-3-opus",
+        "strong": "claude-3-5-haiku",
+        "timeout_count": 5,
+        "recommended_timeout": 1200,
+        "notes": "Consistent timeouts across all competition levels"
+      },
+      {
+        "weak": "claude-3-opus",
+        "strong": "claude-4-sonnet",
+        "timeout_count": 5,
+        "recommended_timeout": 1200,
+        "notes": "Consistent timeouts across all competition levels"
+      },
+      {
+        "weak": "gemini-1-5-pro",
+        "strong": "claude-3-5-haiku",
+        "timeout_count": 5,
+        "recommended_timeout": 1500,
+        "notes": "Most problematic pairing overall"
+      },
+      {
+        "weak": "gpt-4o",
+        "strong": "gemini-2-5-pro",
+        "timeout_count": 4,
+        "recommended_timeout": 1200,
+        "notes": "Cross-family issues"
+      }
+    ]
+  },
+  "competition_level_factors": {
+    "0.0": 1.0,
+    "0.25": 1.0,
+    "0.5": 1.2,
+    "0.75": 1.4,
+    "1.0": 1.5
+  },
+  "recommendations": {
+    "default_timeout": 600,
+    "max_retries": 3,
+    "retry_backoff": "exponential",
+    "parallel_jobs": {
+      "easy": 8,
+      "moderate": 4,
+      "difficult": 2,
+      "retry": 1
+    },
+    "skip_combinations": [
+      {
+        "weak": "gemini-1-5-pro",
+        "strong": "claude-3-5-haiku",
+        "competition": [0.75, 1.0],
+        "reason": "Consistent timeouts even with extended timeout"
+      }
+    ]
+  }
+}

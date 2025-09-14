@@ -103,7 +103,202 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Accurate utility calculations for all scenarios
 - **Estimated Time**: 1 week
 
-#### 8. Context Management System
+#### 8. Experiment Parameterization System (Broken into Sub-tasks)
+
+**Phase 8A: Configuration Foundation (Tasks 8.1-8.6)**
+
+#### 8.1 Experiment Hyperparameter Logging
+**Objective**: Ensure comprehensive experiment hyperparameter storage in JSON output files
+- **Status**: ✅ **PARTIALLY COMPLETE** - Basic config storage exists in experiment results (see `o3_haiku_1753987978_3208_individual.json`)
+- **Current Parameters Stored**: `m_items`, `n_agents`, `t_rounds`, `gamma_discount`, `competition_level`, `known_to_all`, `random_seed`
+- **Remaining Deliverables**: 
+  - Add model-specific hyperparameters (temperature, max_tokens, reasoning_steps)
+  - Add preference system configuration (vector vs matrix, preference values)
+  - Add proposal order tracking configuration
+  - Add experiment metadata (start_time, duration, cluster_config if applicable)
+  - Add validation that all hyperparameters from YAML config are preserved in JSON output
+- **Success Criteria**: Every experiment parameter that could affect results is stored in the JSON output for full reproducibility
+- **Estimated Time**: 2-3 days
+
+#### 8.2 Basic YAML Schema Structure
+**Objective**: Complete foundational YAML configuration structure
+- **Status**: ✅ **PARTIALLY COMPLETE** - Model schema exists in `experiments/configs/model_config_schema.yaml`
+- **Remaining Deliverables**: Add missing sections for environment, preferences, and analysis to existing schema
+- **Success Criteria**: Complete YAML schema with all experiment sections that can be loaded and validated
+- **Estimated Time**: 1-2 days
+
+#### 8.3 Number of Agents (n) Configuration
+**Objective**: Add configurable number of agents parameter
+- **Deliverables**: 
+  - `environment.num_agents` parameter in YAML schema
+  - Validation rules for minimum/maximum agents (2-6 as per existing validation_rules)
+  - Integration with agent configuration section
+- **Success Criteria**: Can specify and validate number of agents via config
+- **Estimated Time**: 1-2 days
+
+#### 8.4 Number of Items (m) Configuration  
+**Objective**: Add configurable number of items parameter
+- **Deliverables**:
+  - `environment.num_items` parameter in YAML schema
+  - Item pool generation based on config
+  - Validation rules for reasonable item counts
+- **Success Criteria**: Can specify number of negotiable items via config
+- **Estimated Time**: 1-2 days
+
+#### 8.5 Number of Rounds (t) Configuration
+**Objective**: Add configurable maximum rounds parameter
+- **Deliverables**:
+  - `environment.max_rounds` parameter in YAML schema
+  - Round progression logic integration
+  - Validation for reasonable round limits
+- **Success Criteria**: Can specify maximum negotiation rounds via config
+- **Estimated Time**: 1-2 days
+
+#### 8.6 Discount Factor (γ) Configuration
+**Objective**: Add configurable discount factor parameter
+- **Deliverables**:
+  - `environment.discount_factor` parameter in YAML schema
+  - Integration with utility calculation system
+  - Validation for discount factor range (0.0-1.0)
+- **Success Criteria**: Can specify discount factor for time-based utility decay via config
+- **Estimated Time**: 1-2 days
+
+**Phase 8B: Model Configuration - OpenAI (Tasks 8.7-8.11)**
+
+#### 8.7 OpenAI O3 Model Integration
+**Objective**: Add O3 model support to config system
+- **Deliverables**: O3 model configuration, API integration, rate limiting
+- **Success Criteria**: Can run experiments with O3 agents via config
+- **Estimated Time**: 2-3 days
+
+#### 8.8 OpenAI GPT-4 Model Integration
+**Objective**: Add GPT-4 model support to config system
+- **Status**: ✅ **COMPLETE** - GPT-4o already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with GPT-4 agents via config
+- **Estimated Time**: 1 day (verification only)
+
+#### 8.9 Additional OpenAI Models (GPT-4o, gpt-oss)
+**Objective**: Complete OpenAI model suite
+- **Status**: ✅ **PARTIALLY COMPLETE** - GPT-4o exists, need to add O3-mini and other variants
+- **Remaining Deliverables**: Add missing OpenAI model variants to schema
+- **Success Criteria**: All OpenAI models configurable and functional
+- **Estimated Time**: 1-2 days
+
+**Phase 8C: Model Configuration - Claude (Tasks 8.10-8.12)**
+
+#### 8.10 Claude Haiku Model Integration
+**Objective**: Add Claude Haiku support to config system
+- **Status**: ✅ **COMPLETE** - Claude-3-haiku already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with Haiku agents via config
+- **Estimated Time**: 1 day (verification only)
+
+#### 8.11 Claude Sonnet Model Integration
+**Objective**: Add Claude Sonnet support to config system
+- **Status**: ✅ **COMPLETE** - Claude-3-sonnet already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with Sonnet agents via config
+- **Estimated Time**: 1 day (verification only)
+
+#### 8.12 Claude Opus Model Integration
+**Objective**: Add Claude Opus support to config system
+- **Deliverables**: Opus model configuration and integration (missing from current schema)
+- **Success Criteria**: Can run experiments with Opus agents via config
+- **Estimated Time**: 2-3 days
+
+**Phase 8D: Model Configuration - Other APIs (Tasks 8.13-8.15)**
+
+#### 8.13 Llama via OpenRouter Integration
+**Objective**: Add Llama model support through OpenRouter
+- **Status**: ✅ **COMPLETE** - Llama-3-70b already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with Llama agents via config
+- **Estimated Time**: 1 day (verification only)
+
+#### 8.14 Gemini API Integration
+**Objective**: Add Gemini model support
+- **Status**: ✅ **COMPLETE** - Multiple Gemini models already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with Gemini agents via config
+- **Estimated Time**: 1 day (verification only)
+
+#### 8.15 Qwen via OpenRouter Integration
+**Objective**: Add Qwen model support through OpenRouter
+- **Status**: ✅ **COMPLETE** - Qwen-2.5-72b already defined in model_config_schema.yaml
+- **Remaining Deliverables**: Verify integration works with experiment runner
+- **Success Criteria**: Can run experiments with Qwen agents via config
+- **Estimated Time**: 1 day (verification only)
+
+**Phase 8E: Preference Systems (Tasks 8.16-8.18)**
+
+#### 8.16 Vector Preferences Configuration
+**Objective**: Add vector preferences to config system
+- **Deliverables**: Vector preference configuration and implementation
+- **Success Criteria**: Vector preferences fully configurable via YAML
+- **Estimated Time**: 2-3 days
+
+#### 8.17 Matrix Preferences Configuration
+**Objective**: Add matrix preferences to config system
+- **Deliverables**: Matrix preference configuration and implementation
+- **Success Criteria**: Matrix preferences fully configurable via YAML
+- **Estimated Time**: 2-3 days
+
+#### 8.18 Competition Level Configuration
+**Objective**: Add cosine similarity competition control
+- **Deliverables**: Configurable cosine similarity for preference generation
+- **Success Criteria**: Can generate preferences with specified competition levels
+- **Estimated Time**: 2-3 days
+
+**Phase 8F: Proposal Order Analysis (Tasks 8.19-8.21)**
+
+#### 8.19 Randomized Proposal Order Tracking
+**Objective**: Implement proposal order randomization and tracking
+- **Deliverables**: Random proposal order with systematic tracking
+- **Success Criteria**: Proposal order randomized and logged for each experiment
+- **Estimated Time**: 3-4 days
+
+#### 8.20 Win Rate Correlation Analysis
+**Objective**: Analyze correlation between proposal order and outcomes
+- **Deliverables**: Statistical analysis of proposal order effects on win rates
+- **Success Criteria**: Can detect and measure proposal order bias
+- **Estimated Time**: 4-5 days
+
+#### 8.21 Ablation Study Framework
+**Objective**: Framework for isolating proposal order effects
+- **Deliverables**: Ablation study tools for proposal order analysis
+- **Success Criteria**: Can run controlled studies of proposal order effects only
+- **Estimated Time**: 4-5 days
+
+**Phase 8G: Validation & Integration (Tasks 8.22-8.24)**
+
+#### 8.22 Configuration Validation System
+**Objective**: Comprehensive config validation
+- **Status**: ✅ **PARTIALLY COMPLETE** - Basic validation_rules exist in model_config_schema.yaml
+- **Remaining Deliverables**: Expand validation for environment and preference parameters
+- **Success Criteria**: Invalid configurations caught with helpful error messages
+- **Estimated Time**: 2-3 days
+
+#### 8.23 Example Configuration Files
+**Objective**: Create template configs for common scenarios
+- **Deliverables**: Well-documented example YAML files for different experiment types
+- **Success Criteria**: Users can easily create new experiments from templates
+- **Estimated Time**: 2-3 days
+
+#### 8.24 Main Script Refactoring
+**Objective**: Refactor o3_vs_haiku_baseline.py to use full config system
+- **Deliverables**: Single configurable experiment script
+- **Success Criteria**: All experiments run through unified config-driven interface
+- **Estimated Time**: 1 week
+
+**Overall Phase 8 Success Criteria**:
+- Single experiment script can run any model combination through YAML config
+- Proposal order effects can be isolated and measured  
+- Easy setup for systematic ablation studies across all parameters
+- **Total Estimated Time**: 2-3 weeks
+- **Priority**: High (needed for systematic exploration of parameter space)
+
+#### 9. Context Management System
 **Objective**: Persistent agent memory across rounds
 - **Deliverables**:
   - Agent memory persistence between rounds
@@ -114,7 +309,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 3: Configuration & Baselines (Medium Priority)**
 
-#### 9. Experiment Configuration System
+#### 10. Experiment Configuration System
 **Objective**: Flexible parameter management
 - **Deliverables**:
   - YAML/JSON configuration files
@@ -123,7 +318,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Easy experiment setup with different parameters
 - **Estimated Time**: 1 week
 
-#### 10. Baseline Agent Implementation
+#### 11. Baseline Agent Implementation
 **Objective**: Random/greedy/cooperative agents
 - **Deliverables**:
   - Random agent (random proposals and votes)
@@ -132,7 +327,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Strong baselines for comparison with LLM agents
 - **Estimated Time**: 1 week
 
-#### 11. Metrics and Analysis System
+#### 12. Metrics and Analysis System
 **Objective**: Win rates, utilities, sentiment analysis
 - **Deliverables**:
   - Individual utility tracking
@@ -142,7 +337,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Comprehensive metrics for each negotiation
 - **Estimated Time**: 1-2 weeks
 
-#### 12. Exploitation Detection Framework
+#### 13. Exploitation Detection Framework
 **Objective**: Strategic behavior identification
 - **Deliverables**:
   - Qualitative analysis tools
@@ -154,7 +349,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 
 ### **Phase 4: Infrastructure & Analysis (Low Priority)**
 
-#### 13. Princeton Cluster Integration
+#### 14. Princeton Cluster Integration
 **Objective**: SLURM job submission for Della/PLI
 - **Deliverables**:
   - SLURM job scripts
@@ -163,7 +358,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Large-scale experiments run on Princeton clusters
 - **Estimated Time**: 1-2 weeks
 
-#### 14. Logging and Experiment Tracking
+#### 15. Logging and Experiment Tracking
 **Objective**: Comprehensive data collection
 - **Deliverables**:
   - Complete conversation logs
@@ -173,7 +368,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Full experiment reproducibility and analysis
 - **Estimated Time**: 1 week
 
-#### 15. Scaling Laws Analysis Pipeline
+#### 16. Scaling Laws Analysis Pipeline
 **Objective**: Statistical relationship analysis
 - **Deliverables**:
   - Model capability vs. exploitation correlation analysis
@@ -182,7 +377,7 @@ Stronger LLMs will systematically exploit weaker LLMs in negotiation settings th
 - **Success Criteria**: Clear scaling relationships between model strength and exploitation
 - **Estimated Time**: 2-3 weeks
 
-#### 16. Reproducibility Infrastructure
+#### 17. Reproducibility Infrastructure
 **Objective**: Seed management and versioning
 - **Deliverables**:
   - Random seed management
