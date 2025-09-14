@@ -50,7 +50,6 @@ from .llm_agents import (
     BaseLLMAgent,
     AnthropicAgent,
     OpenAIAgent,
-    SimulatedAgent
 )
 
 from .agent_factory import (
@@ -59,7 +58,6 @@ from .agent_factory import (
     AgentFactory,
     create_o3_vs_haiku_experiment,
     create_cooperative_experiment,
-    create_simulated_experiment,
     create_scaling_study_experiment,
     agent_factory
 )
@@ -70,6 +68,12 @@ from .utility_engine import (
     create_utility_engine,
     calculate_discounted_utility,
     compare_discount_factors
+)
+
+from .negotiation_runner import (
+    ModularNegotiationRunner,
+    NegotiationOutcome,
+    NegotiationPhase
 )
 
 __version__ = "0.1.0"
@@ -116,7 +120,6 @@ __all__ = [
     "BaseLLMAgent",
     "AnthropicAgent",
     "OpenAIAgent",
-    "SimulatedAgent",
     
     # Agent Factory components
     "AgentConfiguration",
@@ -124,7 +127,6 @@ __all__ = [
     "AgentFactory",
     "create_o3_vs_haiku_experiment",
     "create_cooperative_experiment", 
-    "create_simulated_experiment",
     "create_scaling_study_experiment",
     "agent_factory",
     
@@ -133,5 +135,10 @@ __all__ = [
     "UtilityCalculationResult",
     "create_utility_engine",
     "calculate_discounted_utility",
-    "compare_discount_factors"
+    "compare_discount_factors",
+    
+    # Negotiation Runner components
+    "ModularNegotiationRunner",
+    "NegotiationOutcome",
+    "NegotiationPhase"
 ]
