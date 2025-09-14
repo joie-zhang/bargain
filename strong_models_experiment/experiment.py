@@ -273,7 +273,8 @@ class StrongModelsExperiment:
         models: List[str],
         num_runs: int = 10,
         experiment_config: Optional[Dict[str, Any]] = None,
-        job_id: Optional[int] = None
+        job_id: Optional[int] = None,
+        override_run_number: Optional[int] = None
     ) -> BatchResults:
         """
         Run multiple experiments and aggregate results.
@@ -304,28 +305,37 @@ class StrongModelsExperiment:
         self.logger.info(f"Batch directory: {batch_dir}")
         
         for i in range(num_runs):
-            self.current_run_number = i + 1
+            # Use override_run_number if provided, otherwise use iteration number
+            if override_run_number is not None:
+                self.current_run_number = override_run_number
+                actual_run_number = override_run_number
+            else:
+                self.current_run_number = i + 1
+                actual_run_number = i + 1
+
             self.logger.info(f"\n{'='*60}")
-            self.logger.info(f"BATCH RUN {i+1}/{num_runs}")
+            self.logger.info(f"BATCH RUN {actual_run_number} (iteration {i+1}/{num_runs})")
             self.logger.info(f"{'='*60}")
-            
+
             # Use different seed for each run to get different preference vectors
             run_config = experiment_config.copy() if experiment_config else {}
-            if 'random_seed' in run_config:
-                run_config['random_seed'] = run_config['random_seed'] + i
-            else:
-                run_config['random_seed'] = 42 + i  # Default seed + offset
-            
+            # Don't modify seed if override_run_number is provided (use exact seed from config)
+            if override_run_number is None:
+                if 'random_seed' in run_config:
+                    run_config['random_seed'] = run_config['random_seed'] + i
+                else:
+                    run_config['random_seed'] = 42 + i  # Default seed + offset
+
             try:
                 result = await self.run_single_experiment(models, run_config)
                 experiments.append(result)
-                
+
                 # Save intermediate result
                 self.file_manager.save_experiment_result(
                     result.to_dict(),
                     batch_dir,
                     batch_mode=True,
-                    run_number=i + 1
+                    run_number=actual_run_number
                 )
                 
             except Exception as e:

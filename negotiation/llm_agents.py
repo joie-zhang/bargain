@@ -1205,13 +1205,15 @@ class XAIAgent(BaseLLMAgent):
             response_time = time.time() - start_time
             
             return AgentResponse(
-                agent_id=self.agent_id,
                 content=response.content,
-                thinking=kwargs.get("include_thinking", False) and hasattr(response, 'thinking') and response.thinking or None,
-                raw_response=str(response),
-                usage=None,  # XAI SDK might not provide usage info
+                model_used=self.model_name,
                 response_time=response_time,
-                model_name=self.model_name
+                tokens_used=None,  # XAI SDK might not provide usage info
+                cost_estimate=None,
+                metadata={
+                    "thinking": kwargs.get("include_thinking", False) and hasattr(response, 'thinking') and response.thinking or None,
+                    "raw_response": str(response)
+                }
             )
             
         except Exception as e:

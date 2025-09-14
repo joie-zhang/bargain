@@ -25,6 +25,7 @@ NUM_ITEMS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['nu
 MAX_ROUNDS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['max_rounds'])")
 RANDOM_SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_seed'])")
 OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
+RUN_NUMBER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
 
 # Create output directory
 FULL_OUTPUT_DIR="${BASE_DIR}/${OUTPUT_DIR}"
@@ -43,6 +44,7 @@ fi
 
 # Build command
 # Note: --num-runs 1 means run 1 negotiation game in this Python process
+# --run-number passes the actual run number from the config for correct output naming
 CMD="python3 run_strong_models_experiment.py \
     --models ${WEAK_MODEL} ${STRONG_MODEL} \
     --competition-level ${COMP_LEVEL} \
@@ -51,6 +53,7 @@ CMD="python3 run_strong_models_experiment.py \
     --random-seed ${RANDOM_SEED} \
     --batch \
     --num-runs 1 \
+    --run-number ${RUN_NUMBER} \
     --job-id ${JOB_ID}"
 
 echo "[$(date)] Running: ${CMD}" >> "${LOG_FILE}"

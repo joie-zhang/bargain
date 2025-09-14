@@ -106,6 +106,13 @@ async def main():
         default=None,
         help="Job ID from batch scheduler (for tracking config number)"
     )
+
+    parser.add_argument(
+        "--run-number",
+        type=int,
+        default=None,
+        help="Specific run number for output files (overrides automatic numbering in batch mode)"
+    )
     
     # Token control arguments for different phases
     parser.add_argument(
@@ -290,7 +297,8 @@ async def main():
                 models=args.models,
                 num_runs=args.num_runs,
                 experiment_config=experiment_config,
-                job_id=args.job_id
+                job_id=args.job_id,
+                override_run_number=args.run_number
             )
             
             print(f"\n📈 Batch Results Summary:")
