@@ -178,7 +178,14 @@ async def main():
         default=False,
         help="Enable the individual reflection phase (default: disabled)"
     )
-    
+
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Custom output directory for results (overrides default timestamped directory)",
+    )
+
     args = parser.parse_args()
     
     # Check for at least one API key
@@ -286,8 +293,8 @@ async def main():
         experiment_config["max_tokens_default"] = args.max_tokens_default
     
     # Initialize experiment runner
-    experiment = StrongModelsExperiment()
-    
+    experiment = StrongModelsExperiment(output_dir=args.output_dir)
+
     try:
         if args.batch:
             print(f"\n--- Batch Experiment ({args.num_runs} runs) ---")

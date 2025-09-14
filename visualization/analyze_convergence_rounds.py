@@ -206,7 +206,7 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.grid(True, alpha=0.3, axis='y')
     
     plt.tight_layout()
-    plt.savefig('convergence_analysis_by_competition.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/convergence_analysis_by_competition.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Saved convergence analysis to convergence_analysis_by_competition.png")
     
@@ -231,7 +231,7 @@ def create_convergence_visualizations(convergence_by_competition, convergence_by
     ax.grid(True, alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('convergence_distribution.png', dpi=300, bbox_inches='tight')
+    plt.savefig('figures/convergence_distribution.png', dpi=300, bbox_inches='tight')
     plt.show()
     print("Saved convergence distribution to convergence_distribution.png")
     

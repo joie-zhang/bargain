@@ -22,12 +22,20 @@ class StrongModelsExperiment:
     Runs the 14-phase strong models negotiation experiment.
     """
     
-    def __init__(self):
+    def __init__(self, output_dir=None):
         """Initialize the experiment runner."""
         self.logger = self._setup_logging()
-        self.results_dir = Path("experiments/results")
+
+        # Use custom output directory if provided, otherwise use default
+        if output_dir:
+            self.results_dir = Path(output_dir)
+            self.use_custom_output = True
+        else:
+            self.results_dir = Path("experiments/results")
+            self.use_custom_output = False
+
         self.results_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Initialize components
         self.agent_factory = StrongModelAgentFactory()
         self.analyzer = ExperimentAnalyzer()
@@ -238,7 +246,10 @@ class StrongModelsExperiment:
         self._stream_save_json()
         
         # Determine save location
-        if self.current_batch_id and self.current_run_number:
+        if self.use_custom_output:
+            # Use custom output directory directly
+            exp_dir = self.results_dir
+        elif self.current_batch_id and self.current_run_number:
             exp_dir = self.results_dir / self.current_batch_id
         else:
             exp_dir = self.results_dir / experiment_id
@@ -288,18 +299,24 @@ class StrongModelsExperiment:
         Returns:
             BatchResults object with aggregated statistics
         """
-        # Create batch ID - include job_id if provided
-        timestamp_pid = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
-        if job_id is not None:
-            batch_id = f"strong_models_{timestamp_pid}_config{job_id:03d}"
+        # Create batch ID and directory
+        if self.use_custom_output:
+            # When using custom output, don't create timestamped subdirectory
+            batch_id = ""  # Empty batch_id means use results_dir directly
+            batch_dir = self.results_dir
+            batch_dir.mkdir(parents=True, exist_ok=True)
         else:
-            batch_id = f"strong_models_{timestamp_pid}"
+            # Original behavior: create timestamped directory
+            timestamp_pid = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{os.getpid()}"
+            if job_id is not None:
+                batch_id = f"strong_models_{timestamp_pid}_config{job_id:03d}"
+            else:
+                batch_id = f"strong_models_{timestamp_pid}"
+            batch_dir = self.results_dir / batch_id
+            batch_dir.mkdir(parents=True, exist_ok=True)
+
         self.current_batch_id = batch_id
         experiments = []
-        
-        # Create batch directory
-        batch_dir = self.results_dir / batch_id
-        batch_dir.mkdir(parents=True, exist_ok=True)
         
         self.logger.info(f"Starting batch experiment {batch_id} with {num_runs} runs")
         self.logger.info(f"Batch directory: {batch_dir}")
@@ -394,7 +411,10 @@ class StrongModelsExperiment:
             return
         
         # Determine the directory structure
-        if self.current_batch_id and self.current_run_number:
+        if self.use_custom_output:
+            # Use custom output directory directly
+            exp_dir = self.results_dir
+        elif self.current_batch_id and self.current_run_number:
             exp_dir = self.results_dir / self.current_batch_id
         else:
             exp_dir = self.results_dir / self.current_experiment_id
