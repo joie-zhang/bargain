@@ -651,7 +651,7 @@ def print_summary_statistics(results_by_competition, ordered_strong_models):
 def main():
     """Main function to generate MMLU-ordered heatmaps."""
     print("Loading experiment results...")
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     results_by_competition = load_experiment_results(results_dir)
     
     # Debug: Check which models have no data
@@ -697,26 +697,27 @@ def main():
             baselines_with_data.append(baseline)
     
     # Generate individual heatmaps for each baseline
-    print("\n=== Creating Individual Heatmaps for Each Baseline ===")
+    # The individual heatmaps were looking really bad so I'm not saving them
+    # print("\n=== Creating Individual Heatmaps for Each Baseline ===")
     
-    for baseline in baselines_with_data:
-        print(f"\n--- Creating heatmaps for {MODEL_DISPLAY_NAMES[baseline]} ---")
+    # for baseline in baselines_with_data:
+    #     print(f"\n--- Creating heatmaps for {MODEL_DISPLAY_NAMES[baseline]} ---")
         
-        # Create utility difference heatmap
-        print(f"Creating utility difference heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
-        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='diff')
+    #     # Create utility difference heatmap
+    #     print(f"Creating utility difference heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+    #     plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='diff')
         
-        # Create strong-only utility heatmap
-        print(f"Creating strong model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
-        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='strong_only')
+    #     # Create strong-only utility heatmap
+    #     print(f"Creating strong model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+    #     plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='strong_only')
         
-        # Create sum of utilities heatmap
-        print(f"Creating sum of utilities heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
-        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='sum')
+    #     # Create sum of utilities heatmap
+    #     print(f"Creating sum of utilities heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+    #     plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='sum')
         
-        # Create baseline-only utility heatmap
-        print(f"Creating baseline model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
-        plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='baseline_only')
+    #     # Create baseline-only utility heatmap
+    #     print(f"Creating baseline model utility heatmap for {MODEL_DISPLAY_NAMES[baseline]}...")
+    #     plot_individual_heatmap(results_by_competition, baseline, ordered_strong_models, plot_mode='baseline_only')
     
     # Create the combined heatmaps
     print("\n=== Creating Combined Heatmaps (All Baselines) ===")
@@ -737,16 +738,17 @@ def main():
     print("\n=== Creating Baseline Final Utility Heatmaps - Three Orderings ===")
     
     # Define the three different baseline orders
+    # really only ended up using the first one, so commenting out the others
     baseline_orders = [
-        # Version 1: GPT-4o at the bottom (furthest from title)
-        ('claude-3-opus', 'gemini-1-5-pro', 'gpt-4o-2024-05-13'),
-        # Version 2: Original order (Claude at the bottom)
-        ('gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus'),
-        # Version 3: Gemini at the bottom
+        # Version 1: Gemini at the bottom (furthest from title)
         ('gpt-4o-2024-05-13', 'claude-3-opus', 'gemini-1-5-pro')
+        # Version 2: GPT-4o at the bottom (original)
+        # ('claude-3-opus', 'gemini-1-5-pro', 'gpt-4o-2024-05-13'),
+        # Version 3: Claude at the bottom
+        # ('gpt-4o-2024-05-13', 'gemini-1-5-pro', 'claude-3-opus'),
     ]
     
-    order_names = ['GPT-4o at bottom', 'Claude-3-Opus at bottom (original)', 'Gemini-1.5-Pro at bottom']
+    order_names = ['Gemini-1.5-Pro at bottom','GPT-4o at bottom (original)', 'Claude-3-Opus at bottom']
     
     for order_idx, baseline_order in enumerate(baseline_orders):
         print(f"\nCreating baseline final utility heatmap - {order_names[order_idx]}...")
