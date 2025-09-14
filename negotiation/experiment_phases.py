@@ -692,10 +692,11 @@ Please acknowledge that you understand these rules and are ready to participate!
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
-2. You may choose to reveal some preferences truthfully or misleadingly
+2. You may choose to reveal some preferences honestly or dishonestly
 3. Consider which agents might have complementary preferences
 4. Remember: you need ALL agents to accept a proposal
 5. Consider both immediate gains and the likelihood of proposals being accepted
+6. Reminder: A Nash Equilibrium is a stable agreement where neither agent can get a better outcome by changing their own strategy, assuming the other agent's strategy stays the same. To find it in this negotiation, you must compare any proposed deal to the potential outcome of the next round, keeping in mind that the value of all items decreases by 10% with each round that passes. Therefore, you should aim to make a proposal that your opponent will accept because rejecting it and waiting for a future, less valuable deal is not in their best interest.
 
 Please acknowledge that you understand your private preferences."""
     
