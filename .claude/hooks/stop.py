@@ -104,24 +104,24 @@ def main():
                 # Log error but don't fail
                 pass
 
-        # Run existing auto-commit if configured
-        auto_commit_script = (
-            Path.cwd() / ".claude" / "scripts" / "auto-commit-research.py"
-        )
-        if auto_commit_script.exists() and not stop_hook_active:
-            import subprocess
+        # Run existing auto-commit if configured (TEMPORARILY DISABLED)
+        # auto_commit_script = (
+        #     Path.cwd() / ".claude" / "scripts" / "auto-commit-research.py"
+        # )
+        # if auto_commit_script.exists() and not stop_hook_active:
+        #     import subprocess
 
-            try:
-                # Pass the input data to the auto-commit script
-                result = subprocess.run(
-                    ["python3", str(auto_commit_script)],
-                    input=json.dumps(input_data),
-                    text=True,
-                    capture_output=True,
-                    timeout=10,
-                )
-            except:
-                pass
+        #     try:
+        #         # Pass the input data to the auto-commit script
+        #         result = subprocess.run(
+        #             ["python3", str(auto_commit_script)],
+        #             input=json.dumps(input_data),
+        #             text=True,
+        #             capture_output=True,
+        #             timeout=10,
+        #         )
+        #     except:
+        #         pass
 
         sys.exit(0)
 
