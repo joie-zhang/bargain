@@ -182,7 +182,7 @@ def calculate_no_consensus_rate(experiments):
 
 def collect_all_no_consensus_rates():
     """Collect no consensus rates from all experiments"""
-    results_dir = '/root/bargain/experiments/results'
+    results_dir = '/root/bargain/experiments/results_current'
     results_by_pairs = load_experiment_results(results_dir)
     
     if not results_by_pairs:
@@ -240,7 +240,7 @@ def create_no_consensus_matrix(no_consensus_data):
     
     return matrix
 
-def create_heatmap(matrix, output_path='no_consensus_heatmap.png'):
+def create_heatmap(matrix, output_path='no_consensus_heatmap_wonky.png'):
     """Create and save the heatmap"""
     if matrix.empty:
         print("Cannot create heatmap - no data available")
