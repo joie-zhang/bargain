@@ -508,16 +508,14 @@ Vote must be either "accept" or "reject"."""
         
         # Check for unanimous acceptance
         consensus_reached = False
-        winner_agent_id = None
         final_utilities = {}
         
         for prop_num, vote_counts in votes_by_proposal.items():
             if vote_counts["reject"] == 0 and vote_counts["accept"] == len(agents):
                 consensus_reached = True
-                # Find the winning proposal
+                # Find the winning proposal to calculate utilities
                 for enum_prop in enumerated_proposals:
                     if enum_prop["proposal_number"] == prop_num:
-                        winner_agent_id = enum_prop["proposer"]
                         # Calculate utilities
                         allocation = enum_prop["allocation"]
                         for agent in agents:
@@ -555,7 +553,6 @@ Vote must be either "accept" or "reject"."""
         return {
             "messages": messages,
             "consensus_reached": consensus_reached,
-            "winner_agent_id": winner_agent_id,
             "final_utilities": final_utilities,
             "votes_by_proposal": votes_by_proposal
         }

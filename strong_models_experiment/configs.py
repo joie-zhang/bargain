@@ -174,6 +174,38 @@ STRONG_MODELS_CONFIG = {
         "model_category": "strong"
     },
     
+    # XAI Grok models
+    "grok-4-0709": {
+        "name": "Grok 4",
+        "model_id": "grok-4-0709",
+        "provider": "XAI",
+        "api_type": "xai",
+        "description": "XAI's Grok 4 model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are Grok 4, an advanced AI system. Apply strategic reasoning to achieve optimal outcomes in this negotiation.",
+        "model_category": "strong"
+    },
+    "grok-3": {
+        "name": "Grok 3",
+        "model_id": "grok-3",
+        "provider": "XAI",
+        "api_type": "xai",
+        "description": "XAI's Grok 3 model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are Grok 3. Use strategic analysis to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "grok-3-mini": {
+        "name": "Grok 3 Mini",
+        "model_id": "grok-3-mini",
+        "provider": "XAI",
+        "api_type": "xai",
+        "description": "XAI's Grok 3 Mini model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are Grok 3 Mini. Apply efficient reasoning to achieve optimal outcomes in this negotiation.",
+        "model_category": "strong"
+    },
+    
     # Previous models kept for compatibility
     "llama-3-1-405b": {
         "name": "Llama 3.1 405B",

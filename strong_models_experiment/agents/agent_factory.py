@@ -30,6 +30,7 @@ class StrongModelAgentFactory:
         openrouter_key = os.getenv("OPENROUTER_API_KEY")
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
+        xai_key = os.getenv("XAI_API_KEY")
         
         # Get max_tokens from config, default to None (unlimited)
         max_tokens = config.get("max_tokens_default", None)
@@ -53,7 +54,7 @@ class StrongModelAgentFactory:
             
             agent = self._create_agent_by_type(
                 api_type, model_name, model_config, agent_id,
-                anthropic_key, openai_key, openrouter_key, max_tokens
+                anthropic_key, openai_key, openrouter_key, xai_key, max_tokens
             )
             
             if agent:
@@ -67,13 +68,15 @@ class StrongModelAgentFactory:
     def _create_agent_by_type(self, api_type: str, model_name: str, model_config: Dict,
                              agent_id: str, anthropic_key: Optional[str],
                              openai_key: Optional[str], openrouter_key: Optional[str],
-                             max_tokens: int = 999999) -> Optional[BaseLLMAgent]:
+                             xai_key: Optional[str], max_tokens: int = 999999) -> Optional[BaseLLMAgent]:
         """Create an agent based on API type."""
         
         if api_type == "anthropic":
             return self._create_anthropic_agent(model_name, model_config, agent_id, anthropic_key, max_tokens)
         elif api_type == "openai":
             return self._create_openai_agent(model_name, model_config, agent_id, openai_key, max_tokens)
+        elif api_type == "xai":
+            return self._create_xai_agent(model_name, model_config, agent_id, xai_key, max_tokens)
         else:  # openrouter
             return self._create_openrouter_agent(model_name, model_config, agent_id, openrouter_key, max_tokens)
     
@@ -154,6 +157,33 @@ class StrongModelAgentFactory:
         llm_config._actual_model_id = model_config["model_id"]
         
         return OpenAIAgent(
+            agent_id=agent_id,
+            config=llm_config,
+            api_key=api_key
+        )
+    
+    def _create_xai_agent(self, model_name: str, model_config: Dict,
+                         agent_id: str, api_key: Optional[str], max_tokens: int = 999999) -> Optional['XAIAgent']:
+        """Create an XAI Grok agent."""
+        if not api_key:
+            self.logger.warning(f"XAI_API_KEY not set, skipping {model_name}")
+            return None
+        
+        from negotiation.llm_agents import XAIAgent, LLMConfig, ModelType
+        
+        # Use GPT_4 as the base model type for configuration compatibility
+        llm_config = LLMConfig(
+            model_type=ModelType.GPT_4,  # Base type for config compatibility
+            temperature=model_config["temperature"],
+            max_tokens=max_tokens,
+            system_prompt=model_config["system_prompt"],
+            custom_parameters={}
+        )
+        
+        # Store the actual model_id for the agent to use
+        llm_config._actual_model_id = model_config["model_id"]
+        
+        return XAIAgent(
             agent_id=agent_id,
             config=llm_config,
             api_key=api_key

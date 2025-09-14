@@ -45,6 +45,16 @@ except ImportError:
     genai = None
 
 try:
+    from xai_sdk import Client as XAIClient
+    from xai_sdk.chat import user, system
+    XAI_AVAILABLE = True
+except ImportError:
+    XAI_AVAILABLE = False
+    XAIClient = None
+    user = None
+    system = None
+
+try:
     import requests
     REQUESTS_AVAILABLE = True
 except ImportError:
@@ -353,6 +363,69 @@ class GoogleClient(BaseModelClient):
         return "\n\n".join(prompt_parts) + "\n\nAssistant:"
 
 
+class GrokClient(BaseModelClient):
+    """Client for XAI Grok models."""
+    
+    def __init__(self, config: ProviderConfig, model_spec: ModelSpec):
+        super().__init__(config, model_spec)
+        
+        if not XAI_AVAILABLE:
+            raise ImportError("XAI SDK not available. Install with: pip install xai-sdk")
+        
+        self.client = XAIClient(
+            api_key=config.api_key or os.getenv('XAI_API_KEY')
+        )
+        self.model_name = model_spec.api_model_name or model_spec.model_id
+    
+    async def generate(self, messages: List[Dict[str, str]], **kwargs) -> ModelResponse:
+        """Generate response using XAI Grok API."""
+        start_time = time.time()
+        
+        try:
+            # Create chat with model and temperature
+            chat = self.client.chat.create(
+                model=self.model_name,
+                temperature=kwargs.get('temperature', 0.7)
+            )
+            
+            # Add messages to chat
+            for msg in messages:
+                if msg['role'] == 'system':
+                    chat.append(system(msg['content']))
+                elif msg['role'] == 'user':
+                    chat.append(user(msg['content']))
+                elif msg['role'] == 'assistant':
+                    # For assistant messages in context, we might need to handle differently
+                    # For now, we'll treat them as part of the conversation context
+                    chat.append(user(f"Assistant previously said: {msg['content']}"))
+            
+            # Sample response
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                chat.sample
+            )
+            
+            response_time = time.time() - start_time
+            
+            return ModelResponse(
+                content=response.content,
+                model_id=self.model_spec.model_id,
+                provider="xai",
+                timestamp=start_time,
+                response_time=response_time,
+                metadata={'model': self.model_name}
+            )
+        
+        except Exception as e:
+            self.logger.error(f"XAI Grok API error: {e}")
+            raise
+    
+    async def generate_stream(self, messages: List[Dict[str, str]], **kwargs) -> AsyncGenerator[str, None]:
+        """Generate streaming response."""
+        # XAI SDK might not support streaming yet
+        yield "Streaming not implemented for Grok client"
+
+
 class OpenRouterClient(BaseModelClient):
     """Client for models accessed via OpenRouter API."""
     
@@ -565,6 +638,9 @@ class ModelClientFactory:
         
         elif model_spec.provider == ModelProvider.GOOGLE:
             return GoogleClient(config, model_spec)
+        
+        elif model_spec.provider == ModelProvider.XAI:
+            return GrokClient(config, model_spec)
         
         elif model_spec.provider == ModelProvider.OPENROUTER:
             return OpenRouterClient(config, model_spec)

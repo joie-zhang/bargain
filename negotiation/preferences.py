@@ -142,37 +142,27 @@ class VectorPreferenceSystem(BasePreferenceSystem):
         """Generate preferences with target cosine similarity using random vector generator."""
         preferences = {}
         
-        # Use RandomVectorGenerator to create vectors with exact cosine similarity
-        generator = RandomVectorGenerator(random_seed=self.config.random_seed)
-        
         # Vectors should sum to 100 for clear utility calculations
         max_utility = 100.0
         
-        if self.config.n_agents == 2:
-            # Generate two vectors with target similarity
-            v1, v2 = generator.generate_vectors_with_cosine_similarity(
-                target_cosine=self.config.target_cosine_similarity,
-                n_items=self.config.m_items,
-                max_utility=max_utility,
-                integer_values=True
-            )
-            preferences[agent_ids[0]] = v1.tolist()
-            preferences[agent_ids[1]] = v2.tolist()
-        else:
-            # For more than 2 agents, generate first vector then create similar ones
-            v1 = generator._generate_random_vector(
-                self.config.m_items, 
-                max_utility,
-                integer_values=True
-            )
-            preferences[agent_ids[0]] = v1.tolist()
-            
-            # Generate other agents with target similarity to first
-            for agent_id in agent_ids[1:]:
-                target_vector = self._generate_similar_vector(
-                    v1, self.config.target_cosine_similarity
-                )
-                preferences[agent_id] = target_vector.tolist()
+        # Use the multi-agent generator for balanced preferences
+        from .multi_agent_vector_generator import MultiAgentVectorGenerator
+        
+        multi_generator = MultiAgentVectorGenerator(random_seed=self.config.random_seed)
+        
+        # Generate vectors with balanced pairwise similarities
+        agent_vectors = multi_generator.generate_vectors_for_n_agents(
+            n_agents=self.config.n_agents,
+            target_cosine=self.config.target_cosine_similarity,
+            n_items=self.config.m_items,
+            max_utility=max_utility,
+            integer_values=True,
+            tolerance=0.1  # Accept some deviation for practical generation
+        )
+        
+        # Map generated vectors to agent IDs
+        for i, agent_id in enumerate(agent_ids):
+            preferences[agent_id] = agent_vectors[f"agent_{i}"].tolist()
         
         return preferences
     

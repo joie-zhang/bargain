@@ -60,19 +60,6 @@ class ExperimentAnalyzer:
                 return model_key
         return "unknown"
     
-    @staticmethod
-    def calculate_model_win_rates(experiments: List[Any], models: List[str]) -> Dict[str, float]:
-        """Calculate win rates for each model."""
-        model_wins = {model: 0 for model in models}
-        
-        for exp in experiments:
-            if exp.winner_agent_id:
-                model_name = ExperimentAnalyzer.get_model_name(exp.winner_agent_id)
-                if model_name in model_wins:
-                    model_wins[model_name] += 1
-        
-        total = len(experiments) if experiments else 1
-        return {model: wins / total for model, wins in model_wins.items()}
     
     @staticmethod
     def aggregate_strategic_behaviors(experiments: List[Any]) -> Dict[str, float]:
@@ -104,28 +91,3 @@ class ExperimentAnalyzer:
         
         return total_behaviors
     
-    @staticmethod
-    def determine_winners(agents: List[Any], winner_agent_id: Optional[str], 
-                         final_utilities: Dict[str, float]) -> tuple[Dict[str, bool], Dict[str, bool], Dict[str, bool]]:
-        """Determine model winners in different categories."""
-        model_winners = {}  # Keep for backwards compatibility (same as proposal_winners)
-        proposal_winners = {}  # Who got their proposal accepted
-        utility_winners = {}  # Who achieved highest utility
-        
-        # Track proposal winners (who got their proposal accepted)
-        if winner_agent_id and final_utilities:
-            for agent in agents:
-                model_name = ExperimentAnalyzer.get_model_name(agent.agent_id)
-                is_proposal_winner = (agent.agent_id == winner_agent_id)
-                model_winners[model_name] = is_proposal_winner  # Backwards compatibility
-                proposal_winners[model_name] = is_proposal_winner
-        
-        # Track utility winners (who achieved highest utility)
-        if final_utilities:
-            max_utility = max(final_utilities.values())
-            for agent in agents:
-                model_name = ExperimentAnalyzer.get_model_name(agent.agent_id)
-                agent_utility = final_utilities.get(agent.agent_id, 0)
-                utility_winners[model_name] = (agent_utility == max_utility)
-        
-        return model_winners, proposal_winners, utility_winners

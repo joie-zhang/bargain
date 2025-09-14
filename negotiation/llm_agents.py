@@ -1149,3 +1149,86 @@ class OpenAIAgent(BaseLLMAgent):
             return 16_000
         else:
             return 16_000  # Default
+
+
+class XAIAgent(BaseLLMAgent):
+    """LLM agent using XAI Grok models."""
+    
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
+        super().__init__(agent_id, config)
+        
+        try:
+            from xai_sdk import Client as XAIClient
+            from xai_sdk.chat import user, system
+            self.XAI_AVAILABLE = True
+            self.user = user
+            self.system = system
+        except ImportError:
+            self.XAI_AVAILABLE = False
+            raise ImportError("xai_sdk package not available. Install with: pip install xai-sdk")
+        
+        self.client = XAIClient(api_key=api_key)
+        
+        # Check if we have an actual model ID stored
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
+        else:
+            # Default model name
+            self.model_name = "grok-3"
+    
+    async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
+        """Call XAI Grok API."""
+        start_time = time.time()
+        
+        try:
+            # Create chat with model and temperature
+            chat = self.client.chat.create(
+                model=self.model_name,
+                temperature=self.config.temperature
+            )
+            
+            # Add messages to chat
+            for msg in messages:
+                if msg['role'] == 'system':
+                    chat.append(self.system(msg['content']))
+                elif msg['role'] == 'user':
+                    chat.append(self.user(msg['content']))
+                # Skip assistant messages for now as they're part of context
+            
+            # Sample response synchronously (wrapped in async)
+            import asyncio
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                chat.sample
+            )
+            
+            response_time = time.time() - start_time
+            
+            return AgentResponse(
+                agent_id=self.agent_id,
+                content=response.content,
+                thinking=kwargs.get("include_thinking", False) and hasattr(response, 'thinking') and response.thinking or None,
+                raw_response=str(response),
+                usage=None,  # XAI SDK might not provide usage info
+                response_time=response_time,
+                model_name=self.model_name
+            )
+            
+        except Exception as e:
+            self.logger.error(f"XAI API error: {e}")
+            raise
+    
+    def _get_context_limit(self) -> int:
+        """Get the context limit for XAI models."""
+        # All Grok models support 128k context
+        return 128_000
+    
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get XAI model information."""
+        return {
+            "provider": "xai",
+            "model_type": self.config.model_type.value,
+            "model_name": self.model_name,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens
+        }

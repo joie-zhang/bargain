@@ -30,6 +30,7 @@ class ModelProvider(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic" 
     GOOGLE = "google"
+    XAI = "xai"
     
     # Third-party aggregators
     OPENROUTER = "openrouter"
@@ -49,6 +50,7 @@ class ModelFamily(Enum):
     GEMINI = "gemini"
     GEMMA = "gemma"
     QWEN = "qwen"
+    GROK = "grok"
     CUSTOM = "custom"
 
 
@@ -554,6 +556,67 @@ class ModelRegistry:
             reasoning_capability="medium",
             estimated_speed="fast"
         ))
+        
+        # Grok models
+        self.register_model(ModelSpec(
+            model_id="grok-4-0709",
+            display_name="Grok 4",
+            family=ModelFamily.GROK,
+            provider=ModelProvider.XAI,
+            api_model_name="grok-4-0709",
+            context_window=128000,
+            supports_system_prompt=True,
+            reasoning_capability="high",
+            estimated_speed="medium"
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="grok-3",
+            display_name="Grok 3",
+            family=ModelFamily.GROK,
+            provider=ModelProvider.XAI,
+            api_model_name="grok-3",
+            context_window=128000,
+            supports_system_prompt=True,
+            reasoning_capability="high",
+            estimated_speed="fast"
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="grok-3-mini",
+            display_name="Grok 3 Mini",
+            family=ModelFamily.GROK,
+            provider=ModelProvider.XAI,
+            api_model_name="grok-3-mini",
+            context_window=128000,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="very_fast"
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="grok-2",
+            display_name="Grok 2",
+            family=ModelFamily.GROK,
+            provider=ModelProvider.XAI,
+            api_model_name="grok-2",
+            context_window=128000,
+            supports_system_prompt=True,
+            reasoning_capability="high",
+            estimated_speed="fast"
+        ))
+        
+        self.register_model(ModelSpec(
+            model_id="grok-2-mini",
+            display_name="Grok 2 Mini",
+            family=ModelFamily.GROK,
+            provider=ModelProvider.XAI,
+            api_model_name="grok-2-mini",
+            context_window=128000,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="very_fast"
+        ))
     
     def register_model(self, model_spec: ModelSpec) -> None:
         """Register a new model specification."""
@@ -624,7 +687,7 @@ class ConfigValidator:
         # Validate API keys are provided
         for provider_name, provider_config in config.providers.items():
             provider_enum = ModelProvider(provider_name)
-            if provider_enum in [ModelProvider.OPENAI, ModelProvider.ANTHROPIC, ModelProvider.GOOGLE]:
+            if provider_enum in [ModelProvider.OPENAI, ModelProvider.ANTHROPIC, ModelProvider.GOOGLE, ModelProvider.XAI]:
                 if not provider_config.api_key and provider_name not in config.default_api_keys:
                     errors.append(f"No API key provided for provider {provider_name}")
         

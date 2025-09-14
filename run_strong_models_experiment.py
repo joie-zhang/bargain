@@ -150,6 +150,28 @@ async def main():
         help="Default maximum tokens for all other phases (default: unlimited)"
     )
     
+    # Phase control arguments (default to disabled)
+    parser.add_argument(
+        "--enable-discussion",
+        action="store_true",
+        default=False,
+        help="Enable the public discussion phase (default: disabled)"
+    )
+    
+    parser.add_argument(
+        "--enable-thinking",
+        action="store_true",
+        default=False,
+        help="Enable the private thinking phase (default: disabled)"
+    )
+    
+    parser.add_argument(
+        "--enable-reflection",
+        action="store_true",
+        default=False,
+        help="Enable the individual reflection phase (default: disabled)"
+    )
+    
     args = parser.parse_args()
     
     # Check for at least one API key
@@ -184,6 +206,30 @@ async def main():
     if args.random_seed:
         print(f"Random Seed: {args.random_seed}")
     
+    # Show enabled/disabled phases
+    enabled_phases = []
+    disabled_phases = []
+    
+    if args.enable_discussion:
+        enabled_phases.append("Discussion")
+    else:
+        disabled_phases.append("Discussion")
+        
+    if args.enable_thinking:
+        enabled_phases.append("Private Thinking")
+    else:
+        disabled_phases.append("Private Thinking")
+        
+    if args.enable_reflection:
+        enabled_phases.append("Individual Reflection")
+    else:
+        disabled_phases.append("Individual Reflection")
+    
+    if disabled_phases:
+        print(f"Disabled Phases: {', '.join(disabled_phases)}")
+    if enabled_phases:
+        print(f"Enabled Phases: {', '.join(enabled_phases)}")
+    
     # Only show token limits if any are specified
     token_limits = []
     if args.max_tokens_discussion is not None:
@@ -213,6 +259,9 @@ async def main():
         "competition_level": args.competition_level,
         "gamma_discount": args.gamma_discount,
         "random_seed": args.random_seed,
+        "disable_discussion": not args.enable_discussion,  # Invert the flag
+        "disable_thinking": not args.enable_thinking,      # Invert the flag
+        "disable_reflection": not args.enable_reflection,  # Invert the flag
     }
     
     # Only add token limits if they're specified
@@ -247,9 +296,6 @@ async def main():
             print(f"\n📈 Batch Results Summary:")
             print(f"  Batch ID: {batch_results.batch_id}")
             print(f"  Successful Runs: {batch_results.num_runs}")
-            print(f"  Model Win Rates:")
-            for model, rate in batch_results.model_win_rates.items():
-                print(f"    {model}: {rate:.1%}")
             print(f"  Consensus Rate: {batch_results.consensus_rate:.1%}")
             print(f"  Average Rounds: {batch_results.average_rounds:.1f}")
             print(f"  Exploitation Rate: {batch_results.exploitation_rate:.1%}")
@@ -265,7 +311,6 @@ async def main():
             print(f"  Experiment ID: {single_result.experiment_id}")
             print(f"  Consensus Reached: {'✓' if single_result.consensus_reached else '✗'}")
             print(f"  Final Round: {single_result.final_round}")
-            print(f"  Winner: {single_result.winner_agent_id}")
             print(f"  Exploitation Detected: {'✓' if single_result.exploitation_detected else '✗'}")
             
             if single_result.final_utilities:
