@@ -266,7 +266,7 @@ def main():
         
         # Create the grouped bar chart
         safe_baseline_name = baseline.replace('-', '_')
-        filename = f'win_rate_bar_chart_{safe_baseline_name}.png'
+        filename = f'figures/win_rate_bar_chart_{safe_baseline_name}.png'
         create_grouped_bar_chart(family_data, baseline, filename)
         
         # Print statistics
