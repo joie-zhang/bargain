@@ -12,8 +12,8 @@ mkdir -p "${CONFIG_DIR}"
 # Model definitions
 # Weak models - baseline models for exploitation experiments
 WEAK_MODELS=(
-    # "claude-3-opus"
-    # "gemini-1-5-pro"
+    "claude-3-opus"
+    "gemini-1-5-pro"
     "gpt-4o"  # May 2024 version
 )
 
@@ -32,10 +32,10 @@ STRONG_MODELS=(
     "o1"
     "o3"
     
-    # # Google models
-    # "gemini-2-0-flash"
-    # "gemini-2-0-flash-lite"
-    # "gemini-2-5-pro"
+    # Google models
+    "gemini-2-0-flash"
+    "gemini-2-0-flash-lite"
+    "gemini-2-5-pro"
     
     # XAI Grok models
     "grok-4-0709"
