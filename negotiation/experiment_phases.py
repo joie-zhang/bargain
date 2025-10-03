@@ -636,10 +636,16 @@ class NegotiationPhases:
         """Create the standardized game rules explanation prompt."""
         items_list = [f"  {i}: {item['name']}" for i, item in enumerate(items)]
         items_text = "\n".join(items_list)
-        
+
+        # Create clearer phrasing for 2-agent negotiations
+        if num_agents == 2:
+            agent_phrase = "another agent"
+        else:
+            agent_phrase = f"{num_agents - 1} other agents"
+
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
-You are participating in a strategic negotiation with {num_agents} agents over {len(items)} valuable items. Here are the complete rules:
+You are participating in a strategic negotiation with {agent_phrase} over {len(items)} valuable items. Here are the complete rules:
 
 **ITEMS BEING NEGOTIATED:**
 {items_text}
@@ -660,7 +666,6 @@ You have been assigned private preferences for each item. These preferences are 
 **WINNING CONDITIONS:**
 - Your goal is to maximize your total utility
 - No deal means everyone gets zero utility
-- Consider both immediate gains and the likelihood of proposals being accepted
 
 Please acknowledge that you understand these rules and are ready to participate!"""
     
@@ -693,9 +698,11 @@ Please acknowledge that you understand these rules and are ready to participate!
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
-2. You may choose to reveal some preferences truthfully or misleadingly
+2. You may choose to reveal some preferences honestly or dishonestly
 3. Consider which agents might have complementary preferences
 4. Remember: you need ALL agents to accept a proposal
+5. Consider both immediate gains and the likelihood of proposals being accepted
+6. Reminder: A Nash Equilibrium is a stable agreement where neither agent can get a better outcome by changing their own strategy, assuming the other agent's strategy stays the same. To find it in this negotiation, you must compare any proposed deal to the potential outcome of the next round, keeping in mind that the value of all items decreases by 10% with each round that passes. Therefore, you should aim to make a proposal that your opponent will accept because rejecting it and waiting for a future, less valuable deal is not in their best interest.
 
 Please acknowledge that you understand your private preferences."""
     
