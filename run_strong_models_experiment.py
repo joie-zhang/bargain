@@ -157,26 +157,26 @@ async def main():
         help="Default maximum tokens for all other phases (default: unlimited)"
     )
     
-    # Phase control arguments (default to disabled)
+    # Phase control arguments (default to enabled)
     parser.add_argument(
-        "--enable-discussion",
+        "--disable-discussion",
         action="store_true",
         default=False,
-        help="Enable the public discussion phase (default: disabled)"
+        help="Disable the public discussion phase (default: enabled)"
     )
-    
+
     parser.add_argument(
-        "--enable-thinking",
+        "--disable-thinking",
         action="store_true",
         default=False,
-        help="Enable the private thinking phase (default: disabled)"
+        help="Disable the private thinking phase (default: enabled)"
     )
-    
+
     parser.add_argument(
-        "--enable-reflection",
+        "--disable-reflection",
         action="store_true",
         default=False,
-        help="Enable the individual reflection phase (default: disabled)"
+        help="Disable the individual reflection phase (default: enabled)"
     )
 
     parser.add_argument(
@@ -223,21 +223,21 @@ async def main():
     # Show enabled/disabled phases
     enabled_phases = []
     disabled_phases = []
-    
-    if args.enable_discussion:
-        enabled_phases.append("Discussion")
-    else:
+
+    if args.disable_discussion:
         disabled_phases.append("Discussion")
-        
-    if args.enable_thinking:
-        enabled_phases.append("Private Thinking")
     else:
+        enabled_phases.append("Discussion")
+
+    if args.disable_thinking:
         disabled_phases.append("Private Thinking")
-        
-    if args.enable_reflection:
-        enabled_phases.append("Individual Reflection")
     else:
+        enabled_phases.append("Private Thinking")
+
+    if args.disable_reflection:
         disabled_phases.append("Individual Reflection")
+    else:
+        enabled_phases.append("Individual Reflection")
     
     if disabled_phases:
         print(f"Disabled Phases: {', '.join(disabled_phases)}")
@@ -273,9 +273,9 @@ async def main():
         "competition_level": args.competition_level,
         "gamma_discount": args.gamma_discount,
         "random_seed": args.random_seed,
-        "disable_discussion": not args.enable_discussion,  # Invert the flag
-        "disable_thinking": not args.enable_thinking,      # Invert the flag
-        "disable_reflection": not args.enable_reflection,  # Invert the flag
+        "disable_discussion": args.disable_discussion,
+        "disable_thinking": args.disable_thinking,
+        "disable_reflection": args.disable_reflection,
     }
     
     # Only add token limits if they're specified

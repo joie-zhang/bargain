@@ -140,6 +140,8 @@ class StrongModelsExperiment:
         consensus_reached = False
         final_round = 0
         final_utilities = {}
+        final_allocation = {}
+        agent_preferences_data = {}
         strategic_behaviors = {}
         conversation_logs = []
         
@@ -210,6 +212,8 @@ class StrongModelsExperiment:
                     consensus_reached = True
                     final_round = round_num
                     final_utilities = tabulation_result.get("final_utilities", {})
+                    final_allocation = tabulation_result.get("final_allocation", {})
+                    agent_preferences_data = tabulation_result.get("agent_preferences", {})
                     self.logger.info(f"✅ CONSENSUS REACHED in round {round_num}!")
                     break
                 
@@ -263,6 +267,8 @@ class StrongModelsExperiment:
             consensus_reached=consensus_reached,
             final_round=final_round,
             final_utilities=final_utilities,
+            final_allocation=final_allocation,
+            agent_preferences=agent_preferences_data,
             strategic_behaviors=strategic_behaviors,
             conversation_logs=conversation_logs,
             agent_performance=agent_performance,

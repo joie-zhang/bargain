@@ -13,11 +13,13 @@ class ExperimentResults:
     consensus_reached: bool
     final_round: int
     final_utilities: Optional[Dict[str, float]]
-    strategic_behaviors: Dict[str, Any]
-    conversation_logs: List[Dict[str, Any]]
-    agent_performance: Dict[str, Any]
-    exploitation_detected: bool
-    
+    final_allocation: Optional[Dict[str, List[int]]] = field(default_factory=dict)
+    agent_preferences: Optional[Dict[str, List[float]]] = field(default_factory=dict)
+    strategic_behaviors: Dict[str, Any] = field(default_factory=dict)
+    conversation_logs: List[Dict[str, Any]] = field(default_factory=list)
+    agent_performance: Dict[str, Any] = field(default_factory=dict)
+    exploitation_detected: bool = False
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -27,6 +29,8 @@ class ExperimentResults:
             "consensus_reached": self.consensus_reached,
             "final_round": self.final_round,
             "final_utilities": self.final_utilities,
+            "final_allocation": self.final_allocation,
+            "agent_preferences": self.agent_preferences,
             "strategic_behaviors": self.strategic_behaviors,
             "conversation_logs": self.conversation_logs,
             "agent_performance": self.agent_performance,

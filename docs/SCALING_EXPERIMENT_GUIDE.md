@@ -1,148 +1,111 @@
-# Scaling Experiment Guide: 300 Experiments Setup
+# Scaling Experiment Guide: Current Workflow
 
 ## Overview
-This guide documents the bash script system for running 300 negotiation experiments testing how stronger models exploit weaker models across different competition levels.
+This guide documents the current bash script system for running negotiation experiments testing how stronger models exploit weaker models across different competition levels.
 
-### Experiment Configuration
-- **Weak Models (3)**: `gpt-4o`, `claude-3-opus`, `gemini-1-5-pro`
-- **Strong Models (10)**: `gemini-2-0-flash`, `gemini-2-5-flash`, `gemini-2-5-pro`, `claude-3-5-haiku`, `claude-4-sonnet`, `claude-4-opus`, `o3-mini`, `o4-mini`, `o3`, `chatgpt-5`
-- **Competition Levels (10)**: 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
-- **Total Experiments**: 3 × 10 × 10 = 300
+### Current Experiment Configuration
+- **Weak Models**: `gemini-1-5-pro` (others commented out: `claude-3-opus`, `gpt-4o`)
+- **Strong Models**: `grok-4-0709` (others available but commented out)
+- **Competition Levels (5)**: 0.0, 0.25, 0.5, 0.75, 1.0
+- **Runs per configuration**: 5 (different seeds: 42, 123, 456, 789, 101112)
+- **Items (m)**: 5
+- **Agents (n)**: 2
+- **Max rounds (t)**: 10
 
 ## Quick Start
 
 ```bash
-# 1. First time setup
-cd /Users/qw281/Downloads/bargain
-./scripts/setup_experiment.sh
-
-# 2. Set your API keys
+# 1. Set your API keys
 export OPENROUTER_API_KEY='your-key'
 export ANTHROPIC_API_KEY='your-key'
 export OPENAI_API_KEY='your-key'
+export GOOGLE_API_KEY='your-key'  # For Gemini models
+export XAI_API_KEY='your-key'      # For Grok models
+
+# 2. Generate configurations
+./scripts/generate_configs_both_orders.sh
 
 # 3. Run all experiments (default 4 parallel)
-./scripts/run_all_experiments.sh
+./scripts/run_all_simple.sh
 
 # Or with custom parallelism (e.g., 8 jobs)
-./scripts/run_all_experiments.sh --parallel 8
+./scripts/run_all_simple.sh 8
+
+# 4. Visualize results
+python visualization/create_mmlu_ordered_heatmaps.py
 ```
 
-## Script Files
+## Current Script Files
 
-All scripts are located in `/Users/qw281/Downloads/bargain/scripts/`
+All scripts are located in `scripts/`
 
-### 1. Main Orchestrator: `run_all_experiments.sh`
-**Purpose**: Coordinates the entire experiment pipeline
+### 1. Main Orchestrator: `run_all_simple.sh`
+**Purpose**: Simple runner that just executes all experiments without complex timeout handling
 
 **Usage**:
 ```bash
-./scripts/run_all_experiments.sh [OPTIONS]
-  --parallel N     Number of parallel jobs (default: 4)
-  --dry-run        Show what would be run without executing
-  --help           Show help message
+./scripts/run_all_simple.sh [MAX_PARALLEL]
+# Example: ./scripts/run_all_simple.sh 4
 ```
 
 **What it does**:
-1. Checks requirements (Python, API keys)
-2. Generates experiment configurations
-3. Runs experiments in parallel
-4. Collects and aggregates results
+1. Generates configs if needed
+2. Runs experiments in parallel using xargs
+3. Skips already completed experiments
+4. Collects results at the end
 5. Shows summary statistics
 
-### 2. Configuration Generator: `generate_configs.sh`
-**Purpose**: Creates JSON configuration files for all 300 experiments
+### 2. Configuration Generator: `generate_configs_both_orders.sh`
+**Purpose**: Creates JSON configuration files with weak model always first (no order variation)
 
-**Output**: Creates 300 config files in `experiments/results/scaling_experiment/configs/`
+**Output**: Creates config files in `experiments/results/scaling_experiment/configs/`
 
 **Config format**:
 ```json
 {
     "experiment_id": 0,
-    "weak_model": "gpt-4o",
-    "strong_model": "gemini-2-0-flash",
-    "competition_level": 0.1,
+    "weak_model": "gemini-1-5-pro",
+    "strong_model": "grok-4-0709",
+    "models": ["gemini-1-5-pro", "grok-4-0709"],
+    "model_order": "weak_first",
+    "competition_level": 0.5,
+    "run_number": 1,
     "num_items": 5,
     "max_rounds": 10,
     "random_seed": 42,
-    "output_dir": "experiments/results/scaling_experiment/gpt-4o_vs_gemini-2-0-flash/comp_0.1"
+    "output_dir": "experiments/results/scaling_experiment/gemini-1-5-pro_vs_grok-4-0709/weak_first/comp_0.5/run_1"
 }
 ```
 
-### 3. Single Experiment Runner: `run_single_experiment.sh`
-**Purpose**: Runs a single experiment by job ID
+### 3. Single Experiment Runner: `run_single_experiment_simple.sh`
+**Purpose**: Runs a single experiment by job ID (no timeout, simple execution)
 
 **Usage**:
 ```bash
-./scripts/run_single_experiment.sh JOB_ID
-# Example: ./scripts/run_single_experiment.sh 42
+./scripts/run_single_experiment_simple.sh JOB_ID
+# Example: ./scripts/run_single_experiment_simple.sh 42
 ```
 
 **Features**:
-- 10-minute timeout per experiment
+- No timeout (lets Python handle retries internally)
 - Detailed logging to `logs/experiment_JOB_ID.log`
 - Saves results to appropriate output directory
 - Creates completion flag for resume capability
+- Simpler error handling
 
-### 4. Parallel Job Manager: `run_parallel_jobs.sh`
-**Purpose**: Manages parallel execution of experiments
-
-**Usage**:
-```bash
-./scripts/run_parallel_jobs.sh [MAX_PARALLEL]
-# Example: ./scripts/run_parallel_jobs.sh 8
-```
-
-**Features**:
-- Real-time progress display
-- Job slot management
-- Resume capability (skips completed jobs)
-- Statistics on completion rate and timing
-- Lists failed experiments at the end
-
-**Progress display example**:
-```
-[150/300] Completed: 150 | Failed: 5 | Rate: 2.5/min | Elapsed: 3600s
-```
-
-### 5. Results Collector: `collect_results.sh`
+### 4. Results Collector: `collect_results.sh`
 **Purpose**: Aggregates all experiment results and creates summaries
 
 **Output files**:
 - `all_results.json` - Complete results data
 - `summary.json` - Statistical summary
 - `results.csv` - CSV for analysis
-- `visualize_results.py` - Script for creating plots
 
 **Summary includes**:
 - Total experiments run
 - Success/failure rates
 - Breakdown by model pair
 - Breakdown by competition level
-
-### 6. Retry Failed: `retry_failed.sh`
-**Purpose**: Retries failed or timed-out experiments
-
-**Usage**:
-```bash
-./scripts/retry_failed.sh [MAX_PARALLEL]
-# Example: ./scripts/retry_failed.sh 4
-```
-
-**Features**:
-- Automatically identifies failed experiments
-- Archives old logs before retry
-- Runs failed jobs in parallel
-- Updates results after completion
-
-### 7. Setup Script: `setup_experiment.sh`
-**Purpose**: Prepares environment for running experiments
-
-**What it checks**:
-- Makes all scripts executable
-- Verifies Python dependencies
-- Checks API key environment variables
-- Shows usage instructions
 
 ## Directory Structure
 
@@ -151,52 +114,49 @@ experiments/results/scaling_experiment/
 ├── configs/                          # Configuration files
 │   ├── config_0.json
 │   ├── config_1.json
-│   └── ... (300 files total)
+│   └── ...
 ├── logs/                             # Execution logs
 │   ├── experiment_0.log
 │   ├── completed_0.flag             # Completion markers
 │   └── ...
-├── gpt-4o_vs_gemini-2-0-flash/     # Results by model pair
-│   ├── comp_0.1/                    # By competition level
-│   │   └── result_0.json
-│   └── ...
+├── gemini-1-5-pro_vs_grok-4-0709/  # Results by model pair
+│   └── weak_first/                  # Model order
+│       ├── comp_0.0/                # By competition level
+│       │   └── run_1/              # By run number
+│       │       └── result.json
+│       └── ...
 ├── all_results.json                 # Aggregated results
 ├── summary.json                     # Statistical summary
-├── results.csv                      # CSV for analysis
-└── visualize_results.py            # Visualization script
+└── results.csv                      # CSV for analysis
 ```
 
-## Running Individual Steps
+## Visualization
 
-Instead of using the main orchestrator, you can run steps individually:
+After experiments complete, use the visualization scripts:
 
 ```bash
-# Step 1: Generate configurations
-./scripts/generate_configs.sh
+# Create MMLU-ordered heatmaps
+python visualization/create_mmlu_ordered_heatmaps.py
 
-# Step 2: Run experiments (with 6 parallel jobs)
-./scripts/run_parallel_jobs.sh 6
+# Analyze convergence rates
+python visualization/analyze_convergence_rounds.py
 
-# Step 3: Collect results
-./scripts/collect_results.sh
+# Check token usage
+python visualization/analyze_token_usage.py
 
-# Optional: Retry any failures
-./scripts/retry_failed.sh 4
-
-# Optional: Visualize results (requires matplotlib)
-python3 experiments/results/scaling_experiment/visualize_results.py
+# Verify run counts per cell
+python visualization/analyze_number_of_runs_in_heatmap.py
 ```
 
 ## Monitoring Progress
 
 ### During execution:
-- Watch real-time progress in terminal
 - Check individual logs: `tail -f experiments/results/scaling_experiment/logs/experiment_*.log`
 - Count completed: `ls experiments/results/scaling_experiment/logs/completed_*.flag | wc -l`
 
 ### After execution:
 - View summary: `cat experiments/results/scaling_experiment/summary.json | python3 -m json.tool`
-- Check failures: `grep -l "FAILED\|TIMEOUT" experiments/results/scaling_experiment/logs/*.log`
+- Check failures: `grep -l "FAILED" experiments/results/scaling_experiment/logs/*.log`
 
 ## Resuming Interrupted Runs
 
@@ -204,27 +164,8 @@ The system automatically resumes from where it left off:
 
 ```bash
 # If interrupted, just run again - completed experiments will be skipped
-./scripts/run_all_experiments.sh --parallel 8
-
-# Or run the parallel jobs script directly
-./scripts/run_parallel_jobs.sh 8
+./scripts/run_all_simple.sh 8
 ```
-
-## Performance Tuning
-
-### Parallelism Guidelines:
-- **API Rate Limits**: Don't exceed your API rate limits
-  - Anthropic: ~5 requests/minute per key
-  - OpenAI: ~60 requests/minute per key
-  - OpenRouter: Varies by model
-- **System Resources**: Each experiment uses ~1GB RAM
-- **Recommended**: Start with 4-6 parallel jobs, adjust based on performance
-
-### Time Estimates:
-- Single experiment: 2-5 minutes
-- Sequential (300 experiments): 10-25 hours
-- Parallel (4 jobs): 2.5-6 hours
-- Parallel (8 jobs): 1.5-3 hours
 
 ## Troubleshooting
 
@@ -235,7 +176,8 @@ The system automatically resumes from where it left off:
    # Check keys are set
    echo $OPENROUTER_API_KEY
    echo $ANTHROPIC_API_KEY
-   echo $OPENAI_API_KEY
+   echo $GOOGLE_API_KEY
+   echo $XAI_API_KEY
    ```
 
 2. **Permission Denied**:
@@ -247,52 +189,37 @@ The system automatically resumes from where it left off:
 3. **Python Module Not Found**:
    ```bash
    # Install required packages
-   pip install numpy pandas matplotlib
+   pip install numpy pandas matplotlib seaborn
    ```
 
-4. **Timeout Issues**:
-   - Edit timeout in `run_single_experiment.sh` (line with `timeout 600`)
-   - Default is 600 seconds (10 minutes)
+## Modifying Experiments
 
-5. **Resume Not Working**:
-   - Check for completion flags: `ls logs/completed_*.flag`
-   - Remove flag to re-run: `rm logs/completed_42.flag`
-
-## Advanced Usage
-
-### Running Subset of Experiments:
+### To test different models:
+Edit `scripts/generate_configs_both_orders.sh`:
 ```bash
-# Modify generate_configs.sh to only generate specific configs
-# For example, only competition levels 0.5-0.9:
-COMPETITION_LEVELS=(0.5 0.6 0.7 0.8 0.9)
+WEAK_MODELS=(
+    "claude-3-opus"
+    "gemini-1-5-pro"
+    "gpt-4o"
+)
 
-# Or only specific model pairs:
-WEAK_MODELS=("gpt-4o")
-STRONG_MODELS=("o3" "chatgpt-5")
+STRONG_MODELS=(
+    "claude-3-5-haiku"
+    "claude-3-5-sonnet"
+    "gpt-5-nano"
+    # etc...
+)
 ```
 
-### Custom Analysis:
-```python
-# Load results in Python
-import json
-import pandas as pd
-
-with open('experiments/results/scaling_experiment/all_results.json') as f:
-    results = json.load(f)
-
-df = pd.DataFrame(results)
-# Your analysis here...
+### To change competition levels:
+```bash
+COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
 ```
 
-### Integration with SLURM (for cluster):
-If you later want to run on a cluster, replace `run_parallel_jobs.sh` with:
+### To adjust number of runs:
 ```bash
-#!/bin/bash
-#SBATCH --array=0-299
-#SBATCH --time=00:30:00
-#SBATCH --mem=4G
-
-./scripts/run_single_experiment.sh $SLURM_ARRAY_TASK_ID
+NUM_RUNS=5  # Number of runs per configuration
+RUN_SEEDS=(42 123 456 789 101112)  # Seeds for each run
 ```
 
 ## Notes
@@ -300,10 +227,4 @@ If you later want to run on a cluster, replace `run_parallel_jobs.sh` with:
 - Results are saved incrementally, so partial runs are not lost
 - Each experiment is independent - order doesn't matter
 - System is idempotent - safe to run multiple times
-- Logs are verbose for debugging - check them if issues arise
-
-## Contact & Updates
-
-This experiment setup was created for the bargain negotiation research project.
-Last updated: August 2024
-Location: `/Users/qw281/Downloads/bargain/`
+- The simple runner has no timeouts - relies on Python's internal retry logic

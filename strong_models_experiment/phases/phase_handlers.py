@@ -509,20 +509,27 @@ Vote must be either "accept" or "reject"."""
         # Check for unanimous acceptance
         consensus_reached = False
         final_utilities = {}
-        
+        final_allocation = {}
+        agent_preferences = {}
+
         for prop_num, vote_counts in votes_by_proposal.items():
             if vote_counts["reject"] == 0 and vote_counts["accept"] == len(agents):
                 consensus_reached = True
                 # Find the winning proposal to calculate utilities
                 for enum_prop in enumerated_proposals:
                     if enum_prop["proposal_number"] == prop_num:
-                        # Calculate utilities
+                        # Save the allocation
                         allocation = enum_prop["allocation"]
+                        final_allocation = allocation.copy()
+
+                        # Calculate utilities and save preferences
                         for agent in agents:
                             agent_items = allocation.get(agent.agent_id, [])
-                            utility = sum(preferences["agent_preferences"][agent.agent_id][i] 
+                            utility = sum(preferences["agent_preferences"][agent.agent_id][i]
                                         for i in agent_items if i < len(items))
                             final_utilities[agent.agent_id] = utility
+                            # Save the preference vector for this agent
+                            agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
                         break
                 break
         
@@ -554,6 +561,8 @@ Vote must be either "accept" or "reject"."""
             "messages": messages,
             "consensus_reached": consensus_reached,
             "final_utilities": final_utilities,
+            "final_allocation": final_allocation,
+            "agent_preferences": agent_preferences,
             "votes_by_proposal": votes_by_proposal
         }
     

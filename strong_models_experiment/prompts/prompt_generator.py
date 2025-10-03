@@ -15,9 +15,15 @@ class PromptGenerator:
         # Get discount factor from config, default to 0.9 if not specified
         gamma_discount = config.get("gamma_discount", 0.9)
         
+        # Create clearer phrasing for 2-agent negotiations
+        if num_agents == 2:
+            agent_phrase = "another agent"
+        else:
+            agent_phrase = f"{num_agents - 1} other agents"
+
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
-You are participating in a strategic negotiation with {num_agents} agents over {len(items)} valuable items. Here are the complete rules:
+You are participating in a strategic negotiation with {agent_phrase} over {len(items)} valuable items. Here are the complete rules:
 
 **ITEMS BEING NEGOTIATED:**
 {items_text}

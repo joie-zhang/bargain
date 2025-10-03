@@ -21,9 +21,11 @@ This repository is for multi-agent negotiation research focused on understanding
 **Core Research Elements**:
 - Multi-agent negotiation environment with m items, n agents, t rounds
 - Variable preference systems (competitive vectors or cooperative matrices)
-- Different LLM capabilities tested against each other (O3 vs Claude Haiku, etc.)
+- Different LLM capabilities tested against each other (Grok vs Gemini, GPT-5 vs Claude, etc.)
 - Strategic behavior analysis including manipulation, gaslighting, and exploitation
 - Scaling laws for model strength vs. negotiation outcomes
+- Confounding factors: instruction-following, sycophancy, strategic capability
+- Future: Multi-domain expansion beyond negotiation (ICML deadline)
 
 **Key Stakeholders**: AI safety researchers, negotiation theorists, multi-agent system designers
 </project_context>

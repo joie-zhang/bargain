@@ -42,15 +42,22 @@ class StrongModelAgentFactory:
         if len(models) == 1:
             models = models * 3
         
+        # Use Greek letters for agent names to maintain anonymity
+        agent_names = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"]
+
         for i, model_name in enumerate(models):
             if model_name not in STRONG_MODELS_CONFIG:
                 self.logger.warning(f"Unknown model: {model_name}, skipping")
                 continue
-            
+
             model_config = STRONG_MODELS_CONFIG[model_name]
             api_type = model_config.get("api_type", "openrouter")
-            
-            agent_id = f"{model_name.replace('-', '_')}_{i+1}"
+
+            # Use anonymous agent names instead of model names
+            if i < len(agent_names):
+                agent_id = f"Agent_{agent_names[i]}"
+            else:
+                agent_id = f"Agent_{i+1}"  # Fallback to numbers if we run out of Greek letters
             
             agent = self._create_agent_by_type(
                 api_type, model_name, model_config, agent_id,
