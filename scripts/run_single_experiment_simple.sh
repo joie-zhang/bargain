@@ -37,9 +37,10 @@ echo "[$(date)] Starting experiment ${JOB_ID}: ${WEAK_MODEL} vs ${STRONG_MODEL} 
 
 cd "${BASE_DIR}"
 
-# Activate virtual environment if exists
-if [ -f ~/.venv/bin/activate ]; then
-    source ~/.venv/bin/activate
+# Activate conda environment if available
+if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+    conda activate negotiation-research
 fi
 
 # Build command
