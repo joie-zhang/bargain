@@ -10,6 +10,10 @@ CONFIG_DIR="${BASE_DIR}/experiments/results/scaling_experiment/configs"
 mkdir -p "${CONFIG_DIR}"
 
 # Model definitions
+# NOTE: These short names map to full model_id values defined in:
+#       strong_models_experiment/configs.py (STRONG_MODELS_CONFIG dictionary)
+#       The Python code looks up these short names to get the full model_id (e.g., "gpt-5-mini" -> "gpt-5-mini-2025-08-07")
+#
 # Weak models - baseline models for exploitation experiments
 WEAK_MODELS=(
     "claude-3-opus"
@@ -26,11 +30,13 @@ STRONG_MODELS=(
     "claude-4-1-opus"
     
     # OpenAI models
-    "gpt-4o-latest"  # Nov 2024 version
-    "gpt-5-nano"
-    "gpt-5-mini"
-    "o1"
-    "o3"
+    "gpt-4o-latest"  # Nov 2024 version (model_id: gpt-4o-2024-11-20)
+    "gpt-5"  # Full GPT-5 (model_id: gpt-5-2025-08-07)
+    "gpt-5.1"  # GPT-5.1 (model_id: gpt-5.1-2025-11-13)
+    "gpt-5-nano"  # GPT-5 Nano (model_id: gpt-5-nano-2025-08-07)
+    "gpt-5-mini"  # GPT-5 Mini (model_id: gpt-5-mini-2025-08-07)
+    "o1"  # O1 (model_id: o1-2024-12-17)
+    "o3"  # O3 (model_id: o3-2025-04-16)
     
     # Google models
     "gemini-2-0-flash"
@@ -110,10 +116,13 @@ echo "   - Competition levels: ${#COMPETITION_LEVELS[@]}"
 echo "   - Runs per config: ${NUM_RUNS}"
 echo "   - Location: ${CONFIG_DIR}"
 
-# Create master config list
+# Create master config list (only if configs were just generated)
+# Skip if file already exists and is up to date
 MASTER_CONFIG="${CONFIG_DIR}/all_configs.txt"
-ls -1 "${CONFIG_DIR}"/config_*.json > "${MASTER_CONFIG}"
-echo "✅ Created master config list: ${MASTER_CONFIG}"
+if [ ! -f "${MASTER_CONFIG}" ] || [ "${CONFIG_DIR}"/config_*.json -nt "${MASTER_CONFIG}" ]; then
+    ls -1 "${CONFIG_DIR}"/config_*.json > "${MASTER_CONFIG}"
+    echo "✅ Created/updated master config list: ${MASTER_CONFIG}"
+fi
 
 # Create a detailed summary file
 SUMMARY_FILE="${CONFIG_DIR}/summary.txt"

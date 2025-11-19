@@ -277,6 +277,18 @@ class ModelRegistry:
             estimated_speed="slow"
         ))
         
+        self.register_model(ModelSpec(
+            model_id="claude-4-5-haiku",
+            display_name="Claude 4.5 Haiku",
+            family=ModelFamily.CLAUDE,
+            provider=ModelProvider.ANTHROPIC,
+            api_model_name="claude-haiku-4-5-20251001",
+            context_window=200000,
+            supports_system_prompt=True,
+            reasoning_capability="medium",
+            estimated_speed="fast"
+        ))
+        
         # Llama models (via OpenRouter or local)
         self.register_model(ModelSpec(
             model_id="llama-3-70b",

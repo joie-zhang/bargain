@@ -143,6 +143,26 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent. Apply systematic thinking to achieve optimal outcomes in this negotiation.",
         "model_category": "strong"
     },
+    "gpt-5": {
+        "name": "GPT-5",
+        "model_id": "gpt-5-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5 model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategy to maximize your utility in this negotiation.",
+        "model_category": "strong"
+    },
+    "gpt-5.1": {
+        "name": "GPT-5.1",
+        "model_id": "gpt-5.1-2025-11-13",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5.1 model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategy to maximize your utility in this negotiation.",
+        "model_category": "strong"
+    },
     "gpt-5-mini": {
         "name": "GPT-5 Mini",
         "model_id": "gpt-5-mini-2025-08-07",
@@ -228,15 +248,6 @@ STRONG_MODELS_CONFIG = {
     
     # Additional models available but not currently in use
     # These models are functional and can be enabled if needed
-    "gpt-5": {
-        "name": "GPT-5",
-        "model_id": "gpt-5-2025-08-07",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "OpenAI's GPT-5 model",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategy to maximize your utility in this negotiation."
-    },
     "o3-mini": {
         "name": "O3 Mini",
         "model_id": "o3-mini-2025-01-31",

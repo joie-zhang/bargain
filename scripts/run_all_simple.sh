@@ -14,6 +14,12 @@ MAX_PARALLEL_JOBS=${1:-4}
 # Create directories
 mkdir -p "${RESULTS_DIR}" "${LOGS_DIR}" "${CONFIG_DIR}"
 
+# Activate conda environment if available
+if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+    conda activate negotiation-research
+fi
+
 echo "============================================================"
 echo "SIMPLE EXPERIMENT RUNNER (No Timeouts)"
 echo "============================================================"
@@ -24,7 +30,8 @@ echo ""
 # Step 1: Generate configs if needed
 if [ ! -f "${CONFIG_DIR}/config_0.json" ]; then
     echo "Generating experiment configurations..."
-    "${SCRIPTS_DIR}/generate_configs_both_orders.sh"
+    # "${SCRIPTS_DIR}/generate_configs_both_orders.sh"
+    "${SCRIPTS_DIR}/generate_single_config.sh"
 fi
 
 # Step 2: Count experiments
