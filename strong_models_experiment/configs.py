@@ -284,5 +284,84 @@ STRONG_MODELS_CONFIG = {
         "description": "Google's fast Gemini 2.5 Flash model",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent. Apply quick and efficient reasoning in this negotiation."
+    },
+    
+    # Qwen2.5 models (local Princeton cluster)
+    "Qwen2.5-0.5B-Instruct": {
+        "name": "Qwen2.5 0.5B Instruct",
+        "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-0.5B-Instruct",
+        "description": "Qwen2.5 0.5B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-1.5B-Instruct": {
+        "name": "Qwen2.5 1.5B Instruct",
+        "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-1.5B-Instruct",
+        "description": "Qwen2.5 1.5B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-3B-Instruct": {
+        "name": "Qwen2.5 3B Instruct",
+        "model_id": "Qwen/Qwen2.5-3B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-3B-Instruct",
+        "description": "Qwen2.5 3B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-7B-Instruct": {
+        "name": "Qwen2.5 7B Instruct",
+        "model_id": "Qwen/Qwen2.5-7B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-7B-Instruct",
+        "description": "Qwen2.5 7B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-14B-Instruct": {
+        "name": "Qwen2.5 14B Instruct",
+        "model_id": "Qwen/Qwen2.5-14B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-14B-Instruct",
+        "description": "Qwen2.5 14B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-32B-Instruct": {
+        "name": "Qwen2.5 32B Instruct",
+        "model_id": "Qwen/Qwen2.5-32B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-32B-Instruct",
+        "description": "Qwen2.5 32B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
+    },
+    "Qwen2.5-72B-Instruct": {
+        "name": "Qwen2.5 72B Instruct",
+        "model_id": "Qwen/Qwen2.5-72B-Instruct",
+        "provider": "Qwen",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct",
+        "description": "Qwen2.5 72B Instruct model (local cluster)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "model_category": "strong"
     }
 }

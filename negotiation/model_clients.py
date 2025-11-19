@@ -581,7 +581,30 @@ class PrincetonClusterClient(BaseModelClient):
     
     def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert messages to model-specific prompt format."""
-        # This would be customized based on the specific model's training format
+        # Try to use tokenizer's chat template if available (for Qwen models)
+        if self.tokenizer is not None and hasattr(self.tokenizer, 'apply_chat_template'):
+            try:
+                # Convert messages format for chat template
+                chat_messages = []
+                for msg in messages:
+                    if msg['role'] == 'system':
+                        chat_messages.append({"role": "system", "content": msg['content']})
+                    elif msg['role'] == 'user':
+                        chat_messages.append({"role": "user", "content": msg['content']})
+                    elif msg['role'] == 'assistant':
+                        chat_messages.append({"role": "assistant", "content": msg['content']})
+                
+                # Apply chat template
+                prompt = self.tokenizer.apply_chat_template(
+                    chat_messages,
+                    tokenize=False,
+                    add_generation_prompt=True
+                )
+                return prompt
+            except Exception as e:
+                self.logger.warning(f"Failed to use chat template, falling back to generic format: {e}")
+        
+        # Fallback to generic format
         prompt_parts = []
         for msg in messages:
             role = msg['role']
