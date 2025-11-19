@@ -344,7 +344,7 @@ class StrongModelsExperiment:
             run_config = experiment_config.copy() if experiment_config else {}
             # Don't modify seed if override_run_number is provided (use exact seed from config)
             if override_run_number is None:
-                if 'random_seed' in run_config:
+                if 'random_seed' in run_config and run_config['random_seed'] is not None:
                     run_config['random_seed'] = run_config['random_seed'] + i
                 else:
                     run_config['random_seed'] = 42 + i  # Default seed + offset
