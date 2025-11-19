@@ -49,6 +49,16 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent. Use efficient reasoning to achieve optimal outcomes in this negotiation.",
         "model_category": "strong"
     },
+    "claude-4-5-haiku": {
+        "name": "Claude 4.5 Haiku",
+        "model_id": "claude-haiku-4-5-20251001",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Anthropic's latest fast and efficient Claude 4.5 Haiku model (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Use efficient reasoning to achieve optimal outcomes in this negotiation.",
+        "model_category": "strong"
+    },
     "claude-3-5-sonnet": {
         "name": "Claude 3.5 Sonnet",
         "model_id": "claude-3-5-sonnet-20241022",
