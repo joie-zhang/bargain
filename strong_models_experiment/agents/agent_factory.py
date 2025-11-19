@@ -4,7 +4,7 @@ import os
 import logging
 from typing import List, Dict, Any, Optional
 from negotiation import AgentFactory, AgentConfiguration
-from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LLMConfig
+from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LocalModelAgent, LLMConfig
 from negotiation.openrouter_client import OpenRouterAgent
 from ..configs import STRONG_MODELS_CONFIG
 
@@ -84,6 +84,8 @@ class StrongModelAgentFactory:
             return self._create_openai_agent(model_name, model_config, agent_id, openai_key, max_tokens)
         elif api_type == "xai":
             return self._create_xai_agent(model_name, model_config, agent_id, xai_key, max_tokens)
+        elif api_type == "princeton_cluster":
+            return self._create_local_model_agent(model_name, model_config, agent_id, max_tokens)
         else:  # openrouter
             return self._create_openrouter_agent(model_name, model_config, agent_id, openrouter_key, max_tokens)
     
@@ -194,6 +196,38 @@ class StrongModelAgentFactory:
             agent_id=agent_id,
             config=llm_config,
             api_key=api_key
+        )
+    
+    def _create_local_model_agent(self, model_name: str, model_config: Dict,
+                                 agent_id: str, max_tokens: int = 999999) -> Optional[LocalModelAgent]:
+        """Create a local model agent for Princeton cluster models."""
+        local_path = model_config.get("local_path")
+        if not local_path:
+            self.logger.warning(f"local_path not specified for {model_name}, skipping")
+            return None
+        
+        # Check if path exists
+        import os
+        if not os.path.exists(local_path):
+            self.logger.warning(f"Model path does not exist: {local_path}, skipping {model_name}")
+            return None
+        
+        # Use GEMMA_2_27B as base type (just for config compatibility, won't be used)
+        llm_config = LLMConfig(
+            model_type=ModelType.GEMMA_2_27B,  # Base type for compatibility
+            temperature=model_config["temperature"],
+            max_tokens=max_tokens,
+            system_prompt=model_config["system_prompt"],
+            custom_parameters={}
+        )
+        
+        # Store the actual model_id for reference
+        llm_config._actual_model_id = model_config.get("model_id", model_name)
+        
+        return LocalModelAgent(
+            agent_id=agent_id,
+            config=llm_config,
+            local_path=local_path
         )
     
     def _create_openrouter_agent(self, model_name: str, model_config: Dict,

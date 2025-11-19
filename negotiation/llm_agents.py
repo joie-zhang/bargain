@@ -1151,6 +1151,96 @@ class OpenAIAgent(BaseLLMAgent):
             return 16_000  # Default
 
 
+class LocalModelAgent(BaseLLMAgent):
+    """LLM agent using local models via PrincetonClusterClient."""
+    
+    def __init__(self, agent_id: str, config: LLMConfig, local_path: str):
+        super().__init__(agent_id, config)
+        
+        from negotiation.model_clients import (
+            PrincetonClusterClient, 
+            ModelSpec, 
+            ModelProvider, 
+            ProviderConfig
+        )
+        from negotiation.model_config import ModelFamily
+        
+        # Create model spec
+        model_spec = ModelSpec(
+            model_id=config.model_type.value if hasattr(config.model_type, 'value') else str(config.model_type),
+            display_name=f"Local Model ({local_path})",
+            family=ModelFamily.QWEN,  # Assuming Qwen family
+            provider=ModelProvider.PRINCETON_CLUSTER,
+            local_path=local_path
+        )
+        
+        # Create provider config
+        provider_config = ProviderConfig(
+            provider=ModelProvider.PRINCETON_CLUSTER,
+            api_base_url=None,
+            api_key=None,
+            read_timeout=300.0,  # Longer timeout for local models
+            max_retries=1  # Local models don't need retries
+        )
+        
+        # Create client
+        self.client = PrincetonClusterClient(provider_config, model_spec)
+        self.model_path = local_path
+        
+        # Store model name for info
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
+        else:
+            self.model_name = local_path.split('/')[-1]  # Use directory name
+    
+    async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
+        """Call local model via PrincetonClusterClient."""
+        start_time = time.time()
+        
+        # Prepare generation parameters
+        gen_kwargs = {
+            "temperature": kwargs.get("temperature", self.config.temperature),
+            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
+            "top_p": kwargs.get("top_p", 0.9),
+            "top_k": kwargs.get("top_k", 50)
+        }
+        
+        # Call the client
+        model_response = await self.client.generate(messages, **gen_kwargs)
+        
+        response_time = time.time() - start_time
+        
+        # Convert ModelResponse to AgentResponse
+        total_tokens = None
+        if model_response.input_tokens is not None and model_response.output_tokens is not None:
+            total_tokens = model_response.input_tokens + model_response.output_tokens
+        
+        return AgentResponse(
+            content=model_response.content,
+            model_used=self.model_name,
+            response_time=response_time,
+            tokens_used=total_tokens,
+            cost_estimate=0.0,  # Local models have no API cost
+            metadata={
+                "input_tokens": model_response.input_tokens,
+                "output_tokens": model_response.output_tokens,
+                "model_path": self.model_path,
+                **model_response.metadata
+            }
+        )
+    
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get local model information."""
+        return {
+            "provider": "princeton_cluster",
+            "model_type": self.config.model_type.value if hasattr(self.config.model_type, 'value') else str(self.config.model_type),
+            "model_name": self.model_name,
+            "model_path": self.model_path,
+            "context_window": 32768,  # Typical for Qwen models
+            "capabilities": ["text_generation", "instruct"]
+        }
+
+
 class XAIAgent(BaseLLMAgent):
     """LLM agent using XAI Grok models."""
     
