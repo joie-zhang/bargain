@@ -64,7 +64,19 @@ STRONG_MODELS_CONFIG = {
         "model_id": "claude-3-5-sonnet-20241022",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's Claude 3.5 Sonnet model (STRONG MODEL)",
+        "description": "Anthropic's Claude 3.5 Sonnet model (STRONG MODEL) - DEPRECATED: Use claude-3-7-sonnet instead",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "model_category": "strong",
+        "deprecated": True,
+        "deprecation_message": "claude-3-5-sonnet is deprecated. Please use claude-3-7-sonnet instead."
+    },
+    "claude-3-7-sonnet": {
+        "name": "Claude 3.7 Sonnet",
+        "model_id": "claude-3-7-sonnet-20250219",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Anthropic's Claude 3.7 Sonnet model (STRONG MODEL)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
         "model_category": "strong"

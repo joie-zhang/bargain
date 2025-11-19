@@ -92,6 +92,13 @@ class StrongModelAgentFactory:
     def _create_anthropic_agent(self, model_name: str, model_config: Dict,
                                agent_id: str, api_key: Optional[str], max_tokens: int = 999999) -> Optional[AnthropicAgent]:
         """Create an Anthropic agent."""
+        # Check if model is deprecated
+        if model_config.get("deprecated", False):
+            deprecation_msg = model_config.get("deprecation_message", f"{model_name} is deprecated")
+            error_msg = f"ERROR: {deprecation_msg}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+        
         if not api_key:
             self.logger.warning(f"ANTHROPIC_API_KEY not set, skipping {model_name}")
             return None
@@ -127,8 +134,8 @@ class StrongModelAgentFactory:
             custom_parameters={}
         )
         
-        # Store the actual model_id for the agent to use
-        if model_name not in model_type_map:
+        # Always use model_id from config if available (more up-to-date than enum)
+        if "model_id" in model_config:
             llm_config._actual_model_id = model_config["model_id"]
         
         return AnthropicAgent(
