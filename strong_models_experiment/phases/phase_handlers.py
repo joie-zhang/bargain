@@ -313,10 +313,47 @@ class PhaseHandler:
                 if item_indices:
                     item_names = []
                     for idx in item_indices:
-                        if 0 <= idx < len(items):
-                            item_names.append(f"{idx}:{items[idx]['name']}")
-                        else:
-                            item_names.append(f"{idx}:unknown")
+                        resolved_idx = None
+                        
+                        # Try to convert to integer first
+                        try:
+                            idx_int = int(idx) if isinstance(idx, str) else idx
+                            if isinstance(idx_int, int):
+                                if 0 <= idx_int < len(items):
+                                    resolved_idx = idx_int
+                                else:
+                                    raise ValueError(
+                                        f"Index {idx_int} is out of bounds (valid range: 0-{len(items)-1}) "
+                                        f"in proposal by {proposer}"
+                                    )
+                        except (ValueError, TypeError):
+                            # Conversion failed - try matching against item names
+                            if isinstance(idx, str):
+                                # Try to find matching item name (case-insensitive)
+                                for i, item in enumerate(items):
+                                    item_name = item.get('name', '')
+                                    if item_name.lower() == idx.lower():
+                                        resolved_idx = i
+                                        break
+                                
+                                if resolved_idx is None:
+                                    # No match found - raise error with helpful message
+                                    available_items = [item.get('name', f'Item {i}') for i, item in enumerate(items)]
+                                    raise ValueError(
+                                        f"Invalid item identifier '{idx}' in proposal by {proposer}. "
+                                        f"Expected an integer index (0-{len(items)-1}) or an item name. "
+                                        f"Available items: {available_items}"
+                                    )
+                            else:
+                                # Not a string and not convertible to int - raise error
+                                raise ValueError(
+                                    f"Invalid item identifier '{idx}' (type: {type(idx).__name__}) in proposal by {proposer}. "
+                                    f"Expected an integer index (0-{len(items)-1}) or an item name string."
+                                )
+                        
+                        # Use the resolved index
+                        if resolved_idx is not None:
+                            item_names.append(f"{resolved_idx}:{items[resolved_idx]['name']}")
                     proposal_display_lines.append(f"    → {agent_id}: {', '.join(item_names)}")
                 else:
                     proposal_display_lines.append(f"    → {agent_id}: (no items)")

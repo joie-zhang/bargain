@@ -652,6 +652,70 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             # Ensure required fields are present
             if "allocation" not in proposal:
                 raise ValueError("Missing allocation field")
+            
+            # Normalize indices in allocation to ensure they're integers
+            if "allocation" in proposal:
+                normalized_allocation = {}
+                for agent_key, items in proposal["allocation"].items():
+                    if isinstance(items, list):
+                        normalized_items = []
+                        for item_identifier in items:
+                            resolved_idx = None
+                            
+                            # Try to convert to integer first
+                            try:
+                                idx_int = int(item_identifier) if isinstance(item_identifier, str) else item_identifier
+                                if isinstance(idx_int, int):
+                                    if 0 <= idx_int < len(context.items):
+                                        resolved_idx = idx_int
+                                    else:
+                                        raise ValueError(
+                                            f"Index {idx_int} is out of bounds (valid range: 0-{len(context.items)-1}) "
+                                            f"in proposal by {self.agent_id}"
+                                        )
+                            except (ValueError, TypeError):
+                                # Conversion failed - try matching against item names
+                                if isinstance(item_identifier, str):
+                                    # Try to find matching item name (case-insensitive)
+                                    for i, context_item in enumerate(context.items):
+                                        # Handle both dict items (with 'name' field) and string items
+                                        if isinstance(context_item, dict):
+                                            item_name = context_item.get('name', '')
+                                        else:
+                                            item_name = str(context_item)
+                                        
+                                        if item_name.lower() == item_identifier.lower():
+                                            resolved_idx = i
+                                            break
+                                    
+                                    if resolved_idx is None:
+                                        # No match found - raise error with helpful message
+                                        available_items = []
+                                        for i, ctx_item in enumerate(context.items):
+                                            if isinstance(ctx_item, dict):
+                                                available_items.append(ctx_item.get('name', f'Item {i}'))
+                                            else:
+                                                available_items.append(str(ctx_item))
+                                        raise ValueError(
+                                            f"Invalid item identifier '{item_identifier}' in proposal by {self.agent_id}. "
+                                            f"Expected an integer index (0-{len(context.items)-1}) or an item name. "
+                                            f"Available items: {available_items}"
+                                        )
+                                else:
+                                    # Not a string and not convertible to int - raise error
+                                    raise ValueError(
+                                        f"Invalid item identifier '{item_identifier}' (type: {type(item_identifier).__name__}) "
+                                        f"in proposal by {self.agent_id}. Expected an integer index "
+                                        f"(0-{len(context.items)-1}) or an item name string."
+                                    )
+                            
+                            if resolved_idx is not None:
+                                normalized_items.append(resolved_idx)
+                        normalized_allocation[agent_key] = normalized_items
+                    else:
+                        normalized_allocation[agent_key] = items
+                proposal["allocation"] = normalized_allocation
+            
             if "reasoning" not in proposal:
                 proposal["reasoning"] = "No reasoning provided"
             proposal["proposed_by"] = self.agent_id
@@ -666,12 +730,89 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             try:
                 import re
                 
-                # Look for JSON block in the response
-                json_match = re.search(r'\{[\s\S]*\}', response.content)
-                if json_match:
-                    json_str = json_match.group(0)
-                    self.logger.debug(f"Extracted JSON string: {json_str[:200]}...")
-                    proposal = json.loads(json_str)
+                json_blocks = []
+                
+                # Find all ```json markers and extract content until next ```
+                json_marker_positions = []
+                for match in re.finditer(r'```json', response.content, re.IGNORECASE):
+                    json_marker_positions.append(match.end())
+                
+                # Extract content between ```json and next ```
+                for start_pos in json_marker_positions:
+                    # Find the next ``` marker after this position
+                    end_match = re.search(r'```', response.content[start_pos:])
+                    if end_match:
+                        json_content = response.content[start_pos:start_pos + end_match.start()].strip()
+                        if json_content.startswith('{'):
+                            json_blocks.append(json_content)
+                
+                # Also try to find JSON blocks wrapped in just ``` ... ``` (without json marker)
+                if not json_blocks:
+                    code_block_matches = re.finditer(r'```\s*(\{[\s\S]*?\})\s*```', response.content)
+                    for match in code_block_matches:
+                        block_content = match.group(1).strip()
+                        if block_content.startswith('{') and '"allocation"' in block_content:
+                            json_blocks.append(block_content)
+                
+                # If no code blocks found, try to find standalone JSON objects
+                if not json_blocks:
+                    # Look for JSON objects that contain "allocation" key - use a more robust approach
+                    # Find all { that might start a JSON object
+                    brace_positions = []
+                    for i, char in enumerate(response.content):
+                        if char == '{':
+                            brace_positions.append(i)
+                    
+                    # Try to parse JSON starting from each {
+                    for start_pos in brace_positions:
+                        # Try to find a complete JSON object by counting braces
+                        brace_count = 0
+                        end_pos = start_pos
+                        for i in range(start_pos, len(response.content)):
+                            if response.content[i] == '{':
+                                brace_count += 1
+                            elif response.content[i] == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    end_pos = i + 1
+                                    break
+                        
+                        if brace_count == 0:  # Found a complete JSON object
+                            json_candidate = response.content[start_pos:end_pos]
+                            if '"allocation"' in json_candidate:
+                                json_blocks.append(json_candidate)
+                                break  # Found one, that's enough
+                
+                # Final fallback: try the original single-block approach
+                if not json_blocks:
+                    json_match = re.search(r'\{[\s\S]*\}', response.content)
+                    if json_match:
+                        json_blocks = [json_match.group(0)]
+                
+                proposal = None
+                last_error = None
+                
+                # Try parsing JSON blocks in reverse order (last one first, as it's likely the corrected version)
+                for json_str in reversed(json_blocks):
+                    try:
+                        self.logger.debug(f"Trying to parse JSON block: {json_str[:200]}...")
+                        proposal = json.loads(json_str)
+                        
+                        # Validate that it has the required structure
+                        if "allocation" in proposal and isinstance(proposal["allocation"], dict):
+                            # Successfully parsed and validated - use this one
+                            self.logger.debug(f"Successfully parsed JSON block (using last/corrected version)")
+                            break
+                        else:
+                            # Invalid structure, try next block
+                            proposal = None
+                            continue
+                    except (json.JSONDecodeError, ValueError) as parse_error:
+                        last_error = parse_error
+                        continue
+                
+                if proposal is None:
+                    raise ValueError(f"Could not parse any valid JSON block from response. Last error: {last_error}")
                     
                     # Convert the allocation format if needed
                     if "allocation" in proposal:
@@ -697,17 +838,61 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                                 
                             # Handle both item names and indices
                             if isinstance(items, list) and len(items) > 0:
-                                if isinstance(items[0], str):
-                                    # Convert item names to indices
-                                    item_indices = []
-                                    for item_name in items:
-                                        for i, context_item in enumerate(context.items):
-                                            if context_item == item_name:
-                                                item_indices.append(i)
-                                                break
-                                    converted_allocation[actual_agent_key] = item_indices
-                                else:
-                                    converted_allocation[actual_agent_key] = items
+                                normalized_indices = []
+                                for item_identifier in items:
+                                    resolved_idx = None
+                                    
+                                    # Try to convert to integer first
+                                    try:
+                                        idx_int = int(item_identifier) if isinstance(item_identifier, str) else item_identifier
+                                        if isinstance(idx_int, int):
+                                            if 0 <= idx_int < len(context.items):
+                                                resolved_idx = idx_int
+                                            else:
+                                                raise ValueError(
+                                                    f"Index {idx_int} is out of bounds (valid range: 0-{len(context.items)-1}) "
+                                                    f"in proposal by {self.agent_id}"
+                                                )
+                                    except (ValueError, TypeError):
+                                        # Conversion failed - try matching against item names
+                                        if isinstance(item_identifier, str):
+                                            # Try to find matching item name (case-insensitive)
+                                            for i, context_item in enumerate(context.items):
+                                                # Handle both dict items (with 'name' field) and string items
+                                                if isinstance(context_item, dict):
+                                                    item_name = context_item.get('name', '')
+                                                else:
+                                                    item_name = str(context_item)
+                                                
+                                                if item_name.lower() == item_identifier.lower():
+                                                    resolved_idx = i
+                                                    break
+                                            
+                                            if resolved_idx is None:
+                                                # No match found - raise error with helpful message
+                                                available_items = []
+                                                for i, ctx_item in enumerate(context.items):
+                                                    if isinstance(ctx_item, dict):
+                                                        available_items.append(ctx_item.get('name', f'Item {i}'))
+                                                    else:
+                                                        available_items.append(str(ctx_item))
+                                                raise ValueError(
+                                                    f"Invalid item identifier '{item_identifier}' in proposal by {self.agent_id}. "
+                                                    f"Expected an integer index (0-{len(context.items)-1}) or an item name. "
+                                                    f"Available items: {available_items}"
+                                                )
+                                        else:
+                                            # Not a string and not convertible to int - raise error
+                                            raise ValueError(
+                                                f"Invalid item identifier '{item_identifier}' (type: {type(item_identifier).__name__}) "
+                                                f"in proposal by {self.agent_id}. Expected an integer index "
+                                                f"(0-{len(context.items)-1}) or an item name string."
+                                            )
+                                    
+                                    if resolved_idx is not None:
+                                        normalized_indices.append(resolved_idx)
+                                
+                                converted_allocation[actual_agent_key] = normalized_indices
                             else:
                                 converted_allocation[actual_agent_key] = items
                         
