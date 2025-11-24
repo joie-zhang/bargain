@@ -46,6 +46,9 @@ class ModelType(Enum):
     CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
     CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"
+    CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
+    CLAUDE_4_5_HAIKU = "claude-haiku-4-5-20251001"
+    CLAUDE_3_7_SONNET = "claude-3-7-sonnet-20250219"
     
     # OpenAI models
     GPT_4 = "gpt-4"
@@ -813,98 +816,7 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 
                 if proposal is None:
                     raise ValueError(f"Could not parse any valid JSON block from response. Last error: {last_error}")
-                    
-                    # Convert the allocation format if needed
-                    if "allocation" in proposal:
-                        allocation = proposal["allocation"]
-                        # Convert agent names to indices if needed
-                        converted_allocation = {}
-                        
-                        # Map agent names to actual IDs
-                        agent_mapping = {}
-                        if context.agents:
-                            for i, agent in enumerate(context.agents):
-                                if isinstance(agent, str):
-                                    agent_mapping[f"agent_{i}"] = agent
-                                else:
-                                    agent_mapping[f"agent_{i}"] = agent.agent_id
-                                
-                        for agent_key, items in allocation.items():
-                            # Convert generic agent names to actual agent IDs
-                            if agent_key in agent_mapping:
-                                actual_agent_key = agent_mapping[agent_key]
-                            else:
-                                actual_agent_key = agent_key
-                                
-                            # Handle both item names and indices
-                            if isinstance(items, list) and len(items) > 0:
-                                normalized_indices = []
-                                for item_identifier in items:
-                                    resolved_idx = None
-                                    
-                                    # Try to convert to integer first
-                                    try:
-                                        idx_int = int(item_identifier) if isinstance(item_identifier, str) else item_identifier
-                                        if isinstance(idx_int, int):
-                                            if 0 <= idx_int < len(context.items):
-                                                resolved_idx = idx_int
-                                            else:
-                                                raise ValueError(
-                                                    f"Index {idx_int} is out of bounds (valid range: 0-{len(context.items)-1}) "
-                                                    f"in proposal by {self.agent_id}"
-                                                )
-                                    except (ValueError, TypeError):
-                                        # Conversion failed - try matching against item names
-                                        if isinstance(item_identifier, str):
-                                            # Try to find matching item name (case-insensitive)
-                                            for i, context_item in enumerate(context.items):
-                                                # Handle both dict items (with 'name' field) and string items
-                                                if isinstance(context_item, dict):
-                                                    item_name = context_item.get('name', '')
-                                                else:
-                                                    item_name = str(context_item)
-                                                
-                                                if item_name.lower() == item_identifier.lower():
-                                                    resolved_idx = i
-                                                    break
-                                            
-                                            if resolved_idx is None:
-                                                # No match found - raise error with helpful message
-                                                available_items = []
-                                                for i, ctx_item in enumerate(context.items):
-                                                    if isinstance(ctx_item, dict):
-                                                        available_items.append(ctx_item.get('name', f'Item {i}'))
-                                                    else:
-                                                        available_items.append(str(ctx_item))
-                                                raise ValueError(
-                                                    f"Invalid item identifier '{item_identifier}' in proposal by {self.agent_id}. "
-                                                    f"Expected an integer index (0-{len(context.items)-1}) or an item name. "
-                                                    f"Available items: {available_items}"
-                                                )
-                                        else:
-                                            # Not a string and not convertible to int - raise error
-                                            raise ValueError(
-                                                f"Invalid item identifier '{item_identifier}' (type: {type(item_identifier).__name__}) "
-                                                f"in proposal by {self.agent_id}. Expected an integer index "
-                                                f"(0-{len(context.items)-1}) or an item name string."
-                                            )
-                                    
-                                    if resolved_idx is not None:
-                                        normalized_indices.append(resolved_idx)
-                                
-                                converted_allocation[actual_agent_key] = normalized_indices
-                            else:
-                                converted_allocation[actual_agent_key] = items
-                        
-                        proposal["allocation"] = converted_allocation
-                    
-                    # Ensure required fields are present
-                    if "reasoning" not in proposal:
-                        proposal["reasoning"] = "No reasoning provided"
-                    
-                    proposal["proposed_by"] = self.agent_id
-                    proposal["round"] = context.current_round
-                    return proposal
+                
             except (json.JSONDecodeError, AttributeError):
                 pass
             
@@ -1120,6 +1032,12 @@ class AnthropicAgent(BaseLLMAgent):
                 self.model_name = "claude-3-haiku-20240307"
             elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
                 self.model_name = "claude-3-5-sonnet-20241022"
+            elif config.model_type == ModelType.CLAUDE_3_5_HAIKU:
+                self.model_name = "claude-3-5-haiku-20241022"
+            elif config.model_type == ModelType.CLAUDE_4_5_HAIKU:
+                self.model_name = "claude-haiku-4-5-20251001"
+            elif config.model_type == ModelType.CLAUDE_3_7_SONNET:
+                self.model_name = "claude-3-7-sonnet-20250219"
             else:
                 raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
     

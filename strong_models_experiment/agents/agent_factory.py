@@ -101,7 +101,9 @@ class StrongModelAgentFactory:
             "claude-3-sonnet": ModelType.CLAUDE_3_SONNET,
             "claude-3-haiku": ModelType.CLAUDE_3_HAIKU,
             "claude-3-5-sonnet": ModelType.CLAUDE_3_5_SONNET,
-            "claude-3-5-haiku": ModelType.CLAUDE_3_HAIKU,  # Map to closest available
+            "claude-3-5-haiku": ModelType.CLAUDE_3_5_HAIKU,
+            "claude-4-5-haiku": ModelType.CLAUDE_4_5_HAIKU,
+            "claude-3-7-sonnet": ModelType.CLAUDE_3_7_SONNET,
         }
         
         # Use the enum if available, otherwise use a default
