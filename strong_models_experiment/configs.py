@@ -69,6 +69,16 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
         "model_category": "strong"
     },
+    "claude-3-7-sonnet": {
+        "name": "Claude 3.7 Sonnet",
+        "model_id": "claude-3-7-sonnet-20250219",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Anthropic's Claude 3.7 Sonnet model with extended thinking (STRONG MODEL)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "model_category": "strong"
+    },
     "claude-4-sonnet": {
         "name": "Claude 4 Sonnet",
         "model_id": "claude-sonnet-4-20250514",
