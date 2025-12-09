@@ -427,10 +427,14 @@ class StrongModelsExperiment:
         
         exp_dir.mkdir(parents=True, exist_ok=True)
         
+        # Determine batch mode: use run_number if set, regardless of batch_id
+        # (batch_id can be empty string when using custom output directories)
+        batch_mode = self.current_run_number is not None
+        
         # Save all interactions
         self.file_manager.save_all_interactions(
             self.all_interactions, exp_dir,
-            bool(self.current_batch_id), self.current_run_number
+            batch_mode, self.current_run_number
         )
         
         # Save agent-specific interactions
@@ -438,5 +442,5 @@ class StrongModelsExperiment:
             for interaction in interactions:
                 self.file_manager.save_interaction(
                     interaction, exp_dir,
-                    bool(self.current_batch_id), self.current_run_number
+                    batch_mode, self.current_run_number
                 )

@@ -536,6 +536,113 @@ Response format: Provide your analysis as structured strategic thinking."""
         
         return result
     
+    def _extract_json_from_text(self, text: str, max_length: int = 1000000) -> Optional[str]:
+        """
+        Extract the first valid JSON object from text, handling very long responses.
+        
+        This method handles cases where:
+        - JSON is embedded in text
+        - Multiple JSON objects exist (returns first valid one)
+        - Very long responses that might cause memory issues
+        - Malformed JSON with extra data
+        
+        Args:
+            text: Text that may contain JSON
+            max_length: Maximum length of JSON to try parsing (default 1MB to avoid memory issues)
+            
+        Returns:
+            Extracted JSON string or None if no valid JSON found
+        """
+        if not text or not isinstance(text, str):
+            return None
+        
+        import re
+        
+        original_length = len(text)
+        
+        # Truncate if too long to avoid memory issues
+        if len(text) > max_length:
+            text = text[:max_length]
+            self.logger.warning(f"Response truncated from {original_length} to {max_length} characters for JSON extraction")
+        
+        # Method 1: Try direct parsing if it looks like pure JSON
+        text_stripped = text.strip()
+        if text_stripped.startswith('{') and text_stripped.endswith('}'):
+            try:
+                # Try parsing - if "Extra data" error, take first JSON object
+                parsed = json.loads(text_stripped)
+                return text_stripped
+            except json.JSONDecodeError as e:
+                if "Extra data" in str(e):
+                    # Multiple JSON objects - extract first one
+                    pass
+                else:
+                    # Other parsing error, try other methods
+                    pass
+        
+        # Method 2: Find first { and try to find balanced braces (handles nested objects)
+        first_brace = text.find('{')
+        if first_brace == -1:
+            return None
+        
+        # Try to find balanced JSON by counting braces
+        brace_count = 0
+        in_string = False
+        escape_next = False
+        
+        for i in range(first_brace, min(len(text), first_brace + max_length)):
+            char = text[i]
+            
+            if escape_next:
+                escape_next = False
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                continue
+            
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+            
+            if not in_string:
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        # Found balanced JSON
+                        json_candidate = text[first_brace:i+1]
+                        try:
+                            json.loads(json_candidate)
+                            return json_candidate
+                        except json.JSONDecodeError:
+                            # Continue searching for next JSON object
+                            first_brace = text.find('{', i + 1)
+                            if first_brace == -1:
+                                break
+                            brace_count = 0
+                            continue
+        
+        # Method 3: Fallback - try to find JSON-like structure with regex (non-greedy)
+        # Look for JSON object boundaries more carefully
+        json_patterns = [
+            r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',  # Simple nested
+            r'\{.*?\}',  # Non-greedy match
+        ]
+        
+        for pattern in json_patterns:
+            json_match = re.search(pattern, text[:max_length], re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                try:
+                    json.loads(json_str)
+                    return json_str
+                except json.JSONDecodeError:
+                    continue
+        
+        return None
+    
     def _build_context_messages(self, context: NegotiationContext, 
                                prompt: str) -> List[Dict[str, str]]:
         """Build conversation context for the LLM."""
@@ -646,6 +753,16 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
         
         response = await self.generate_response(context, prompt)
         
+        # Handle empty or None responses
+        if not response.content or not response.content.strip():
+            self.logger.warning(f"Empty response from {self.agent_id} for proposal. Using fallback.")
+            return {
+                "allocation": {},
+                "reasoning": "No response received from agent",
+                "proposed_by": self.agent_id,
+                "round": context.current_round
+            }
+        
         try:
             # Try to parse the JSON directly first
             proposal = json.loads(response.content)
@@ -658,19 +775,17 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             proposal["round"] = context.current_round
             return proposal
         except (json.JSONDecodeError, ValueError) as e:
-            # Log the FULL parsing issue for debugging
+            # Log parsing failure (truncate long responses to avoid huge log files)
+            response_preview = response.content[:500] if response.content else ""
             self.logger.debug(f"Direct JSON parsing failed for {self.agent_id}: {e}")
-            self.logger.debug(f"Raw response content: {response.content}")
+            self.logger.debug(f"Response preview: {response_preview}...")
             
-            # Try to extract JSON from text response
+            # Try to extract JSON from text response using a more robust method
             try:
-                import re
-                
-                # Look for JSON block in the response
-                json_match = re.search(r'\{[\s\S]*\}', response.content)
-                if json_match:
-                    json_str = json_match.group(0)
-                    self.logger.debug(f"Extracted JSON string: {json_str[:200]}...")
+                # Use improved JSON extraction method
+                json_str = self._extract_json_from_text(response.content)
+                if json_str:
+                    self.logger.debug(f"Extracted JSON string (length: {len(json_str)}): {json_str[:200]}...")
                     proposal = json.loads(json_str)
                     
                     # Convert the allocation format if needed
@@ -724,7 +839,8 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 pass
             
             # Fallback: create a simple proposal
-            self.logger.warning(f"Failed to parse proposal JSON. Full content: {response.content}")
+            response_preview = response.content[:200] if response.content else ""
+            self.logger.warning(f"Failed to parse proposal JSON from {self.agent_id}: {response_preview}...")
             return {
                 "allocation": {self.agent_id: list(range(len(context.items)))},
                 "reasoning": "Failed to parse structured response",
@@ -756,26 +872,34 @@ Vote must be either "accept" or "reject"."""
         
         response = await self.generate_response(context, prompt)
         
+        # Handle empty or None responses
+        if not response.content or not response.content.strip():
+            self.logger.warning(f"Empty response from {self.agent_id} for vote. Defaulting to reject.")
+            return {
+                "vote": "reject",
+                "reasoning": "No response received from agent",
+                "voter": self.agent_id,
+                "round": context.current_round
+            }
+        
         try:
             # Try to parse the JSON directly first
             vote = json.loads(response.content)
             vote["voter"] = self.agent_id
             vote["round"] = context.current_round
             return vote
-        except json.JSONDecodeError:
-            # Try to extract JSON from text response
+        except json.JSONDecodeError as e:
+            # Try to extract JSON from text response using a more robust method
             try:
-                import re
-                
-                # Look for JSON block in the response
-                json_match = re.search(r'\{[\s\S]*\}', response.content)
-                if json_match:
-                    json_str = json_match.group(0)
+                # Use improved JSON extraction
+                json_str = self._extract_json_from_text(response.content)
+                if json_str:
                     vote = json.loads(json_str)
                     vote["voter"] = self.agent_id
                     vote["round"] = context.current_round
                     return vote
-            except (json.JSONDecodeError, AttributeError):
+            except (json.JSONDecodeError, AttributeError, ValueError) as parse_error:
+                self.logger.debug(f"JSON extraction failed for vote: {parse_error}")
                 pass
             
             # Fallback: reject by default
