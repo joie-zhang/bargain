@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --time=01:00:00
+#SBATCH --time=10:00:00
 #SBATCH --output=logs/cluster/gpt5_low_vs_high_%j.out
 #SBATCH --error=logs/cluster/gpt5_low_vs_high_%j.err
 #SBATCH --mail-type=END,FAIL
