@@ -26,8 +26,11 @@ except ImportError:
 
 from analysis import (
     analyze_batch,
+    aggregate_batches,
     compare_batches,
     extract_concession_reasoning,
+    get_aggregated_effort_comparison,
+    get_experiment_type,
     load_all_interactions,
     BatchMetrics,
     ExperimentMetrics,
@@ -883,6 +886,9 @@ def create_reasoning_vs_payoff_by_effort_chart(batches: List[BatchMetrics]) -> O
         title="Reasoning Tokens vs. Payoff by Effort Level",
     )
 
+    # Make markers bigger
+    fig.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
+
     fig.update_layout(
         xaxis_title="Reasoning Tokens (Private Thinking Phase)",
         yaxis_title="Agent Payoff (Discounted)",
@@ -966,6 +972,9 @@ def create_reasoning_vs_payoff_by_position_chart(batches: List[BatchMetrics]) ->
         title="Reasoning Tokens vs. Payoff by Agent Position",
     )
 
+    # Make markers bigger
+    fig.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
+
     fig.update_layout(
         xaxis_title="Reasoning Tokens (Private Thinking Phase)",
         yaxis_title="Agent Payoff (Discounted)",
@@ -975,6 +984,115 @@ def create_reasoning_vs_payoff_by_position_chart(batches: List[BatchMetrics]) ->
     # Add a horizontal line at y=50 (equal split reference)
     fig.add_hline(y=50, line_dash="dash", line_color="gray",
                   annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
+def create_payoff_difference_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Create scatter plot showing paired agent comparison:
+    X = Reasoning token difference (Beta - Alpha)
+    Y = Payoff difference (Beta - Alpha)
+
+    Positive Y means Beta (second agent) won more.
+    This helps identify if higher reasoning effort leads to better outcomes.
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        short_name = get_short_experiment_name(batch.folder_name)
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        # Create a matchup label
+        matchup = f"{alpha_effort} vs {beta_effort}"
+
+        for exp in batch.experiments:
+            # Get per-agent reasoning tokens
+            alpha_tokens = 0
+            beta_tokens = 0
+            if "Agent_Alpha" in exp.phase_tokens_by_agent:
+                alpha_tokens = exp.phase_tokens_by_agent["Agent_Alpha"].private_thinking
+            if "Agent_Beta" in exp.phase_tokens_by_agent:
+                beta_tokens = exp.phase_tokens_by_agent["Agent_Beta"].private_thinking
+
+            # Calculate differences
+            token_diff = beta_tokens - alpha_tokens
+            payoff_diff = exp.agent_beta_utility - exp.agent_alpha_utility
+
+            all_data.append({
+                "Experiment": short_name,
+                "Matchup": matchup,
+                "Alpha Effort": alpha_effort,
+                "Beta Effort": beta_effort,
+                "Token Diff (β-α)": token_diff,
+                "Payoff Diff (β-α)": payoff_diff,
+                "Alpha Tokens": alpha_tokens,
+                "Beta Tokens": beta_tokens,
+                "Alpha Payoff": exp.agent_alpha_utility,
+                "Beta Payoff": exp.agent_beta_utility,
+                "Run": exp.run_number,
+                "Consensus": "Yes" if exp.consensus_reached else "No",
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Define color mapping for matchups
+    color_map = {
+        "Low vs Low": "#6b7280",      # Gray
+        "Low vs Medium": "#f59e0b",   # Orange
+        "Low vs High": "#ef4444",     # Red
+        "Medium vs Low": "#84cc16",   # Lime
+        "Medium vs Medium": "#6b7280",
+        "Medium vs High": "#f97316",  # Orange-red
+        "High vs Low": "#22c55e",     # Green
+        "High vs Medium": "#14b8a6",  # Teal
+        "High vs High": "#6b7280",    # Gray
+    }
+
+    fig = px.scatter(
+        df,
+        x="Token Diff (β-α)",
+        y="Payoff Diff (β-α)",
+        color="Matchup",
+        color_discrete_map=color_map,
+        hover_data=["Experiment", "Alpha Effort", "Beta Effort",
+                    "Alpha Tokens", "Beta Tokens", "Alpha Payoff", "Beta Payoff", "Run"],
+        title="Paired Agent Comparison: Token & Payoff Differences",
+    )
+
+    # Make markers bigger
+    fig.update_traces(marker=dict(size=14, line=dict(width=1, color='DarkSlateGrey')))
+
+    fig.update_layout(
+        xaxis_title="Reasoning Token Difference (Beta - Alpha)",
+        yaxis_title="Payoff Difference (Beta - Alpha)",
+        height=550,
+    )
+
+    # Add reference lines
+    fig.add_hline(y=0, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Payoff", annotation_position="right")
+    fig.add_vline(x=0, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Tokens", annotation_position="top")
+
+    # Add quadrant annotations
+    fig.add_annotation(x=0.95, y=0.95, xref="paper", yref="paper",
+                       text="β reasons more & wins", showarrow=False,
+                       font=dict(size=10, color="gray"), opacity=0.7)
+    fig.add_annotation(x=0.05, y=0.95, xref="paper", yref="paper",
+                       text="α reasons more, β wins", showarrow=False,
+                       font=dict(size=10, color="gray"), opacity=0.7)
+    fig.add_annotation(x=0.95, y=0.05, xref="paper", yref="paper",
+                       text="β reasons more, α wins", showarrow=False,
+                       font=dict(size=10, color="gray"), opacity=0.7)
+    fig.add_annotation(x=0.05, y=0.05, xref="paper", yref="paper",
+                       text="α reasons more & wins", showarrow=False,
+                       font=dict(size=10, color="gray"), opacity=0.7)
 
     return fig
 
@@ -1096,10 +1214,250 @@ def create_phase_efficiency_chart(batches: List[BatchMetrics]) -> Optional[go.Fi
 # MAIN COMPARISON VIEW
 # =============================================================================
 
+def render_aggregated_effort_view():
+    """
+    Render the aggregated effort level comparison view.
+
+    This view automatically aggregates all folders of the same experiment type
+    (e.g., all low_vs_low folders) into single buckets for statistical analysis.
+    """
+    st.header("📊 Aggregated Effort Level Comparison")
+    st.markdown("""
+    *Automatically aggregates all runs of the same experiment type across multiple batch folders.*
+
+    This view is ideal for statistical analysis when you have multiple SLURM jobs
+    producing results for the same experiment configuration.
+    """)
+
+    # Get aggregated data
+    with st.spinner("Aggregating experiments by effort level..."):
+        aggregated = get_aggregated_effort_comparison(RESULTS_DIR)
+
+    if not aggregated:
+        st.warning("No GPT-5 effort experiments found to aggregate.")
+        return
+
+    # Display aggregation summary
+    st.subheader("📦 Aggregation Summary")
+
+    # Count folders per type for display
+    folders = get_experiment_folders()
+    folder_counts = {}
+    for folder in folders:
+        exp_type = get_experiment_type(folder)
+        if exp_type:
+            folder_counts[exp_type] = folder_counts.get(exp_type, 0) + 1
+
+    # Create summary cards
+    cols = st.columns(len(aggregated))
+    for i, (exp_type, batch) in enumerate(sorted(aggregated.items())):
+        with cols[i]:
+            # Format the experiment type nicely
+            alpha, beta = exp_type.split('_vs_')
+            display_name = f"{alpha.title()} vs {beta.title()}"
+
+            st.markdown(f"""
+            <div style="
+                background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+                padding: 15px;
+                border-radius: 10px;
+                text-align: center;
+                color: white;
+            ">
+                <h3 style="margin: 0; color: white;">{display_name}</h3>
+                <p style="margin: 5px 0; font-size: 24px; font-weight: bold;">{batch.num_runs} runs</p>
+                <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+                    from {folder_counts.get(exp_type, 1)} batch folder(s)
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Convert to list for visualization functions
+    batches = list(aggregated.values())
+
+    # Create nicer labels for the batches
+    for batch in batches:
+        # Extract effort levels from folder name for cleaner display
+        exp_type = None
+        for et in aggregated.keys():
+            if aggregated[et] == batch:
+                exp_type = et
+                break
+        if exp_type:
+            alpha, beta = exp_type.split('_vs_')
+            batch.folder_name = f"{alpha.title()} vs {beta.title()}"
+
+    # Summary metrics
+    st.subheader("📈 Aggregated Metrics")
+    cols = st.columns(5)
+
+    with cols[0]:
+        total_runs = sum(b.num_runs for b in batches)
+        st.metric("Total Runs", total_runs)
+
+    with cols[1]:
+        avg_consensus = sum(b.consensus_rate for b in batches) / len(batches)
+        st.metric("Avg Consensus Rate", f"{avg_consensus:.0%}")
+
+    with cols[2]:
+        avg_nash = sum(b.avg_nash_welfare for b in batches) / len(batches)
+        st.metric("Avg Nash Welfare", f"{avg_nash:.1f}")
+
+    with cols[3]:
+        avg_alpha = sum(b.avg_alpha_utility for b in batches) / len(batches)
+        st.metric("Avg Alpha Utility", f"{avg_alpha:.1f}")
+
+    with cols[4]:
+        avg_beta = sum(b.avg_beta_utility for b in batches) / len(batches)
+        st.metric("Avg Beta Utility", f"{avg_beta:.1f}")
+
+    # Detailed comparison table
+    st.subheader("📋 Detailed Comparison")
+
+    # Create a more detailed table for aggregated data
+    table_data = []
+    for exp_type, batch in sorted(aggregated.items()):
+        alpha, beta = exp_type.split('_vs_')
+        table_data.append({
+            "Matchup": f"{alpha.title()} vs {beta.title()}",
+            "Total Runs": batch.num_runs,
+            "Folders": folder_counts.get(exp_type, 1),
+            "Consensus Rate": f"{batch.consensus_rate:.0%}",
+            "Avg Round": f"{batch.avg_consensus_round:.1f}",
+            "Alpha Utility": f"{batch.avg_alpha_utility:.1f} ± {batch.std_alpha_utility:.1f}",
+            "Beta Utility": f"{batch.avg_beta_utility:.1f} ± {batch.std_beta_utility:.1f}",
+            "Utility Diff (α-β)": f"{batch.avg_alpha_utility - batch.avg_beta_utility:+.1f}",
+            "Nash Welfare": f"{batch.avg_nash_welfare:.1f} ± {batch.std_nash_welfare:.1f}",
+        })
+
+    df = pd.DataFrame(table_data)
+    st.dataframe(df, use_container_width=True)
+
+    # Download button
+    csv = df.to_csv(index=False)
+    st.download_button(
+        "📥 Download Aggregated Results CSV",
+        csv,
+        "aggregated_effort_comparison.csv",
+        "text/csv"
+    )
+
+    # Statistical significance indicator
+    st.subheader("📊 Statistical Power")
+
+    # Show a table indicating statistical power based on sample size
+    power_data = []
+    for exp_type, batch in sorted(aggregated.items()):
+        alpha, beta = exp_type.split('_vs_')
+        n = batch.num_runs
+
+        # Rough power estimate (simplified)
+        # With n=5, hard to detect small effects; n=20+ for medium effects
+        if n >= 30:
+            power_level = "🟢 Good (n≥30)"
+        elif n >= 15:
+            power_level = "🟡 Moderate (15≤n<30)"
+        elif n >= 10:
+            power_level = "🟠 Limited (10≤n<15)"
+        else:
+            power_level = "🔴 Low (n<10)"
+
+        power_data.append({
+            "Matchup": f"{alpha.title()} vs {beta.title()}",
+            "N": n,
+            "Power": power_level,
+            "Recommendation": "Sufficient" if n >= 15 else f"Need ~{max(15-n, 5)} more runs"
+        })
+
+    st.dataframe(pd.DataFrame(power_data), use_container_width=True)
+
+    # Visualizations using the same functions but with aggregated data
+    st.subheader("📊 Visualizations")
+
+    viz_tabs = st.tabs([
+        "💰 Payoffs",
+        "🔢 Tokens by Phase",
+        "🤝 Consensus Distribution",
+        "⚖️ Nash Welfare",
+        "🧠 Reasoning vs Payoff"
+    ])
+
+    with viz_tabs[0]:
+        st.markdown("### Agent Payoff Comparison (Aggregated)")
+
+        utility_type = st.radio(
+            "Utility Type",
+            ["Discounted", "Non-Discounted (Raw)"],
+            horizontal=True,
+            key="agg_payoff_utility_type"
+        )
+        use_discounted = utility_type == "Discounted"
+
+        fig = create_payoff_comparison_chart(batches)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+
+        fig_violin = create_utility_violin_chart(batches, use_discounted=use_discounted)
+        if fig_violin:
+            st.plotly_chart(fig_violin, use_container_width=True)
+
+    with viz_tabs[1]:
+        st.markdown("### Token Usage by Phase (Aggregated)")
+
+        fig = create_phase_token_breakdown_chart(batches)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+
+    with viz_tabs[2]:
+        st.markdown("### Consensus Round Distribution (Aggregated)")
+
+        fig = create_consensus_violin_chart(batches)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+
+        fig_bar = create_consensus_round_chart(batches)
+        if fig_bar:
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    with viz_tabs[3]:
+        st.markdown("### Nash Welfare (Aggregated)")
+
+        fig = create_nash_welfare_chart(batches)
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+
+    with viz_tabs[4]:
+        st.markdown("### Reasoning vs Payoff (Aggregated)")
+
+        fig_effort = create_reasoning_vs_payoff_by_effort_chart(batches)
+        if fig_effort:
+            st.plotly_chart(fig_effort, use_container_width=True)
+
+        fig_diff = create_payoff_difference_chart(batches)
+        if fig_diff:
+            st.plotly_chart(fig_diff, use_container_width=True)
+
+
 def render_comparison_view():
     """Render the main comparison view."""
     st.header("📊 Batch Comparison View")
     st.markdown("*Compare multiple experiment batches side-by-side*")
+
+    # Add view mode selector at the top
+    st.sidebar.markdown("## 🎛️ View Mode")
+    view_mode = st.sidebar.radio(
+        "Select view mode",
+        ["Individual Batches", "Aggregated by Effort Level"],
+        help="Aggregated mode combines all folders of the same experiment type (e.g., all low_vs_low folders) into single statistical buckets."
+    )
+
+    if view_mode == "Aggregated by Effort Level":
+        render_aggregated_effort_view()
+        return
+
+    # Original individual batch view continues below...
 
     # Get available experiments
     folders = get_experiment_folders()
@@ -1390,6 +1748,20 @@ def render_comparison_view():
             st.plotly_chart(fig_position, use_container_width=True)
         else:
             st.info("Insufficient data for position analysis.")
+
+        # Paired agent comparison (difference plot)
+        st.markdown("#### Paired Agent Comparison (Differences)")
+        st.markdown("""
+        *Each dot = one negotiation. Shows the **difference** between paired agents (Beta − Alpha).*
+        - **X-axis**: Token difference (positive = Beta reasoned more)
+        - **Y-axis**: Payoff difference (positive = Beta won more)
+        - **Quadrants**: Top-right = β reasons more & wins; Bottom-left = α reasons more & wins
+        """)
+        fig_diff = create_payoff_difference_chart(batches)
+        if fig_diff:
+            st.plotly_chart(fig_diff, use_container_width=True)
+        else:
+            st.info("Insufficient data for paired comparison.")
 
         # Phase-specific breakdown
         st.markdown("#### Phase-Specific Reasoning vs. Payoff")
