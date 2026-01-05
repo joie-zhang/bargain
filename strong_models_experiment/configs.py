@@ -160,8 +160,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o1-2024-12-17",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O1 reasoning model (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's O1 reasoning model (STRONG MODEL) - Note: temperature parameter is ignored by API",
+        "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -170,8 +170,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with low reasoning effort (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's GPT-5 model with low reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "temperature": 1.0,
         "reasoning_effort": "low",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -181,8 +181,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with medium reasoning effort (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's GPT-5 model with medium reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "temperature": 1.0,
         "reasoning_effort": "medium",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -192,8 +192,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with high reasoning effort (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's GPT-5 model with high reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "temperature": 1.0,
         "reasoning_effort": "high",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -203,8 +203,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5.1-2025-11-13",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5.1 model (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's GPT-5.1 model (STRONG MODEL) - Note: only supports temperature=1",
+        "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -213,7 +213,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-mini-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 Mini model (STRONG MODEL)",
+        "description": "OpenAI's GPT-5 Mini model (STRONG MODEL) - Note: only supports temperature=1",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -223,7 +223,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-nano-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 Nano model (STRONG MODEL)",
+        "description": "OpenAI's GPT-5 Nano model (STRONG MODEL) - Note: only supports temperature=1",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -233,8 +233,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o3-2025-04-16",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O3 reasoning model (STRONG MODEL)",
-        "temperature": 0.7,
+        "description": "OpenAI's O3 reasoning model (STRONG MODEL) - Note: only supports temperature=1",
+        "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -298,8 +298,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o3-mini-2025-01-31",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O3 Mini reasoning model",
-        "temperature": 0.7,
+        "description": "OpenAI's O3 Mini reasoning model - Note: only supports temperature=1",
+        "temperature": 1.0,
         "system_prompt": "You are a negotiating agent."
     },
     "o4-mini": {
@@ -307,8 +307,8 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o4-mini-2025-04-16",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O4 Mini reasoning model",
-        "temperature": 0.7,
+        "description": "OpenAI's O4 Mini reasoning model - Note: only supports temperature=1",
+        "temperature": 1.0,
         "system_prompt": "You are a negotiating agent."
     },
     "gemini-2-5-flash": {
