@@ -27,6 +27,26 @@ class PhaseHandler:
             "default": None
         }
     
+    def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
+        """Extract token usage information from an AgentResponse object."""
+        if not agent_response:
+            return None
+        
+        token_usage = None
+        if agent_response.metadata and agent_response.metadata.get("usage"):
+            usage = agent_response.metadata["usage"]
+            token_usage = {
+                "input_tokens": usage.get("prompt_tokens"),
+                "output_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }
+        elif agent_response.tokens_used:
+            token_usage = {
+                "total_tokens": agent_response.tokens_used
+            }
+        
+        return token_usage
+    
     async def run_game_setup_phase(self, agents: List[BaseLLMAgent], items: List[Dict], 
                                   preferences: Dict, config: Dict) -> None:
         """Phase 1A: Game Setup Phase"""
@@ -53,11 +73,14 @@ class PhaseHandler:
                 turn_type="setup"
             )
             
-            response = await agent.discuss(context, game_rules_prompt)
+            # Get response with token info
+            agent_response = await agent.generate_response(context, game_rules_prompt)
+            response_content = agent_response.content
+            token_usage = self._extract_token_usage(agent_response)
             
             self.logger.info(f"  📬 {agent.agent_id} response:")
-            self.logger.info(f"    {response}")
-            self.save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response, 0)
+            self.logger.info(f"    {response_content}")
+            self.save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response_content, 0, token_usage)
         
         self.logger.info("Game setup phase completed - all agents briefed on rules")
     
@@ -92,11 +115,14 @@ class PhaseHandler:
                 turn_type="preference_assignment"
             )
             
-            response = await agent.discuss(context, preference_prompt)
+            # Get response with token info
+            agent_response = await agent.generate_response(context, preference_prompt)
+            response_content = agent_response.content
+            token_usage = self._extract_token_usage(agent_response)
             
             self.logger.info(f"  📬 {agent.agent_id} acknowledgment:")
-            self.logger.info(f"    {response}")
-            self.save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response, 0)
+            self.logger.info(f"    {response_content}")
+            self.save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response_content, 0, token_usage)
         
         self.logger.info("Private preference assignment completed")
     
@@ -133,13 +159,16 @@ class PhaseHandler:
                 discussion_prompt, agent.agent_id, current_discussion_history, i + 1, len(agents)
             )
             
-            response = await agent.discuss(context, full_discussion_prompt)
+            # Get response with token info
+            agent_response = await agent.generate_response(context, full_discussion_prompt)
+            response_content = agent_response.content
+            token_usage = self._extract_token_usage(agent_response)
             
             message = {
                 "phase": "discussion",
                 "round": round_num,
                 "from": agent.agent_id,
-                "content": response,
+                "content": response_content,
                 "timestamp": time.time(),
                 "speaker_order": i + 1,
                 "total_speakers": len(agents)
@@ -147,10 +176,10 @@ class PhaseHandler:
             messages.append(message)
             
             self.logger.info(f"  💬 Speaker {i+1}/{len(agents)} - {agent.agent_id}:")
-            self.logger.info(f"    {response}")
+            self.logger.info(f"    {response_content}")
             
             self.save_interaction(agent.agent_id, f"discussion_round_{round_num}", 
-                                full_discussion_prompt, response, round_num)
+                                full_discussion_prompt, response_content, round_num, token_usage)
         
         self.logger.info(f"Discussion phase completed - {len(messages)} messages exchanged")
         return {"messages": messages}
@@ -185,6 +214,9 @@ class PhaseHandler:
             try:
                 thinking_response = await agent.think_strategy(thinking_prompt, context)
                 
+                # Extract token usage if present (remove from response to avoid saving it in the content)
+                token_usage = thinking_response.pop("_token_usage", None)
+                
                 self.logger.info(f"🧠 [PRIVATE] {agent.agent_id} strategic thinking:")
                 self.logger.info(f"  Full reasoning: {thinking_response.get('reasoning', 'No reasoning provided')}")
                 self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
@@ -192,7 +224,7 @@ class PhaseHandler:
                 
                 thinking_response_str = json.dumps(thinking_response, default=str)
                 self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", 
-                                    thinking_prompt, thinking_response_str, round_num)
+                                    thinking_prompt, thinking_response_str, round_num, token_usage)
                 
                 thinking_results.append({
                     "agent_id": agent.agent_id,
@@ -244,11 +276,15 @@ class PhaseHandler:
             proposal_prompt = f"Please propose an allocation for round {round_num}."
             
             proposal = await agent.propose_allocation(context)
+            
+            # Extract token usage if present (remove from proposal to avoid saving it in the content)
+            token_usage = proposal.pop("_token_usage", None)
+            
             proposals.append(proposal)
             
             proposal_str = json.dumps(proposal, default=str)
             self.save_interaction(agent.agent_id, f"proposal_round_{round_num}", 
-                                proposal_prompt, proposal_str, round_num)
+                                proposal_prompt, proposal_str, round_num, token_usage)
             
             message = {
                 "phase": "proposal",
@@ -415,6 +451,9 @@ Vote must be either "accept" or "reject"."""
                         proposal_for_voting
                     )
                     
+                    # Extract token usage if present (remove from vote_result to avoid saving it in the content)
+                    token_usage = vote_result.pop("_token_usage", None)
+                    
                     vote_entry = {
                         "voter_id": agent.agent_id,
                         "proposal_number": enum_proposal["proposal_number"],
@@ -449,7 +488,8 @@ Vote must be either "accept" or "reject"."""
                         f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}", 
                         voting_prompt, 
                         vote_response_str, 
-                        round_num
+                        round_num,
+                        token_usage
                     )
                 
                 private_votes.extend(agent_votes)
@@ -595,7 +635,11 @@ Vote must be either "accept" or "reject"."""
             )
             
             try:
-                reflection = await agent.discuss(context, reflection_prompt)
+                # Get response with token info
+                agent_response = await agent.generate_response(context, reflection_prompt)
+                reflection = agent_response.content
+                token_usage = self._extract_token_usage(agent_response)
+                
                 reflections.append({
                     "agent_id": agent.agent_id,
                     "reflection": reflection,
@@ -606,7 +650,7 @@ Vote must be either "accept" or "reject"."""
                 self.logger.info(f"    {reflection}")
                 
                 self.save_interaction(agent.agent_id, f"reflection_round_{round_num}", 
-                                    reflection_prompt, reflection, round_num)
+                                    reflection_prompt, reflection, round_num, token_usage)
             except Exception as e:
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {e}")
         

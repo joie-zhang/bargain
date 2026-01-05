@@ -336,6 +336,19 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                 # Parse strategic thinking response
                 thinking_result = self._parse_thinking_response(response.content)
                 
+                # Add token usage info to the result
+                if response.metadata and response.metadata.get("usage"):
+                    usage = response.metadata["usage"]
+                    thinking_result["_token_usage"] = {
+                        "input_tokens": usage.get("prompt_tokens"),
+                        "output_tokens": usage.get("completion_tokens"),
+                        "total_tokens": usage.get("total_tokens")
+                    }
+                elif response.tokens_used:
+                    thinking_result["_token_usage"] = {
+                        "total_tokens": response.tokens_used
+                    }
+                
                 # Store in strategic memory
                 self.strategic_memory.append(f"Round {context.current_round} thinking: {thinking_result.get('strategy', '')}")
                 
@@ -759,15 +772,32 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
         
         response = await self.generate_response(context, prompt)
         
+        # Extract token usage info
+        token_usage = None
+        if response.metadata and response.metadata.get("usage"):
+            usage = response.metadata["usage"]
+            token_usage = {
+                "input_tokens": usage.get("prompt_tokens"),
+                "output_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }
+        elif response.tokens_used:
+            token_usage = {
+                "total_tokens": response.tokens_used
+            }
+        
         # Handle empty or None responses
         if not response.content or not response.content.strip():
             self.logger.warning(f"Empty response from {self.agent_id} for proposal. Using fallback.")
-            return {
+            result = {
                 "allocation": {},
                 "reasoning": "No response received from agent",
                 "proposed_by": self.agent_id,
                 "round": context.current_round
             }
+            if token_usage:
+                result["_token_usage"] = token_usage
+            return result
         
         try:
             # Try to parse the JSON directly first
@@ -779,6 +809,8 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                 proposal["reasoning"] = "No reasoning provided"
             proposal["proposed_by"] = self.agent_id
             proposal["round"] = context.current_round
+            if token_usage:
+                proposal["_token_usage"] = token_usage
             return proposal
         except (json.JSONDecodeError, ValueError) as e:
             # Log parsing failure (truncate long responses to avoid huge log files)
@@ -878,21 +910,40 @@ Vote must be either "accept" or "reject"."""
         
         response = await self.generate_response(context, prompt)
         
+        # Extract token usage info
+        token_usage = None
+        if response.metadata and response.metadata.get("usage"):
+            usage = response.metadata["usage"]
+            token_usage = {
+                "input_tokens": usage.get("prompt_tokens"),
+                "output_tokens": usage.get("completion_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }
+        elif response.tokens_used:
+            token_usage = {
+                "total_tokens": response.tokens_used
+            }
+        
         # Handle empty or None responses
         if not response.content or not response.content.strip():
             self.logger.warning(f"Empty response from {self.agent_id} for vote. Defaulting to reject.")
-            return {
+            result = {
                 "vote": "reject",
                 "reasoning": "No response received from agent",
                 "voter": self.agent_id,
                 "round": context.current_round
             }
+            if token_usage:
+                result["_token_usage"] = token_usage
+            return result
         
         try:
             # Try to parse the JSON directly first
             vote = json.loads(response.content)
             vote["voter"] = self.agent_id
             vote["round"] = context.current_round
+            if token_usage:
+                vote["_token_usage"] = token_usage
             return vote
         except json.JSONDecodeError as e:
             # Try to extract JSON from text response using a more robust method

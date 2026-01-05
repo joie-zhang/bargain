@@ -388,8 +388,18 @@ class StrongModelsExperiment:
         
         return batch_results
     
-    def _save_interaction(self, agent_id: str, phase: str, prompt: str, response: str, round_num: int = None):
-        """Save an interaction to both all_interactions and agent-specific storage."""
+    def _save_interaction(self, agent_id: str, phase: str, prompt: str, response: str, round_num: int = None,
+                         token_usage: Optional[Dict[str, Any]] = None):
+        """Save an interaction to both all_interactions and agent-specific storage.
+        
+        Args:
+            agent_id: Agent identifier
+            phase: Phase name
+            prompt: Prompt sent to agent
+            response: Agent's response text
+            round_num: Round number
+            token_usage: Optional dict with token usage info (e.g., {'input_tokens': int, 'output_tokens': int, 'total_tokens': int})
+        """
         interaction = {
             "timestamp": time.time(),
             "experiment_id": self.current_experiment_id,
@@ -399,6 +409,10 @@ class StrongModelsExperiment:
             "prompt": prompt,
             "response": response
         }
+        
+        # Add token usage information if provided
+        if token_usage:
+            interaction["token_usage"] = token_usage
         
         # Add to all interactions
         self.all_interactions.append(interaction)
