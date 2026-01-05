@@ -1,25 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=gpt5_low_vs_low
+#SBATCH --job-name=gpt5_low_vs_med
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:h100:1
-#SBATCH --constraint=gpu80
-#SBATCH --mem=80G
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=16G
 #SBATCH --time=01:00:00
-#SBATCH --partition=pli-c
-#SBATCH --output=logs/cluster/gpt5_low_vs_low_%j.out
-#SBATCH --error=logs/cluster/gpt5_low_vs_low_%j.err
+#SBATCH --output=logs/cluster/gpt5_low_vs_med_%j.out
+#SBATCH --error=logs/cluster/gpt5_low_vs_med_%j.err
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=joie@princeton.edu
 
-# This script runs GPT-5 Low Reasoning Effort vs GPT-5 Low Reasoning Effort
+# This script runs GPT-5 Low Reasoning Effort vs GPT-5 Medium Reasoning Effort
 # 5 runs with competition_level=1, max_rounds=10
-# Running on PLI cluster (H100 GPUs - 1 GPU, 80GB)
+# Running on PLI cluster (CPU-only, API calls to OpenAI)
 
 set -e
 
 MODEL1="gpt-5-low-effort"
-MODEL2="gpt-5-low-effort"
+MODEL2="gpt-5-medium-effort"
 COMPETITION_LEVEL=1
 NUM_RUNS=5
 NUM_ITEMS=5
@@ -30,7 +28,7 @@ echo "SLURM Job ID: $SLURM_JOB_ID"
 echo "Models: ${MODEL1} vs ${MODEL2}"
 echo "Started at: $(date)"
 echo "Node: $SLURM_NODELIST"
-echo "Cluster: PLI (H100 GPUs - 1 GPU, 80GB)"
+echo "Cluster: PLI (CPU-only, API calls)"
 echo "============================================================"
 
 # Change to project directory
@@ -47,9 +45,8 @@ module load proxy/default
 source "${BASE_DIR}/.venv/bin/activate"
 echo "Activated virtual environment: ${BASE_DIR}/.venv"
 
-# Verify Python and CUDA
+# Verify Python
 echo "Python version: $(python3 --version)"
-echo "CUDA available: $(python3 -c 'import torch; print(torch.cuda.is_available())')"
 echo ""
 
 # Create logs directory if it doesn't exist
