@@ -814,6 +814,42 @@ Ensure reproducibility across different environments and scales."
 For detailed automation documentation, see `docs/guides/automation-hooks.md`
 </automation>
 
+## Virtual Environment Management
+
+<environment_management>
+**CRITICAL: Always check the virtual environment before assuming packages are missing.**
+
+When encountering package-related errors (e.g., `ModuleNotFoundError`, `ImportError`):
+
+1. **First, activate the project virtual environment**:
+   ```bash
+   source .venv/bin/activate
+   ```
+
+2. **Verify the package is actually missing** by checking:
+   ```bash
+   pip list | grep <package_name>
+   # or
+   python -c "import <package_name>"
+   ```
+
+3. **DO NOT immediately modify code** to accommodate "missing" packages:
+   - The package is often installed in `.venv` but the wrong Python interpreter was used
+   - Adding `try/except ImportError` blocks as a workaround creates technical debt
+   - Making packages "optional" when they're actually required obscures real issues
+
+4. **If the package is truly not installed**, request permission and use:
+   ```bash
+   uv pip install <package_name>
+   ```
+   Always get user permission before installing new packages.
+
+5. **Common virtual environment locations**:
+   - Project venv: `.venv/bin/activate`
+   - Conda: `conda activate <env_name>`
+   - Poetry: `poetry shell`
+</environment_management>
+
 ## Important File References
 
 <key_files>
