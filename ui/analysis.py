@@ -36,6 +36,47 @@ except ImportError:
 # =============================================================================
 
 @dataclass
+class ProposalMetrics:
+    """Metrics for a single proposal."""
+    round_num: int
+    proposer: str
+    allocation: Dict[str, List[int]]
+    alpha_utility: float  # Discounted
+    beta_utility: float   # Discounted
+    alpha_raw_utility: float  # Non-discounted
+    beta_raw_utility: float   # Non-discounted
+    nash_welfare: float
+    nash_welfare_raw: float  # Non-discounted Nash welfare
+
+
+@dataclass
+class PhaseTokens:
+    """Token counts by negotiation phase."""
+    game_setup: int = 0
+    preference_assignment: int = 0
+    discussion: int = 0
+    private_thinking: int = 0
+    proposal: int = 0
+    voting: int = 0
+    reflection: int = 0
+
+    def total(self) -> int:
+        return (self.game_setup + self.preference_assignment + self.discussion +
+                self.private_thinking + self.proposal + self.voting + self.reflection)
+
+    def to_dict(self) -> Dict[str, int]:
+        return {
+            "game_setup": self.game_setup,
+            "preference_assignment": self.preference_assignment,
+            "discussion": self.discussion,
+            "private_thinking": self.private_thinking,
+            "proposal": self.proposal,
+            "voting": self.voting,
+            "reflection": self.reflection,
+        }
+
+
+@dataclass
 class ExperimentMetrics:
     """Metrics for a single experiment run."""
     experiment_id: str
@@ -63,12 +104,17 @@ class ExperimentMetrics:
 
     # Nash welfare
     nash_welfare: float
+    nash_welfare_raw: float  # Non-discounted
 
     # Fields with defaults must come last
     tokens_by_phase: Dict[str, int] = field(default_factory=dict)
+    phase_tokens: PhaseTokens = field(default_factory=PhaseTokens)
+    phase_tokens_by_agent: Dict[str, PhaseTokens] = field(default_factory=dict)
     reasoning_trace_lengths: List[int] = field(default_factory=list)
     agent_preferences: Dict[str, List[float]] = field(default_factory=dict)
     final_allocation: Dict[str, List[int]] = field(default_factory=dict)
+    proposals_by_round: List[ProposalMetrics] = field(default_factory=list)
+    discount_factor: float = 0.9
 
 
 @dataclass
@@ -83,11 +129,17 @@ class BatchMetrics:
     consensus_rate: float
     avg_consensus_round: float
 
-    # Utilities
+    # Utilities (discounted)
     avg_alpha_utility: float
     avg_beta_utility: float
     std_alpha_utility: float
     std_beta_utility: float
+
+    # Utilities (raw/non-discounted)
+    avg_alpha_raw_utility: float
+    avg_beta_raw_utility: float
+    std_alpha_raw_utility: float
+    std_beta_raw_utility: float
 
     # Token usage
     avg_total_tokens: int
@@ -102,10 +154,15 @@ class BatchMetrics:
     # Nash welfare
     avg_nash_welfare: float
     std_nash_welfare: float
+    avg_nash_welfare_raw: float
+    std_nash_welfare_raw: float
 
     # Fields with defaults must come last
     consensus_rounds: List[int] = field(default_factory=list)
     experiments: List[ExperimentMetrics] = field(default_factory=list)
+    avg_phase_tokens: PhaseTokens = field(default_factory=PhaseTokens)
+    avg_phase_tokens_alpha: PhaseTokens = field(default_factory=PhaseTokens)
+    avg_phase_tokens_beta: PhaseTokens = field(default_factory=PhaseTokens)
 
 
 # =============================================================================
@@ -175,6 +232,130 @@ def analyze_token_usage(interactions: List[Dict]) -> Dict[str, Any]:
             results["reasoning_traces"].append(len(response))
 
     return results
+
+
+def categorize_phase(phase_name: str) -> str:
+    """Categorize a phase string into one of the 7 main phases."""
+    phase_lower = phase_name.lower()
+
+    if "game_setup" in phase_lower or "setup" in phase_lower:
+        return "game_setup"
+    elif "preference" in phase_lower or "assignment" in phase_lower:
+        return "preference_assignment"
+    elif "discussion" in phase_lower:
+        return "discussion"
+    elif "thinking" in phase_lower or "private" in phase_lower:
+        return "private_thinking"
+    elif "proposal" in phase_lower:
+        return "proposal"
+    elif "voting" in phase_lower or "vote" in phase_lower:
+        return "voting"
+    elif "reflection" in phase_lower:
+        return "reflection"
+    else:
+        # Default to discussion for unknown phases
+        return "discussion"
+
+
+def analyze_phase_tokens(interactions: List[Dict]) -> Tuple[PhaseTokens, Dict[str, PhaseTokens]]:
+    """
+    Analyze token usage by the 7 main negotiation phases.
+
+    Returns:
+        Tuple of (overall PhaseTokens, Dict mapping agent -> PhaseTokens)
+    """
+    overall = PhaseTokens()
+    by_agent: Dict[str, PhaseTokens] = {
+        "Agent_Alpha": PhaseTokens(),
+        "Agent_Beta": PhaseTokens(),
+    }
+
+    for entry in interactions:
+        response = entry.get("response", "")
+        agent = entry.get("agent_id", "unknown")
+        phase = entry.get("phase", "unknown")
+
+        tokens = estimate_tokens(response)
+        category = categorize_phase(phase)
+
+        # Update overall tokens
+        current = getattr(overall, category, 0)
+        setattr(overall, category, current + tokens)
+
+        # Update per-agent tokens
+        if agent in by_agent:
+            agent_current = getattr(by_agent[agent], category, 0)
+            setattr(by_agent[agent], category, agent_current + tokens)
+
+    return overall, by_agent
+
+
+def extract_proposals_from_interactions(
+    interactions: List[Dict],
+    preferences: Dict[str, List[float]],
+    discount_factor: float = 0.9
+) -> List[ProposalMetrics]:
+    """
+    Extract all proposals from interactions and calculate their Nash welfare.
+
+    Returns:
+        List of ProposalMetrics for each proposal made.
+    """
+    proposals = []
+
+    for entry in interactions:
+        phase = entry.get("phase", "").lower()
+        response = entry.get("response", "")
+        agent = entry.get("agent_id", "")
+        round_num = entry.get("round", 0)
+
+        if "proposal" not in phase:
+            continue
+
+        try:
+            data = json.loads(response)
+            allocation = data.get("allocation", {})
+
+            if not allocation:
+                continue
+
+            # Calculate utilities for this proposal
+            alpha_raw = 0.0
+            beta_raw = 0.0
+
+            if "Agent_Alpha" in preferences and "Agent_Alpha" in allocation:
+                alpha_raw = sum(preferences["Agent_Alpha"][i] for i in allocation.get("Agent_Alpha", [])
+                               if i < len(preferences["Agent_Alpha"]))
+
+            if "Agent_Beta" in preferences and "Agent_Beta" in allocation:
+                beta_raw = sum(preferences["Agent_Beta"][i] for i in allocation.get("Agent_Beta", [])
+                              if i < len(preferences["Agent_Beta"]))
+
+            # Apply discount factor
+            discount = discount_factor ** (round_num - 1) if round_num > 0 else 1.0
+            alpha_discounted = alpha_raw * discount
+            beta_discounted = beta_raw * discount
+
+            # Calculate Nash welfare
+            nash_raw = calculate_nash_welfare({"alpha": alpha_raw, "beta": beta_raw})
+            nash_discounted = calculate_nash_welfare({"alpha": alpha_discounted, "beta": beta_discounted})
+
+            proposals.append(ProposalMetrics(
+                round_num=round_num,
+                proposer=agent,
+                allocation=allocation,
+                alpha_utility=alpha_discounted,
+                beta_utility=beta_discounted,
+                alpha_raw_utility=alpha_raw,
+                beta_raw_utility=beta_raw,
+                nash_welfare=nash_discounted,
+                nash_welfare_raw=nash_raw,
+            ))
+
+        except (json.JSONDecodeError, TypeError, KeyError, IndexError):
+            continue
+
+    return proposals
 
 
 # =============================================================================
@@ -378,29 +559,39 @@ def analyze_single_experiment(
     if not results:
         return None
 
-    # Token analysis
+    # Token analysis (basic)
     token_analysis = analyze_token_usage(interactions)
+
+    # Phase-specific token analysis
+    phase_tokens, phase_tokens_by_agent = analyze_phase_tokens(interactions)
 
     # Get utilities
     final_utils = results.get("final_utilities", {})
     alpha_util = final_utils.get("Agent_Alpha", 0)
     beta_util = final_utils.get("Agent_Beta", 0)
 
-    # Get preferences and allocation
+    # Get preferences, allocation, and discount factor
     preferences = results.get("agent_preferences", {})
     allocation = results.get("final_allocation", {})
+    discount_factor = results.get("discount_factor", 0.9)
 
     # Calculate raw utilities (before discount)
     alpha_raw = 0
     beta_raw = 0
     if preferences and allocation:
         if "Agent_Alpha" in preferences and "Agent_Alpha" in allocation:
-            alpha_raw = sum(preferences["Agent_Alpha"][i] for i in allocation["Agent_Alpha"])
+            alpha_raw = sum(preferences["Agent_Alpha"][i] for i in allocation["Agent_Alpha"]
+                          if i < len(preferences["Agent_Alpha"]))
         if "Agent_Beta" in preferences and "Agent_Beta" in allocation:
-            beta_raw = sum(preferences["Agent_Beta"][i] for i in allocation["Agent_Beta"])
+            beta_raw = sum(preferences["Agent_Beta"][i] for i in allocation["Agent_Beta"]
+                         if i < len(preferences["Agent_Beta"]))
 
-    # Calculate Nash welfare
+    # Calculate Nash welfare (discounted and raw)
     nash = calculate_nash_welfare(final_utils) if final_utils else 0
+    nash_raw = calculate_nash_welfare({"alpha": alpha_raw, "beta": beta_raw})
+
+    # Extract proposals with per-round Nash welfare
+    proposals = extract_proposals_from_interactions(interactions, preferences, discount_factor)
 
     return ExperimentMetrics(
         experiment_id=results.get("experiment_id", ""),
@@ -416,12 +607,17 @@ def analyze_single_experiment(
         agent_alpha_tokens=token_analysis["by_agent"].get("Agent_Alpha", 0),
         agent_beta_tokens=token_analysis["by_agent"].get("Agent_Beta", 0),
         tokens_by_phase=dict(token_analysis["by_phase"]),
+        phase_tokens=phase_tokens,
+        phase_tokens_by_agent=phase_tokens_by_agent,
         avg_response_length=sum(token_analysis["response_lengths"]) / len(token_analysis["response_lengths"]) if token_analysis["response_lengths"] else 0,
         max_response_length=max(token_analysis["response_lengths"]) if token_analysis["response_lengths"] else 0,
         reasoning_trace_lengths=token_analysis["reasoning_traces"],
         nash_welfare=nash,
+        nash_welfare_raw=nash_raw,
         agent_preferences=preferences,
         final_allocation=allocation,
+        proposals_by_round=proposals,
+        discount_factor=discount_factor,
     )
 
 
@@ -461,9 +657,15 @@ def analyze_batch(folder_path: Path) -> Optional[BatchMetrics]:
     consensus_count = sum(1 for e in experiments if e.consensus_reached)
     consensus_rounds = [e.final_round for e in experiments if e.consensus_reached]
 
+    # Discounted utilities
     alpha_utils = [e.agent_alpha_utility for e in experiments]
     beta_utils = [e.agent_beta_utility for e in experiments]
     nash_values = [e.nash_welfare for e in experiments]
+
+    # Raw (non-discounted) utilities
+    alpha_raw_utils = [e.agent_alpha_raw_utility for e in experiments]
+    beta_raw_utils = [e.agent_beta_raw_utility for e in experiments]
+    nash_raw_values = [e.nash_welfare_raw for e in experiments]
 
     total_tokens = [e.total_tokens for e in experiments]
     alpha_tokens = [e.agent_alpha_tokens for e in experiments]
@@ -485,6 +687,23 @@ def analyze_batch(folder_path: Path) -> Optional[BatchMetrics]:
         variance = sum((x - mean) ** 2 for x in lst) / (len(lst) - 1)
         return math.sqrt(variance)
 
+    # Aggregate phase tokens
+    def avg_phase_tokens(experiments, agent=None):
+        """Calculate average phase tokens across experiments."""
+        pt = PhaseTokens()
+        phases = ["game_setup", "preference_assignment", "discussion",
+                  "private_thinking", "proposal", "voting", "reflection"]
+        for phase in phases:
+            values = []
+            for e in experiments:
+                if agent:
+                    if agent in e.phase_tokens_by_agent:
+                        values.append(getattr(e.phase_tokens_by_agent[agent], phase, 0))
+                else:
+                    values.append(getattr(e.phase_tokens, phase, 0))
+            setattr(pt, phase, int(safe_mean(values)))
+        return pt
+
     return BatchMetrics(
         folder_name=folder_name,
         num_runs=len(experiments),
@@ -493,19 +712,33 @@ def analyze_batch(folder_path: Path) -> Optional[BatchMetrics]:
         consensus_rate=consensus_count / len(experiments) if experiments else 0,
         avg_consensus_round=safe_mean(consensus_rounds),
         consensus_rounds=consensus_rounds,
+        # Discounted utilities
         avg_alpha_utility=safe_mean(alpha_utils),
         avg_beta_utility=safe_mean(beta_utils),
         std_alpha_utility=safe_std(alpha_utils),
         std_beta_utility=safe_std(beta_utils),
+        # Raw utilities
+        avg_alpha_raw_utility=safe_mean(alpha_raw_utils),
+        avg_beta_raw_utility=safe_mean(beta_raw_utils),
+        std_alpha_raw_utility=safe_std(alpha_raw_utils),
+        std_beta_raw_utility=safe_std(beta_raw_utils),
+        # Tokens
         avg_total_tokens=int(safe_mean(total_tokens)),
         avg_alpha_tokens=int(safe_mean(alpha_tokens)),
         avg_beta_tokens=int(safe_mean(beta_tokens)),
         avg_tokens_per_round=safe_mean([t / e.final_round for t, e in zip(total_tokens, experiments) if e.final_round > 0]),
         avg_response_length=safe_mean(response_lengths),
         avg_reasoning_trace_length=safe_mean(reasoning_lengths),
+        # Nash welfare
         avg_nash_welfare=safe_mean(nash_values),
         std_nash_welfare=safe_std(nash_values),
+        avg_nash_welfare_raw=safe_mean(nash_raw_values),
+        std_nash_welfare_raw=safe_std(nash_raw_values),
+        # Experiments and phase tokens
         experiments=experiments,
+        avg_phase_tokens=avg_phase_tokens(experiments),
+        avg_phase_tokens_alpha=avg_phase_tokens(experiments, "Agent_Alpha"),
+        avg_phase_tokens_beta=avg_phase_tokens(experiments, "Agent_Beta"),
     )
 
 
