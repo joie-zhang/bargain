@@ -775,9 +775,223 @@ def compare_batches(batch_metrics: List[BatchMetrics]):
     return data
 
 
+def get_experiment_type(folder_name: str) -> Optional[str]:
+    """
+    Extract the experiment type (effort matchup) from a folder name.
+
+    Returns a normalized key like 'low_vs_low', 'low_vs_medium', 'high_vs_low', etc.
+    Returns None if the folder doesn't match the GPT-5 effort pattern.
+
+    Examples:
+        'gpt-5-low-effort_vs_gpt-5-high-effort_runs5_comp1' -> 'low_vs_high'
+        'gpt-5-low-effort_vs_gpt-5-low-effort_runs5_comp1_1' -> 'low_vs_low'
+    """
+    name = folder_name.lower()
+
+    # Only process GPT-5 effort experiments
+    if 'gpt-5' not in name:
+        return None
+
+    # Extract alpha effort level
+    alpha_effort = None
+    if name.startswith('gpt-5-low-effort') or name.startswith('gpt5-low-effort'):
+        alpha_effort = 'low'
+    elif name.startswith('gpt-5-medium-effort') or name.startswith('gpt5-medium-effort') or name.startswith('gpt-5-med-effort'):
+        alpha_effort = 'medium'
+    elif name.startswith('gpt-5-high-effort') or name.startswith('gpt5-high-effort'):
+        alpha_effort = 'high'
+
+    if alpha_effort is None:
+        return None
+
+    # Extract beta effort level (after _vs_)
+    beta_effort = None
+    if '_vs_gpt-5-low-effort' in name or '_vs_gpt5-low-effort' in name:
+        beta_effort = 'low'
+    elif '_vs_gpt-5-medium-effort' in name or '_vs_gpt5-medium-effort' in name or '_vs_gpt-5-med-effort' in name:
+        beta_effort = 'medium'
+    elif '_vs_gpt-5-high-effort' in name or '_vs_gpt5-high-effort' in name:
+        beta_effort = 'high'
+
+    if beta_effort is None:
+        return None
+
+    return f"{alpha_effort}_vs_{beta_effort}"
+
+
+def aggregate_batches(batches: List[BatchMetrics]) -> Optional[BatchMetrics]:
+    """
+    Aggregate multiple BatchMetrics into a single combined BatchMetrics.
+
+    This merges all individual experiment runs from multiple batch folders
+    into one unified batch for statistical analysis.
+
+    Args:
+        batches: List of BatchMetrics to aggregate (should be same experiment type)
+
+    Returns:
+        A single BatchMetrics containing all runs from all input batches
+    """
+    if not batches:
+        return None
+
+    if len(batches) == 1:
+        return batches[0]
+
+    # Collect all experiments from all batches
+    all_experiments = []
+    for batch in batches:
+        all_experiments.extend(batch.experiments)
+
+    if not all_experiments:
+        return None
+
+    # Use first batch for model names (they should all be the same type)
+    model_alpha = batches[0].model_alpha
+    model_beta = batches[0].model_beta
+
+    # Create aggregated folder name
+    folder_name = f"{model_alpha}_vs_{model_beta}_aggregated_{len(batches)}batches"
+
+    # Aggregate metrics from all experiments
+    consensus_count = sum(1 for e in all_experiments if e.consensus_reached)
+    consensus_rounds = [e.final_round for e in all_experiments if e.consensus_reached]
+
+    # Discounted utilities
+    alpha_utils = [e.agent_alpha_utility for e in all_experiments]
+    beta_utils = [e.agent_beta_utility for e in all_experiments]
+    nash_values = [e.nash_welfare for e in all_experiments]
+
+    # Raw (non-discounted) utilities
+    alpha_raw_utils = [e.agent_alpha_raw_utility for e in all_experiments]
+    beta_raw_utils = [e.agent_beta_raw_utility for e in all_experiments]
+    nash_raw_values = [e.nash_welfare_raw for e in all_experiments]
+
+    total_tokens = [e.total_tokens for e in all_experiments]
+    alpha_tokens = [e.agent_alpha_tokens for e in all_experiments]
+    beta_tokens = [e.agent_beta_tokens for e in all_experiments]
+
+    response_lengths = [e.avg_response_length for e in all_experiments]
+    reasoning_lengths = []
+    for e in all_experiments:
+        if e.reasoning_trace_lengths:
+            reasoning_lengths.extend(e.reasoning_trace_lengths)
+
+    def safe_mean(lst):
+        return sum(lst) / len(lst) if lst else 0
+
+    def safe_std(lst):
+        if len(lst) < 2:
+            return 0
+        mean = safe_mean(lst)
+        variance = sum((x - mean) ** 2 for x in lst) / (len(lst) - 1)
+        return math.sqrt(variance)
+
+    # Aggregate phase tokens
+    def avg_phase_tokens(experiments, agent=None):
+        """Calculate average phase tokens across experiments."""
+        pt = PhaseTokens()
+        phases = ["game_setup", "preference_assignment", "discussion",
+                  "private_thinking", "proposal", "voting", "reflection"]
+        for phase in phases:
+            values = []
+            for e in experiments:
+                if agent:
+                    if agent in e.phase_tokens_by_agent:
+                        values.append(getattr(e.phase_tokens_by_agent[agent], phase, 0))
+                else:
+                    values.append(getattr(e.phase_tokens, phase, 0))
+            setattr(pt, phase, int(safe_mean(values)))
+        return pt
+
+    return BatchMetrics(
+        folder_name=folder_name,
+        num_runs=len(all_experiments),
+        model_alpha=model_alpha,
+        model_beta=model_beta,
+        consensus_rate=consensus_count / len(all_experiments) if all_experiments else 0,
+        avg_consensus_round=safe_mean(consensus_rounds),
+        consensus_rounds=consensus_rounds,
+        # Discounted utilities
+        avg_alpha_utility=safe_mean(alpha_utils),
+        avg_beta_utility=safe_mean(beta_utils),
+        std_alpha_utility=safe_std(alpha_utils),
+        std_beta_utility=safe_std(beta_utils),
+        # Raw utilities
+        avg_alpha_raw_utility=safe_mean(alpha_raw_utils),
+        avg_beta_raw_utility=safe_mean(beta_raw_utils),
+        std_alpha_raw_utility=safe_std(alpha_raw_utils),
+        std_beta_raw_utility=safe_std(beta_raw_utils),
+        # Tokens
+        avg_total_tokens=int(safe_mean(total_tokens)),
+        avg_alpha_tokens=int(safe_mean(alpha_tokens)),
+        avg_beta_tokens=int(safe_mean(beta_tokens)),
+        avg_tokens_per_round=safe_mean([t / e.final_round for t, e in zip(total_tokens, all_experiments) if e.final_round > 0]),
+        avg_response_length=safe_mean(response_lengths),
+        avg_reasoning_trace_length=safe_mean(reasoning_lengths),
+        # Nash welfare
+        avg_nash_welfare=safe_mean(nash_values),
+        std_nash_welfare=safe_std(nash_values),
+        avg_nash_welfare_raw=safe_mean(nash_raw_values),
+        std_nash_welfare_raw=safe_std(nash_raw_values),
+        # Experiments and phase tokens
+        experiments=all_experiments,
+        avg_phase_tokens=avg_phase_tokens(all_experiments),
+        avg_phase_tokens_alpha=avg_phase_tokens(all_experiments, "Agent_Alpha"),
+        avg_phase_tokens_beta=avg_phase_tokens(all_experiments, "Agent_Beta"),
+    )
+
+
+def get_aggregated_effort_comparison(results_dir: Path) -> Dict[str, BatchMetrics]:
+    """
+    Get aggregated comparison data for GPT-5 reasoning effort experiments.
+
+    This function finds ALL folders matching each effort level matchup
+    (e.g., all low_vs_low folders including variants like _1, _2, etc.)
+    and aggregates them into a single BatchMetrics per matchup type.
+
+    Returns:
+        Dict mapping experiment type (e.g., 'low_vs_high') to aggregated BatchMetrics
+    """
+    # Group folders by experiment type
+    folders_by_type: Dict[str, List[Path]] = defaultdict(list)
+
+    for folder in results_dir.iterdir():
+        if not folder.is_dir():
+            continue
+
+        exp_type = get_experiment_type(folder.name)
+        if exp_type:
+            folders_by_type[exp_type].append(folder)
+
+    # Analyze and aggregate each type
+    aggregated_results = {}
+
+    for exp_type, folders in folders_by_type.items():
+        # Analyze all batches for this type
+        batches = []
+        for folder in folders:
+            batch = analyze_batch(folder)
+            if batch:
+                batches.append(batch)
+
+        # Aggregate into single batch
+        if batches:
+            aggregated = aggregate_batches(batches)
+            if aggregated:
+                aggregated_results[exp_type] = aggregated
+
+    return aggregated_results
+
+
 def get_reasoning_effort_comparison(results_dir: Path) -> Dict[str, BatchMetrics]:
     """
     Get comparison data specifically for GPT-5 reasoning effort experiments.
+
+    DEPRECATED: Use get_aggregated_effort_comparison() instead for proper
+    aggregation across multiple folders of the same experiment type.
+
+    This function only returns the first folder found for each type.
     """
     effort_levels = {}
 

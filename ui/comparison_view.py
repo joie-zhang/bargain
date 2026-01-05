@@ -1097,6 +1097,331 @@ def create_payoff_difference_chart(batches: List[BatchMetrics]) -> Optional[go.F
     return fig
 
 
+def create_order_effect_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Compare the same matchups in both directions to isolate the effect of position.
+    E.g., compare "Low vs High" (Low=Alpha) with "High vs Low" (High=Alpha).
+
+    This helps answer: Does being Alpha give an advantage independent of effort?
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        if alpha_effort == "Unknown" or beta_effort == "Unknown":
+            continue
+
+        # Create a canonical matchup name (alphabetically sorted)
+        efforts = sorted([alpha_effort, beta_effort])
+        canonical_matchup = f"{efforts[0]} vs {efforts[1]}"
+
+        # Who has the "stronger" effort in this matchup?
+        effort_rank = {"Low": 1, "Medium": 2, "High": 3}
+        alpha_rank = effort_rank.get(alpha_effort, 0)
+        beta_rank = effort_rank.get(beta_effort, 0)
+
+        for exp in batch.experiments:
+            # Record Alpha's performance
+            all_data.append({
+                "Canonical Matchup": canonical_matchup,
+                "Agent Effort": alpha_effort,
+                "Position": "Alpha (First)",
+                "Payoff": exp.agent_alpha_utility,
+                "Is Stronger": "Yes" if alpha_rank > beta_rank else ("Equal" if alpha_rank == beta_rank else "No"),
+                "Run": exp.run_number,
+                "Experiment": get_short_experiment_name(batch.folder_name),
+            })
+
+            # Record Beta's performance
+            all_data.append({
+                "Canonical Matchup": canonical_matchup,
+                "Agent Effort": beta_effort,
+                "Position": "Beta (Second)",
+                "Payoff": exp.agent_beta_utility,
+                "Is Stronger": "Yes" if beta_rank > alpha_rank else ("Equal" if alpha_rank == beta_rank else "No"),
+                "Run": exp.run_number,
+                "Experiment": get_short_experiment_name(batch.folder_name),
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Create box plot comparing Alpha vs Beta payoffs for each matchup
+    fig = px.box(
+        df,
+        x="Canonical Matchup",
+        y="Payoff",
+        color="Position",
+        color_discrete_map={
+            "Alpha (First)": "#3b82f6",
+            "Beta (Second)": "#ef4444",
+        },
+        hover_data=["Agent Effort", "Is Stronger", "Experiment"],
+        title="Position Effect: Alpha vs Beta Payoffs by Matchup Type",
+    )
+
+    fig.update_layout(
+        xaxis_title="Matchup (Canonical - alphabetically sorted)",
+        yaxis_title="Agent Payoff (Discounted)",
+        height=500,
+        boxmode="group",
+    )
+
+    # Add equal split reference
+    fig.add_hline(y=50, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
+def create_effort_by_position_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Show how each effort level performs when playing as Alpha vs Beta.
+    Aggregates across all matchups to see: Does High-effort do better as Alpha or Beta?
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        if alpha_effort == "Unknown" or beta_effort == "Unknown":
+            continue
+
+        for exp in batch.experiments:
+            # Alpha's data point
+            all_data.append({
+                "Effort Level": alpha_effort,
+                "Position": "Alpha (First)",
+                "Payoff": exp.agent_alpha_utility,
+                "Opponent Effort": beta_effort,
+                "Experiment": get_short_experiment_name(batch.folder_name),
+                "Run": exp.run_number,
+            })
+
+            # Beta's data point
+            all_data.append({
+                "Effort Level": beta_effort,
+                "Position": "Beta (Second)",
+                "Payoff": exp.agent_beta_utility,
+                "Opponent Effort": alpha_effort,
+                "Experiment": get_short_experiment_name(batch.folder_name),
+                "Run": exp.run_number,
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Order effort levels
+    effort_order = ["Low", "Medium", "High"]
+    df["Effort Level"] = pd.Categorical(df["Effort Level"], categories=effort_order, ordered=True)
+
+    fig = px.box(
+        df,
+        x="Effort Level",
+        y="Payoff",
+        color="Position",
+        color_discrete_map={
+            "Alpha (First)": "#3b82f6",
+            "Beta (Second)": "#ef4444",
+        },
+        hover_data=["Opponent Effort", "Experiment"],
+        title="Effort Level Performance by Position",
+        category_orders={"Effort Level": effort_order},
+    )
+
+    fig.update_layout(
+        xaxis_title="Agent's Effort Level",
+        yaxis_title="Agent Payoff (Discounted)",
+        height=500,
+        boxmode="group",
+    )
+
+    fig.add_hline(y=50, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
+def create_asymmetric_matchup_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Compare asymmetric matchups side by side.
+    E.g., "Low α vs High β" compared to "High α vs Low β"
+
+    This directly shows if order matters for the same effort pairing.
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        if alpha_effort == "Unknown" or beta_effort == "Unknown":
+            continue
+
+        # Skip symmetric matchups for this chart
+        if alpha_effort == beta_effort:
+            continue
+
+        matchup_label = f"{alpha_effort} α vs {beta_effort} β"
+
+        for exp in batch.experiments:
+            # We want to track: given this matchup, who won?
+            alpha_won = exp.agent_alpha_utility > exp.agent_beta_utility
+            payoff_diff = exp.agent_alpha_utility - exp.agent_beta_utility
+
+            all_data.append({
+                "Matchup": matchup_label,
+                "Alpha Effort": alpha_effort,
+                "Beta Effort": beta_effort,
+                "Alpha Payoff": exp.agent_alpha_utility,
+                "Beta Payoff": exp.agent_beta_utility,
+                "Payoff Diff (α-β)": payoff_diff,
+                "Winner": "Alpha" if alpha_won else ("Tie" if payoff_diff == 0 else "Beta"),
+                "Run": exp.run_number,
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Create grouped bar showing Alpha vs Beta payoff for each asymmetric matchup
+    fig = go.Figure()
+
+    matchups = df["Matchup"].unique()
+
+    for matchup in sorted(matchups):
+        subset = df[df["Matchup"] == matchup]
+        avg_alpha = subset["Alpha Payoff"].mean()
+        avg_beta = subset["Beta Payoff"].mean()
+        std_alpha = subset["Alpha Payoff"].std()
+        std_beta = subset["Beta Payoff"].std()
+
+        fig.add_trace(go.Bar(
+            name=f"{matchup} - Alpha",
+            x=[matchup],
+            y=[avg_alpha],
+            error_y=dict(type='data', array=[std_alpha]),
+            marker_color="#3b82f6",
+            legendgroup=matchup,
+        ))
+
+        fig.add_trace(go.Bar(
+            name=f"{matchup} - Beta",
+            x=[matchup],
+            y=[avg_beta],
+            error_y=dict(type='data', array=[std_beta]),
+            marker_color="#ef4444",
+            legendgroup=matchup,
+        ))
+
+    fig.update_layout(
+        title="Asymmetric Matchup Comparison: Who Wins?",
+        xaxis_title="Matchup Configuration",
+        yaxis_title="Average Payoff (± std)",
+        barmode="group",
+        height=500,
+        showlegend=True,
+    )
+
+    fig.add_hline(y=50, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
+def create_first_mover_advantage_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Aggregate analysis: Does Alpha (first mover) have an advantage overall?
+    Shows win rate and average payoff advantage for Alpha across all experiments.
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        for exp in batch.experiments:
+            alpha_won = exp.agent_alpha_utility > exp.agent_beta_utility
+            payoff_diff = exp.agent_alpha_utility - exp.agent_beta_utility
+
+            matchup_type = "Symmetric" if alpha_effort == beta_effort else "Asymmetric"
+
+            all_data.append({
+                "Matchup Type": matchup_type,
+                "Alpha Effort": alpha_effort,
+                "Beta Effort": beta_effort,
+                "Alpha Won": 1 if alpha_won else 0,
+                "Payoff Diff (α-β)": payoff_diff,
+                "Experiment": get_short_experiment_name(batch.folder_name),
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Create subplot with win rate and payoff difference
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=("Alpha Win Rate by Matchup Type", "Alpha Payoff Advantage (α-β)"),
+        specs=[[{"type": "bar"}, {"type": "box"}]]
+    )
+
+    # Win rate by matchup type
+    win_rates = df.groupby("Matchup Type")["Alpha Won"].mean().reset_index()
+    win_rates.columns = ["Matchup Type", "Win Rate"]
+
+    fig.add_trace(
+        go.Bar(
+            x=win_rates["Matchup Type"],
+            y=win_rates["Win Rate"],
+            marker_color=["#6b7280", "#f59e0b"],
+            text=[f"{r:.0%}" for r in win_rates["Win Rate"]],
+            textposition="outside",
+        ),
+        row=1, col=1
+    )
+
+    # Payoff difference distribution
+    for matchup_type, color in [("Symmetric", "#6b7280"), ("Asymmetric", "#f59e0b")]:
+        subset = df[df["Matchup Type"] == matchup_type]
+        fig.add_trace(
+            go.Box(
+                y=subset["Payoff Diff (α-β)"],
+                name=matchup_type,
+                marker_color=color,
+            ),
+            row=1, col=2
+        )
+
+    fig.update_layout(
+        height=450,
+        showlegend=False,
+        title_text="First-Mover (Alpha) Advantage Analysis",
+    )
+
+    # Add reference lines
+    fig.add_hline(y=0.5, line_dash="dash", line_color="gray", row=1, col=1)
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", row=1, col=2)
+
+    fig.update_yaxes(title_text="Win Rate", row=1, col=1)
+    fig.update_yaxes(title_text="Payoff Difference", row=1, col=2)
+
+    return fig
+
+
 def create_phase_reasoning_payoff_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
     """
     Create detailed breakdown: reasoning by phase vs. payoff impact.
@@ -1275,19 +1600,9 @@ def render_aggregated_effort_view():
     st.markdown("---")
 
     # Convert to list for visualization functions
+    # IMPORTANT: Do NOT modify batch.folder_name - it's needed for effort level parsing
+    # The get_short_experiment_name() function handles display names automatically
     batches = list(aggregated.values())
-
-    # Create nicer labels for the batches
-    for batch in batches:
-        # Extract effort levels from folder name for cleaner display
-        exp_type = None
-        for et in aggregated.keys():
-            if aggregated[et] == batch:
-                exp_type = et
-                break
-        if exp_type:
-            alpha, beta = exp_type.split('_vs_')
-            batch.folder_name = f"{alpha.title()} vs {beta.title()}"
 
     # Summary metrics
     st.subheader("📈 Aggregated Metrics")
@@ -1572,7 +1887,8 @@ def render_comparison_view():
         "🔢 Tokens by Phase",
         "🤝 Consensus Distribution",
         "⚖️ Nash Welfare by Round",
-        "🧠 Reasoning vs Payoff"
+        "🧠 Reasoning vs Payoff",
+        "🔄 Order Analysis"
     ])
 
     with viz_tabs[0]:
@@ -1784,6 +2100,75 @@ def render_comparison_view():
             fig_legacy = create_reasoning_length_chart(batches)
             if fig_legacy:
                 st.plotly_chart(fig_legacy, use_container_width=True)
+
+    with viz_tabs[5]:
+        st.markdown("### Order & Position Analysis")
+        st.markdown("""
+        *Analyze whether agent position (Alpha = first mover, Beta = second mover) affects outcomes,
+        and how this interacts with reasoning effort levels.*
+        """)
+
+        # First-mover advantage overview
+        st.markdown("#### First-Mover Advantage Overview")
+        st.markdown("*Does Alpha (first mover) have a systematic advantage? Compare symmetric vs asymmetric matchups.*")
+        fig_fma = create_first_mover_advantage_chart(batches)
+        if fig_fma:
+            st.plotly_chart(fig_fma, use_container_width=True)
+        else:
+            st.info("Insufficient data for first-mover analysis.")
+
+        # Order effect by matchup type
+        st.markdown("#### Position Effect by Matchup Type")
+        st.markdown("*Box plots comparing Alpha vs Beta payoffs for each canonical matchup (e.g., 'Low vs High' combines both orderings).*")
+        fig_order = create_order_effect_chart(batches)
+        if fig_order:
+            st.plotly_chart(fig_order, use_container_width=True)
+        else:
+            st.info("Insufficient data for order effect analysis.")
+
+        # Effort level performance by position
+        st.markdown("#### Effort Level Performance by Position")
+        st.markdown("*How does each effort level (Low/Medium/High) perform when playing as Alpha vs Beta?*")
+        fig_effort_pos = create_effort_by_position_chart(batches)
+        if fig_effort_pos:
+            st.plotly_chart(fig_effort_pos, use_container_width=True)
+        else:
+            st.info("Insufficient data for effort-by-position analysis.")
+
+        # Asymmetric matchup comparison
+        st.markdown("#### Asymmetric Matchup Comparison")
+        st.markdown("""
+        *Compare asymmetric matchups directly. For example:*
+        - *'Low α vs High β': Low-effort is Alpha (first), High-effort is Beta (second)*
+        - *'High α vs Low β': High-effort is Alpha (first), Low-effort is Beta (second)*
+        """)
+        fig_asym = create_asymmetric_matchup_chart(batches)
+        if fig_asym:
+            st.plotly_chart(fig_asym, use_container_width=True)
+        else:
+            st.info("Insufficient asymmetric matchup data. Need experiments with both orderings (e.g., Low vs High AND High vs Low).")
+
+        # Summary statistics
+        with st.expander("📊 Order Analysis Summary Statistics"):
+            order_stats = []
+            for batch in batches:
+                _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+                alpha_wins = sum(1 for e in batch.experiments if e.agent_alpha_utility > e.agent_beta_utility)
+                beta_wins = sum(1 for e in batch.experiments if e.agent_beta_utility > e.agent_alpha_utility)
+                ties = len(batch.experiments) - alpha_wins - beta_wins
+
+                order_stats.append({
+                    "Experiment": get_short_experiment_name(batch.folder_name),
+                    "Alpha Effort": alpha_effort,
+                    "Beta Effort": beta_effort,
+                    "Alpha Wins": alpha_wins,
+                    "Beta Wins": beta_wins,
+                    "Ties": ties,
+                    "Alpha Win Rate": f"{alpha_wins / len(batch.experiments):.0%}" if batch.experiments else "N/A",
+                    "Avg α Payoff": f"{batch.avg_alpha_utility:.1f}",
+                    "Avg β Payoff": f"{batch.avg_beta_utility:.1f}",
+                })
+            st.dataframe(pd.DataFrame(order_stats), use_container_width=True)
 
     # Qualitative Analysis Section
     st.subheader("💬 Qualitative Analysis: Concession Reasoning")
