@@ -34,6 +34,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Activate the project venv if it exists
+if [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
+    echo "Activating project virtual environment..."
+    source "$PROJECT_ROOT/.venv/bin/activate"
+fi
+
 # Check if streamlit is installed
 if ! command -v streamlit &> /dev/null; then
     echo "Streamlit not found. Installing dependencies..."

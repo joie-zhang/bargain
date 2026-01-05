@@ -27,6 +27,13 @@ try:
 except ImportError:
     PLOTLY_AVAILABLE = False
 
+# Import comparison view
+try:
+    from comparison_view import render_comparison_view
+    COMPARISON_VIEW_AVAILABLE = True
+except ImportError:
+    COMPARISON_VIEW_AVAILABLE = False
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -644,9 +651,10 @@ def main():
         st.header("📁 Experiment Selection")
 
         # Mode selection
+        mode_options = ["📂 Post-hoc Analysis", "📊 Batch Comparison", "🔴 Live Streaming"]
         mode = st.radio(
             "Mode",
-            ["📂 Post-hoc Analysis", "🔴 Live Streaming"],
+            mode_options,
             index=0
         )
 
@@ -692,6 +700,11 @@ def main():
     # Main content area
     if mode == "🔴 Live Streaming":
         setup_live_streaming()
+    elif mode == "📊 Batch Comparison":
+        if COMPARISON_VIEW_AVAILABLE:
+            render_comparison_view()
+        else:
+            st.error("Comparison view module not available. Check ui/comparison_view.py exists.")
     else:
         # Post-hoc analysis mode
         if 'selected_folder' not in dir() or not selected_folder:
