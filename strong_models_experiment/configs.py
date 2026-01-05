@@ -11,7 +11,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Anthropic's Claude 3 Opus model (WEAK MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply deep reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
     "gemini-1-5-pro": {
@@ -21,7 +21,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Google's Gemini 1.5 Pro model (WEAK MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use strategic analysis to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
     "gpt-4o": {
@@ -31,7 +31,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-4o model May 2024 version (WEAK MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use advanced reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
     
@@ -46,7 +46,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's fast and efficient Claude 3.5 Haiku model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use efficient reasoning to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "claude-4-5-haiku": {
@@ -56,7 +56,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's latest fast and efficient Claude 4.5 Haiku model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use efficient reasoning to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "claude-3-5-sonnet": {
@@ -66,7 +66,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's Claude 3.5 Sonnet model (STRONG MODEL) - DEPRECATED: Use claude-3-7-sonnet instead",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong",
         "deprecated": True,
         "deprecation_message": "claude-3-5-sonnet is deprecated. Please use claude-3-7-sonnet instead."
@@ -78,7 +78,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's Claude 3.7 Sonnet model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "claude-4-sonnet": {
@@ -88,7 +88,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's latest and most capable model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to maximize your utility in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "claude-4-1-opus": {
@@ -98,7 +98,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "anthropic",
         "description": "Anthropic's Claude 4.1 Opus model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategic thinking to achieve optimal outcomes.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     
@@ -110,7 +110,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Google's Gemini 2.5 Pro model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use strategic thinking to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gemini-2-0-flash": {
@@ -120,7 +120,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Google's Gemini 2.0 Flash model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use rapid strategic thinking to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gemini-2-0-flash-lite": {
@@ -130,7 +130,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Google's Gemini 2.0 Flash Lite model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     
@@ -142,7 +142,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-4o model November 2024 version (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use advanced reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gpt-4o-mini": {
@@ -152,7 +152,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-4o Mini model - efficient variant (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply efficient reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "o1": {
@@ -162,17 +162,40 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's O1 reasoning model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply systematic thinking to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
-    "gpt-5": {
-        "name": "GPT-5",
+    "gpt-5-low-effort": {
+        "name": "GPT-5 (Low Reasoning Effort)",
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model (STRONG MODEL)",
+        "description": "OpenAI's GPT-5 model with low reasoning effort (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategy to maximize your utility in this negotiation.",
+        "reasoning_effort": "low",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5-medium-effort": {
+        "name": "GPT-5 (Medium Reasoning Effort)",
+        "model_id": "gpt-5-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5 model with medium reasoning effort (STRONG MODEL)",
+        "temperature": 0.7,
+        "reasoning_effort": "medium",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5-high-effort": {
+        "name": "GPT-5 (High Reasoning Effort)",
+        "model_id": "gpt-5-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "OpenAI's GPT-5 model with high reasoning effort (STRONG MODEL)",
+        "temperature": 0.7,
+        "reasoning_effort": "high",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gpt-5.1": {
@@ -182,7 +205,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-5.1 model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply sophisticated reasoning and strategy to maximize your utility in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gpt-5-mini": {
@@ -192,7 +215,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-5 Mini model (STRONG MODEL)",
         "temperature": 1.0,
-        "system_prompt": "You are a negotiating agent. Apply strategic thinking to achieve optimal outcomes.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gpt-5-nano": {
@@ -202,7 +225,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's GPT-5 Nano model (STRONG MODEL)",
         "temperature": 1.0,
-        "system_prompt": "You are a negotiating agent. Apply strategic thinking to achieve optimal outcomes.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "o3": {
@@ -212,7 +235,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's O3 reasoning model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic thinking to achieve optimal outcomes.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     
@@ -224,7 +247,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "xai",
         "description": "XAI's Grok 4 model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "grok-3": {
@@ -234,7 +257,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "xai",
         "description": "XAI's Grok 3 model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use strategic analysis to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "grok-3-mini": {
@@ -244,7 +267,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "xai",
         "description": "XAI's Grok 3 Mini model (STRONG MODEL)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply efficient reasoning to achieve optimal outcomes in this negotiation.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     
@@ -256,7 +279,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Meta's largest open-source model with 405B parameters",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use your extensive knowledge and reasoning to negotiate effectively."
+        "system_prompt": "You are a negotiating agent."
     },
     "qwen3-235b-a22b-thinking-2507": {
         "name": "Qwen 3 235B", 
@@ -265,7 +288,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Alibaba's strong multilingual model",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic analysis to achieve the best possible outcomes in this negotiation."
+        "system_prompt": "You are a negotiating agent."
     },
     
     # Additional models available but not currently in use
@@ -277,7 +300,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's O3 Mini reasoning model",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic thinking to negotiate effectively."
+        "system_prompt": "You are a negotiating agent."
     },
     "o4-mini": {
         "name": "O4 Mini",
@@ -286,7 +309,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "OpenAI's O4 Mini reasoning model",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Use efficient strategic thinking in this negotiation."
+        "system_prompt": "You are a negotiating agent."
     },
     "gemini-2-5-flash": {
         "name": "Gemini 2.5 Flash",
@@ -295,7 +318,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Google's fast Gemini 2.5 Flash model",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply quick and efficient reasoning in this negotiation."
+        "system_prompt": "You are a negotiating agent."
     },
     
     # Qwen2.5 models (local Princeton cluster)
@@ -307,7 +330,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-0.5B-Instruct",
         "description": "Qwen2.5 0.5B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-1.5B-Instruct": {
@@ -318,7 +341,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-1.5B-Instruct",
         "description": "Qwen2.5 1.5B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-3B-Instruct": {
@@ -329,7 +352,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-3B-Instruct",
         "description": "Qwen2.5 3B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-7B-Instruct": {
@@ -340,7 +363,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-7B-Instruct",
         "description": "Qwen2.5 7B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-14B-Instruct": {
@@ -351,7 +374,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-14B-Instruct",
         "description": "Qwen2.5 14B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-32B-Instruct": {
@@ -362,7 +385,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-32B-Instruct",
         "description": "Qwen2.5 32B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "Qwen2.5-72B-Instruct": {
@@ -373,7 +396,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct",
         "description": "Qwen2.5 72B Instruct model (local cluster)",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent. Apply strategic reasoning to negotiate effectively and maximize your utility.",
+        "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     }
 }
