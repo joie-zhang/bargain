@@ -132,6 +132,49 @@ def get_short_experiment_name(folder_name: str, max_length: int = 30) -> str:
     return result
 
 
+def get_effort_level(model_name: str) -> str:
+    """
+    Extract the effort level from a model name.
+    Returns 'Low', 'Medium', 'High', or 'Unknown'.
+    """
+    name = model_name.lower()
+    if 'low-effort' in name or 'low_effort' in name:
+        return 'Low'
+    elif 'medium-effort' in name or 'med-effort' in name or 'medium_effort' in name:
+        return 'Medium'
+    elif 'high-effort' in name or 'high_effort' in name:
+        return 'High'
+    else:
+        return 'Unknown'
+
+
+def parse_experiment_agents(folder_name: str) -> Tuple[str, str, str, str]:
+    """
+    Parse folder name to get model names and effort levels for Alpha and Beta.
+
+    Returns:
+        Tuple of (alpha_model, beta_model, alpha_effort, beta_effort)
+    """
+    import re
+
+    # Remove common suffixes
+    name = re.sub(r'_runs\d+_comp\d+.*$', '', folder_name)
+
+    if '_vs_' not in name:
+        return ('Unknown', 'Unknown', 'Unknown', 'Unknown')
+
+    parts = name.split('_vs_')
+    if len(parts) != 2:
+        return ('Unknown', 'Unknown', 'Unknown', 'Unknown')
+
+    alpha_model = parts[0]
+    beta_model = parts[1]
+    alpha_effort = get_effort_level(alpha_model)
+    beta_effort = get_effort_level(beta_model)
+
+    return (alpha_model, beta_model, alpha_effort, beta_effort)
+
+
 def get_experiment_folders() -> List[str]:
     """Get all experiment folder names."""
     if not RESULTS_DIR.exists():
@@ -768,6 +811,174 @@ def create_reasoning_vs_payoff_chart(batches: List[BatchMetrics]) -> Optional[go
     return fig
 
 
+def create_reasoning_vs_payoff_by_effort_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Create scatter plot showing per-agent reasoning tokens vs payoff,
+    colored by effort level (Low/Medium/High).
+
+    This helps answer: Do higher-effort agents get better payoffs?
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        short_name = get_short_experiment_name(batch.folder_name)
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        for exp in batch.experiments:
+            # Get per-agent reasoning tokens
+            alpha_tokens = 0
+            beta_tokens = 0
+            if "Agent_Alpha" in exp.phase_tokens_by_agent:
+                alpha_tokens = exp.phase_tokens_by_agent["Agent_Alpha"].private_thinking
+            if "Agent_Beta" in exp.phase_tokens_by_agent:
+                beta_tokens = exp.phase_tokens_by_agent["Agent_Beta"].private_thinking
+
+            # Add Alpha agent data point
+            all_data.append({
+                "Experiment": short_name,
+                "Agent": "Alpha",
+                "Effort Level": alpha_effort,
+                "Reasoning Tokens": alpha_tokens,
+                "Payoff": exp.agent_alpha_utility,
+                "Opponent Payoff": exp.agent_beta_utility,
+                "Run": exp.run_number,
+                "Consensus": "Yes" if exp.consensus_reached else "No",
+            })
+
+            # Add Beta agent data point
+            all_data.append({
+                "Experiment": short_name,
+                "Agent": "Beta",
+                "Effort Level": beta_effort,
+                "Reasoning Tokens": beta_tokens,
+                "Payoff": exp.agent_beta_utility,
+                "Opponent Payoff": exp.agent_alpha_utility,
+                "Run": exp.run_number,
+                "Consensus": "Yes" if exp.consensus_reached else "No",
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Define color mapping for effort levels
+    color_map = {
+        "Low": "#22c55e",      # Green
+        "Medium": "#f59e0b",   # Orange/Amber
+        "High": "#ef4444",     # Red
+        "Unknown": "#6b7280",  # Gray
+    }
+
+    fig = px.scatter(
+        df,
+        x="Reasoning Tokens",
+        y="Payoff",
+        color="Effort Level",
+        symbol="Agent",
+        color_discrete_map=color_map,
+        hover_data=["Experiment", "Agent", "Opponent Payoff", "Run", "Consensus"],
+        title="Reasoning Tokens vs. Payoff by Effort Level",
+    )
+
+    fig.update_layout(
+        xaxis_title="Reasoning Tokens (Private Thinking Phase)",
+        yaxis_title="Agent Payoff (Discounted)",
+        height=500,
+    )
+
+    # Add a horizontal line at y=50 (equal split reference)
+    fig.add_hline(y=50, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
+def create_reasoning_vs_payoff_by_position_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
+    """
+    Create scatter plot showing per-agent reasoning tokens vs payoff,
+    colored by position (Alpha/Beta).
+
+    This helps answer: Is there a first-mover advantage (Alpha vs Beta)?
+    """
+    if not PLOTLY_AVAILABLE or not batches:
+        return None
+
+    all_data = []
+    for batch in batches:
+        short_name = get_short_experiment_name(batch.folder_name)
+        _, _, alpha_effort, beta_effort = parse_experiment_agents(batch.folder_name)
+
+        for exp in batch.experiments:
+            # Get per-agent reasoning tokens
+            alpha_tokens = 0
+            beta_tokens = 0
+            if "Agent_Alpha" in exp.phase_tokens_by_agent:
+                alpha_tokens = exp.phase_tokens_by_agent["Agent_Alpha"].private_thinking
+            if "Agent_Beta" in exp.phase_tokens_by_agent:
+                beta_tokens = exp.phase_tokens_by_agent["Agent_Beta"].private_thinking
+
+            # Add Alpha agent data point
+            all_data.append({
+                "Experiment": short_name,
+                "Position": "Alpha (First)",
+                "Effort Level": alpha_effort,
+                "Reasoning Tokens": alpha_tokens,
+                "Payoff": exp.agent_alpha_utility,
+                "Opponent Payoff": exp.agent_beta_utility,
+                "Run": exp.run_number,
+                "Consensus": "Yes" if exp.consensus_reached else "No",
+            })
+
+            # Add Beta agent data point
+            all_data.append({
+                "Experiment": short_name,
+                "Position": "Beta (Second)",
+                "Effort Level": beta_effort,
+                "Reasoning Tokens": beta_tokens,
+                "Payoff": exp.agent_beta_utility,
+                "Opponent Payoff": exp.agent_alpha_utility,
+                "Run": exp.run_number,
+                "Consensus": "Yes" if exp.consensus_reached else "No",
+            })
+
+    if not all_data:
+        return None
+
+    df = pd.DataFrame(all_data)
+
+    # Define color mapping for positions
+    color_map = {
+        "Alpha (First)": "#3b82f6",   # Blue
+        "Beta (Second)": "#ef4444",   # Red
+    }
+
+    fig = px.scatter(
+        df,
+        x="Reasoning Tokens",
+        y="Payoff",
+        color="Position",
+        symbol="Effort Level",
+        color_discrete_map=color_map,
+        hover_data=["Experiment", "Effort Level", "Opponent Payoff", "Run", "Consensus"],
+        title="Reasoning Tokens vs. Payoff by Agent Position",
+    )
+
+    fig.update_layout(
+        xaxis_title="Reasoning Tokens (Private Thinking Phase)",
+        yaxis_title="Agent Payoff (Discounted)",
+        height=500,
+    )
+
+    # Add a horizontal line at y=50 (equal split reference)
+    fig.add_hline(y=50, line_dash="dash", line_color="gray",
+                  annotation_text="Equal Split", annotation_position="right")
+
+    return fig
+
+
 def create_phase_reasoning_payoff_chart(batches: List[BatchMetrics]) -> Optional[go.Figure]:
     """
     Create detailed breakdown: reasoning by phase vs. payoff impact.
@@ -1161,6 +1372,24 @@ def render_comparison_view():
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("Insufficient data for reasoning vs payoff analysis.")
+
+        # Per-agent analysis by effort level
+        st.markdown("#### Reasoning vs. Payoff by Effort Level")
+        st.markdown("*Each dot is an individual agent. Color = effort level (Low/Medium/High). Symbol = position (Alpha/Beta).*")
+        fig_effort = create_reasoning_vs_payoff_by_effort_chart(batches)
+        if fig_effort:
+            st.plotly_chart(fig_effort, use_container_width=True)
+        else:
+            st.info("Insufficient data for effort-level analysis.")
+
+        # Per-agent analysis by position
+        st.markdown("#### Reasoning vs. Payoff by Agent Position")
+        st.markdown("*Each dot is an individual agent. Color = position (Alpha/Beta). Symbol = effort level.*")
+        fig_position = create_reasoning_vs_payoff_by_position_chart(batches)
+        if fig_position:
+            st.plotly_chart(fig_position, use_container_width=True)
+        else:
+            st.info("Insufficient data for position analysis.")
 
         # Phase-specific breakdown
         st.markdown("#### Phase-Specific Reasoning vs. Payoff")
