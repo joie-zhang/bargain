@@ -104,13 +104,18 @@ class StrongModelAgentFactory:
             return None
         
         # Map model names to ModelType enum values
-        # For models not in the enum, we'll use the default and pass actual model via custom_parameters
+        # Note: This is mainly for compatibility/fallback. The actual model_id is always
+        # set via _actual_model_id (line 139), which takes precedence in AnthropicAgent.
         model_type_map = {
             "claude-3-opus": ModelType.CLAUDE_3_OPUS,
             "claude-3-sonnet": ModelType.CLAUDE_3_SONNET,
             "claude-3-haiku": ModelType.CLAUDE_3_HAIKU,
             "claude-3-5-sonnet": ModelType.CLAUDE_3_5_SONNET,
-            "claude-3-5-haiku": ModelType.CLAUDE_3_HAIKU,  # Map to closest available
+            "claude-3-5-haiku": ModelType.CLAUDE_3_5_HAIKU,
+            "claude-3-7-sonnet": ModelType.CLAUDE_3_7_SONNET,
+            "claude-4-sonnet": ModelType.CLAUDE_4_SONNET,
+            "claude-4-1-opus": ModelType.CLAUDE_4_1_OPUS,
+            "claude-4-5-haiku": ModelType.CLAUDE_4_5_HAIKU,
         }
         
         # Use the enum if available, otherwise use a default
@@ -152,21 +157,30 @@ class StrongModelAgentFactory:
             return None
         
         # Determine correct model type
+        # Note: This is mainly for compatibility/fallback. The actual model_id is always
+        # set via _actual_model_id (line 178), which takes precedence in OpenAIAgent.
         if "gpt-4o" in model_name:
             model_type = ModelType.GPT_4O
+        elif "gpt-5" in model_name:
+            model_type = ModelType.GPT_5
         elif "gpt-4" in model_name:
             model_type = ModelType.GPT_4
-        elif "o3" in model_name:
+        elif "o3" in model_name or "o1" in model_name:
             model_type = ModelType.O3
         else:
-            model_type = ModelType.GPT_4  # default
+            model_type = ModelType.GPT_4  # default fallback
+        
+        # Extract reasoning_effort if available and add to custom_parameters
+        custom_params = {}
+        if "reasoning_effort" in model_config:
+            custom_params["reasoning_effort"] = model_config["reasoning_effort"]
         
         llm_config = LLMConfig(
             model_type=model_type,
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={}
+            custom_parameters=custom_params
         )
         
         # Store the actual model_id for the agent to use
