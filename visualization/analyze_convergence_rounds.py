@@ -18,7 +18,7 @@ BASELINE_MODELS = ['claude-3-opus', 'gemini-1-5-pro', 'gpt-4o']
 STRONG_MODELS = ['claude-3-5-haiku', 'claude-3-5-sonnet', 'claude-4-sonnet', 
                  'claude-4-1-opus', 'gemini-2-5-pro', 'gemini-2-0-flash', 
                  'gpt-4o-latest', 'o1', 
-                 'gpt-5-mini', 'gpt-5-nano', 'o3', 'gpt-5']
+                 'gpt-5-mini', 'gpt-5-nano', 'o3', 'gpt-5-medium-effort', 'gpt-5-low-effort', 'gpt-5-high-effort']
 
 # Competition level buckets
 COMPETITION_LEVELS = [0.0, 0.25, 0.5, 0.75, 1.0]

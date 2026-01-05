@@ -31,7 +31,9 @@ STRONG_MODELS=(
     
     # OpenAI models
     "gpt-4o-latest"  # Nov 2024 version (model_id: gpt-4o-2024-11-20)
-    "gpt-5"  # Full GPT-5 (model_id: gpt-5-2025-08-07)
+    "gpt-5-medium-effort"  # GPT-5 with medium reasoning effort (model_id: gpt-5-2025-08-07)
+    "gpt-5-low-effort"  # GPT-5 with low reasoning effort (model_id: gpt-5-2025-08-07)
+    "gpt-5-high-effort"  # GPT-5 with high reasoning effort (model_id: gpt-5-2025-08-07)
     "gpt-5.1"  # GPT-5.1 (model_id: gpt-5.1-2025-11-13)
     "gpt-5-nano"  # GPT-5 Nano (model_id: gpt-5-nano-2025-08-07)
     "gpt-5-mini"  # GPT-5 Mini (model_id: gpt-5-mini-2025-08-07)

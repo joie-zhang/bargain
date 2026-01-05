@@ -46,11 +46,17 @@ class ModelType(Enum):
     CLAUDE_3_SONNET = "claude-3-sonnet-20240229"
     CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"
+    CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"
+    CLAUDE_3_7_SONNET = "claude-3-7-sonnet-20250219"
+    CLAUDE_4_SONNET = "claude-sonnet-4-20250514"
+    CLAUDE_4_1_OPUS = "claude-opus-4-1-20250805"
+    CLAUDE_4_5_HAIKU = "claude-haiku-4-5-20251001"
     
     # OpenAI models
     GPT_4 = "gpt-4"
     GPT_4_TURBO = "gpt-4-turbo"
     GPT_4O = "gpt-4o"
+    GPT_5 = "gpt-5"
     O3_MINI = "o3-mini"
     O3 = "o3"
     
@@ -1059,6 +1065,16 @@ class AnthropicAgent(BaseLLMAgent):
                 self.model_name = "claude-3-haiku-20240307"
             elif config.model_type == ModelType.CLAUDE_3_5_SONNET:
                 self.model_name = "claude-3-5-sonnet-20241022"
+            elif config.model_type == ModelType.CLAUDE_3_5_HAIKU:
+                self.model_name = "claude-3-5-haiku-20241022"
+            elif config.model_type == ModelType.CLAUDE_3_7_SONNET:
+                self.model_name = "claude-3-7-sonnet-20250219"
+            elif config.model_type == ModelType.CLAUDE_4_SONNET:
+                self.model_name = "claude-sonnet-4-20250514"
+            elif config.model_type == ModelType.CLAUDE_4_1_OPUS:
+                self.model_name = "claude-opus-4-1-20250805"
+            elif config.model_type == ModelType.CLAUDE_4_5_HAIKU:
+                self.model_name = "claude-haiku-4-5-20251001"
             else:
                 raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
     
@@ -1180,6 +1196,8 @@ class OpenAIAgent(BaseLLMAgent):
                 self.model_name = "gpt-4-turbo"
             elif config.model_type == ModelType.GPT_4O:
                 self.model_name = "gpt-4o"
+            elif config.model_type == ModelType.GPT_5:
+                self.model_name = "gpt-5"  # Base name, actual version set via _actual_model_id
             elif config.model_type == ModelType.O3_MINI:
                 self.model_name = "o3-mini"
             elif config.model_type == ModelType.O3:
