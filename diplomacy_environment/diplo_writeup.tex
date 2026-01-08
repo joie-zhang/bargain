@@ -1,0 +1,257 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+
+\title{Diplomatic Treaty Negotiation: A Multi-Agent Bargaining Environment}
+\author{Joie Zhang}
+\date{January 6, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Overview}
+
+The diplomatic treaty negotiation environment is a multi-agent, multi-issue bargaining game where agents negotiate over multiple dimensions simultaneously. The environment allows smooth variation between cooperative and competitive scenarios through three orthogonal parameters that control preference alignment, priority overlap, and issue structure.
+
+\section{Game Setup}
+
+\subsection{Basic Components}
+
+\begin{itemize}
+    \item \textbf{Agents}: $N$ agents indexed by $i \in \{1, 2, \ldots, N\}$
+    \item \textbf{Issues}: $K$ negotiation issues indexed by $k \in \{1, 2, \ldots, K\}$
+    \item \textbf{Agreement Space}: An agreement is a vector $A = [a_1, a_2, \ldots, a_K]$ where each $a_k \in [0,1]$ represents the negotiated outcome on issue $k$
+\end{itemize}
+
+\subsection{Agent Preferences}
+
+Each agent $i$ is characterized by two preference components:
+
+\paragraph{Position Preferences:} $p_i = [p_{i1}, p_{i2}, \ldots, p_{iK}]$ where $p_{ik} \in [0,1]$
+
+This represents agent $i$'s ideal outcome on each issue $k$. For example, if issue $k$ represents a trade tariff rate from 0\% to 100\%, then $p_{ik} = 0.3$ means agent $i$ ideally wants a 30\% tariff rate.
+
+\paragraph{Importance Weights:} $w_i = [w_{i1}, w_{i2}, \ldots, w_{iK}]$ where $w_{ik} \geq 0$ and $\sum_{k=1}^{K} w_{ik} = 1$
+
+This represents how much agent $i$ cares about each issue. Higher weights indicate greater importance. The normalization constraint ensures utilities are comparable across agents.
+
+\subsection{Utility Function}
+
+Agent $i$'s utility from agreement $A$ is:
+
+\begin{equation}
+U_i(A) = \sum_{k=1}^{K} w_{ik} \cdot v_{ik}(a_k)
+\end{equation}
+
+where $v_{ik}(a_k)$ is the value agent $i$ receives from outcome $a_k$ on issue $k$.
+
+\paragraph{Issue Value Function:} We define $v_{ik}(a_k)$ based on the issue's structure (see Section 3.3):
+
+\begin{equation}
+v_{ik}(a_k) = \begin{cases}
+1 - |p_{ik} - a_k| & \text{for standard issues} \\
+1 - |p_{ik} - a_k| + c_k \cdot \text{bonus}(a_k) & \text{for compatible issues} \\
+\text{zero-sum function} & \text{for conflicting issues}
+\end{cases}
+\end{equation}
+
+For simplicity in the base case, we use the linear distance penalty:
+\begin{equation}
+v_{ik}(a_k) = 1 - |p_{ik} - a_k|
+\end{equation}
+
+This gives $v_{ik} \in [0,1]$ where $v_{ik} = 1$ when $a_k = p_{ik}$ (perfect match) and $v_{ik} = 0$ when $a_k$ is maximally far from $p_{ik}$.
+
+\section{Competition-Cooperation Parameters}
+
+The environment uses three orthogonal parameters to control the degree of competition versus cooperation:
+
+\subsection{Parameter 1: Preference Correlation ($\rho$)}
+
+\textbf{What it controls}: Whether agents want similar or opposite outcomes on the issues.
+
+\textbf{Range}: $\rho \in [-1, 1]$
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\rho = 1$: Agents have identical position preferences (pure cooperation)
+    \item $\rho = 0$: Agent preferences are uncorrelated (mixed motives)
+    \item $\rho = -1$: Agents have opposing preferences (pure competition)
+\end{itemize}
+
+\textbf{Implementation}: Generate position preferences from a multivariate distribution:
+
+For two agents:
+\begin{equation}
+\begin{bmatrix} p_1 \\ p_2 \end{bmatrix} \sim \mathcal{N}\left(\begin{bmatrix} \mu \\ \mu \end{bmatrix}, \begin{bmatrix} \sigma^2 & \rho\sigma^2 \\ \rho\sigma^2 & \sigma^2 \end{bmatrix}\right)
+\end{equation}
+
+where $\mu = [0.5, 0.5, \ldots, 0.5]$ (center of issue space) and $\sigma$ controls variance. After generation, clip values to $[0,1]$.
+
+For $N > 2$ agents, construct a correlation matrix $\Sigma$ where $\Sigma_{ij} = \rho$ for $i \neq j$ and $\Sigma_{ii} = 1$.
+
+\subsection{Parameter 2: Interest Overlap ($\theta$)}
+
+\textbf{What it controls}: Whether agents care about the same issues or have different priorities.
+
+\textbf{Range}: $\theta \in [0, 1]$
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\theta = 1$: Agents have identical importance weights (high competition for same issues)
+    \item $\theta \approx 0$: Agents have orthogonal priorities (high potential for integrative tradeoffs)
+\end{itemize}
+
+\textbf{Measurement}: For agents $i$ and $j$:
+\begin{equation}
+\theta_{ij} = \frac{w_i \cdot w_j}{\|w_i\| \|w_j\|} = \frac{\sum_{k=1}^{K} w_{ik} w_{jk}}{\sqrt{\sum_{k=1}^{K} w_{ik}^2} \sqrt{\sum_{k=1}^{K} w_{jk}^2}}
+\end{equation}
+
+Since weights are normalized ($\|w_i\| = 1$), this simplifies to:
+\begin{equation}
+\theta_{ij} = \sum_{k=1}^{K} w_{ik} w_{jk}
+\end{equation}
+
+\textbf{Implementation}: To generate weights with target overlap $\theta_{\text{target}}$:
+
+\begin{enumerate}
+    \item Generate base weights from Dirichlet distribution: $w_1 \sim \text{Dir}(\alpha, \alpha, \ldots, \alpha)$
+    \item For agent 2: $w_2 = \theta_{\text{target}} \cdot w_1 + (1-\theta_{\text{target}}) \cdot w_2'$ where $w_2' \sim \text{Dir}(\alpha, \alpha, \ldots, \alpha)$
+    \item Renormalize: $w_2 \leftarrow w_2 / \sum_k w_{2k}$
+\end{enumerate}
+
+\subsection{Parameter 3: Issue Compatibility ($\lambda$)}
+
+\textbf{What it controls}: Whether issues are win-win (both agents can do well) or zero-sum (one's gain is another's loss).
+
+\textbf{Range}: $\lambda \in [-1, 1]$
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\lambda = 1$: All issues are compatible (win-win, integrative)
+    \item $\lambda = 0$: Mixed issue types
+    \item $\lambda = -1$: All issues are conflicting (zero-sum, distributive)
+\end{itemize}
+
+\textbf{Implementation}: For each issue $k$, assign a compatibility score $c_k \in \{-1, 1\}$:
+\begin{itemize}
+    \item Sample $c_k = 1$ with probability $p = (\lambda + 1)/2$
+    \item Sample $c_k = -1$ with probability $1-p$
+\end{itemize}
+
+Then $\lambda = \mathbb{E}[c_k]$ (mean compatibility across issues).
+
+\paragraph{Issue Type Definitions:}
+
+\textbf{Compatible issues} ($c_k = 1$): Both agents can achieve high utility. Implementation:
+\begin{itemize}
+    \item Generate preferences such that $p_{1k}$ and $p_{2k}$ are both near the same value, OR
+    \item Define utility function with a ``sweet spot'' where both agents benefit, e.g., compromise outcomes yield higher joint utility than extreme positions
+\end{itemize}
+
+\textbf{Conflicting issues} ($c_k = -1$): Zero-sum structure. Implementation:
+\begin{itemize}
+    \item Set $p_{2k} = 1 - p_{1k}$ (opposing preferences)
+    \item Use utility: $v_{1k}(a_k) = a_k$ and $v_{2k}(a_k) = 1 - a_k$
+    \item This ensures $v_{1k}(a_k) + v_{2k}(a_k) = 1$ (constant sum)
+\end{itemize}
+
+\section{Example Scenarios}
+
+\subsection{Pure Cooperation}
+\begin{itemize}
+    \item $\rho = 1$: Agents want the same outcomes
+    \item $\theta = 0$: But care about different issues
+    \item $\lambda = 1$: All issues are compatible
+\end{itemize}
+
+Expected behavior: Easy to find Pareto-optimal agreements; high social welfare.
+
+\subsection{Pure Competition}
+\begin{itemize}
+    \item $\rho = -1$: Agents want opposite outcomes
+    \item $\theta = 1$: And care about the same issues
+    \item $\lambda = -1$: All issues are zero-sum
+\end{itemize}
+
+Expected behavior: Difficult negotiation; low social welfare; agreements near Nash equilibrium may be far from Pareto frontier.
+
+\subsection{Integrative Bargaining (Classic Scenario)}
+\begin{itemize}
+    \item $\rho = 0$: Uncorrelated preferences
+    \item $\theta = 0.3$: Different priorities (logrolling potential)
+    \item $\lambda = 0.5$: Mix of compatible and conflicting issues
+\end{itemize}
+
+Expected behavior: Potential for value creation through tradeoffs; agents concede on low-priority issues to gain on high-priority ones.
+
+\section{Negotiation Protocol}
+
+The game can be played with various negotiation protocols:
+
+\subsection{Simultaneous Proposal Protocol}
+\begin{enumerate}
+    \item Each agent $i$ proposes an agreement $A^i = [a^i_1, \ldots, a^i_K]$
+    \item If all proposals are within distance $\epsilon$ (i.e., $\max_{i,j} \|A^i - A^j\| < \epsilon$), agreement is reached at the mean proposal
+    \item Otherwise, agents update proposals and repeat
+    \item Maximum $T$ rounds; failure to agree yields disagreement payoffs
+\end{enumerate}
+
+\subsection{Alternating Offers Protocol}
+\begin{enumerate}
+    \item Agents take turns proposing complete agreements
+    \item Responding agent can accept or reject
+    \item If rejected, responder makes counteroffer
+    \item Continue for maximum $T$ rounds with discount factor $\delta \in (0,1)$
+\end{enumerate}
+
+\subsection{Mediator Protocol}
+\begin{enumerate}
+    \item Agents report preferences (truthfully or strategically)
+    \item Mediator proposes agreement based on reports
+    \item Agents vote to accept/reject
+    \item If majority accepts, agreement implemented
+\end{enumerate}
+
+\section{Evaluation Metrics}
+
+\subsection{Social Welfare}
+\begin{equation}
+SW(A) = \sum_{i=1}^{N} U_i(A)
+\end{equation}
+
+Optimal social welfare: $SW^* = \max_{A} SW(A)$
+
+\subsection{Pareto Efficiency}
+An agreement $A$ is Pareto efficient if there is no alternative agreement $A'$ such that $U_i(A') \geq U_i(A)$ for all $i$ and $U_j(A') > U_j(A)$ for some $j$.
+
+\subsection{Utilitarian Distance}
+\begin{equation}
+D_U = \frac{SW^* - SW(A)}{SW^*}
+\end{equation}
+
+Measures inefficiency: how far the negotiated agreement is from optimal social welfare.
+
+\subsection{Nash Distance}
+Let $A^N$ be the Nash equilibrium agreement (if it exists). Define:
+\begin{equation}
+D_N = \|A - A^N\|
+\end{equation}
+
+Measures strategic sophistication: how far agents deviate from non-cooperative equilibrium.
+
+\subsection{Fairness (Kalai-Smorodinsky)}
+For two agents, compute the ratio of utility gains over disagreement point:
+\begin{equation}
+F = \min\left(\frac{U_1(A) - d_1}{U_2(A) - d_2}, \frac{U_2(A) - d_2}{U_1(A) - d_1}\right)
+\end{equation}
+
+where $d_i$ is agent $i$'s disagreement utility. $F = 1$ indicates perfectly balanced agreement.
+
+\end{document}
