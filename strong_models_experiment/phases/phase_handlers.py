@@ -180,7 +180,7 @@ class PhaseHandler:
                                   preferences: Dict, round_num: int, max_rounds: int) -> Dict:
         """Phase 2: Public Discussion Phase
 
-        When a GameEnvironment is provided, uses its generate_prompt() method
+        When a GameEnvironment is provided, uses its get_*_prompt() methods
         for game-specific discussion prompts. Otherwise falls back to PromptGenerator.
         """
         messages = []
@@ -207,17 +207,22 @@ class PhaseHandler:
 
             # Use GameEnvironment if available, otherwise fall back to PromptGenerator
             if self.game_environment is not None:
-                game_state = self._build_game_state(
-                    agents, items, preferences, round_num, max_rounds,
-                    agent.agent_id, "discussion",
-                    conversation_history=messages
-                )
-                # Add speaker order info to game state
-                game_state["speaker_order"] = i + 1
-                game_state["total_speakers"] = len(agents)
+                # Get the original game_state if stored in preferences, otherwise build one
+                if "game_state" in preferences:
+                    game_state = preferences["game_state"]
+                else:
+                    game_state = self._build_game_state(
+                        agents, items, preferences, round_num, max_rounds,
+                        agent.agent_id, "discussion",
+                        conversation_history=messages
+                    )
 
-                full_discussion_prompt = self.game_environment.generate_prompt(
-                    "discussion", game_state
+                full_discussion_prompt = self.game_environment.get_discussion_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    round_num=round_num,
+                    max_rounds=max_rounds,
+                    discussion_history=current_discussion_history
                 )
             else:
                 # Legacy mode: use PromptGenerator
@@ -328,7 +333,7 @@ class PhaseHandler:
                                 preferences: Dict, round_num: int, max_rounds: int) -> Dict:
         """Phase 4A: Proposal Submission Phase
 
-        When a GameEnvironment is provided, uses its generate_prompt() method
+        When a GameEnvironment is provided, uses its get_*_prompt() methods
         for game-specific proposal prompts. Otherwise uses agent's default behavior.
         """
         messages = []
@@ -354,11 +359,20 @@ class PhaseHandler:
 
             # Generate proposal prompt (for logging and potential custom prompts)
             if self.game_environment is not None:
-                game_state = self._build_game_state(
-                    agents, items, preferences, round_num, max_rounds,
-                    agent.agent_id, "proposal"
+                # Get the original game_state if stored in preferences
+                if "game_state" in preferences:
+                    game_state = preferences["game_state"]
+                else:
+                    game_state = self._build_game_state(
+                        agents, items, preferences, round_num, max_rounds,
+                        agent.agent_id, "proposal"
+                    )
+                proposal_prompt = self.game_environment.get_proposal_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    round_num=round_num,
+                    agents=[a.agent_id for a in agents]
                 )
-                proposal_prompt = self.game_environment.generate_prompt("proposal", game_state)
             else:
                 proposal_prompt = f"Please propose an allocation for round {round_num}."
 
@@ -478,7 +492,7 @@ class PhaseHandler:
                                       proposals: List[Dict], enumerated_proposals: List[Dict]) -> Dict:
         """Phase 5A: Private Voting Phase
 
-        When a GameEnvironment is provided, uses its generate_prompt() method
+        When a GameEnvironment is provided, uses its get_*_prompt() methods
         for game-specific voting prompts. Otherwise uses default voting prompts.
         """
         private_votes = []
@@ -524,14 +538,20 @@ class PhaseHandler:
 
                     # Generate voting prompt (for logging)
                     if self.game_environment is not None:
-                        game_state = self._build_game_state(
-                            agents, items, preferences, round_num, max_rounds,
-                            agent.agent_id, "voting",
-                            proposals=[proposal_for_voting]
-                        )
-                        game_state["current_proposal"] = proposal_for_voting
-                        voting_prompt = self.game_environment.generate_prompt(
-                            "voting", game_state
+                        # Get the original game_state if stored in preferences
+                        if "game_state" in preferences:
+                            game_state = preferences["game_state"]
+                        else:
+                            game_state = self._build_game_state(
+                                agents, items, preferences, round_num, max_rounds,
+                                agent.agent_id, "voting",
+                                proposals=[proposal_for_voting]
+                            )
+                        voting_prompt = self.game_environment.get_voting_prompt(
+                            agent_id=agent.agent_id,
+                            proposal=proposal_for_voting,
+                            game_state=game_state,
+                            round_num=round_num
                         )
                     else:
                         # Legacy mode: use default voting prompt

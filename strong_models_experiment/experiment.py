@@ -174,15 +174,26 @@ class StrongModelsExperiment:
         # Create game state using GameEnvironment
         # This generates items/issues and preferences based on game type
         game_state = game_environment.create_game_state(agents)
-        items = game_state["items"]
-        preferences = {"agent_preferences": game_state["agent_preferences"]}
 
-        # Log game-specific info
+        # Extract items/issues and preferences based on game type
         if game_type == "item_allocation":
+            items = game_state["items"]
+            preferences = {"agent_preferences": game_state["agent_preferences"]}
             self.logger.info(f"Created {len(items)} items with competition_level={config.get('competition_level')}")
         elif game_type == "diplomacy":
+            # Convert issues to item-like format for compatibility
+            items = [{"name": issue} for issue in game_state["issues"]]
+            # Use positions as preferences, store full game_state for utility calculation
+            preferences = {
+                "agent_preferences": game_state["agent_positions"],
+                "agent_weights": game_state["agent_weights"],
+                "issue_types": game_state["issue_types"],
+                "game_state": game_state  # Full state for utility calculation
+            }
             self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}, lam={config.get('lam')}")
-        
+        else:
+            raise ValueError(f"Unknown game type: {game_type}")
+
         # Initialize tracking variables
         consensus_reached = False
         final_round = 0
