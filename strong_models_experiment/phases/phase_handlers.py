@@ -3,20 +3,36 @@
 import json
 import time
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
 from negotiation import NegotiationContext
 from negotiation.llm_agents import BaseLLMAgent
 from ..prompts import PromptGenerator
 
+# Import GameEnvironment for type checking to avoid circular imports
+if TYPE_CHECKING:
+    from game_environments import GameEnvironment
+
 
 class PhaseHandler:
-    """Handles execution of different negotiation phases."""
-    
-    def __init__(self, save_interaction_callback=None, token_config=None):
+    """Handles execution of different negotiation phases.
+
+    Supports two modes of operation:
+    1. Legacy mode: Uses PromptGenerator for prompt generation (default)
+    2. GameEnvironment mode: Uses GameEnvironment for game-specific prompt generation
+
+    When a GameEnvironment is provided, it takes precedence over PromptGenerator
+    for game-specific phases (discussion, proposal, voting).
+    """
+
+    def __init__(self, save_interaction_callback=None, token_config=None,
+                 game_environment: Optional["GameEnvironment"] = None):
         self.logger = logging.getLogger(__name__)
         self.prompt_gen = PromptGenerator()
         self.save_interaction = save_interaction_callback or (lambda *args: None)
-        
+
+        # Optional GameEnvironment for game-specific behavior
+        self.game_environment = game_environment
+
         # Token limits for different phases (None means unlimited)
         self.token_config = token_config or {
             "discussion": None,
@@ -44,9 +60,43 @@ class PhaseHandler:
             token_usage = {
                 "total_tokens": agent_response.tokens_used
             }
-        
+
         return token_usage
-    
+
+    def _build_game_state(self, agents: List[BaseLLMAgent], items: List[Dict],
+                          preferences: Dict, round_num: int, max_rounds: int,
+                          agent_id: str, phase: str,
+                          conversation_history: Optional[List[Dict]] = None,
+                          proposals: Optional[List[Dict]] = None) -> Dict[str, Any]:
+        """Build a game state dictionary for GameEnvironment.
+
+        Args:
+            agents: List of agent objects
+            items: List of item dictionaries
+            preferences: Dictionary containing agent_preferences
+            round_num: Current round number
+            max_rounds: Maximum number of rounds
+            agent_id: ID of the current agent
+            phase: Current phase name
+            conversation_history: Optional list of conversation messages
+            proposals: Optional list of proposals
+
+        Returns:
+            Dictionary representing the current game state
+        """
+        return {
+            "round": round_num,
+            "max_rounds": max_rounds,
+            "items": items,
+            "agents": [a.agent_id for a in agents],
+            "agent_id": agent_id,
+            "preferences": preferences.get("agent_preferences", {}).get(agent_id, []),
+            "all_preferences": preferences.get("agent_preferences", {}),
+            "phase": phase,
+            "conversation_history": conversation_history or [],
+            "proposals": proposals or [],
+        }
+
     async def run_game_setup_phase(self, agents: List[BaseLLMAgent], items: List[Dict], 
                                   preferences: Dict, config: Dict) -> None:
         """Phase 1A: Game Setup Phase"""
@@ -128,21 +178,20 @@ class PhaseHandler:
     
     async def run_discussion_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                   preferences: Dict, round_num: int, max_rounds: int) -> Dict:
-        """Phase 2: Public Discussion Phase"""
+        """Phase 2: Public Discussion Phase
+
+        When a GameEnvironment is provided, uses its generate_prompt() method
+        for game-specific discussion prompts. Otherwise falls back to PromptGenerator.
+        """
         messages = []
-        
-        if round_num == 1:
-            discussion_prompt = self.prompt_gen.create_initial_discussion_prompt(items, round_num, max_rounds)
-        else:
-            discussion_prompt = self.prompt_gen.create_ongoing_discussion_prompt(items, round_num, max_rounds)
-        
+
         self.logger.info(f"=== PUBLIC DISCUSSION PHASE - Round {round_num} ===")
-        
+
         # Set token limit for discussion phase if specified
         if self.token_config["discussion"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["discussion"])
-        
+
         for i, agent in enumerate(agents):
             context = NegotiationContext(
                 current_round=round_num,
@@ -153,11 +202,37 @@ class PhaseHandler:
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="discussion"
             )
-            
+
             current_discussion_history = [msg["content"] for msg in messages]
-            full_discussion_prompt = self.prompt_gen.create_contextual_discussion_prompt(
-                discussion_prompt, agent.agent_id, current_discussion_history, i + 1, len(agents)
-            )
+
+            # Use GameEnvironment if available, otherwise fall back to PromptGenerator
+            if self.game_environment is not None:
+                game_state = self._build_game_state(
+                    agents, items, preferences, round_num, max_rounds,
+                    agent.agent_id, "discussion",
+                    conversation_history=messages
+                )
+                # Add speaker order info to game state
+                game_state["speaker_order"] = i + 1
+                game_state["total_speakers"] = len(agents)
+
+                full_discussion_prompt = self.game_environment.generate_prompt(
+                    "discussion", game_state
+                )
+            else:
+                # Legacy mode: use PromptGenerator
+                if round_num == 1:
+                    discussion_prompt = self.prompt_gen.create_initial_discussion_prompt(
+                        items, round_num, max_rounds
+                    )
+                else:
+                    discussion_prompt = self.prompt_gen.create_ongoing_discussion_prompt(
+                        items, round_num, max_rounds
+                    )
+                full_discussion_prompt = self.prompt_gen.create_contextual_discussion_prompt(
+                    discussion_prompt, agent.agent_id, current_discussion_history,
+                    i + 1, len(agents)
+                )
             
             # Get response with token info
             agent_response = await agent.generate_response(context, full_discussion_prompt)
@@ -251,17 +326,21 @@ class PhaseHandler:
     
     async def run_proposal_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                 preferences: Dict, round_num: int, max_rounds: int) -> Dict:
-        """Phase 4A: Proposal Submission Phase"""
+        """Phase 4A: Proposal Submission Phase
+
+        When a GameEnvironment is provided, uses its generate_prompt() method
+        for game-specific proposal prompts. Otherwise uses agent's default behavior.
+        """
         messages = []
         proposals = []
-        
+
         self.logger.info(f"=== PROPOSAL SUBMISSION PHASE - Round {round_num} ===")
-        
+
         # Set token limit for proposal phase if specified
         if self.token_config["proposal"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["proposal"])
-        
+
         for agent in agents:
             context = NegotiationContext(
                 current_round=round_num,
@@ -272,9 +351,18 @@ class PhaseHandler:
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="proposal"
             )
-            
-            proposal_prompt = f"Please propose an allocation for round {round_num}."
-            
+
+            # Generate proposal prompt (for logging and potential custom prompts)
+            if self.game_environment is not None:
+                game_state = self._build_game_state(
+                    agents, items, preferences, round_num, max_rounds,
+                    agent.agent_id, "proposal"
+                )
+                proposal_prompt = self.game_environment.generate_prompt("proposal", game_state)
+            else:
+                proposal_prompt = f"Please propose an allocation for round {round_num}."
+
+            # Get proposal from agent (agent handles the actual LLM call)
             proposal = await agent.propose_allocation(context)
             
             # Extract token usage if present (remove from proposal to avoid saving it in the content)
@@ -388,28 +476,32 @@ class PhaseHandler:
     async def run_private_voting_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                       preferences: Dict, round_num: int, max_rounds: int,
                                       proposals: List[Dict], enumerated_proposals: List[Dict]) -> Dict:
-        """Phase 5A: Private Voting Phase"""
+        """Phase 5A: Private Voting Phase
+
+        When a GameEnvironment is provided, uses its generate_prompt() method
+        for game-specific voting prompts. Otherwise uses default voting prompts.
+        """
         private_votes = []
-        
+
         self.logger.info(f"=== PRIVATE VOTING PHASE - Round {round_num} ===")
-        
+
         if not enumerated_proposals:
             self.logger.warning("No enumerated proposals available for voting!")
             return {
                 "private_votes": [],
                 "voting_summary": "No proposals to vote on"
             }
-        
+
         # Set token limit for voting phase if specified
         if self.token_config["voting"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["voting"])
-        
+
         for agent in agents:
             agent_votes = []
-            
+
             self.logger.info(f"🗳️ Collecting private votes from {agent.agent_id}...")
-            
+
             voting_context = NegotiationContext(
                 current_round=round_num,
                 max_rounds=max_rounds,
@@ -420,7 +512,7 @@ class PhaseHandler:
                 turn_type="private_voting",
                 current_proposals=proposals
             )
-            
+
             try:
                 for enum_proposal in enumerated_proposals:
                     proposal_for_voting = {
@@ -429,9 +521,21 @@ class PhaseHandler:
                         "reasoning": enum_proposal.get("reasoning", ""),
                         "round": round_num
                     }
-                    
-                    # Create the voting prompt for logging (matching what's in vote_on_proposal)
-                    voting_prompt = f"""A proposal has been made for item allocation:
+
+                    # Generate voting prompt (for logging)
+                    if self.game_environment is not None:
+                        game_state = self._build_game_state(
+                            agents, items, preferences, round_num, max_rounds,
+                            agent.agent_id, "voting",
+                            proposals=[proposal_for_voting]
+                        )
+                        game_state["current_proposal"] = proposal_for_voting
+                        voting_prompt = self.game_environment.generate_prompt(
+                            "voting", game_state
+                        )
+                    else:
+                        # Legacy mode: use default voting prompt
+                        voting_prompt = f"""A proposal has been made for item allocation:
 PROPOSAL: {json.dumps(proposal_for_voting['allocation'], indent=2)}
 REASONING: {proposal_for_voting.get('reasoning', 'No reasoning provided')}
 PROPOSED BY: {proposal_for_voting.get('proposed_by', 'Unknown')}
