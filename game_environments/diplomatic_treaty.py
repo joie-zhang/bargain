@@ -226,7 +226,7 @@ You are participating in a diplomatic negotiation with {parties_phrase} over {le
 
 **AGREEMENT FORMAT:**
 - An agreement is a vector of values, one per issue
-- Example: [{', '.join(['0.3', '0.7', '0.5'][:min(3, len(issues))]}, ...]
+- Example: [0.3, 0.7, 0.5, ...]
 - Each value represents where that issue is resolved on the [0,1] spectrum
 
 **UTILITY CALCULATION:**
