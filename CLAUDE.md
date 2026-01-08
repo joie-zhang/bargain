@@ -451,6 +451,12 @@ python experiments/run_negotiation.py \
 5. **Cluster Job Failures**
    - Solution: Implement checkpointing, automatic restart capability
    - Prevention: Test locally before large-scale cluster runs
+
+6. **Permission Denied on /tmp/ (SSH Sessions)**
+   - Error: `EACCES: permission denied, mkdir '/tmp/claude/-scratch-gpfs-...'`
+   - Cause: When working via SSH on clusters (della, della-gpu), the default /tmp/ directory may not be accessible
+   - Solution: Use the `$TMP_DIR` environment variable defined in ~/.bashrc instead of /tmp/
+   - Note: This is a cluster-specific issue that occurs during remote SSH sessions
 </negotiation_research_principles>
 
 ## Claude Code Integration
