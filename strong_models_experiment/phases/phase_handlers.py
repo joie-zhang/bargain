@@ -97,17 +97,26 @@ class PhaseHandler:
             "proposals": proposals or [],
         }
 
-    async def run_game_setup_phase(self, agents: List[BaseLLMAgent], items: List[Dict], 
+    async def run_game_setup_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                   preferences: Dict, config: Dict) -> None:
         """Phase 1A: Game Setup Phase"""
         self.logger.info("=== GAME SETUP PHASE ===")
-        
+
         # Set token limit for setup phase if specified
         if self.token_config["default"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["default"])
-        
-        game_rules_prompt = self.prompt_gen.create_game_rules_prompt(items, len(agents), config)
+
+        # Use GameEnvironment if available, otherwise fall back to PromptGenerator
+        if self.game_environment is not None:
+            # Get the original game_state if stored in preferences
+            if "game_state" in preferences:
+                game_state = preferences["game_state"]
+            else:
+                game_state = {"items": items, "agent_preferences": preferences.get("agent_preferences", {})}
+            game_rules_prompt = self.game_environment.get_game_rules_prompt(game_state)
+        else:
+            game_rules_prompt = self.prompt_gen.create_game_rules_prompt(items, len(agents), config)
         
         self.logger.info("📜 GAME RULES PROMPT:")
         self.logger.info(f"  {game_rules_prompt}")
@@ -138,17 +147,29 @@ class PhaseHandler:
                                                preferences: Dict, config: Dict) -> None:
         """Phase 1B: Private Preference Assignment"""
         self.logger.info("=== PRIVATE PREFERENCE ASSIGNMENT ===")
-        
+
         # Set token limit for preference assignment if specified
         if self.token_config["default"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["default"])
-        
+
         for agent in agents:
             agent_preferences = preferences["agent_preferences"][agent.agent_id]
-            preference_prompt = self.prompt_gen.create_preference_assignment_prompt(
-                items, agent_preferences, agent.agent_id
-            )
+
+            # Use GameEnvironment if provided, otherwise use legacy PromptGenerator
+            if self.game_environment is not None:
+                if "game_state" in preferences:
+                    game_state = preferences["game_state"]
+                else:
+                    game_state = {"items": items, "agent_preferences": preferences.get("agent_preferences", {})}
+                preference_prompt = self.game_environment.get_preference_assignment_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state
+                )
+            else:
+                preference_prompt = self.prompt_gen.create_preference_assignment_prompt(
+                    items, agent_preferences, agent.agent_id
+                )
             
             self.logger.info(f"  🎯 {agent.agent_id} preferences:")
             for i, (item, value) in enumerate(zip(items, agent_preferences)):
@@ -278,8 +299,27 @@ class PhaseHandler:
                 agent.update_max_tokens(self.token_config["thinking"])
         
         for agent in agents:
-            thinking_prompt = self.prompt_gen.create_thinking_prompt(items, round_num, max_rounds, discussion_messages)
-            
+            # Use GameEnvironment if available, otherwise fall back to PromptGenerator
+            if self.game_environment is not None:
+                # Get the original game_state if stored in preferences
+                if "game_state" in preferences:
+                    game_state = preferences["game_state"]
+                else:
+                    game_state = self._build_game_state(
+                        agents, items, preferences, round_num, max_rounds,
+                        agent.agent_id, "thinking",
+                        conversation_history=discussion_messages
+                    )
+                thinking_prompt = self.game_environment.get_thinking_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    round_num=round_num,
+                    max_rounds=max_rounds,
+                    discussion_history=[msg.get("content", "") for msg in discussion_messages] if discussion_messages else []
+                )
+            else:
+                thinking_prompt = self.prompt_gen.create_thinking_prompt(items, round_num, max_rounds, discussion_messages)
+
             context = NegotiationContext(
                 current_round=round_num,
                 max_rounds=max_rounds,
@@ -290,17 +330,19 @@ class PhaseHandler:
                 turn_type="thinking",
                 conversation_history=discussion_messages
             )
-            
+
             try:
                 thinking_response = await agent.think_strategy(thinking_prompt, context)
-                
+
                 # Extract token usage if present (remove from response to avoid saving it in the content)
                 token_usage = thinking_response.pop("_token_usage", None)
-                
+
                 self.logger.info(f"🧠 [PRIVATE] {agent.agent_id} strategic thinking:")
                 self.logger.info(f"  Full reasoning: {thinking_response.get('reasoning', 'No reasoning provided')}")
                 self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
-                self.logger.info(f"  Target items: {thinking_response.get('target_items', [])}")
+                # Log priorities/targets based on game type
+                priorities = thinking_response.get('key_priorities') or thinking_response.get('target_items', [])
+                self.logger.info(f"  Key priorities: {priorities}")
                 
                 thinking_response_str = json.dumps(thinking_response, default=str)
                 self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", 
@@ -735,19 +777,37 @@ Vote must be either "accept" or "reject"."""
                                              tabulation_result: Dict) -> Dict:
         """Phase 6: Individual Reflection Phase"""
         reflections = []
-        
+
         self.logger.info(f"=== INDIVIDUAL REFLECTION PHASE - Round {round_num} ===")
-        
-        reflection_prompt = f"""Reflect on the outcome of round {round_num}.
-        No proposal achieved unanimous acceptance.
-        Consider what adjustments might lead to consensus in future rounds."""
-        
+
         # Set token limit for reflection phase if specified
         if self.token_config["reflection"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["reflection"])
-        
+
         for agent in agents:
+            # Use GameEnvironment if available, otherwise use default prompt
+            if self.game_environment is not None:
+                # Get the original game_state if stored in preferences
+                if "game_state" in preferences:
+                    game_state = preferences["game_state"]
+                else:
+                    game_state = self._build_game_state(
+                        agents, items, preferences, round_num, max_rounds,
+                        agent.agent_id, "reflection"
+                    )
+                reflection_prompt = self.game_environment.get_reflection_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    round_num=round_num,
+                    max_rounds=max_rounds,
+                    tabulation_result=tabulation_result
+                )
+            else:
+                reflection_prompt = f"""Reflect on the outcome of round {round_num}.
+No proposal achieved unanimous acceptance.
+Consider what adjustments might lead to consensus in future rounds."""
+
             context = NegotiationContext(
                 current_round=round_num,
                 max_rounds=max_rounds,
