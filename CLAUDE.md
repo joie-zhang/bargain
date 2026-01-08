@@ -756,6 +756,7 @@ gemini -p "@**/*.py List all custom loss functions with their mathematical formu
 - Commits: Use conventional commit format (feat:, fix:, docs:, etc.)
 - Branches: `feature/<issue-no>-<description>` or `experiment/<name>`
 - PRs: Include test results and performance impact
+- **Sub-phase commits**: Pause after completing each sub-phase to create a git commit message (do not add Claude as a co-author) and have the user check before committing
 
 ### Testing Frameworks
 - Always verify framework first: `grep -r "test_" . | head -5`
