@@ -16,6 +16,9 @@ from .phases import PhaseHandler
 from .analysis import ExperimentAnalyzer
 from .utils import ExperimentUtils, FileManager
 
+# Import game environment factory
+from game_environments import create_game_environment, GameEnvironment
+
 
 class StrongModelsExperiment:
     """
@@ -92,14 +95,20 @@ class StrongModelsExperiment:
         
         # Default configuration
         default_config = {
+            "game_type": "item_allocation",  # or "diplomacy"
             "m_items": 5,
             "n_agents": len(models),
             "t_rounds": 10,
             "gamma_discount": 0.9,
-            "competition_level": 0.95,
-            "random_seed": None
+            "competition_level": 1,
+            "random_seed": None,
+            # Diplomacy-specific parameters (only used when game_type="diplomacy")
+            "n_issues": 5,
+            "rho": -1,      # Preference correlation [-1, 1]
+            "theta": 1,    # Interest overlap [0, 1]
+            "lam": -1,      # Issue compatibility [-1, 1]
         }
-        
+
         # Merge with provided config
         config = {**default_config, **(experiment_config or {})}
         
@@ -120,21 +129,59 @@ class StrongModelsExperiment:
             "thinking": config.get("max_tokens_thinking", None),
             "default": config.get("max_tokens_default", None)
         }
-        
-        # Initialize phase handler with token config for this experiment
+
+        # Create GameEnvironment based on game_type
+        game_type = config.get("game_type", "item_allocation")
+        self.logger.info(f"Creating game environment: {game_type}")
+
+        if game_type == "item_allocation":
+            game_environment = create_game_environment(
+                game_type="item_allocation",
+                n_agents=config["n_agents"],
+                t_rounds=config["t_rounds"],
+                gamma_discount=config["gamma_discount"],
+                random_seed=config.get("random_seed"),
+                m_items=config.get("m_items", 5),
+                competition_level=config.get("competition_level", 0.95)
+            )
+        elif game_type == "diplomacy":
+            game_environment = create_game_environment(
+                game_type="diplomacy",
+                n_agents=config["n_agents"],
+                t_rounds=config["t_rounds"],
+                gamma_discount=config["gamma_discount"],
+                random_seed=config.get("random_seed"),
+                n_issues=config.get("n_issues", 5),
+                rho=config.get("rho", 0.0),
+                theta=config.get("theta", 0.5),
+                lam=config.get("lam", 0.0)
+            )
+        else:
+            raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation' or 'diplomacy'")
+
+        # Initialize phase handler with token config and game environment
         self.phase_handler = PhaseHandler(
             save_interaction_callback=self._save_interaction,
-            token_config=token_config
+            token_config=token_config,
+            game_environment=game_environment
         )
         
         # Create agents
         agents = await self.agent_factory.create_agents(models, config)
         if not agents:
             raise ValueError("Failed to create agents")
-        
-        # Create items and preferences
-        items = self.utils.create_items(config["m_items"])
-        preferences = self.utils.create_preferences(agents, items, config)
+
+        # Create game state using GameEnvironment
+        # This generates items/issues and preferences based on game type
+        game_state = game_environment.create_game_state(agents)
+        items = game_state["items"]
+        preferences = {"agent_preferences": game_state["agent_preferences"]}
+
+        # Log game-specific info
+        if game_type == "item_allocation":
+            self.logger.info(f"Created {len(items)} items with competition_level={config.get('competition_level')}")
+        elif game_type == "diplomacy":
+            self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}, lam={config.get('lam')}")
         
         # Initialize tracking variables
         consensus_reached = False
