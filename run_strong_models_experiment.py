@@ -93,7 +93,45 @@ async def main():
         default=0.9,
         help="Discount factor for rewards per round (0-1, default: 0.9)"
     )
-    
+
+    # Game type selection
+    parser.add_argument(
+        "--game-type",
+        type=str,
+        choices=["item_allocation", "diplomacy"],
+        default="item_allocation",
+        help="Type of negotiation game (default: item_allocation)"
+    )
+
+    # Diplomacy-specific arguments
+    parser.add_argument(
+        "--n-issues",
+        type=int,
+        default=5,
+        help="Number of issues to negotiate (diplomacy game only, default: 5)"
+    )
+
+    parser.add_argument(
+        "--rho",
+        type=float,
+        default=0.0,
+        help="Preference correlation [-1, 1]: 1=cooperative, -1=competitive (diplomacy only, default: 0.0)"
+    )
+
+    parser.add_argument(
+        "--theta",
+        type=float,
+        default=0.5,
+        help="Interest overlap [0, 1]: 1=same priorities, 0=different priorities (diplomacy only, default: 0.5)"
+    )
+
+    parser.add_argument(
+        "--lam",
+        type=float,
+        default=0.0,
+        help="Issue compatibility [-1, 1]: 1=win-win, -1=zero-sum (diplomacy only, default: 0.0)"
+    )
+
     parser.add_argument(
         "--random-seed",
         type=int,
@@ -212,10 +250,20 @@ async def main():
     print("=" * 60)
     print("STRONG MODELS NEGOTIATION EXPERIMENT (REFACTORED)")
     print("=" * 60)
+    print(f"Game Type: {args.game_type}")
     print(f"Models: {', '.join(args.models)}")
     print(f"Max Rounds: {args.max_rounds}")
-    print(f"Items: {args.num_items}")
-    print(f"Competition Level: {args.competition_level}")
+
+    # Show game-specific parameters
+    if args.game_type == "item_allocation":
+        print(f"Items: {args.num_items}")
+        print(f"Competition Level: {args.competition_level}")
+    elif args.game_type == "diplomacy":
+        print(f"Issues: {args.n_issues}")
+        print(f"Rho (preference correlation): {args.rho}")
+        print(f"Theta (interest overlap): {args.theta}")
+        print(f"Lambda (issue compatibility): {args.lam}")
+
     print(f"Discount Factor: {args.gamma_discount}")
     if args.random_seed:
         print(f"Random Seed: {args.random_seed}")
@@ -268,6 +316,7 @@ async def main():
     
     # Create experiment configuration
     experiment_config = {
+        "game_type": args.game_type,
         "m_items": args.num_items,
         "t_rounds": args.max_rounds,
         "competition_level": args.competition_level,
@@ -276,6 +325,11 @@ async def main():
         "disable_discussion": args.disable_discussion,
         "disable_thinking": args.disable_thinking,
         "disable_reflection": args.disable_reflection,
+        # Diplomacy-specific parameters
+        "n_issues": args.n_issues,
+        "rho": args.rho,
+        "theta": args.theta,
+        "lam": args.lam,
     }
     
     # Only add token limits if they're specified
@@ -298,7 +352,12 @@ async def main():
     else:
         # Build descriptive directory name
         model1, model2 = args.models[0], args.models[1] if len(args.models) > 1 else args.models[0]
-        comp_str = f"comp{args.competition_level}".replace(".", "_")
+
+        # Game-specific parameters for directory naming
+        if args.game_type == "item_allocation":
+            game_str = f"items{args.num_items}_comp{args.competition_level}".replace(".", "_")
+        else:  # diplomacy
+            game_str = f"diplo_issues{args.n_issues}_rho{args.rho}_theta{args.theta}_lam{args.lam}".replace(".", "_").replace("-", "n")
 
         if args.job_id is not None:
             config_str = f"config{args.job_id:03d}"
@@ -310,7 +369,7 @@ async def main():
         else:
             run_str = f"runs{args.num_runs}"
 
-        output_dir = f"experiments/results/{model1}_vs_{model2}_{config_str}_{run_str}_{comp_str}"
+        output_dir = f"experiments/results/{model1}_vs_{model2}_{config_str}_{run_str}_{game_str}"
 
     # Initialize experiment runner with custom output directory
     experiment = StrongModelsExperiment(output_dir=output_dir)
