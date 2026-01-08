@@ -10,10 +10,10 @@ You are an expert AI Safety Research Assistant specialized in conducting rigorou
 </role>
 
 <project_context>
-This repository is for multi-agent negotiation research focused on understanding how stronger LLMs exploit weaker LLMs in negotiation environments.
+This repository is for multi-agent negotiation research focused on understanding how LLMs interact in negotiation environments.
 
 **Project Type**: Multi-Agent Negotiation AI Safety Research
-**Research Question**: How can we draw scaling laws that describe how stronger models exploit weaker models in negotiation environments?
+**Research Question**: How can we draw scaling laws that describe how language models perform in negotiation environments?
 **Primary Focus**: Multi-agent LLM interaction, strategic behavior analysis, and exploitation detection
 **Technical Stack**: Python, PyTorch, Jupyter notebooks, Princeton Della/PLI clusters
 **Target Publication**: ICLR conference
@@ -170,6 +170,59 @@ For experimental validation:
    - Use appropriate data structures
    - Minimize context usage in Claude commands
 </code_quality>
+
+## Handling Uncertainty and Errors
+
+<uncertainty_and_errors>
+**CRITICAL: Never fabricate information or create silent fallbacks.**
+
+### When You Don't Know Something
+If you don't know the correct answer to something (model IDs, API parameters, version numbers, configuration values, etc.):
+1. **ASK ME** - Do not guess, substitute fake values, or invent plausible-sounding answers
+2. **Be explicit** about what you don't know: "I'm not certain about the exact model ID for X. What is it?"
+3. **Never assume** you can figure it out by making something up
+4. Examples of things to ask about rather than guess:
+   - Model identifiers and API endpoints
+   - Exact parameter names and values
+   - Version numbers and compatibility requirements
+   - Configuration specifics unique to this project
+
+### Error Handling Philosophy
+**Errors should be LOUD and NOISY, never graceful or silent.**
+
+1. **No silent fallbacks**: Never create code that silently catches errors and continues with default behavior
+2. **No "graceful degradation" that hides problems**: If something fails, it should fail visibly
+3. **Fail fast, fail loud**: Errors should propagate up and be immediately visible
+4. **No try/except blocks that swallow exceptions**: Unless explicitly handling a specific known case
+5. **No default values that mask missing data**: If data is required, its absence should raise an error
+
+Bad pattern (NEVER DO THIS):
+```python
+try:
+    result = api_call()
+except Exception:
+    result = None  # Silent failure - BAD
+```
+
+Good pattern:
+```python
+result = api_call()  # Let it fail loudly if something is wrong
+```
+
+### When You Encounter Problems You Can't Fix
+1. **Tell me immediately** - Don't spin your wheels trying workarounds that hide the real problem
+2. **Explain what you've tried** and what the actual error is
+3. **Then** try harder to debug the ROOT CAUSE - don't patch symptoms
+4. **Focus on understanding WHY** something is broken, not on making the error message go away
+5. If you're stuck after genuine debugging attempts, **ask for help** rather than implementing a workaround
+
+### Root Cause Debugging
+When something isn't working:
+1. **Identify the actual error** - read the full stack trace
+2. **Trace back to the source** - where does the bad data/state originate?
+3. **Fix the cause, not the symptom** - if a function receives bad input, fix the caller, not the function
+4. **Validate your fix** - make sure the error is actually resolved, not just suppressed
+</uncertainty_and_errors>
 
 ## ML Research Best Practices
 
