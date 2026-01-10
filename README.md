@@ -1,33 +1,75 @@
-# Scaling Laws for Strategic Interactions
+# Asymmetric Agent Capabilities in Strategic Scenarios
 
-A research codebase for studying how stronger Large Language Models (LLMs) exploit weaker LLMs in multi-agent negotiation environments. This project aims to establish scaling laws that describe the relationship between model capability and strategic behavior in competitive interactions.
+A research codebase for studying the effects of asymmetric agent capabilities in strategic scenarios, from cooperation to competition. This project investigates how differences in agent capabilities interact with the degree of alignment between agents' preferences to shape outcomes in multi-agent negotiation environments.
 
-## 🎯 Research Goal
+## 🎯 Research Questions
 
-**Primary Research Question**: How can we draw scaling laws that describe how stronger models exploit weaker models in negotiation environments?
+**Primary Research Question**: What are the effects of asymmetric agent capabilities in strategic scenarios, from cooperation to competition?
 
-This project investigates:
-- Strategic exploitation patterns in LLM negotiations
-- Scaling relationships between model capability and negotiation outcomes
-- Behavioral analysis including manipulation, gaslighting, and strategic tactics
-- Multi-agent interaction dynamics in competitive settings
+### Key Sub-Questions
 
-**Target Publication**: ICLR Conference
+#### 1. Overall Patterns and Interplay
+- What's the overall pattern we see across agent capabilities and degree of alignment?
+- What's the interplay between these two dimensions?
+- Can we fit a line to these trends? What does that line look like? Does it allow us to extrapolate?
+- Heatmaps are the primary way to present this overall picture, but we also flatten one dimension (capabilities or degree of alignment) for some plots/results
+
+#### 2. Capability Level Dependencies
+- Does it depend on the base level of capabilities we start from? (i.e., is the difference between a 20% capable and a 50% capable model really big compared to the difference between a 60% capable and a 90% capable model?)
+- This requires separating out a few different sets of ego agents at different capability levels
+
+#### 3. Model Dispositions
+- Does it depend on the model's 'dispositions'? Or rather, where/how does it depend on that?
+- Operationalized by seeing how much variance in results is explained by:
+  - Model family/developer
+  - Scores on relevant 'disposition' benchmarks
+
+#### 4. Auxiliary Observations
+- Other observations that help the reader understand the dynamics of what's happening, or are independently interesting (e.g., time to consensus plots)
+- Quick ablations/sanity checking (can go in appendix) – these shouldn't require running the whole set of experiments again, just a representative scenario/subset:
+  - What happens if we use a different capability metric?
+  - What happens if agents negotiate for longer/shorter?
+  - Etc.
+
+#### 5. Scaling with Number of Agents (Secondary Question)
+- How robust are the scaling trends above when we have multiple agents and the environment is more complex?
+- Can multiple lower-capability agents team up against a higher-capability agent?
+- More generally: imagine you have a set of n agents along a capability x-axis and a fixed competition level, where do the rewards (y-axis) tend to accrue most? Is this linear in capabilities or is there some interesting non-linearity here? Again: what does the trend/'scaling law' look like?
+- This can be run via randomized/selective cross-play; we don't literally have to test for all agents at once, or for all combinations of agents
+
+### Experimental Design
+
+**Target**: Test across ~3 negotiation/bargaining style games, each a little bit different (technically) and with a different story, so that reviewers don't complain about lack of robustness. If we can't get 3 in time for submission, we aim for 2, then try to get a third ready for rebuttals.
+
+**Target Publication**: ICML Conference
 
 ## 📋 Project Overview
 
-This codebase implements a multi-agent negotiation framework where LLMs negotiate over shared resources. The environment supports:
+This codebase implements a modular multi-agent negotiation framework where LLMs negotiate in different game environments. The framework supports multiple game types, each with different mechanics and negotiation structures:
 
-- **Configurable Parameters**:
-  - `m` items: Number of items in the negotiation pool (default: 5)
+### Supported Game Environments
+
+1. **Item Allocation Game** (`item_allocation`)
+   - Discrete item allocation with preference vectors
+   - Agents negotiate over m items in a shared pool
+   - Preference systems:
+     - Vector preferences: Competitive scenarios with m-dimensional preference vectors
+     - Matrix preferences: Cooperative/competitive scenarios with m×n preference matrices
+
+2. **Diplomatic Treaty Game** (`diplomacy`)
+   - Multi-issue continuous negotiation with position/weight preferences
+   - Agents negotiate over K continuous issues (values in [0,1])
+   - Each agent has position preferences and importance weights
+   - Control parameters: ρ (preference correlation), θ (interest overlap), λ (issue compatibility)
+
+### Common Framework Parameters
+
+- **Configurable Parameters** (game-specific):
   - `n` agents: Number of negotiating agents (default: 2)
   - `t` rounds: Maximum negotiation rounds (default: 10)
   - `γ` (gamma): Discount factor for rewards per round (default: 0.9)
-  - Competition level: Controls preference overlap between agents (0-1)
-
-- **Preference Systems**:
-  - Vector preferences: Competitive scenarios with m-dimensional preference vectors
-  - Matrix preferences: Cooperative/competitive scenarios with m×n preference matrices
+  - Competition level: Controls preference overlap between agents (0-1), where 0 = full cooperation and 1 = full competition
+  - Game type: Select which game environment to use (`item_allocation`, `diplomacy`, or future game types)
 
 - **Model Support**: Integration with multiple LLM providers including:
   - Anthropic (Claude models)
@@ -81,8 +123,10 @@ This codebase implements a multi-agent negotiation framework where LLMs negotiat
 
 Run a single negotiation between two models:
 
+**Item Allocation Game**:
 ```bash
 python3 run_strong_models_experiment.py \
+    --game-type item_allocation \
     --models claude-3-5-sonnet gpt-4o \
     --competition-level 0.95 \
     --num-items 5 \
@@ -91,14 +135,30 @@ python3 run_strong_models_experiment.py \
     --batch
 ```
 
-**Parameters**:
+**Diplomatic Treaty Game**:
+```bash
+python3 run_strong_models_experiment.py \
+    --game-type diplomacy \
+    --models claude-3-5-sonnet gpt-4o \
+    --competition-level 0.95 \
+    --n-issues 5 \
+    --max-rounds 10 \
+    --num-runs 5 \
+    --batch
+```
+
+**Common Parameters**:
+- `--game-type`: Game environment to use (`item_allocation` or `diplomacy`, default: `item_allocation`)
 - `--models`: Two model names to negotiate (see available models below)
-- `--competition-level`: Preference overlap (0.0 = no competition, 1.0 = full competition)
-- `--num-items`: Number of items in the negotiation pool
+- `--competition-level`: Preference overlap (0.0 = no competition/cooperation, 1.0 = full competition)
 - `--max-rounds`: Maximum negotiation rounds
 - `--num-runs`: Number of negotiation games to run
 - `--batch`: Enable batch mode for multiple runs
 - `--output-dir`: Custom output directory (optional)
+
+**Game-Specific Parameters**:
+- Item Allocation: `--num-items` (number of items in the negotiation pool)
+- Diplomatic Treaty: `--n-issues` (number of continuous issues to negotiate)
 
 ### Batch Experiments with Scripts
 
@@ -184,7 +244,7 @@ python3 scripts/analyze_order_effects.py
 
 ### Visualization
 
-Generate visualizations of negotiation results:
+Generate visualizations of negotiation results, including heatmaps showing capability vs. alignment:
 
 ```bash
 python3 visualize_negotiation_results.py
@@ -195,6 +255,10 @@ python3 visualize_negotiation_results.py
 ```
 .
 ├── run_strong_models_experiment.py    # Main experiment runner
+├── game_environments/                  # Modular game environment implementations
+│   ├── base.py                        # GameEnvironment abstract base class
+│   ├── item_allocation.py             # Item Allocation game
+│   └── diplomatic_treaty.py            # Diplomatic Treaty game
 ├── strong_models_experiment/           # Core experiment framework
 │   ├── experiment.py                  # Main experiment class
 │   ├── agents/                        # Agent implementations
@@ -216,47 +280,82 @@ python3 visualize_negotiation_results.py
 
 ### Experiment Design
 
-1. **Setup Phase**: Initialize negotiation environment with m items, n agents
-2. **Preference Assignment**: Generate competitive or cooperative preference vectors/matrices
-3. **Negotiation Rounds**: Agents propose allocations, vote, and reach agreements
+The framework uses a modular game environment system that supports multiple game types:
+
+1. **Setup Phase**: Initialize negotiation environment (game type-specific: items for Item Allocation, issues for Diplomatic Treaty), n agents
+2. **Preference Assignment**: Generate competitive or cooperative preferences based on competition level (game-specific format)
+3. **Negotiation Rounds**: Agents propose allocations/agreements, vote, and reach agreements
 4. **Reflection Phase**: Agents reflect on outcomes and strategies
-5. **Analysis**: Quantitative metrics (utility, exploitation) and qualitative analysis (strategic behavior)
+5. **Analysis**: Quantitative metrics (utility, capability differences) and qualitative analysis (strategic behavior)
+
+Each game type implements the same `GameEnvironment` interface, allowing experiments to run across different negotiation structures while maintaining consistent analysis.
 
 ### Key Metrics
 
 - **Utility Scores**: Per-agent utility from final allocations
-- **Exploitation Metrics**: Difference in outcomes between stronger and weaker models
-- **Strategic Behavior**: Qualitative analysis of manipulation, gaslighting, and tactical moves
-- **Scaling Relationships**: Model capability vs. negotiation success
+- **Capability Differences**: Outcomes across different capability levels
+- **Strategic Behavior**: Qualitative analysis of negotiation tactics and behaviors
+- **Scaling Relationships**: Model capability vs. negotiation success across different competition levels
+- **Time to Consensus**: Auxiliary metric showing how long negotiations take
+
+### Results Organization
+
+Results are organized around two main dimensions:
+
+**Option 1** (if not including number of agents):
+- Non-reasoning models
+- Reasoning models
+
+**Option 2**:
+- **Capabilities** ['quality' of agents]
+  - Non-reasoning models
+  - Reasoning models
+- **Number** ['quantity' of agents]
+  - 2-agent scenarios
+  - Multi-agent scenarios (3+ agents)
 
 ## 🧪 Example Experiments
 
-### Scaling Study: Qwen Models vs Claude
+### Capability vs. Competition Level Study
 
-Compare how different sizes of Qwen models perform against Claude:
+Test how different capability levels interact with competition levels across game types:
 
-```bash
-bash scripts/run_qwen_large_models_comp1.sh
-```
-
-### Competition Level Variation
-
-Test how competition level affects outcomes:
-
+**Item Allocation**:
 ```bash
 python3 run_strong_models_experiment.py \
+    --game-type item_allocation \
     --models Qwen2.5-14B-Instruct claude-3-7-sonnet \
     --competition-level 0.5 \
+    --num-items 5 \
+    --num-runs 10 \
+    --batch
+```
+
+**Diplomatic Treaty**:
+```bash
+python3 run_strong_models_experiment.py \
+    --game-type diplomacy \
+    --models Qwen2.5-14B-Instruct claude-3-7-sonnet \
+    --competition-level 0.5 \
+    --n-issues 5 \
     --num-runs 10 \
     --batch
 ```
 
 ### Three-Agent Negotiations
 
-Run experiments with three agents:
+Run experiments with three agents to study multi-agent dynamics:
 
 ```bash
 bash scripts/run_all_3agent.sh
+```
+
+### Capability Level Variation
+
+Test different base capability levels:
+
+```bash
+bash scripts/run_qwen_large_models_comp1.sh
 ```
 
 ## 📝 Development
