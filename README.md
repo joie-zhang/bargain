@@ -250,6 +250,78 @@ Generate visualizations of negotiation results, including heatmaps showing capab
 python3 visualize_negotiation_results.py
 ```
 
+## 🖥️ Interactive UI (Negotiation Viewer)
+
+The project includes a Streamlit-based web UI for visualizing and analyzing negotiation experiments interactively.
+
+### Features
+
+The Negotiation Viewer provides three modes:
+
+1. **📂 Post-hoc Analysis**: View and analyze completed experiments
+   - Round-by-round timeline with color-coded phases
+   - Agent comparison with utility metrics
+   - Analytics dashboard with charts and statistics
+   - Raw data explorer for detailed inspection
+   - Preference visualization
+
+2. **📊 Batch Comparison**: Compare multiple experiments side-by-side
+   - Aggregate metrics across experiment runs
+   - Cross-experiment analysis
+   - Performance comparisons
+
+3. **🔴 Live Streaming**: Monitor experiments as they run in real-time
+   - Watch negotiations unfold live
+   - Real-time updates as rounds complete
+
+### Launching the UI
+
+**Option 1: Using the launch script (recommended)**
+
+```bash
+# Default port (8501)
+bash ui/run_viewer.sh
+
+# Custom port
+bash ui/run_viewer.sh --port 8080
+```
+
+**Option 2: Direct Streamlit command**
+
+```bash
+streamlit run ui/negotiation_viewer.py
+```
+
+**Option 3: With custom port**
+
+```bash
+streamlit run ui/negotiation_viewer.py --server.port 8080 --server.headless true
+```
+
+### Accessing the UI
+
+Once launched, open your browser to:
+- **Local**: `http://localhost:8501` (or your custom port)
+- **Remote server**: `http://your-server-address:8501`
+
+### UI Dependencies
+
+The UI requires additional dependencies (already included in `requirements.txt`):
+- `streamlit>=1.28.0`
+- `plotly>=5.15.0` (for interactive charts)
+
+If you haven't installed them yet:
+```bash
+pip install streamlit plotly
+```
+
+### Usage Tips
+
+- **Selecting Experiments**: Use the sidebar to browse experiment results in `experiments/results/`
+- **Filtering**: Use filters in the sidebar to focus on specific rounds, agents, or phases
+- **Exporting**: Export data to CSV or Markdown for further analysis
+- **Live Mode**: For live streaming, ensure experiments are running and writing to the results directory
+
 ## 🏗️ Project Structure
 
 ```
@@ -270,6 +342,12 @@ python3 visualize_negotiation_results.py
 │   ├── run_qwen_large_models_comp1.sh
 │   ├── run_all_simple.sh
 │   └── ...
+├── ui/                                # Streamlit-based negotiation viewer
+│   ├── negotiation_viewer.py          # Main UI application
+│   ├── comparison_view.py             # Batch comparison view
+│   ├── components.py                   # Reusable UI components
+│   ├── analysis.py                    # Analysis utilities
+│   └── run_viewer.sh                  # Launch script
 ├── experiments/
 │   └── results/                       # Experiment outputs
 ├── tests/                             # Unit tests
