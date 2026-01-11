@@ -39,7 +39,7 @@ A research codebase for studying the effects of asymmetric agent capabilities in
 
 ### Experimental Design
 
-**Target**: Test across ~3 negotiation/bargaining style games, each a little bit different (technically) and with a different story, so that reviewers don't complain about lack of robustness. If we can't get 3 in time for submission, we aim for 2, then try to get a third ready for rebuttals.
+**Target**: Test across 2-3 negotiation/bargaining style games, each a little bit different (technically) and with a different story, to ensure experiment robustness.
 
 **Target Publication**: ICML
 
