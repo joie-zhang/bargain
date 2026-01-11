@@ -453,7 +453,7 @@ The project follows Python best practices. Key modules:
 
 ## 🤝 Contributing
 
-This is a research codebase. For questions or contributions, please contact the research team.
+This is a research codebase. For questions or contributions, please submit an issue or reach out to Joie via email (firstname at princeton dot edu).
 
 ## 📚 Additional Documentation
 
