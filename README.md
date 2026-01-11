@@ -1,4 +1,4 @@
-# Asymmetric Agent Capabilities in Strategic Scenarios
+# Scaling Laws for Strategic Interactions
 
 A research codebase for studying the effects of asymmetric agent capabilities in strategic scenarios, from cooperation to competition. This project investigates how differences in agent capabilities interact with the degree of alignment between agents' preferences to shape outcomes in multi-agent negotiation environments.
 
@@ -41,7 +41,7 @@ A research codebase for studying the effects of asymmetric agent capabilities in
 
 **Target**: Test across ~3 negotiation/bargaining style games, each a little bit different (technically) and with a different story, so that reviewers don't complain about lack of robustness. If we can't get 3 in time for submission, we aim for 2, then try to get a third ready for rebuttals.
 
-**Target Publication**: ICML Conference
+**Target Publication**: ICML
 
 ## 📋 Project Overview
 
@@ -389,4 +389,4 @@ MIT License - See LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-This research is conducted at Princeton University, utilizing the Della/PLI computing clusters.
+This research was conducted at the ML Alignment & Theory Scholars Program as well as Princeton University, utilizing Princeton's Della/PLI computing clusters and compute funding from MATS and PLI.
