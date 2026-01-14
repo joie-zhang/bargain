@@ -307,20 +307,47 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[str]
     ) -> str:
-        """Generate discussion prompt."""
+        """Generate discussion prompt with conversation history.
+
+        Args:
+            agent_id: ID of the agent receiving this prompt
+            game_state: Current game state
+            round_num: Current negotiation round
+            max_rounds: Maximum number of rounds
+            discussion_history: List of previous discussion messages (strings)
+        """
         items = game_state["items"]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
 
-        if round_num == 1:
+        # Build conversation history section
+        history_section = ""
+        if discussion_history:
+            history_section = "\n**CONVERSATION SO FAR:**\n"
+            for msg in discussion_history:
+                history_section += f"{msg}\n\n"
+            history_section += "---\n"
+
+        if round_num == 1 and not discussion_history:
+            # First speaker in first round
             context = """**DISCUSSION OBJECTIVES:**
 - Share strategic information about your preferences
 - Learn about other agents' priorities
 - Explore potential coalition opportunities
 - Identify mutually beneficial trade possibilities
 
-Please share your thoughts on the items and any initial ideas for how we might structure a deal."""
+You are the first to speak. Please share your thoughts on the items and any initial ideas for how we might structure a deal."""
+        elif round_num == 1:
+            # Continuing discussion in first round
+            context = """**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to specific points raised by other agents
+- Share your own perspective on the items
+- Propose potential trade-offs or areas of agreement
+- Ask clarifying questions if needed
+
+Keep the conversation flowing naturally."""
         else:
             urgency = ""
             if round_num >= max_rounds - 1:
@@ -342,7 +369,7 @@ This is the open discussion phase where all agents can share information about t
 **ITEMS AVAILABLE:**
 {items_text}
 
-{context}"""
+{history_section}{context}"""
 
     def get_voting_prompt(
         self,
