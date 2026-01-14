@@ -4,18 +4,6 @@ STRONG_MODELS_CONFIG = {
     # WEAK MODELS - Used as baseline/exploitable models in experiments
     # These models represent the "weaker" side in exploitation experiments
     
-    "claude-3-opus": {
-        "name": "Claude 3 Opus",
-        "model_id": "anthropic/claude-3-opus",
-        "provider": "Anthropic",
-        "api_type": "openrouter",
-        "description": "Weak tier, Closed-source, Non-reasoning - RETIRED: Retired Jan 5, 2026. Use claude-opus-4-5 instead",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent.",
-        "model_category": "weak",
-        "deprecated": True,
-        "deprecation_message": "claude-3-opus was retired on January 5, 2026. Please use claude-opus-4-5-20251101 instead."
-    },
     "gemini-1-5-pro": {
         "name": "Gemini 1.5 Pro",
         "model_id": "google/gemini-pro-1.5",
@@ -41,18 +29,6 @@ STRONG_MODELS_CONFIG = {
     # These models represent the "stronger" side that may exploit weaker models
     
     # Anthropic strong models
-    "claude-3-5-haiku": {
-        "name": "Claude 3.5 Haiku",
-        "model_id": "claude-3-5-haiku-20241022",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-haiku-4-5-20251001 instead",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent.",
-        "model_category": "weak",
-        "deprecated": True,
-        "deprecation_message": "claude-3-5-haiku-20241022 was deprecated on December 19, 2025 and will be retired on February 19, 2026. Please use claude-haiku-4-5-20251001 instead."
-    },
     "claude-4-5-haiku": {
         "name": "Claude 4.5 Haiku",
         "model_id": "claude-haiku-4-5-20251001",
@@ -62,30 +38,6 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
-    },
-    "claude-3-5-sonnet": {
-        "name": "Claude 3.5 Sonnet",
-        "model_id": "claude-3-5-sonnet-20241022",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Strong tier, Closed-source, Non-reasoning - RETIRED: Retired Oct 28, 2025. Use claude-sonnet-4-5-20250929 instead",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong",
-        "deprecated": True,
-        "deprecation_message": "claude-3-5-sonnet-20241022 was retired on October 28, 2025. Please use claude-sonnet-4-5-20250929 instead."
-    },
-    "claude-3-7-sonnet": {
-        "name": "Claude 3.7 Sonnet",
-        "model_id": "claude-3-7-sonnet-20250219",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-sonnet-4-5-20250929 instead",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong",
-        "deprecated": True,
-        "deprecation_message": "claude-3-7-sonnet-20250219 was deprecated on October 28, 2025 and will be retired on February 19, 2026. Please use claude-sonnet-4-5-20250929 instead."
     },
     "claude-4-sonnet": {
         "name": "Claude 4 Sonnet",
@@ -301,7 +253,7 @@ STRONG_MODELS_CONFIG = {
     # Multi-Agent Strategic Games Evaluation Models (11 models)
     # Selected for scaling laws evaluation across capability tiers
     
-    # STRONG TIER - Elo ≥ 1420 (5 models)
+    # STRONG TIER - Elo ≥ 1415 (6 models)
     "gemini-3-pro": {
         "name": "Gemini 3 Pro",
         "model_id": "google/gemini-3-pro-preview",
@@ -352,18 +304,18 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
-    
-    # MEDIUM TIER - 1290 ≤ Elo < 1420 (4 models)
     "qwen3-235b-a22b-instruct-2507": {
         "name": "Qwen3 235B A22B Instruct",
         "model_id": "qwen/qwen3-235b-a22b-2507",
         "provider": "Alibaba",
         "api_type": "openrouter",
-        "description": "Medium tier, Elo: 1418, Open-source, Non-reasoning",
+        "description": "Strong tier, Elo: 1418, Open-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "medium"
+        "model_category": "strong"
     },
+    
+    # MEDIUM TIER - 1290 ≤ Elo < 1415 (3 models)
     "o4-mini-2025-04-16": {
         "name": "O4 Mini",
         "model_id": "o4-mini-2025-04-16",
@@ -505,5 +457,62 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
+    },
+    
+    # ============================================================================
+    # DEPRECATED / RETIRED MODELS
+    # ============================================================================
+    # These models are deprecated or retired and should not be used for new experiments.
+    # They are kept here for backward compatibility with existing code/configs only.
+    # Please migrate to the recommended replacement models listed in deprecation_message.
+    # ============================================================================
+    
+    "claude-3-opus": {
+        "name": "Claude 3 Opus",
+        "model_id": "anthropic/claude-3-opus",
+        "provider": "Anthropic",
+        "api_type": "openrouter",
+        "description": "Weak tier, Closed-source, Non-reasoning - RETIRED: Retired Jan 5, 2026. Use claude-opus-4-5 instead",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak",
+        "deprecated": True,
+        "deprecation_message": "claude-3-opus was retired on January 5, 2026. Please use claude-opus-4-5-20251101 instead."
+    },
+    "claude-3-5-haiku": {
+        "name": "Claude 3.5 Haiku",
+        "model_id": "claude-3-5-haiku-20241022",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-haiku-4-5-20251001 instead",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak",
+        "deprecated": True,
+        "deprecation_message": "claude-3-5-haiku-20241022 was deprecated on December 19, 2025 and will be retired on February 19, 2026. Please use claude-haiku-4-5-20251001 instead."
+    },
+    "claude-3-5-sonnet": {
+        "name": "Claude 3.5 Sonnet",
+        "model_id": "claude-3-5-sonnet-20241022",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Strong tier, Closed-source, Non-reasoning - RETIRED: Retired Oct 28, 2025. Use claude-sonnet-4-5-20250929 instead",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong",
+        "deprecated": True,
+        "deprecation_message": "claude-3-5-sonnet-20241022 was retired on October 28, 2025. Please use claude-sonnet-4-5-20250929 instead."
+    },
+    "claude-3-7-sonnet": {
+        "name": "Claude 3.7 Sonnet",
+        "model_id": "claude-3-7-sonnet-20250219",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-sonnet-4-5-20250929 instead",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong",
+        "deprecated": True,
+        "deprecation_message": "claude-3-7-sonnet-20250219 was deprecated on October 28, 2025 and will be retired on February 19, 2026. Please use claude-sonnet-4-5-20250929 instead."
     }
 }
