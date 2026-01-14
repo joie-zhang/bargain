@@ -198,91 +198,110 @@ class PhaseHandler:
         self.logger.info("Private preference assignment completed")
     
     async def run_discussion_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
-                                  preferences: Dict, round_num: int, max_rounds: int) -> Dict:
+                                  preferences: Dict, round_num: int, max_rounds: int,
+                                  discussion_turns: int = 3) -> Dict:
         """Phase 2: Public Discussion Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
         for game-specific discussion prompts. Otherwise falls back to PromptGenerator.
+
+        Args:
+            agents: List of agent objects
+            items: List of items being negotiated
+            preferences: Dictionary containing agent preferences
+            round_num: Current round number
+            max_rounds: Maximum number of rounds
+            discussion_turns: Number of times agents go around the circle discussing (default: 3)
         """
         messages = []
 
         self.logger.info(f"=== PUBLIC DISCUSSION PHASE - Round {round_num} ===")
+        self.logger.info(f"  Discussion turns: {discussion_turns}")
 
         # Set token limit for discussion phase if specified
         if self.token_config["discussion"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["discussion"])
 
-        for i, agent in enumerate(agents):
-            context = NegotiationContext(
-                current_round=round_num,
-                max_rounds=max_rounds,
-                items=items,
-                agents=[a.agent_id for a in agents],
-                agent_id=agent.agent_id,
-                preferences=preferences["agent_preferences"][agent.agent_id],
-                turn_type="discussion"
-            )
+        # Outer loop: go around the circle discussion_turns times
+        for turn in range(discussion_turns):
+            self.logger.info(f"  --- Discussion Turn {turn + 1}/{discussion_turns} ---")
 
-            current_discussion_history = [msg["content"] for msg in messages]
-
-            # Use GameEnvironment if available, otherwise fall back to PromptGenerator
-            if self.game_environment is not None:
-                # Get the original game_state if stored in preferences, otherwise build one
-                if "game_state" in preferences:
-                    game_state = preferences["game_state"]
-                else:
-                    game_state = self._build_game_state(
-                        agents, items, preferences, round_num, max_rounds,
-                        agent.agent_id, "discussion",
-                        conversation_history=messages
-                    )
-
-                full_discussion_prompt = self.game_environment.get_discussion_prompt(
-                    agent_id=agent.agent_id,
-                    game_state=game_state,
-                    round_num=round_num,
+            for i, agent in enumerate(agents):
+                context = NegotiationContext(
+                    current_round=round_num,
                     max_rounds=max_rounds,
-                    discussion_history=current_discussion_history
+                    items=items,
+                    agents=[a.agent_id for a in agents],
+                    agent_id=agent.agent_id,
+                    preferences=preferences["agent_preferences"][agent.agent_id],
+                    turn_type="discussion"
                 )
-            else:
-                # Legacy mode: use PromptGenerator
-                if round_num == 1:
-                    discussion_prompt = self.prompt_gen.create_initial_discussion_prompt(
-                        items, round_num, max_rounds
+
+                # Build discussion history with speaker attribution
+                current_discussion_history = [
+                    f"**{msg['from']}**: {msg['content']}"
+                    for msg in messages
+                ]
+
+                # Use GameEnvironment if available, otherwise fall back to PromptGenerator
+                if self.game_environment is not None:
+                    # Get the original game_state if stored in preferences, otherwise build one
+                    if "game_state" in preferences:
+                        game_state = preferences["game_state"]
+                    else:
+                        game_state = self._build_game_state(
+                            agents, items, preferences, round_num, max_rounds,
+                            agent.agent_id, "discussion",
+                            conversation_history=messages
+                        )
+
+                    full_discussion_prompt = self.game_environment.get_discussion_prompt(
+                        agent_id=agent.agent_id,
+                        game_state=game_state,
+                        round_num=round_num,
+                        max_rounds=max_rounds,
+                        discussion_history=current_discussion_history
                     )
                 else:
-                    discussion_prompt = self.prompt_gen.create_ongoing_discussion_prompt(
-                        items, round_num, max_rounds
+                    # Legacy mode: use PromptGenerator
+                    if round_num == 1 and turn == 0:
+                        discussion_prompt = self.prompt_gen.create_initial_discussion_prompt(
+                            items, round_num, max_rounds
+                        )
+                    else:
+                        discussion_prompt = self.prompt_gen.create_ongoing_discussion_prompt(
+                            items, round_num, max_rounds
+                        )
+                    full_discussion_prompt = self.prompt_gen.create_contextual_discussion_prompt(
+                        discussion_prompt, agent.agent_id, current_discussion_history,
+                        i + 1, len(agents)
                     )
-                full_discussion_prompt = self.prompt_gen.create_contextual_discussion_prompt(
-                    discussion_prompt, agent.agent_id, current_discussion_history,
-                    i + 1, len(agents)
-                )
-            
-            # Get response with token info
-            agent_response = await agent.generate_response(context, full_discussion_prompt)
-            response_content = agent_response.content
-            token_usage = self._extract_token_usage(agent_response)
-            
-            message = {
-                "phase": "discussion",
-                "round": round_num,
-                "from": agent.agent_id,
-                "content": response_content,
-                "timestamp": time.time(),
-                "speaker_order": i + 1,
-                "total_speakers": len(agents)
-            }
-            messages.append(message)
-            
-            self.logger.info(f"  💬 Speaker {i+1}/{len(agents)} - {agent.agent_id}:")
-            self.logger.info(f"    {response_content}")
-            
-            self.save_interaction(agent.agent_id, f"discussion_round_{round_num}", 
-                                full_discussion_prompt, response_content, round_num, token_usage)
-        
-        self.logger.info(f"Discussion phase completed - {len(messages)} messages exchanged")
+
+                # Get response with token info
+                agent_response = await agent.generate_response(context, full_discussion_prompt)
+                response_content = agent_response.content
+                token_usage = self._extract_token_usage(agent_response)
+
+                message = {
+                    "phase": "discussion",
+                    "round": round_num,
+                    "discussion_turn": turn + 1,
+                    "from": agent.agent_id,
+                    "content": response_content,
+                    "timestamp": time.time(),
+                    "speaker_order": i + 1,
+                    "total_speakers": len(agents)
+                }
+                messages.append(message)
+
+                self.logger.info(f"  💬 Turn {turn+1} Speaker {i+1}/{len(agents)} - {agent.agent_id}:")
+                self.logger.info(f"    {response_content}")
+
+                self.save_interaction(agent.agent_id, f"discussion_round_{round_num}_turn_{turn+1}",
+                                    full_discussion_prompt, response_content, round_num, token_usage)
+
+        self.logger.info(f"Discussion phase completed - {len(messages)} messages exchanged across {discussion_turns} turns")
         return {"messages": messages}
     
     async def run_private_thinking_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
@@ -684,8 +703,17 @@ Vote must be either "accept" or "reject"."""
             prop_num = vote['proposal_number']
             if prop_num not in voting_summary["votes_by_proposal"]:
                 voting_summary["votes_by_proposal"][prop_num] = {"accept": 0, "reject": 0, "votes": []}
-            
-            voting_summary["votes_by_proposal"][prop_num][vote['vote']] += 1
+
+            # Defensive: ensure vote is a string, not a dict
+            vote_value = vote.get('vote', 'reject')
+            if isinstance(vote_value, dict):
+                self.logger.warning(f"Vote value is a dict, extracting: {vote_value}")
+                vote_value = vote_value.get('decision', vote_value.get('vote', 'reject'))
+            if not isinstance(vote_value, str) or vote_value not in ('accept', 'reject'):
+                vote_value = 'reject'
+            vote['vote'] = vote_value  # Update the vote dict with normalized value
+
+            voting_summary["votes_by_proposal"][prop_num][vote_value] += 1
             voting_summary["votes_by_proposal"][prop_num]["votes"].append(vote)
         
         self.logger.info(f"✅ Private voting complete: {len(private_votes)} votes collected from {len(agents)} agents")
@@ -710,7 +738,16 @@ Vote must be either "accept" or "reject"."""
             prop_num = vote['proposal_number']
             if prop_num not in votes_by_proposal:
                 votes_by_proposal[prop_num] = {"accept": 0, "reject": 0}
-            votes_by_proposal[prop_num][vote['vote']] += 1
+
+            # Defensive: ensure vote is a string, not a dict
+            vote_value = vote.get('vote', 'reject')
+            if isinstance(vote_value, dict):
+                self.logger.warning(f"Vote tabulation: vote value is a dict, extracting: {vote_value}")
+                vote_value = vote_value.get('decision', vote_value.get('vote', 'reject'))
+            if not isinstance(vote_value, str) or vote_value not in ('accept', 'reject'):
+                vote_value = 'reject'
+
+            votes_by_proposal[prop_num][vote_value] += 1
         
         # Check for unanimous acceptance
         consensus_reached = False
