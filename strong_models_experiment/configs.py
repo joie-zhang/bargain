@@ -9,17 +9,19 @@ STRONG_MODELS_CONFIG = {
         "model_id": "anthropic/claude-3-opus",
         "provider": "Anthropic",
         "api_type": "openrouter",
-        "description": "Anthropic's Claude 3 Opus model (WEAK MODEL)",
+        "description": "Weak tier, Closed-source, Non-reasoning - RETIRED: Retired Jan 5, 2026. Use claude-opus-4-5 instead",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "weak"
+        "model_category": "weak",
+        "deprecated": True,
+        "deprecation_message": "claude-3-opus was retired on January 5, 2026. Please use claude-opus-4-5-20251101 instead."
     },
     "gemini-1-5-pro": {
         "name": "Gemini 1.5 Pro",
         "model_id": "google/gemini-pro-1.5",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's Gemini 1.5 Pro model (WEAK MODEL)",
+        "description": "Weak tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
@@ -29,7 +31,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-4o-2024-05-13",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-4o model May 2024 version (WEAK MODEL)",
+        "description": "Weak tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
@@ -44,49 +46,63 @@ STRONG_MODELS_CONFIG = {
         "model_id": "claude-3-5-haiku-20241022",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's fast and efficient Claude 3.5 Haiku model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-haiku-4-5-20251001 instead",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong"
+        "model_category": "weak",
+        "deprecated": True,
+        "deprecation_message": "claude-3-5-haiku-20241022 was deprecated on December 19, 2025 and will be retired on February 19, 2026. Please use claude-haiku-4-5-20251001 instead."
     },
     "claude-4-5-haiku": {
         "name": "Claude 4.5 Haiku",
         "model_id": "claude-haiku-4-5-20251001",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's latest fast and efficient Claude 4.5 Haiku model (STRONG MODEL)",
+        "description": "Medium tier, Elo: 1378, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong"
+        "model_category": "medium"
     },
     "claude-3-5-sonnet": {
         "name": "Claude 3.5 Sonnet",
         "model_id": "claude-3-5-sonnet-20241022",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's Claude 3.5 Sonnet model (STRONG MODEL) - DEPRECATED: Use claude-3-7-sonnet instead",
+        "description": "Strong tier, Closed-source, Non-reasoning - RETIRED: Retired Oct 28, 2025. Use claude-sonnet-4-5-20250929 instead",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong",
         "deprecated": True,
-        "deprecation_message": "claude-3-5-sonnet is deprecated. Please use claude-3-7-sonnet instead."
+        "deprecation_message": "claude-3-5-sonnet-20241022 was retired on October 28, 2025. Please use claude-sonnet-4-5-20250929 instead."
     },
     "claude-3-7-sonnet": {
         "name": "Claude 3.7 Sonnet",
         "model_id": "claude-3-7-sonnet-20250219",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's Claude 3.7 Sonnet model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning - DEPRECATED: Retiring Feb 19, 2026. Use claude-sonnet-4-5-20250929 instead",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong"
+        "model_category": "strong",
+        "deprecated": True,
+        "deprecation_message": "claude-3-7-sonnet-20250219 was deprecated on October 28, 2025 and will be retired on February 19, 2026. Please use claude-sonnet-4-5-20250929 instead."
     },
     "claude-4-sonnet": {
         "name": "Claude 4 Sonnet",
         "model_id": "claude-sonnet-4-20250514",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's latest and most capable model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-sonnet-4-5": {
+        "name": "Claude Sonnet 4.5",
+        "model_id": "claude-sonnet-4-5-20250929",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -96,7 +112,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "claude-opus-4-1-20250805",
         "provider": "Anthropic",
         "api_type": "anthropic",
-        "description": "Anthropic's Claude 4.1 Opus model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -108,7 +124,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "google/gemini-2.5-pro",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's Gemini 2.5 Pro model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -118,7 +134,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "google/gemini-2.0-flash-001",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's Gemini 2.0 Flash model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -128,7 +144,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "google/gemini-2.0-flash-lite-001",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's Gemini 2.0 Flash Lite model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -140,7 +156,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-4o-2024-11-20",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-4o model November 2024 version (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -150,7 +166,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-4o-mini-2024-07-18",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-4o Mini model - efficient variant (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -160,7 +176,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o1-2024-12-17",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O1 reasoning model (STRONG MODEL) - Note: temperature parameter is ignored by API",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -170,7 +186,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with low reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "reasoning_effort": "low",
         "system_prompt": "You are a negotiating agent.",
@@ -181,7 +197,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with medium reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "reasoning_effort": "medium",
         "system_prompt": "You are a negotiating agent.",
@@ -192,7 +208,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 model with high reasoning effort (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "reasoning_effort": "high",
         "system_prompt": "You are a negotiating agent.",
@@ -203,7 +219,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5.1-2025-11-13",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5.1 model (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -213,7 +229,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-mini-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 Mini model (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -223,7 +239,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "gpt-5-nano-2025-08-07",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's GPT-5 Nano model (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -233,7 +249,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o3-2025-04-16",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O3 reasoning model (STRONG MODEL) - Note: only supports temperature=1",
+        "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -245,7 +261,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "grok-4-0709",
         "provider": "XAI",
         "api_type": "xai",
-        "description": "XAI's Grok 4 model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -255,7 +271,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "grok-3",
         "provider": "XAI",
         "api_type": "xai",
-        "description": "XAI's Grok 3 model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -265,7 +281,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "grok-3-mini",
         "provider": "XAI",
         "api_type": "xai",
-        "description": "XAI's Grok 3 Mini model (STRONG MODEL)",
+        "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -277,18 +293,118 @@ STRONG_MODELS_CONFIG = {
         "model_id": "meta-llama/llama-3.1-405b-instruct",
         "provider": "Meta",
         "api_type": "openrouter",
-        "description": "Meta's largest open-source model with 405B parameters",
+        "description": "Open-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent."
     },
-    "qwen3-235b-a22b-thinking-2507": {
-        "name": "Qwen 3 235B", 
-        "model_id": "qwen/qwen3-235b-a22b-thinking-2507",
+    
+    # Multi-Agent Strategic Games Evaluation Models (11 models)
+    # Selected for scaling laws evaluation across capability tiers
+    
+    # STRONG TIER - Elo ≥ 1420 (5 models)
+    "gemini-3-pro": {
+        "name": "Gemini 3 Pro",
+        "model_id": "google/gemini-3-pro-preview",
+        "provider": "Google",
+        "api_type": "openrouter",
+        "description": "Strong tier, Elo: 1492, Closed-source, Reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5.2-high": {
+        "name": "GPT-5.2 High",
+        "model_id": "gpt-5.2-high",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Strong tier, Elo: 1465, Closed-source, Reasoning",
+        "temperature": 1.0,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-opus-4-5": {
+        "name": "Claude Opus 4.5",
+        "model_id": "claude-opus-4-5-20251101",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Strong tier, Elo: 1462, Closed-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "kimi-k2-thinking": {
+        "name": "Kimi K2 Thinking",
+        "model_id": "moonshotai/kimi-k2-thinking",
+        "provider": "Moonshot",
+        "api_type": "openrouter",
+        "description": "Strong tier, Elo: 1438, Open-source, Reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "deepseek-r1-0528": {
+        "name": "DeepSeek R1 0528",
+        "model_id": "deepseek/deepseek-r1-0528",
+        "provider": "DeepSeek",
+        "api_type": "openrouter",
+        "description": "Strong tier, Elo: 1426, Open-source, Reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    
+    # MEDIUM TIER - 1290 ≤ Elo < 1420 (4 models)
+    "qwen3-235b-a22b-instruct-2507": {
+        "name": "Qwen3 235B A22B Instruct",
+        "model_id": "qwen/qwen3-235b-a22b-2507",
         "provider": "Alibaba",
         "api_type": "openrouter",
-        "description": "Alibaba's strong multilingual model",
+        "description": "Medium tier, Elo: 1418, Open-source, Non-reasoning",
         "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent."
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "o4-mini-2025-04-16": {
+        "name": "O4 Mini",
+        "model_id": "o4-mini-2025-04-16",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Medium tier, Elo: 1362, Closed-source, Reasoning",
+        "temperature": 1.0,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "gpt-oss-20b": {
+        "name": "GPT-OSS 20B",
+        "model_id": "openai/gpt-oss-20b",
+        "provider": "OpenAI",
+        "api_type": "openrouter",
+        "description": "Medium tier, Elo: 1315, Open-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    
+    # WEAK TIER - Elo < 1290 (2 models)
+    "llama-3.3-70b-instruct": {
+        "name": "Llama 3.3 70B Instruct",
+        "model_id": "meta-llama/llama-3.3-70b-instruct",
+        "provider": "Meta",
+        "api_type": "openrouter",
+        "description": "Weak tier, Elo: 1276, Open-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.1-8b-instruct": {
+        "name": "Llama 3.1 8B Instruct",
+        "model_id": "meta-llama/llama-3.1-8b-instruct",
+        "provider": "Meta",
+        "api_type": "openrouter",
+        "description": "Weak tier, Elo: 1193, Open-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
     },
     
     # Additional models available but not currently in use
@@ -298,16 +414,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "o3-mini-2025-01-31",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "OpenAI's O3 Mini reasoning model - Note: only supports temperature=1",
-        "temperature": 1.0,
-        "system_prompt": "You are a negotiating agent."
-    },
-    "o4-mini": {
-        "name": "O4 Mini",
-        "model_id": "o4-mini-2025-04-16",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "OpenAI's O4 Mini reasoning model - Note: only supports temperature=1",
+        "description": "Closed-source, Reasoning",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent."
     },
@@ -316,7 +423,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "google/gemini-2.5-flash",
         "provider": "Google",
         "api_type": "openrouter",
-        "description": "Google's fast Gemini 2.5 Flash model",
+        "description": "Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent."
     },
@@ -328,7 +435,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-0.5B-Instruct",
-        "description": "Qwen2.5 0.5B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -339,7 +446,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-1.5B-Instruct",
-        "description": "Qwen2.5 1.5B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -350,7 +457,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-3B-Instruct",
-        "description": "Qwen2.5 3B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -361,7 +468,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-7B-Instruct",
-        "description": "Qwen2.5 7B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -372,7 +479,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-14B-Instruct",
-        "description": "Qwen2.5 14B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -383,7 +490,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-32B-Instruct",
-        "description": "Qwen2.5 32B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -394,7 +501,7 @@ STRONG_MODELS_CONFIG = {
         "provider": "Qwen",
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct",
-        "description": "Qwen2.5 72B Instruct model (local cluster)",
+        "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
