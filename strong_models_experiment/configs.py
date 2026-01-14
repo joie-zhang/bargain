@@ -6,9 +6,9 @@ STRONG_MODELS_CONFIG = {
     
     "gemini-1-5-pro": {
         "name": "Gemini 1.5 Pro",
-        "model_id": "google/gemini-pro-1.5",
+        "model_id": "gemini-1.5-pro",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Weak tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -73,9 +73,9 @@ STRONG_MODELS_CONFIG = {
     # Google strong models
     "gemini-2-5-pro": {
         "name": "Gemini 2.5 Pro",
-        "model_id": "google/gemini-2.5-pro",
+        "model_id": "gemini-2.5-pro",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -83,9 +83,9 @@ STRONG_MODELS_CONFIG = {
     },
     "gemini-2-0-flash": {
         "name": "Gemini 2.0 Flash",
-        "model_id": "google/gemini-2.0-flash-001",
+        "model_id": "gemini-2.0-flash",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -93,9 +93,9 @@ STRONG_MODELS_CONFIG = {
     },
     "gemini-2-0-flash-lite": {
         "name": "Gemini 2.0 Flash Lite",
-        "model_id": "google/gemini-2.0-flash-lite-001",
+        "model_id": "gemini-2.0-flash-lite",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Strong tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -256,9 +256,9 @@ STRONG_MODELS_CONFIG = {
     # STRONG TIER - Elo ≥ 1415 (6 models)
     "gemini-3-pro": {
         "name": "Gemini 3 Pro",
-        "model_id": "google/gemini-3-pro-preview",
+        "model_id": "gemini-3-pro-preview",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Strong tier, Elo: 1492, Closed-source, Reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -372,9 +372,9 @@ STRONG_MODELS_CONFIG = {
     },
     "gemini-2-5-flash": {
         "name": "Gemini 2.5 Flash",
-        "model_id": "google/gemini-2.5-flash",
+        "model_id": "gemini-2.5-flash",
         "provider": "Google",
-        "api_type": "openrouter",
+        "api_type": "google",
         "description": "Closed-source, Non-reasoning",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent."
