@@ -169,6 +169,91 @@ For experimental validation:
    - Document performance characteristics
    - Use appropriate data structures
    - Minimize context usage in Claude commands
+
+6. **Comprehensive File Headers - CRITICAL**: Every script or significant file MUST have a thorough header explaining:
+   - **What it does**: Clear description of purpose and functionality
+   - **Usage**: How to run/use the file with example commands
+   - **What it creates/modifies**: Files, directories, or state changes
+   - **Configuration**: Variables/parameters to edit for customization
+   - **Dependencies**: What it requires (other scripts, packages, etc.)
+   - **Examples**: Common usage patterns with actual commands
+
+   Use this format for shell scripts:
+   ```bash
+   #!/bin/bash
+   # =============================================================================
+   # Script Name and Purpose
+   # =============================================================================
+   #
+   # Description of what this script does and why.
+   #
+   # Usage:
+   #   ./script.sh [arguments]
+   #   ./script.sh --help
+   #
+   # What it creates:
+   #   output/directory/
+   #   ├── file1.json      # Description
+   #   ├── file2.csv       # Description
+   #   └── subdir/
+   #       └── file3.txt   # Description
+   #
+   # Examples:
+   #   # Basic usage
+   #   ./script.sh input.txt
+   #
+   #   # With options
+   #   ./script.sh --verbose --output results/
+   #
+   # Configuration (edit these variables):
+   #   - VARIABLE_1: Description of what it controls
+   #   - VARIABLE_2: Description of what it controls
+   #
+   # Dependencies:
+   #   - python3 with packages: numpy, pandas
+   #   - Other scripts: helper.sh
+   #
+   # =============================================================================
+   ```
+
+   Use this format for Python files:
+   ```python
+   #!/usr/bin/env python3
+   """
+   =============================================================================
+   Script Name and Purpose
+   =============================================================================
+
+   Description of what this script does and why.
+
+   Usage:
+       python script.py [arguments]
+       python script.py --help
+
+   What it creates:
+       output/directory/
+       ├── file1.json      # Description
+       └── file2.csv       # Description
+
+   Examples:
+       # Basic usage
+       python script.py input.txt
+
+       # With options
+       python script.py --verbose --output results/
+
+   Configuration:
+       Edit the following variables/constants:
+       - CONFIG_VAR_1: Description
+       - CONFIG_VAR_2: Description
+
+   Dependencies:
+       - numpy, pandas, torch
+       - Local modules: utils.helper
+
+   =============================================================================
+   """
+   ```
 </code_quality>
 
 ## Handling Uncertainty and Errors
@@ -343,49 +428,6 @@ Following Neel Nanda's framework:
    - Always acknowledge limitations and negative results
 </ml_research_principles>
 
-## Negotiation Research Best Practices
-
-<negotiation_research_principles>
-### Multi-Agent Negotiation Mindset
-
-1. **Strategic Behavior Validation**
-   - **Test Strategic vs. Cooperative Tendencies**: Always include control conditions that test pure cooperation
-   - **Document Exploitation Evidence**: Look for anger, gaslighting, manipulation tactics in agent conversations
-   - **Measure Consistency**: Strategic exploitation should be consistent across runs, not random
-   - **Beware Training Data Defaults**: Negotiation tasks should avoid scenarios with obvious training data answers
-
-2. **Environment Design for Strategic Elicitation**
-   - **Balance Competition and Cooperation**: Use cosine similarity of preference vectors to control competition level
-   - **Preference System Choice**: Vector preferences (competitive) vs. matrix preferences (cooperative/competitive)
-   - **Information Asymmetry**: Test both secret and commonly known preferences
-   - **Parameter Sensitivity**: Systematically vary m (items), n (agents), t (rounds), γ (discount factor)
-
-3. **Multi-Model Experimental Design**
-   - **Capability Gradients**: Test O3 vs Claude Haiku, GPT-4 vs GPT-3.5, etc.
-   - **Model Assignment Strategy**: Randomize which agent gets which model across runs
-   - **Cross-Model Validation**: Key findings should hold across different model pairs
-   - **Baseline Comparison**: Include random, greedy, and cooperative baseline agents
-
-4. **Scaling Laws for Exploitation**
-   - **Quantitative Metrics**: Win rate, utility differential, conversation sentiment analysis
-   - **Model Capability Proxies**: Use standardized benchmarks (MMLU, GSM8K) to rank model strength
-   - **Statistical Power**: Ensure sufficient sample sizes for detecting exploitation effects
-   - **Effect Size Estimation**: Look for practically significant differences, not just statistical significance
-
-5. **Princeton Cluster Integration**
-   - **SLURM Job Arrays**: Use for parallel experiments across model combinations
-   - **Resource Management**: Estimate GPU/CPU requirements for different model sizes
-   - **Data Storage**: Use shared file systems for experiment results and logs
-   - **Job Monitoring**: Set up alerts for failed negotiations or crashed agents
-   - **Reproducibility**: Include environment setup in SLURM scripts for exact replication
-
-6. **Negotiation-Specific Debugging**
-   - **Agent Communication Logs**: Save full conversation transcripts for qualitative analysis
-   - **Decision Tree Analysis**: Track agent reasoning steps for each proposal/vote
-   - **Payoff Verification**: Double-check utility calculations for both vector and matrix preferences
-   - **Consensus Mechanism**: Ensure voting and unanimous decision logic works correctly
-   - **Memory Persistence**: Verify agent context carries forward across rounds
-
 ### Princeton Cluster Workflows
 
 #### Basic SLURM Job Template
@@ -436,269 +478,23 @@ python experiments/run_negotiation.py \
    - Solution: Add conversation turn limits, implement deadlock detection
    - Debugging: Log agent internal reasoning steps
 
-2. **Unrealistic Strategic Behavior**
-   - Solution: Adjust preference systems, add more competitive scenarios
-   - Validation: Include human evaluation of "realism"
-
-3. **Model API Rate Limits**
+2. **Model API Rate Limits**
    - Solution: Implement exponential backoff, use multiple API keys
    - Monitoring: Track API usage and costs per experiment
 
-4. **Inconsistent Results Across Runs**
+3. **Inconsistent Results Across Runs**
    - Solution: Fix random seeds, validate reproducibility
    - Analysis: Separate random variation from systematic effects
 
-5. **Cluster Job Failures**
+4. **Cluster Job Failures**
    - Solution: Implement checkpointing, automatic restart capability
    - Prevention: Test locally before large-scale cluster runs
 
-6. **Permission Denied on /tmp/ (SSH Sessions)**
+5. **Permission Denied on /tmp/ (SSH Sessions)**
    - Error: `EACCES: permission denied, mkdir '/tmp/claude/-scratch-gpfs-...'`
    - Cause: When working via SSH on clusters (della, della-gpu), the default /tmp/ directory may not be accessible
    - Solution: Use the `$TMP_DIR` environment variable defined in ~/.bashrc instead of /tmp/
    - Note: This is a cluster-specific issue that occurs during remote SSH sessions
-</negotiation_research_principles>
-
-## Claude Code Integration
-
-<custom_commands>
-### 🚀 Getting Started - Run /setup First!
-
-**New to this template?** Start with:
-```
-/setup
-```
-This will guide you through integrating your research codebase and creating custom commands for your specific workflow.
-
-### 📦 Core Template Commands
-
-#### `/setup` - Interactive Setup Wizard
-- **Purpose**: Guide you through integrating your research codebase with AI agent workflows
-- **When to use**: First time using this template or adding a new codebase
-- **What it does**: 
-  - Helps merge template with your existing code
-  - Guides context gathering (papers, documentation)
-  - Assists in creating custom commands for your research
-  - Sets up verification infrastructure
-- **Command file**: @.claude/commands/setup.md
-
-#### `/crud-claude-commands` - Create Your Own Commands
-- **Purpose**: Dynamically create, update, or delete custom slash commands
-- **When to use**: 
-  - You find yourself repeating the same requests
-  - Need to automate a specific workflow
-  - Want to create domain-specific commands
-- **Example**: `/crud-claude-commands create run-ablation-study`
-- **Command file**: @.claude/commands/crud-claude-commands.md
-
-#### `/page` - Save Your Work
-- **Purpose**: Save complete session state before context fills up
-- **When to use**:
-  - Context usage exceeds 70%
-  - Switching between major tasks
-  - End of work session
-- **Auto-trigger**: At 80% context usage
-- **Example**: `/page "experiment-2024-01-15-results"`
-- **Command file**: @.claude/commands/page.md
-
-#### `/plan-with-context` - Smart Planning
-- **Purpose**: Create implementation plans while managing context efficiently
-- **When to use**:
-  - Breaking down complex tasks
-  - Limited context but big goals
-  - Need phased approach
-- **Command file**: @.claude/commands/plan-with-context.md
-
-#### `/plan-auto-context-enhanced` - Natural Language Planning
-- **Purpose**: Create implementation plans by simply describing what you want in natural language
-- **When to use**:
-  - You want to describe your goal without specifying files
-  - Need automatic discovery of relevant code
-  - Want intelligent context selection
-- **Example**: `/plan-auto-context-enhanced I want to add rate limiting to our API`
-- **Command file**: @.claude/commands/plan-auto-context-enhanced.md
-- **Note**: Also integrates with repomix and Gemini CLI when available
-
-#### `/parallel-analysis-example` - Multi-Agent Pattern Example
-- **Purpose**: EXAMPLE showing how to use multiple agents in parallel
-- **When to use**: As a template for creating your own multi-agent commands
-- **Adapt for**:
-  - Multi-model ensemble analysis
-  - Parallel literature review
-  - Distributed experiment validation
-- **Command file**: @.claude/commands/parallel-analysis-example.md
-
-#### `/integrate-external-codebase` - Integrate External Repositories
-- **Purpose**: Integrate external codebases (GitHub repos or local) for AI-assisted analysis
-- **When to use**:
-  - Adding a dependency or framework to analyze
-  - Integrating research code from collaborators
-  - Studying existing implementations
-- **Example**: `/integrate-external-codebase https://github.com/user/repo`
-- **Command file**: @.claude/commands/integrate-external-codebase.md
-
-#### `/clean-and-organize` - Repository Maintenance
-- **Purpose**: Clean temporary files and organize misplaced files
-- **When to use**:
-  - Repository has accumulated temp files
-  - Markdown files cluttering the root directory
-  - After extensive development sessions
-- **What it does**:
-  - Removes: *.tmp, *.temp, __pycache__, *.pyc, etc.
-  - Organizes: Moves stray markdown → ai_docs/temp_markdowns/
-  - Preserves: .env, .claude/logs/, and other important files
-- **Command file**: @.claude/commands/clean-and-organize.md
-
-### 🛠️ Creating Your Research-Specific Commands
-
-After running `/setup`, you'll want to create commands specific to your research domain. Here are patterns to consider:
-
-1. **Experiment Automation**
-   ```
-   /crud-claude-commands create run-experiment
-   ```
-   Design it to handle your specific:
-   - Configuration management
-   - Result validation
-   - Metric tracking
-
-2. **Analysis Workflows**
-   ```
-   /crud-claude-commands create analyze-results
-   ```
-   Customize for your:
-   - Statistical tests
-   - Visualization needs
-   - Comparison methods
-
-3. **Debugging Helpers**
-   ```
-   /crud-claude-commands create debug-training
-   ```
-   Include your common:
-   - Error patterns
-   - Diagnostic steps
-   - Quick fixes
-
-4. **Literature Integration**
-   ```
-   /crud-claude-commands create paper-to-code
-   ```
-   For implementing papers:
-   - Extract key algorithms
-   - Generate test cases
-   - Verify correctness
-</custom_commands>
-
-<autonomous_command_usage>
-### Guiding Principles for Your Custom Commands
-
-When creating commands for your research, consider these patterns:
-
-#### Command Triggers
-Design your commands to activate on specific patterns:
-- Research-specific terminology
-- Repeated workflows
-- Common analysis needs
-- Debugging scenarios
-
-#### Example Patterns to Implement
-
-1. **Experiment Management**
-   ```python
-   # When user mentions "run experiment" or "test hypothesis"
-   if "experiment" in message or "hypothesis" in message:
-       use_command("/run-experiment", config=extract_config())
-   ```
-
-2. **Results Analysis**
-   ```python
-   # When results are generated
-   if "results ready" or "analyze output":
-       use_command("/analyze-results", metrics=domain_specific_metrics)
-   ```
-
-3. **Context Preservation**
-   ```python
-   # Always monitor context usage
-   if context_usage > 0.7:
-       suggest_command("/page", reason="preserve progress")
-   elif context_usage > 0.8:
-       auto_command("/page", name=generate_checkpoint_name())
-   ```
-
-#### Building Reliable Automation
-
-1. **Start with Manual Commands**: Run commands manually first to understand patterns
-2. **Identify Repetition**: Notice when you use the same command sequence
-3. **Create Composite Commands**: Combine common sequences into single commands
-4. **Add Verification**: Always include checks to ensure commands worked
-5. **Document Failures**: Track when commands fail and why
-
-#### Integration with External Tools
-Your custom commands can integrate with:
-- Experiment tracking (Weights & Biases, MLflow)
-- Compute clusters (SLURM, Ray)
-- Version control (Git workflows)
-- Data pipelines (DVC, Pachyderm)
-- Analysis tools (Jupyter, Pandas)
-</autonomous_command_usage>
-
-<autonomous_scripts>
-### Autonomous Research Scripts
-
-All slash commands now have programmatic versions in `scripts/commands/` that can be executed autonomously:
-
-#### Codebase Integration
-```bash
-# Integrate external codebase
-python scripts/integrate_codebase.py https://github.com/org/repo.git
-```
-
-#### Automatic Context Planning
-```bash
-# Create implementation plan with automatic context selection
-python scripts/commands/plan_auto_context.py "add caching layer to improve API performance"
-
-# With external tools (repomix + Gemini)
-python scripts/commands/plan_auto_context.py "implement websocket notifications" --output plan.md
-```
-
-#### Orchestrated Workflows
-```bash
-# Run comprehensive analysis workflow
-python scripts/commands/orchestrate_research.py \
-    --workflow comprehensive_analysis \
-    --codebase ./project \
-    --task "Analyze security architecture"
-```
-
-#### Multi-Model Coordination
-The orchestration script supports:
-- Parallel execution of multiple tools
-- Custom workflow definitions
-- Automatic report generation
-- Integration with Gemini, O3, and other models
-
-See `scripts/README.md` for complete documentation.
-</autonomous_scripts>
-
-<thinking_guidelines>
-## Extended Thinking Usage
-
-For complex problems, I will use extended thinking when you include trigger phrases:
-- "think step by step" - Basic reasoning
-- "think deeply" - More thorough analysis
-- "think harder" - Complex problem solving
-- "ultrathink" - Maximum reasoning depth
-
-Best used for:
-- Mathematical proofs and derivations
-- Architecture decisions with multiple trade-offs
-- Debugging subtle issues
-- Research hypothesis formation
-- Safety analysis and failure mode identification
-</thinking_guidelines>
 
 ## Best Practices for Maximum Efficiency
 
