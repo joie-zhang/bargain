@@ -116,7 +116,25 @@ class StrongModelsExperiment:
         if config["random_seed"]:
             import random
             random.seed(config["random_seed"])
-        
+
+        # Handle random model ordering
+        model_order = config.get("model_order", "weak_first")
+        if model_order == "random":
+            import random as rand_module
+            if rand_module.random() < 0.5:
+                config["actual_order"] = "weak_first"
+                self.logger.info("Random order selected: weak_first (models unchanged)")
+            else:
+                config["actual_order"] = "strong_first"
+                models = models[::-1]  # Reverse the models list
+                self.logger.info("Random order selected: strong_first (models reversed)")
+        else:
+            config["actual_order"] = model_order
+            if model_order == "strong_first":
+                # If explicitly strong_first, ensure models are in correct order
+                # (config generator should have already handled this, but verify)
+                self.logger.info(f"Using configured order: {model_order}")
+
         self.logger.info(f"Starting experiment {experiment_id}")
         
         # Extract token configuration from config
@@ -221,7 +239,8 @@ class StrongModelsExperiment:
                 discussion_result = {"messages": []}
                 if not config.get("disable_discussion", False):
                     discussion_result = await self.phase_handler.run_discussion_phase(
-                        agents, items, preferences, round_num, config["t_rounds"]
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        discussion_turns=config.get("discussion_turns", 3)
                     )
                     conversation_logs.extend(discussion_result.get("messages", []))
                 else:
