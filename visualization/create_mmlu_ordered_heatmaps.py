@@ -4,6 +4,8 @@ Create heatmaps with models ordered by MMLU-Pro performance.
 Y-axis: Competition level (0 to 1)
 X-axis: Models ordered by MMLU-Pro score (low to high)
 Values: Utility differences (Strong model - Baseline model)
+
+Supports aggregation across model orderings (weak_first/strong_first) with confidence intervals.
 """
 
 import json
@@ -14,6 +16,84 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
 import pandas as pd
+from scipy import stats
+
+
+def compute_mean_with_ci(values, confidence=0.95):
+    """Compute mean and confidence interval.
+
+    Args:
+        values: List of values to aggregate
+        confidence: Confidence level (default: 0.95 for 95% CI)
+
+    Returns:
+        Tuple of (mean, ci_lower, ci_upper, ci_half_width)
+    """
+    n = len(values)
+    if n == 0:
+        return np.nan, np.nan, np.nan, np.nan
+
+    mean = np.mean(values)
+
+    if n == 1:
+        return mean, mean, mean, 0.0
+
+    se = stats.sem(values)
+    ci_half_width = se * stats.t.ppf((1 + confidence) / 2, n - 1)
+
+    return mean, mean - ci_half_width, mean + ci_half_width, ci_half_width
+
+
+def aggregate_across_orderings(results_by_competition, results_by_order=None):
+    """Average results across weak_first and strong_first orderings for each model pair.
+
+    Args:
+        results_by_competition: Original results organized by competition level
+        results_by_order: Optional dict with results separated by order
+
+    Returns:
+        Aggregated results with means and confidence intervals
+    """
+    aggregated = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+
+    for comp_level in results_by_competition:
+        for baseline in results_by_competition[comp_level]:
+            for strong in results_by_competition[comp_level][baseline]:
+                experiments = results_by_competition[comp_level][baseline][strong]
+                if not experiments:
+                    continue
+
+                # Extract values for different metrics
+                utility_diffs = [exp['utility_diff'] for exp in experiments]
+                baseline_utilities = [exp['baseline_utility'] for exp in experiments]
+                strong_utilities = [exp['strong_utility'] for exp in experiments]
+
+                # Compute means with confidence intervals
+                diff_mean, diff_ci_low, diff_ci_high, diff_ci = compute_mean_with_ci(utility_diffs)
+                baseline_mean, baseline_ci_low, baseline_ci_high, baseline_ci = compute_mean_with_ci(baseline_utilities)
+                strong_mean, strong_ci_low, strong_ci_high, strong_ci = compute_mean_with_ci(strong_utilities)
+
+                # Get order information if available
+                orders = set()
+                for exp in experiments:
+                    order = exp.get('model_order', 'unknown')
+                    orders.add(order)
+
+                aggregated[comp_level][baseline][strong] = {
+                    'utility_diff_mean': diff_mean,
+                    'utility_diff_ci': diff_ci,
+                    'utility_diff_ci_low': diff_ci_low,
+                    'utility_diff_ci_high': diff_ci_high,
+                    'baseline_utility_mean': baseline_mean,
+                    'baseline_utility_ci': baseline_ci,
+                    'strong_utility_mean': strong_mean,
+                    'strong_utility_ci': strong_ci,
+                    'n_experiments': len(experiments),
+                    'orders_included': list(orders),
+                    'raw_experiments': experiments  # Keep raw data for order-specific analysis
+                }
+
+    return aggregated
 
 # MMLU-Pro scores from the provided data
 MMLU_PRO_SCORES = {
@@ -172,11 +252,15 @@ def load_experiment_results(results_dir):
                                 
                                 # Store the utility difference (strong - baseline)
                                 utility_diff = strong_utility - baseline_utility
-                                
+
+                                # Get model order from config if available
+                                model_order = exp['config'].get('model_order', 'unknown')
+
                                 results_by_competition[comp_bucket][baseline_model][strong_model].append({
                                     'utility_diff': utility_diff,
                                     'baseline_utility': baseline_utility,
-                                    'strong_utility': strong_utility
+                                    'strong_utility': strong_utility,
+                                    'model_order': model_order
                                 })
                 
                 processed_files += 1
@@ -353,9 +437,23 @@ def plot_individual_heatmap(results_by_competition, baseline_model, ordered_stro
     print(f"Saved individual heatmap to {filename}")
     plt.close()
 
-def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models, plot_mode='diff'):
-    """Create a heatmap for a specific baseline model."""
-    
+def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_strong_models,
+                                 plot_mode='diff', order_filter=None, return_ci=False):
+    """Create a heatmap for a specific baseline model.
+
+    Args:
+        results_by_competition: Results dictionary
+        baseline_model: The baseline model name
+        ordered_strong_models: List of strong models in order
+        plot_mode: 'diff', 'strong_only', 'sum', or 'baseline_only'
+        order_filter: If set, only include experiments with this model_order ('weak_first' or 'strong_first')
+        return_ci: If True, also return confidence interval matrix
+
+    Returns:
+        data: Mean values matrix
+        ci_data: Confidence interval half-widths (only if return_ci=True)
+    """
+
     # Maximum possible welfare at each competition level
     MAX_WELFARE = {
         0.0: 200.0,   # No competition: both agents can get 100
@@ -364,19 +462,26 @@ def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_
         0.75: 138.0,  # High competition
         1.0: 100.0    # Full competition (constant-sum game)
     }
-    
+
     # Create data matrix: rows = competition levels, cols = strong models
     # Reverse the order of competition levels so 0 is at bottom, 1 at top
     reversed_competition_levels = list(reversed(COMPETITION_LEVELS))
     data = np.full((len(reversed_competition_levels), len(ordered_strong_models)), np.nan)
-    
+    ci_data = np.full((len(reversed_competition_levels), len(ordered_strong_models)), np.nan)
+
     for i, comp_level in enumerate(reversed_competition_levels):
         for j, strong_model in enumerate(ordered_strong_models):
-            if (comp_level in results_by_competition and 
+            if (comp_level in results_by_competition and
                 baseline_model in results_by_competition[comp_level] and
                 strong_model in results_by_competition[comp_level][baseline_model]):
-                
+
                 experiments = results_by_competition[comp_level][baseline_model][strong_model]
+
+                # Filter by order if specified
+                if order_filter:
+                    experiments = [exp for exp in experiments
+                                   if exp.get('model_order', 'unknown') == order_filter]
+
                 if experiments:
                     if plot_mode == 'diff':
                         # Use utility difference (strong - baseline)
@@ -395,9 +500,13 @@ def create_heatmap_for_baseline(results_by_competition, baseline_model, ordered_
                         values = [exp['baseline_utility'] for exp in experiments]
                     else:  # other modes
                         values = [exp['utility_diff'] for exp in experiments]
-                    
-                    data[i, j] = np.mean(values)
-    
+
+                    mean, _, _, ci = compute_mean_with_ci(values)
+                    data[i, j] = mean
+                    ci_data[i, j] = ci
+
+    if return_ci:
+        return data, ci_data
     return data
 
 def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff', baseline_order=None):
@@ -619,6 +728,153 @@ def plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='diff
     plt.show()
     print(f"Saved heatmap to {filename}")
 
+def generate_order_specific_figures(results_by_competition, ordered_strong_models, plot_mode='diff'):
+    """Generate separate figures for each model ordering (for appendix).
+
+    Creates two figures:
+    1. weak_first ordering only
+    2. strong_first ordering only
+
+    Args:
+        results_by_competition: Results dictionary with model_order in each experiment
+        ordered_strong_models: List of strong models in MMLU-Pro order
+        plot_mode: Which metric to plot ('diff', 'strong_only', 'sum', 'baseline_only')
+    """
+
+    for order in ['weak_first', 'strong_first']:
+        print(f"\n=== Creating {order} figures (for appendix) ===")
+
+        # Get baselines with data for this order
+        baselines_with_data = []
+        for baseline in BASELINE_MODELS:
+            has_data = False
+            for comp_level in results_by_competition:
+                if baseline in results_by_competition[comp_level]:
+                    for strong in results_by_competition[comp_level][baseline]:
+                        experiments = results_by_competition[comp_level][baseline][strong]
+                        # Check if any experiments have this order
+                        if any(exp.get('model_order') == order for exp in experiments):
+                            has_data = True
+                            break
+                    if has_data:
+                        break
+            if has_data:
+                baselines_with_data.append(baseline)
+
+        if not baselines_with_data:
+            print(f"  No data found for {order} ordering")
+            continue
+
+        # Create figure with subplots
+        fig, axes = plt.subplots(len(baselines_with_data), 1, figsize=(16, 5*len(baselines_with_data)))
+        if len(baselines_with_data) == 1:
+            axes = [axes]
+
+        for idx, baseline in enumerate(baselines_with_data):
+            ax = axes[idx]
+
+            # Get data with order filter
+            data, ci_data = create_heatmap_for_baseline(
+                results_by_competition, baseline, ordered_strong_models,
+                plot_mode=plot_mode, order_filter=order, return_ci=True
+            )
+
+            # Create mask for missing data
+            mask = np.isnan(data)
+
+            # Create annotation labels with CI
+            annot_labels = np.empty_like(data, dtype=object)
+            for i in range(data.shape[0]):
+                for j in range(data.shape[1]):
+                    if np.isnan(data[i, j]):
+                        annot_labels[i, j] = ''
+                    elif np.isnan(ci_data[i, j]) or ci_data[i, j] == 0:
+                        annot_labels[i, j] = f'{data[i, j]:.1f}'
+                    else:
+                        annot_labels[i, j] = f'{data[i, j]:.1f}\n±{ci_data[i, j]:.1f}'
+
+            # Create heatmap
+            if plot_mode == 'diff':
+                im = sns.heatmap(data,
+                               annot=annot_labels,
+                               fmt='',
+                               cmap='RdBu_r',
+                               mask=mask,
+                               cbar_kws={'label': 'Utility Difference (Adversary - Baseline)'},
+                               annot_kws={'fontsize': 9},
+                               vmin=-100,
+                               vmax=100,
+                               center=0,
+                               linewidths=0.5,
+                               linecolor='gray',
+                               ax=ax,
+                               square=False)
+                title_suffix = f"Utility Difference ({order})"
+            elif plot_mode == 'strong_only':
+                im = sns.heatmap(data,
+                               annot=annot_labels,
+                               fmt='',
+                               cmap='viridis',
+                               mask=mask,
+                               cbar_kws={'label': 'Adversary Model Utility'},
+                               annot_kws={'fontsize': 9},
+                               vmin=0,
+                               vmax=100,
+                               linewidths=0.5,
+                               linecolor='gray',
+                               ax=ax,
+                               square=False)
+                title_suffix = f"Adversary Utility ({order})"
+            else:
+                # Default to diff
+                im = sns.heatmap(data,
+                               annot=annot_labels,
+                               fmt='',
+                               cmap='RdBu_r',
+                               mask=mask,
+                               cbar_kws={'label': 'Utility Difference'},
+                               annot_kws={'fontsize': 9},
+                               vmin=-100,
+                               vmax=100,
+                               center=0,
+                               linewidths=0.5,
+                               linecolor='gray',
+                               ax=ax,
+                               square=False)
+                title_suffix = f"{plot_mode} ({order})"
+
+            # Set colorbar label font size
+            cbar = ax.collections[0].colorbar
+            if cbar:
+                cbar.ax.tick_params(labelsize=12)
+                cbar.set_label(cbar.ax.get_ylabel(), fontsize=14)
+
+            # Set labels
+            if idx == len(baselines_with_data) - 1:
+                ax.set_xlabel('Adversary Models Ordered by MMLU-Pro Performance →', fontsize=16, fontweight='bold')
+                ax.set_xticklabels([MODEL_DISPLAY_NAMES[model] for model in ordered_strong_models],
+                                  rotation=0, ha='center', fontsize=14)
+            else:
+                ax.set_xlabel('')
+                ax.set_xticklabels([])
+
+            ax.set_ylabel('Competition Level', fontsize=16, fontweight='bold')
+            ax.set_title(f'{MODEL_DISPLAY_NAMES[baseline]}: {title_suffix}',
+                        fontsize=14, fontweight='bold', pad=15)
+
+            # Reverse the labels to match the reversed data (0 at bottom, 1 at top)
+            ax.set_yticklabels([f'{level:.2f}' for level in reversed(COMPETITION_LEVELS)],
+                              rotation=0, fontsize=14)
+
+        plt.tight_layout()
+
+        # Save figure
+        filename = f'figures/appendix_mmlu_ordered_{plot_mode}_{order}_heatmaps.pdf'
+        plt.savefig(filename, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"  Saved {order} heatmap to {filename}")
+
+
 def print_summary_statistics(results_by_competition, ordered_strong_models):
     """Print summary of the data."""
     print("\n=== Data Summary ===")
@@ -753,6 +1009,12 @@ def main():
     for order_idx, baseline_order in enumerate(baseline_orders):
         print(f"\nCreating baseline final utility heatmap - {order_names[order_idx]}...")
         plot_heatmaps(results_by_competition, ordered_strong_models, plot_mode='baseline_only', baseline_order=list(baseline_order))
+
+    # Generate order-specific figures for appendix (weak_first and strong_first separately)
+    print("\n=== Creating Order-Specific Figures for Appendix ===")
+    generate_order_specific_figures(results_by_competition, ordered_strong_models, plot_mode='diff')
+    generate_order_specific_figures(results_by_competition, ordered_strong_models, plot_mode='strong_only')
+
 
 if __name__ == "__main__":
     main()
