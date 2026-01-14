@@ -15,40 +15,31 @@ mkdir -p "${CONFIG_DIR}"
 #       The Python code looks up these short names to get the full model_id (e.g., "gpt-5-mini" -> "gpt-5-mini-2025-08-07")
 #
 # Weak models - baseline models for exploitation experiments
+# From Multi-Agent Strategic Games Evaluation Models (Weak Tier - Elo < 1290)
 WEAK_MODELS=(
-    "claude-3-opus"
+    "gpt-4o" # May 2024 version
     "gemini-1-5-pro"
-    "gpt-4o"  # May 2024 version
 )
 
 # Strong models - newer/more capable models that may exploit weak models
+# From Multi-Agent Strategic Games Evaluation Models (11 models total)
 STRONG_MODELS=(
-    # Claude models
-    "claude-3-5-haiku"
-    "claude-3-5-sonnet"
-    "claude-4-sonnet"
-    "claude-4-1-opus"
+    # STRONG TIER - Elo ≥ 1415 (6 models)
+    "gemini-3-pro"  # Strong tier, Elo: 1492, Closed-source, Reasoning
+    "gpt-5.2-high"  # Strong tier, Elo: 1465, Closed-source, Reasoning
+    "claude-opus-4-5"  # Strong tier, Elo: 1462, Closed-source, Non-reasoning
+    "kimi-k2-thinking"  # Strong tier, Elo: 1438, Open-source, Reasoning
+    "deepseek-r1-0528"  # Strong tier, Elo: 1426, Open-source, Reasoning
+    "qwen3-235b-a22b-instruct-2507"  # Strong tier, Elo: 1418, Open-source, Non-reasoning
     
-    # OpenAI models
-    "gpt-4o-latest"  # Nov 2024 version (model_id: gpt-4o-2024-11-20)
-    "gpt-5-medium-effort"  # GPT-5 with medium reasoning effort (model_id: gpt-5-2025-08-07)
-    "gpt-5-low-effort"  # GPT-5 with low reasoning effort (model_id: gpt-5-2025-08-07)
-    "gpt-5-high-effort"  # GPT-5 with high reasoning effort (model_id: gpt-5-2025-08-07)
-    "gpt-5.1"  # GPT-5.1 (model_id: gpt-5.1-2025-11-13)
-    "gpt-5-nano"  # GPT-5 Nano (model_id: gpt-5-nano-2025-08-07)
-    "gpt-5-mini"  # GPT-5 Mini (model_id: gpt-5-mini-2025-08-07)
-    "o1"  # O1 (model_id: o1-2024-12-17)
-    "o3"  # O3 (model_id: o3-2025-04-16)
-    
-    # Google models
-    "gemini-2-0-flash"
-    "gemini-2-0-flash-lite"
-    "gemini-2-5-pro"
-    
-    # XAI Grok models
-    "grok-4-0709"
-    "grok-3"
-    "grok-3-mini"
+    # MEDIUM TIER - 1290 ≤ Elo < 1415 (3 models)
+    "claude-4-5-haiku"  # Medium tier, Elo: 1378, Closed-source, Non-reasoning
+    "o4-mini-2025-04-16"  # Medium tier, Elo: 1362, Closed-source, Reasoning
+    "gpt-oss-20b"  # Medium tier, Elo: 1315, Open-source, Non-reasoning
+
+    # WEAK TIER - Elo < 1290 (2 models)
+    "llama-3.3-70b-instruct"  # Weak tier, Elo: 1276, Open-source, Non-reasoning
+    "llama-3.1-8b-instruct"  # Weak tier, Elo: 1193, Open-source, Non-reasoning
 )
 
 # Competition levels
