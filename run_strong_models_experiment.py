@@ -218,6 +218,21 @@ async def main():
     )
 
     parser.add_argument(
+        "--discussion-turns",
+        type=int,
+        default=3,
+        help="Number of times agents go around discussing per round (default: 3)"
+    )
+
+    parser.add_argument(
+        "--model-order",
+        type=str,
+        choices=["weak_first", "strong_first", "random"],
+        default="weak_first",
+        help="Order of model speaking: weak_first, strong_first, or random (default: weak_first)"
+    )
+
+    parser.add_argument(
         "--output-dir",
         type=str,
         default=None,
@@ -291,6 +306,9 @@ async def main():
         print(f"Disabled Phases: {', '.join(disabled_phases)}")
     if enabled_phases:
         print(f"Enabled Phases: {', '.join(enabled_phases)}")
+
+    print(f"Discussion Turns: {args.discussion_turns}")
+    print(f"Model Order: {args.model_order}")
     
     # Only show token limits if any are specified
     token_limits = []
@@ -325,6 +343,8 @@ async def main():
         "disable_discussion": args.disable_discussion,
         "disable_thinking": args.disable_thinking,
         "disable_reflection": args.disable_reflection,
+        "discussion_turns": args.discussion_turns,
+        "model_order": args.model_order,
         # Diplomacy-specific parameters
         "n_issues": args.n_issues,
         "rho": args.rho,
