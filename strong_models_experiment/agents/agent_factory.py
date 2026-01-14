@@ -4,7 +4,7 @@ import os
 import logging
 from typing import List, Dict, Any, Optional
 from negotiation import AgentFactory, AgentConfiguration
-from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LocalModelAgent, LLMConfig
+from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LocalModelAgent, GoogleAgent, LLMConfig
 from negotiation.openrouter_client import OpenRouterAgent
 from ..configs import STRONG_MODELS_CONFIG
 
@@ -31,6 +31,7 @@ class StrongModelAgentFactory:
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         openai_key = os.getenv("OPENAI_API_KEY")
         xai_key = os.getenv("XAI_API_KEY")
+        google_key = os.getenv("GOOGLE_API_KEY")
         
         # Get max_tokens from config, default to None (unlimited)
         max_tokens = config.get("max_tokens_default", None)
@@ -61,7 +62,7 @@ class StrongModelAgentFactory:
             
             agent = self._create_agent_by_type(
                 api_type, model_name, model_config, agent_id,
-                anthropic_key, openai_key, openrouter_key, xai_key, max_tokens
+                anthropic_key, openai_key, openrouter_key, xai_key, google_key, max_tokens
             )
             
             if agent:
@@ -75,15 +76,18 @@ class StrongModelAgentFactory:
     def _create_agent_by_type(self, api_type: str, model_name: str, model_config: Dict,
                              agent_id: str, anthropic_key: Optional[str],
                              openai_key: Optional[str], openrouter_key: Optional[str],
-                             xai_key: Optional[str], max_tokens: int = 999999) -> Optional[BaseLLMAgent]:
+                             xai_key: Optional[str], google_key: Optional[str],
+                             max_tokens: int = 999999) -> Optional[BaseLLMAgent]:
         """Create an agent based on API type."""
-        
+
         if api_type == "anthropic":
             return self._create_anthropic_agent(model_name, model_config, agent_id, anthropic_key, max_tokens)
         elif api_type == "openai":
             return self._create_openai_agent(model_name, model_config, agent_id, openai_key, max_tokens)
         elif api_type == "xai":
             return self._create_xai_agent(model_name, model_config, agent_id, xai_key, max_tokens)
+        elif api_type == "google":
+            return self._create_google_agent(model_name, model_config, agent_id, google_key, max_tokens)
         elif api_type == "princeton_cluster":
             return self._create_local_model_agent(model_name, model_config, agent_id, max_tokens)
         else:  # openrouter
@@ -218,7 +222,32 @@ class StrongModelAgentFactory:
             config=llm_config,
             api_key=api_key
         )
-    
+
+    def _create_google_agent(self, model_name: str, model_config: Dict,
+                            agent_id: str, api_key: Optional[str], max_tokens: int = 999999) -> Optional[GoogleAgent]:
+        """Create a Google Gemini agent."""
+        if not api_key:
+            self.logger.warning(f"GOOGLE_API_KEY not set, skipping {model_name}")
+            return None
+
+        # Use GPT_4 as the base model type for configuration compatibility
+        llm_config = LLMConfig(
+            model_type=ModelType.GPT_4,  # Base type for config compatibility
+            temperature=model_config["temperature"],
+            max_tokens=max_tokens,
+            system_prompt=model_config["system_prompt"],
+            custom_parameters={}
+        )
+
+        # Store the actual model_id for the agent to use
+        llm_config._actual_model_id = model_config["model_id"]
+
+        return GoogleAgent(
+            agent_id=agent_id,
+            config=llm_config,
+            api_key=api_key
+        )
+
     def _create_local_model_agent(self, model_name: str, model_config: Dict,
                                  agent_id: str, max_tokens: int = 999999) -> Optional[LocalModelAgent]:
         """Create a local model agent for Princeton cluster models."""
