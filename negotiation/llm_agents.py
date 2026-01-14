@@ -554,7 +554,51 @@ Response format: Provide your analysis as structured strategic thinking."""
         result['anticipated_resistance'] = resistance_mentions
         
         return result
-    
+
+    def _normalize_vote(self, vote_value: Any) -> str:
+        """
+        Normalize a vote value to either 'accept' or 'reject'.
+
+        Handles cases where the LLM returns:
+        - A string directly: "accept" or "reject"
+        - A nested dict: {"decision": "accept"} or {"vote": "accept"}
+        - Other variations that need parsing
+
+        Args:
+            vote_value: The raw vote value from the LLM response
+
+        Returns:
+            Normalized vote string: "accept" or "reject"
+        """
+        # If it's already a valid string, normalize it
+        if isinstance(vote_value, str):
+            vote_lower = vote_value.lower().strip()
+            if 'accept' in vote_lower or 'yes' in vote_lower or 'approve' in vote_lower:
+                return "accept"
+            else:
+                return "reject"
+
+        # If it's a dict, try to extract the vote
+        if isinstance(vote_value, dict):
+            # Try common keys that might contain the actual vote
+            for key in ['decision', 'vote', 'choice', 'action', 'result', 'value']:
+                if key in vote_value:
+                    return self._normalize_vote(vote_value[key])
+
+            # If no known key found, look for any string value that looks like a vote
+            for v in vote_value.values():
+                if isinstance(v, str):
+                    v_lower = v.lower()
+                    if 'accept' in v_lower or 'reject' in v_lower:
+                        return self._normalize_vote(v)
+
+            self.logger.warning(f"Could not extract vote from dict: {vote_value}")
+            return "reject"
+
+        # For any other type, default to reject
+        self.logger.warning(f"Unexpected vote type {type(vote_value)}: {vote_value}")
+        return "reject"
+
     def _extract_json_from_text(self, text: str, max_length: int = 1000000) -> Optional[str]:
         """
         Extract the first valid JSON object from text, handling very long responses.
@@ -701,12 +745,18 @@ Response format: Provide your analysis as structured strategic thinking."""
         for attempt in range(self.config.max_retries):
             try:
                 response = await self._call_llm_api(messages)
-                
+
                 # Update tracking
                 self.total_requests += 1
                 if response.tokens_used:
+                    # Handle case where tokens_used might be a dict (defensive)
+                    if isinstance(response.tokens_used, dict):
+                        response.tokens_used = response.tokens_used.get('total_tokens', 0)
                     self.total_tokens += response.tokens_used
                 if response.cost_estimate:
+                    # Handle case where cost_estimate might be a dict (defensive)
+                    if isinstance(response.cost_estimate, dict):
+                        response.cost_estimate = 0.0
                     self.total_cost += response.cost_estimate
                 self.response_times.append(response.response_time)
                 
@@ -867,13 +917,17 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
                         proposal["allocation"] = converted_allocation
                     
                     # Ensure required fields are present
+                    if "allocation" not in proposal:
+                        # If no allocation key, don't return - fall through to default fallback
+                        raise ValueError("Extracted JSON missing 'allocation' key")
+
                     if "reasoning" not in proposal:
                         proposal["reasoning"] = "No reasoning provided"
-                    
+
                     proposal["proposed_by"] = self.agent_id
                     proposal["round"] = context.current_round
                     return proposal
-            except (json.JSONDecodeError, AttributeError):
+            except (json.JSONDecodeError, AttributeError, ValueError):
                 pass
             
             # Fallback: create a simple proposal
@@ -940,6 +994,8 @@ Vote must be either "accept" or "reject"."""
         try:
             # Try to parse the JSON directly first
             vote = json.loads(response.content)
+            # Normalize the vote value to handle nested structures
+            vote["vote"] = self._normalize_vote(vote.get("vote", "reject"))
             vote["voter"] = self.agent_id
             vote["round"] = context.current_round
             if token_usage:
@@ -952,13 +1008,15 @@ Vote must be either "accept" or "reject"."""
                 json_str = self._extract_json_from_text(response.content)
                 if json_str:
                     vote = json.loads(json_str)
+                    # Normalize the vote value to handle nested structures
+                    vote["vote"] = self._normalize_vote(vote.get("vote", "reject"))
                     vote["voter"] = self.agent_id
                     vote["round"] = context.current_round
                     return vote
             except (json.JSONDecodeError, AttributeError, ValueError) as parse_error:
                 self.logger.debug(f"JSON extraction failed for vote: {parse_error}")
                 pass
-            
+
             # Fallback: reject by default
             self.logger.warning(f"Failed to parse vote JSON: {response.content[:200]}...")
             return {
@@ -1286,17 +1344,7 @@ class OpenAIAgent(BaseLLMAgent):
         )
         
         response_time = time.time() - start_time
-        
-        # DEBUG: Log O3 API responses only if they fail
-        if "o3" in self.model_name.lower() and not response.choices[0].message.content:
-            print(f"\n⚠️  O3 API Response Issue:")
-            print(f"Model: {self.model_name}")
-            print(f"Finish reason: {response.choices[0].finish_reason}")
-            print(f"Content length: {len(response.choices[0].message.content or '')}")
-            if response.usage:
-                print(f"Tokens used: {response.usage.total_tokens}")
-            print("=" * 80)
-        
+
         return AgentResponse(
             content=response.choices[0].message.content,  # Keep original - no masking
             model_used=self.model_name,
@@ -1512,6 +1560,129 @@ class XAIAgent(BaseLLMAgent):
         """Get XAI model information."""
         return {
             "provider": "xai",
+            "model_type": self.config.model_type.value,
+            "model_name": self.model_name,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens
+        }
+
+
+class GoogleAgent(BaseLLMAgent):
+    """LLM agent using Google Gemini models via the Google AI API."""
+
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
+        super().__init__(agent_id, config)
+
+        try:
+            import google.generativeai as genai
+            self.genai = genai
+            self.GOOGLE_AVAILABLE = True
+        except ImportError:
+            self.GOOGLE_AVAILABLE = False
+            raise ImportError("google-generativeai package not available. Install with: pip install google-generativeai")
+
+        # Configure the API key
+        self.genai.configure(api_key=api_key)
+
+        # Check if we have an actual model ID stored
+        if hasattr(config, '_actual_model_id'):
+            self.model_name = config._actual_model_id
+        else:
+            # Default model name
+            self.model_name = "gemini-2.0-flash"
+
+        # Initialize the generative model
+        self.model = self.genai.GenerativeModel(model_name=self.model_name)
+
+    async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
+        """Call Google Gemini API."""
+        start_time = time.time()
+
+        try:
+            # Convert messages to Gemini format
+            prompt_text = self._messages_to_prompt(messages)
+
+            # Create generation config
+            generation_config = self.genai.types.GenerationConfig(
+                temperature=self.config.temperature,
+                max_output_tokens=self.config.max_tokens,
+            )
+
+            # Generate response synchronously (wrapped in async)
+            import asyncio
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.model.generate_content(
+                    prompt_text,
+                    generation_config=generation_config
+                )
+            )
+
+            response_time = time.time() - start_time
+
+            # Extract token usage if available
+            tokens_used = None
+            token_metadata = {}
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+                completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+                total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
+                # tokens_used should be an int, not a dict!
+                tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
+                # Store detailed breakdown in metadata instead
+                token_metadata = {
+                    'prompt_tokens': prompt_tokens,
+                    'completion_tokens': completion_tokens,
+                    'total_tokens': tokens_used
+                }
+
+            return AgentResponse(
+                content=response.text,
+                model_used=self.model_name,
+                response_time=response_time,
+                tokens_used=tokens_used,  # Now an int, not a dict
+                cost_estimate=None,
+                metadata={
+                    "finish_reason": response.candidates[0].finish_reason.name if response.candidates else None,
+                    "safety_ratings": [str(r) for r in response.candidates[0].safety_ratings] if response.candidates else [],
+                    "usage": token_metadata  # Detailed token info goes in metadata
+                }
+            )
+
+        except Exception as e:
+            self.logger.error(f"Google Gemini API error: {e}")
+            raise
+
+    def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
+        """Convert OpenAI-style messages to Gemini prompt format."""
+        prompt_parts = []
+        for msg in messages:
+            role = msg['role']
+            content = msg['content']
+
+            if role == 'system':
+                prompt_parts.append(f"System: {content}")
+            elif role == 'user':
+                prompt_parts.append(f"Human: {content}")
+            elif role == 'assistant':
+                prompt_parts.append(f"Assistant: {content}")
+
+        return "\n\n".join(prompt_parts) + "\n\nAssistant:"
+
+    def _get_context_limit(self) -> int:
+        """Get the context limit for Google Gemini models."""
+        # Gemini models have varying context limits
+        if "2.0" in self.model_name or "2.5" in self.model_name or "3" in self.model_name:
+            return 1_000_000  # 1M context for newer models
+        elif "1.5" in self.model_name:
+            return 1_000_000  # 1M context for Gemini 1.5
+        else:
+            return 128_000  # Default to 128k
+
+    def get_model_info(self) -> Dict[str, Any]:
+        """Get Google Gemini model information."""
+        return {
+            "provider": "google",
             "model_type": self.config.model_type.value,
             "model_name": self.model_name,
             "temperature": self.config.temperature,
