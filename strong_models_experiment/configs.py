@@ -266,11 +266,12 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5.2-high": {
         "name": "GPT-5.2 High",
-        "model_id": "gpt-5.2-high",
+        "model_id": "gpt-5.2",
         "provider": "OpenAI",
         "api_type": "openai",
         "description": "Strong tier, Elo: 1465, Closed-source, Reasoning",
         "temperature": 1.0,
+        "reasoning_effort": "high",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
