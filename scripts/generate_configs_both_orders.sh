@@ -51,10 +51,12 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Create timestamped config directory to avoid overwriting previous experiments
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-CONFIG_DIR="${BASE_DIR}/experiments/results/scaling_experiment/configs_${TIMESTAMP}"
+SCALING_EXPERIMENT_DIR="${BASE_DIR}/experiments/results/scaling_experiment_${TIMESTAMP}"
+CONFIG_DIR="${SCALING_EXPERIMENT_DIR}/configs"
 mkdir -p "${CONFIG_DIR}"
 
-echo "Creating timestamped config directory: ${CONFIG_DIR}"
+echo "Creating timestamped scaling experiment directory: ${SCALING_EXPERIMENT_DIR}"
+echo "Config directory: ${CONFIG_DIR}"
 echo "This ensures previous experiment configs are preserved."
 echo ""
 
@@ -173,6 +175,7 @@ TOTAL_COUNT=${EXPERIMENT_ID}
 # Create symlink to latest configs directory for easy access
 # This allows SLURM scripts to reference a consistent path
 CONFIGS_SYMLINK="${BASE_DIR}/experiments/results/scaling_experiment/configs"
+SYMLINK_PARENT_DIR="$(dirname "${CONFIGS_SYMLINK}")"
 if [[ -L "${CONFIGS_SYMLINK}" ]]; then
     # Remove old symlink
     rm "${CONFIGS_SYMLINK}"
@@ -183,9 +186,10 @@ elif [[ -d "${CONFIGS_SYMLINK}" ]] && [[ ! -L "${CONFIGS_SYMLINK}" ]]; then
     echo "         Moving it to ${OLD_DIR} to preserve it."
     mv "${CONFIGS_SYMLINK}" "${OLD_DIR}"
 fi
-# Create symlink pointing to the timestamped directory
-ln -sf "$(basename "${CONFIG_DIR}")" "${CONFIGS_SYMLINK}"
-echo "✅ Created symlink: ${CONFIGS_SYMLINK} -> $(basename "${CONFIG_DIR}")"
+# Create symlink pointing to the timestamped configs directory
+# Use relative path from symlink location
+ln -sf "../scaling_experiment_${TIMESTAMP}/configs" "${CONFIGS_SYMLINK}"
+echo "✅ Created symlink: ${CONFIGS_SYMLINK} -> ../scaling_experiment_${TIMESTAMP}/configs"
 
 echo ""
 echo "✅ Generated ${EXPERIMENT_ID} total configuration files:"

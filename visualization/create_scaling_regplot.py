@@ -281,12 +281,20 @@ def compute_regression_stats(x, y):
     if HAS_STATSMODELS:
         X = sm.add_constant(x)
         model = sm.OLS(y, X).fit()
+        conf_int = model.conf_int()
+        # Handle both DataFrame and numpy array returns from conf_int()
+        if hasattr(conf_int, 'iloc'):
+            # DataFrame case
+            ci_slope = conf_int.iloc[1].values
+        else:
+            # numpy array case
+            ci_slope = conf_int[1, :]
         return {
             'slope': model.params[1],
             'intercept': model.params[0],
             'r_squared': model.rsquared,
             'p_value': model.pvalues[1],
-            'conf_int': model.conf_int().iloc[1].values,  # CI for slope
+            'conf_int': ci_slope,  # CI for slope
             'n': len(x)
         }
     else:
