@@ -48,8 +48,15 @@
 set -e
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_DIR="${BASE_DIR}/experiments/results/scaling_experiment/configs"
+
+# Create timestamped config directory to avoid overwriting previous experiments
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+CONFIG_DIR="${BASE_DIR}/experiments/results/scaling_experiment/configs_${TIMESTAMP}"
 mkdir -p "${CONFIG_DIR}"
+
+echo "Creating timestamped config directory: ${CONFIG_DIR}"
+echo "This ensures previous experiment configs are preserved."
+echo ""
 
 # Model definitions
 # NOTE: These short names map to full model_id values defined in:
@@ -163,12 +170,30 @@ done
 
 TOTAL_COUNT=${EXPERIMENT_ID}
 
+# Create symlink to latest configs directory for easy access
+# This allows SLURM scripts to reference a consistent path
+CONFIGS_SYMLINK="${BASE_DIR}/experiments/results/scaling_experiment/configs"
+if [[ -L "${CONFIGS_SYMLINK}" ]]; then
+    # Remove old symlink
+    rm "${CONFIGS_SYMLINK}"
+elif [[ -d "${CONFIGS_SYMLINK}" ]] && [[ ! -L "${CONFIGS_SYMLINK}" ]]; then
+    # If it's a real directory, rename it to preserve it
+    OLD_DIR="${CONFIGS_SYMLINK}_old_$(date +%Y%m%d_%H%M%S)"
+    echo "Warning: ${CONFIGS_SYMLINK} exists as a directory."
+    echo "         Moving it to ${OLD_DIR} to preserve it."
+    mv "${CONFIGS_SYMLINK}" "${OLD_DIR}"
+fi
+# Create symlink pointing to the timestamped directory
+ln -sf "$(basename "${CONFIG_DIR}")" "${CONFIGS_SYMLINK}"
+echo "✅ Created symlink: ${CONFIGS_SYMLINK} -> $(basename "${CONFIG_DIR}")"
+
 echo ""
 echo "✅ Generated ${EXPERIMENT_ID} total configuration files:"
 echo "   - Model pairs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]}))"
 echo "   - Competition levels: ${#COMPETITION_LEVELS[@]}"
 echo "   - Runs per config: ${NUM_RUNS}"
 echo "   - Location: ${CONFIG_DIR}"
+echo "   - Symlink: ${CONFIGS_SYMLINK}"
 
 # Create master config list (always regenerate to ensure it's current)
 MASTER_CONFIG="${CONFIG_DIR}/all_configs.txt"
@@ -314,6 +339,7 @@ echo "Python version: $(python3 --version)"
 echo ""
 
 # Get config file for this array task
+# Note: This uses the symlink 'configs' which points to the latest timestamped config directory
 CONFIG_DIR="experiments/results/scaling_experiment/configs"
 CONFIG_FILE="${CONFIG_DIR}/config_${SLURM_ARRAY_TASK_ID}.json"
 
@@ -422,6 +448,7 @@ echo "CUDA available: $(python3 -c 'import torch; print(torch.cuda.is_available(
 echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
 
+# Note: Uses symlink 'configs' which points to the latest timestamped config directory
 CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${SLURM_ARRAY_TASK_ID}.json"
 [[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
 
@@ -492,6 +519,7 @@ echo "CUDA available: $(python3 -c 'import torch; print(torch.cuda.is_available(
 echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
 
+# Note: Uses symlink 'configs' which points to the latest timestamped config directory
 CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${SLURM_ARRAY_TASK_ID}.json"
 [[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
 
@@ -522,65 +550,182 @@ echo "✅ Created large GPU SLURM script: ${GPU_LARGE_SLURM}"
 
 # Create a helper script to submit experiments
 SUBMIT_SCRIPT="${SLURM_DIR}/submit_all.sh"
-cat > "${SUBMIT_SCRIPT}" << EOF
+cat > "${SUBMIT_SCRIPT}" << 'SUBMIT_SCRIPT_EOF'
 #!/bin/bash
 # Submit all experiment jobs to SLURM
-# Usage: ./submit_all.sh [api|gpu|all]
+# Usage: ./submit_all.sh [api|gpu|all] [--staggered <seconds>] [--max-concurrent <num>]
+#
+# Options:
+#   --staggered <seconds>  Submit jobs individually with delay (default: array jobs)
+#                          Use this to avoid API rate limits (recommended: 2-5 seconds)
 
 set -e
 
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="\$(cd "\${SCRIPT_DIR}/../.." && pwd)"
-cd "\${BASE_DIR}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+cd "${BASE_DIR}"
+
+# Parse arguments
+JOB_TYPE="${1:-all}"
+STAGGERED=false
+DELAY_SECONDS=2
+MAX_CONCURRENT=""
+
+# Parse flags (skip first argument which is job type)
+shift || true
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --staggered)
+            if [[ -z "$2" ]] || [[ "$2" =~ ^-- ]]; then
+                echo "Error: --staggered requires a value (seconds)"
+                exit 1
+            fi
+            STAGGERED=true
+            DELAY_SECONDS="$2"
+            shift 2
+            echo "Staggered submission enabled: ${DELAY_SECONDS}s delay between jobs"
+            ;;
+        --max-concurrent)
+            if [[ -z "$2" ]] || [[ "$2" =~ ^-- ]]; then
+                echo "Error: --max-concurrent requires a value (number)"
+                exit 1
+            fi
+            MAX_CONCURRENT="$2"
+            shift 2
+            echo "Concurrency limit enabled: max ${MAX_CONCURRENT} concurrent jobs"
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [api|gpu|all] [--staggered <seconds>] [--max-concurrent <num>]"
+            exit 1
+            ;;
+    esac
+done
 
 # Create logs directory
 mkdir -p logs/cluster
 
 TOTAL_CONFIGS=${EXPERIMENT_ID}
 
+# Function to submit a single job (for staggered mode)
+submit_single_job() {
+    local config_id=$1
+    local sbatch_script=$2
+    
+    # Extract output/error patterns from the script
+    local output_pattern=$(grep -E "^#SBATCH --output=" "$sbatch_script" | head -1 | sed 's/.*--output=//' || echo "")
+    local error_pattern=$(grep -E "^#SBATCH --error=" "$sbatch_script" | head -1 | sed 's/.*--error=//' || echo "")
+    
+    # Replace %a with config_id, %A will be set by SLURM when job is submitted
+    # For single jobs, %a won't expand, so we replace it manually
+    local output_file=""
+    local error_file=""
+    
+    if [[ -n "$output_pattern" ]]; then
+        output_file=$(echo "$output_pattern" | sed "s/%a/${config_id}/g")
+    fi
+    if [[ -n "$error_pattern" ]]; then
+        error_file=$(echo "$error_pattern" | sed "s/%a/${config_id}/g")
+    fi
+    
+    # Submit with --export to set SLURM_ARRAY_TASK_ID
+    # Note: %A in output/error will be replaced by SLURM with actual job ID
+    local sbatch_cmd="sbatch --export=SLURM_ARRAY_TASK_ID=${config_id}"
+    
+    if [[ -n "$output_file" ]]; then
+        sbatch_cmd="${sbatch_cmd} --output=${output_file}"
+    fi
+    if [[ -n "$error_file" ]]; then
+        sbatch_cmd="${sbatch_cmd} --error=${error_file}"
+    fi
+    
+    sbatch_cmd="${sbatch_cmd} ${sbatch_script}"
+    
+    eval "$sbatch_cmd" > /dev/null 2>&1
+}
+
+# Function to submit jobs (array or staggered)
+submit_jobs() {
+    local job_ids=$1
+    local sbatch_script=$2
+    local job_type_name=$3
+    
+    if [[ -z "$job_ids" ]]; then
+        echo "No ${job_type_name} jobs to submit"
+        return
+    fi
+    
+    if [[ "$STAGGERED" == "true" ]]; then
+        echo "Submitting ${job_type_name} jobs with staggered delays..."
+        local count=0
+        local total=$(echo "$job_ids" | tr ',' '\n' | wc -l)
+        
+        for id in $(echo "$job_ids" | tr ',' ' '); do
+            count=$((count + 1))
+            echo -n "[$(date +%H:%M:%S)] Submitting ${job_type_name} job ${count}/${total} (config ${id})... "
+            
+            if submit_single_job "$id" "$sbatch_script"; then
+                echo "✅ Submitted"
+            else
+                echo "❌ Failed"
+            fi
+            
+            # Don't sleep after the last job
+            if [[ $count -lt $total ]]; then
+                sleep "${DELAY_SECONDS}"
+            fi
+        done
+    else
+        # Use array job with optional concurrency limit
+        local array_spec="$job_ids"
+        if [[ -n "$MAX_CONCURRENT" ]]; then
+            array_spec="${array_spec}%${MAX_CONCURRENT}"
+            echo "Submitting ${job_type_name} job array with concurrency limit: $array_spec"
+        else
+            echo "Submitting ${job_type_name} job array: $array_spec"
+        fi
+        sbatch --array="$array_spec" "$sbatch_script"
+    fi
+}
+
 submit_api_jobs() {
     echo "Submitting API-based experiment jobs (CPU)..."
-    echo "Total configs: \${TOTAL_CONFIGS}"
+    echo "Total configs: ${TOTAL_CONFIGS}"
 
     # Filter config IDs for API-only experiments
     API_IDS=""
-    for i in \$(seq 0 \$((TOTAL_CONFIGS - 1))); do
-        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_\${i}.json"
-        if [[ -f "\$CONFIG_FILE" ]]; then
-            WEAK=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
-            STRONG=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+    for i in $(seq 0 $((TOTAL_CONFIGS - 1))); do
+        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i}.json"
+        if [[ -f "$CONFIG_FILE" ]]; then
+            WEAK=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
+            STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check if both models are API-based (not local)
             LOCAL_MODELS="llama-3.3-70b-instruct llama-3.1-8b-instruct"
             IS_LOCAL=false
-            for lm in \$LOCAL_MODELS; do
-                if [[ "\$WEAK" == "\$lm" ]] || [[ "\$STRONG" == "\$lm" ]]; then
+            for lm in $LOCAL_MODELS; do
+                if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
                     IS_LOCAL=true
                     break
                 fi
             done
 
-            if [[ "\$IS_LOCAL" == "false" ]]; then
-                if [[ -n "\$API_IDS" ]]; then
-                    API_IDS="\${API_IDS},\${i}"
+            if [[ "$IS_LOCAL" == "false" ]]; then
+                if [[ -n "$API_IDS" ]]; then
+                    API_IDS="${API_IDS},${i}"
                 else
-                    API_IDS="\${i}"
+                    API_IDS="${i}"
                 fi
             fi
         fi
     done
 
-    if [[ -n "\$API_IDS" ]]; then
-        echo "Submitting job array for config IDs: \$API_IDS"
-        sbatch --array="\$API_IDS" "\${SCRIPT_DIR}/run_api_experiments.sbatch"
-    else
-        echo "No API-based experiments to submit"
-    fi
+    submit_jobs "$API_IDS" "${SCRIPT_DIR}/run_api_experiments.sbatch" "API"
 }
 
 submit_gpu_jobs() {
     echo "Submitting GPU-based experiment jobs..."
-    echo "Total configs: \${TOTAL_CONFIGS}"
+    echo "Total configs: ${TOTAL_CONFIGS}"
 
     # Large models (70B+): 4 GPUs, 320GB
     LARGE_GPU_MODELS="llama-3.3-70b-instruct"
@@ -590,25 +735,25 @@ submit_gpu_jobs() {
     GPU_LARGE_IDS=""
     GPU_SMALL_IDS=""
 
-    for i in \$(seq 0 \$((TOTAL_CONFIGS - 1))); do
-        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_\${i}.json"
-        if [[ -f "\$CONFIG_FILE" ]]; then
-            WEAK=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
-            STRONG=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+    for i in $(seq 0 $((TOTAL_CONFIGS - 1))); do
+        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i}.json"
+        if [[ -f "$CONFIG_FILE" ]]; then
+            WEAK=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
+            STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check for large GPU models
-            for lm in \$LARGE_GPU_MODELS; do
-                if [[ "\$WEAK" == "\$lm" ]] || [[ "\$STRONG" == "\$lm" ]]; then
-                    [[ -n "\$GPU_LARGE_IDS" ]] && GPU_LARGE_IDS="\${GPU_LARGE_IDS},\${i}" || GPU_LARGE_IDS="\${i}"
+            for lm in $LARGE_GPU_MODELS; do
+                if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
+                    [[ -n "$GPU_LARGE_IDS" ]] && GPU_LARGE_IDS="${GPU_LARGE_IDS},${i}" || GPU_LARGE_IDS="${i}"
                     break
                 fi
             done
 
             # Check for small GPU models (only if not already large)
-            if ! echo "\$GPU_LARGE_IDS" | grep -qw "\$i"; then
-                for lm in \$SMALL_GPU_MODELS; do
-                    if [[ "\$WEAK" == "\$lm" ]] || [[ "\$STRONG" == "\$lm" ]]; then
-                        [[ -n "\$GPU_SMALL_IDS" ]] && GPU_SMALL_IDS="\${GPU_SMALL_IDS},\${i}" || GPU_SMALL_IDS="\${i}"
+            if ! echo "$GPU_LARGE_IDS" | grep -qw "$i"; then
+                for lm in $SMALL_GPU_MODELS; do
+                    if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
+                        [[ -n "$GPU_SMALL_IDS" ]] && GPU_SMALL_IDS="${GPU_SMALL_IDS},${i}" || GPU_SMALL_IDS="${i}"
                         break
                     fi
                 done
@@ -616,22 +761,20 @@ submit_gpu_jobs() {
         fi
     done
 
-    if [[ -n "\$GPU_LARGE_IDS" ]]; then
-        echo "Submitting LARGE GPU jobs (4x H100, 320GB): \$GPU_LARGE_IDS"
-        sbatch --array="\$GPU_LARGE_IDS" "\${SCRIPT_DIR}/run_gpu_large.sbatch"
+    if [[ -n "$GPU_LARGE_IDS" ]]; then
+        submit_jobs "$GPU_LARGE_IDS" "${SCRIPT_DIR}/run_gpu_large.sbatch" "LARGE GPU"
     fi
 
-    if [[ -n "\$GPU_SMALL_IDS" ]]; then
-        echo "Submitting SMALL GPU jobs (1x H100, 80GB): \$GPU_SMALL_IDS"
-        sbatch --array="\$GPU_SMALL_IDS" "\${SCRIPT_DIR}/run_gpu_small.sbatch"
+    if [[ -n "$GPU_SMALL_IDS" ]]; then
+        submit_jobs "$GPU_SMALL_IDS" "${SCRIPT_DIR}/run_gpu_small.sbatch" "SMALL GPU"
     fi
 
-    if [[ -z "\$GPU_LARGE_IDS" ]] && [[ -z "\$GPU_SMALL_IDS" ]]; then
+    if [[ -z "$GPU_LARGE_IDS" ]] && [[ -z "$GPU_SMALL_IDS" ]]; then
         echo "No GPU-based experiments to submit"
     fi
 }
 
-case "\${1:-all}" in
+case "${JOB_TYPE}" in
     api)
         submit_api_jobs
         ;;
@@ -643,14 +786,26 @@ case "\${1:-all}" in
         submit_gpu_jobs
         ;;
     *)
-        echo "Usage: \$0 [api|gpu|all]"
+        echo "Usage: $0 [api|gpu|all] [--staggered <seconds>]"
+        echo ""
+        echo "Options:"
+        echo "  --staggered <seconds>     Submit jobs individually with delay (avoids rate limits)"
+        echo "  --max-concurrent <num>    Limit concurrent array jobs (e.g., --max-concurrent 10)"
+        echo ""
+        echo "Examples:"
+        echo "  $0 all                              # Submit all jobs as array (fast, may hit rate limits)"
+        echo "  $0 all --staggered 2                # Submit all jobs with 2s delay (safer for APIs)"
+        echo "  $0 all --max-concurrent 10          # Submit all jobs, max 10 concurrent"
+        echo "  $0 api --staggered 5                # Submit API jobs with 5s delay"
+        echo "  $0 api --max-concurrent 5           # Submit API jobs, max 5 concurrent"
+        echo "  $0 all --staggered 2 --max-concurrent 20  # Staggered mode ignores max-concurrent"
         exit 1
         ;;
 esac
 
 echo ""
-echo "Job submission complete. Use 'squeue -u \$USER' to monitor jobs."
-EOF
+echo "Job submission complete. Use 'squeue -u $USER' to monitor jobs."
+SUBMIT_SCRIPT_EOF
 chmod +x "${SUBMIT_SCRIPT}"
 
 echo "✅ Created job submission script: ${SUBMIT_SCRIPT}"
@@ -663,6 +818,10 @@ echo "  - Specific model pair: Filter by weak_model and strong_model in CSV"
 echo ""
 echo "SLURM submission:"
 echo "  cd ${BASE_DIR}"
-echo "  ${SUBMIT_SCRIPT} all     # Submit all jobs"
-echo "  ${SUBMIT_SCRIPT} api     # Submit API-only jobs (CPU)"
-echo "  ${SUBMIT_SCRIPT} gpu     # Submit GPU jobs (local models)"
+echo "  ${SUBMIT_SCRIPT} all                    # Submit all jobs as array (fast)"
+echo "  ${SUBMIT_SCRIPT} all --staggered 2      # Submit all jobs with 2s delay (safer for APIs)"
+echo "  ${SUBMIT_SCRIPT} api --staggered 5       # Submit API jobs with 5s delay"
+echo "  ${SUBMIT_SCRIPT} gpu                     # Submit GPU jobs (array mode)"
+echo ""
+echo "Note: Use --staggered to avoid API rate limits when submitting many jobs."
+echo "      See scripts/EXPERIMENT_WORKFLOW.md for detailed workflow guide."
