@@ -215,26 +215,7 @@ fi
 # Use relative path from symlink location
 ln -sf "scaling_experiment_${TIMESTAMP}" "${SCALING_EXPERIMENT_SYMLINK}"
 echo "✅ Created symlink: ${SCALING_EXPERIMENT_SYMLINK} -> scaling_experiment_${TIMESTAMP}"
-
-# Create symlink to latest configs directory for easy access
-# This allows SLURM scripts to reference a consistent path
-# Note: This is created AFTER the scaling_experiment symlink, so it will resolve through the symlink
-CONFIGS_SYMLINK="${BASE_DIR}/experiments/results/scaling_experiment/configs"
-if [[ -L "${CONFIGS_SYMLINK}" ]]; then
-    # Remove old symlink
-    rm "${CONFIGS_SYMLINK}"
-elif [[ -e "${CONFIGS_SYMLINK}" ]] && [[ ! -L "${CONFIGS_SYMLINK}" ]]; then
-    # If it exists as a file or directory, rename it to preserve it
-    OLD_DIR="${CONFIGS_SYMLINK}_old_$(date +%Y%m%d_%H%M%S)"
-    echo "Warning: ${CONFIGS_SYMLINK} exists."
-    echo "         Moving it to ${OLD_DIR} to preserve it."
-    mv "${CONFIGS_SYMLINK}" "${OLD_DIR}"
-fi
-# Create symlink pointing to the timestamped configs directory
-# Use relative path from symlink location
-# Note: scaling_experiment is now a symlink, so this will create configs inside the timestamped directory
-ln -sf "../scaling_experiment_${TIMESTAMP}/configs" "${CONFIGS_SYMLINK}"
-echo "✅ Created symlink: ${CONFIGS_SYMLINK} -> ../scaling_experiment_${TIMESTAMP}/configs"
+echo "   Note: scaling_experiment/configs will automatically resolve to scaling_experiment_${TIMESTAMP}/configs"
 
 echo ""
 echo "✅ Generated ${EXPERIMENT_ID} total configuration files:"
@@ -242,7 +223,7 @@ echo "   - Model pairs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]}))"
 echo "   - Competition levels: ${#COMPETITION_LEVELS[@]}"
 echo "   - Runs per config: ${NUM_RUNS}"
 echo "   - Location: ${CONFIG_DIR}"
-echo "   - Symlink: ${CONFIGS_SYMLINK}"
+echo "   - Access via: ${BASE_DIR}/experiments/results/scaling_experiment/configs"
 
 # Create master config list (always regenerate to ensure it's current)
 MASTER_CONFIG="${CONFIG_DIR}/all_configs.txt"
