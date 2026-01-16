@@ -102,13 +102,21 @@ MAX_ROUNDS=10
 NUM_RUNS=6  # Number of runs per configuration
 DISCUSSION_TURNS=3  # Number of discussion exchanges per round
 
-# Seeds for each run (consistent across model pairs)
-RUN_SEEDS=(42 123 456 789 101112 131415)
+# Seeds for each scenario (used for both weak_first and strong_first orderings)
+# With balanced ordering, runs 1-3 (weak_first) and runs 4-6 (strong_first) use the same seeds
+# This allows direct comparison of order effects while keeping scenarios consistent
+SCENARIO_SEEDS=(42 123 456)
 
 # Balanced ordering: split runs between weak_first and strong_first
 # weak_first gets ceiling(NUM_RUNS/2), strong_first gets floor(NUM_RUNS/2)
 WEAK_FIRST_RUNS=$(( (NUM_RUNS + 1) / 2 ))
 STRONG_FIRST_RUNS=$(( NUM_RUNS / 2 ))
+
+# Validate that we have enough seeds for the number of scenarios
+if [ ${#SCENARIO_SEEDS[@]} -lt $WEAK_FIRST_RUNS ]; then
+    echo "Error: Not enough scenario seeds. Need at least ${WEAK_FIRST_RUNS} seeds for ${NUM_RUNS} runs."
+    exit 1
+fi
 
 echo "Generating experiment configurations with multiple runs..."
 echo "  Weak models: ${#WEAK_MODELS[@]}"
@@ -119,32 +127,44 @@ echo "  Discussion turns: ${DISCUSSION_TURNS}"
 echo "  Total configs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS}))"
 echo ""
 
+# Calculate total number of experiments for zero-padding
+TOTAL_EXPERIMENTS=$((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS}))
+# Calculate padding width (number of digits needed)
+PADDING_WIDTH=${#TOTAL_EXPERIMENTS}
+
 # Counter for experiment ID
 EXPERIMENT_ID=0
 
 # Generate configs with balanced ordering: first WEAK_FIRST_RUNS use weak_first, rest use strong_first
 echo "Generating configs with balanced ordering..."
+echo "Note: Runs 1-${WEAK_FIRST_RUNS} (weak_first) and runs $((WEAK_FIRST_RUNS + 1))-${NUM_RUNS} (strong_first) use the same seeds for direct order comparison."
 for weak_model in "${WEAK_MODELS[@]}"; do
     for strong_model in "${STRONG_MODELS[@]}"; do
         for comp_level in "${COMPETITION_LEVELS[@]}"; do
-            for run_idx in "${!RUN_SEEDS[@]}"; do
-                # Create config file
-                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID}.json"
-
-                # Get seed for this run (consistent across all model pairs for same run number)
-                SEED=${RUN_SEEDS[$run_idx]}
-                RUN_NUM=$((run_idx + 1))
+            for run_idx in $(seq 0 $((NUM_RUNS - 1))); do
+                # Create config file with zero-padded experiment ID
+                EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
+                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
 
                 # Determine model order: first WEAK_FIRST_RUNS use weak_first, rest use strong_first
                 if [ $run_idx -lt $WEAK_FIRST_RUNS ]; then
                     MODEL_ORDER="weak_first"
                     MODELS_ARRAY="[\"${weak_model}\", \"${strong_model}\"]"
                     OUTPUT_SUBDIR="weak_first"
+                    # For weak_first runs (0, 1, 2), use seeds 0, 1, 2
+                    SEED_IDX=$run_idx
                 else
                     MODEL_ORDER="strong_first"
                     MODELS_ARRAY="[\"${strong_model}\", \"${weak_model}\"]"
                     OUTPUT_SUBDIR="strong_first"
+                    # For strong_first runs (3, 4, 5), reuse seeds 0, 1, 2
+                    # This makes run 4 use same seed as run 1, run 5 same as run 2, etc.
+                    SEED_IDX=$((run_idx - WEAK_FIRST_RUNS))
                 fi
+
+                # Get seed for this scenario (same seed used for both orderings of the same scenario)
+                SEED=${SCENARIO_SEEDS[$SEED_IDX]}
+                RUN_NUM=$((run_idx + 1))
 
                 # Write configuration as JSON
                 cat > "${CONFIG_FILE}" << EOF
@@ -223,24 +243,24 @@ Items per negotiation: ${NUM_ITEMS}
 Max rounds: ${MAX_ROUNDS}
 Discussion turns per round: ${DISCUSSION_TURNS}
 
-Random Seeds by Run:
-  - Run 1: ${RUN_SEEDS[0]} (weak_first)
-  - Run 2: ${RUN_SEEDS[1]} (weak_first)
-  - Run 3: ${RUN_SEEDS[2]} (weak_first)
-  - Run 4: ${RUN_SEEDS[3]} (strong_first)
-  - Run 5: ${RUN_SEEDS[4]} (strong_first)
+Random Seeds by Scenario (same seed used for both orderings):
+  - Scenario 1: Seed ${SCENARIO_SEEDS[0]} (Run 1 weak_first, Run $((WEAK_FIRST_RUNS + 1)) strong_first)
+  - Scenario 2: Seed ${SCENARIO_SEEDS[1]} (Run 2 weak_first, Run $((WEAK_FIRST_RUNS + 2)) strong_first)
+  - Scenario 3: Seed ${SCENARIO_SEEDS[2]} (Run 3 weak_first, Run $((WEAK_FIRST_RUNS + 3)) strong_first)
 
 Model Order (Balanced):
   - Runs 1-${WEAK_FIRST_RUNS}: weak model first (weak_first)
   - Runs $((WEAK_FIRST_RUNS + 1))-${NUM_RUNS}: strong model first (strong_first)
   - This balances first-mover advantage across orderings
+  - Same seeds are used for corresponding weak_first and strong_first runs to enable direct order comparison
 
 This design ensures:
   - Statistical significance with ${NUM_RUNS} runs per configuration
   - Balanced ordering to mitigate first-mover advantage effects
-  - Comparable results across model pairs (same seeds for same run number)
-  - Different scenarios tested (${NUM_RUNS} different seeds)
-  - Analysis can average across orderings or compare them
+  - Direct comparison of order effects (same seeds for weak_first vs strong_first)
+  - Comparable results across model pairs (same seeds for same scenario)
+  - ${#SCENARIO_SEEDS[@]} different scenarios tested (each with both orderings)
+  - Analysis can average across orderings or compare order effects directly
 EOF
 
 echo "✅ Created summary: ${SUMMARY_FILE}"
@@ -345,7 +365,18 @@ echo ""
 # Get config file for this array task
 # Note: This uses the symlink 'configs' which points to the latest timestamped config directory
 CONFIG_DIR="experiments/results/scaling_experiment/configs"
-CONFIG_FILE="${CONFIG_DIR}/config_${SLURM_ARRAY_TASK_ID}.json"
+
+# Determine padding width by finding the highest config number
+MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
+if [[ -n "$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=${#MAX_CONFIG}
+else
+    PADDING_WIDTH=3  # Default to 3 digits if no configs found
+fi
+
+# Use zero-padded config ID to match generated file names
+CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
 
 if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "ERROR: Config file not found: $CONFIG_FILE"
@@ -453,7 +484,17 @@ echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())
 echo ""
 
 # Note: Uses symlink 'configs' which points to the latest timestamped config directory
-CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${SLURM_ARRAY_TASK_ID}.json"
+CONFIG_DIR="experiments/results/scaling_experiment/configs"
+# Determine padding width by finding the highest config number
+MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
+if [[ -n "$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=${#MAX_CONFIG}
+else
+    PADDING_WIDTH=3  # Default to 3 digits if no configs found
+fi
+# Use zero-padded config ID to match generated file names
+CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
 [[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
 
 WEAK_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
@@ -524,7 +565,17 @@ echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())
 echo ""
 
 # Note: Uses symlink 'configs' which points to the latest timestamped config directory
-CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${SLURM_ARRAY_TASK_ID}.json"
+CONFIG_DIR="experiments/results/scaling_experiment/configs"
+# Determine padding width by finding the highest config number
+MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
+if [[ -n "$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=${#MAX_CONFIG}
+else
+    PADDING_WIDTH=3  # Default to 3 digits if no configs found
+fi
+# Use zero-padded config ID to match generated file names
+CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
 [[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
 
 WEAK_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
@@ -609,7 +660,22 @@ done
 # Create logs directory
 mkdir -p logs/cluster
 
-TOTAL_CONFIGS=${EXPERIMENT_ID}
+# Calculate total configs by counting config files (handles zero-padded filenames)
+CONFIG_DIR="experiments/results/scaling_experiment/configs"
+TOTAL_CONFIGS=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | wc -l)
+if [ "$TOTAL_CONFIGS" -eq 0 ]; then
+    echo "Error: No config files found in ${CONFIG_DIR}"
+    exit 1
+fi
+# Calculate padding width for config file names
+MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
+if [[ -n "$MAX_CONFIG" ]]; then
+    CONFIG_PADDING_WIDTH=${#MAX_CONFIG}
+else
+    CONFIG_PADDING_WIDTH=3  # Default to 3 digits
+fi
+# Calculate padding width for config file names (same as used during generation)
+CONFIG_PADDING_WIDTH=${#TOTAL_CONFIGS}
 
 # Function to submit a single job (for staggered mode)
 submit_single_job() {
@@ -699,7 +765,9 @@ submit_api_jobs() {
     # Filter config IDs for API-only experiments
     API_IDS=""
     for i in $(seq 0 $((TOTAL_CONFIGS - 1))); do
-        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i}.json"
+        # Use zero-padded ID to match generated config file names
+        i_padded=$(printf "%0${CONFIG_PADDING_WIDTH}d" ${i})
+        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i_padded}.json"
         if [[ -f "$CONFIG_FILE" ]]; then
             WEAK=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
@@ -740,7 +808,9 @@ submit_gpu_jobs() {
     GPU_SMALL_IDS=""
 
     for i in $(seq 0 $((TOTAL_CONFIGS - 1))); do
-        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i}.json"
+        # Use zero-padded ID to match generated config file names
+        i_padded=$(printf "%0${CONFIG_PADDING_WIDTH}d" ${i})
+        CONFIG_FILE="experiments/results/scaling_experiment/configs/config_${i_padded}.json"
         if [[ -f "$CONFIG_FILE" ]]; then
             WEAK=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
