@@ -310,7 +310,9 @@ class StrongModelsExperiment:
                 self.logger.info(f"❌ No consensus after {config['t_rounds']} rounds")
         
         except Exception as e:
+            import traceback
             self.logger.error(f"Error during negotiation: {e}")
+            self.logger.error(f"Traceback:\n{traceback.format_exc()}")
             raise
         
         # Analyze results

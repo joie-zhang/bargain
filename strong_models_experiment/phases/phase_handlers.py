@@ -768,11 +768,14 @@ Vote must be either "accept" or "reject"."""
                         # Calculate utilities and save preferences
                         for agent in agents:
                             agent_items = allocation.get(agent.agent_id, [])
-                            utility = sum(preferences["agent_preferences"][agent.agent_id][i]
-                                        for i in agent_items if i < len(items))
+                            agent_prefs = preferences["agent_preferences"][agent.agent_id]
+                            # Ensure we don't access preferences out of bounds
+                            utility = sum(agent_prefs[i]
+                                        for i in agent_items 
+                                        if i < len(items) and i < len(agent_prefs))
                             final_utilities[agent.agent_id] = utility
                             # Save the preference vector for this agent
-                            agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
+                            agent_preferences[agent.agent_id] = agent_prefs
                         break
                 break
         
