@@ -414,7 +414,52 @@ Response format: Provide your analysis as structured strategic thinking."""
         try:
             # Try to parse as JSON first
             if response_content.strip().startswith('{'):
-                return json.loads(response_content)
+                try:
+                    return json.loads(response_content)
+                except json.JSONDecodeError as json_err:
+                    # If JSON parsing fails, try several recovery strategies
+                    import re
+                    
+                    # Strategy 1: Extract JSON from markdown code blocks
+                    # Some models wrap JSON in ```json ... ``` blocks
+                    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_content, re.DOTALL)
+                    if json_match:
+                        try:
+                            return json.loads(json_match.group(1))
+                        except json.JSONDecodeError:
+                            pass
+                    
+                    # Strategy 2: Try to find the largest valid JSON object
+                    # This handles cases where there's extra text before/after JSON
+                    json_objects = re.findall(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_content)
+                    for json_obj in sorted(json_objects, key=len, reverse=True):
+                        try:
+                            return json.loads(json_obj)
+                        except json.JSONDecodeError:
+                            continue
+                    
+                    # Strategy 3: Try to fix common issues - unescaped newlines in strings
+                    # Replace unescaped \n with \\n inside string values
+                    fixed_content = response_content
+                    # This is a simple heuristic - look for \n not preceded by \
+                    fixed_content = re.sub(r'(?<!\\)\n', '\\n', fixed_content)
+                    # But we need to be careful not to break already-escaped sequences
+                    # So revert double-escapes
+                    fixed_content = fixed_content.replace('\\\\n', '\\n')
+                    try:
+                        return json.loads(fixed_content)
+                    except json.JSONDecodeError:
+                        pass
+                    
+                    # Log the problematic section for debugging
+                    error_pos = json_err.pos if hasattr(json_err, 'pos') else None
+                    if error_pos:
+                        start = max(0, error_pos - 200)
+                        end = min(len(response_content), error_pos + 200)
+                        self.logger.debug(f"JSON parse error at position {error_pos}: {response_content[start:end]}")
+                    
+                    # Re-raise to fall through to other parsing methods
+                    raise json_err
             
             # Check if it's O3 format (often uses bullet points and structured text)
             if self._is_o3_thinking_format(response_content):
@@ -461,10 +506,32 @@ Response format: Provide your analysis as structured strategic thinking."""
             
             return result
             
-        except Exception as e:
-            self.logger.warning(f"Failed to parse thinking response: {e}")
+        except json.JSONDecodeError as json_err:
+            # Log more details about JSON parsing errors
+            error_pos = json_err.pos if hasattr(json_err, 'pos') else None
+            error_msg = str(json_err)
+            if error_pos:
+                start = max(0, error_pos - 100)
+                end = min(len(response_content), error_pos + 100)
+                self.logger.warning(
+                    f"Failed to parse thinking response as JSON: {error_msg}\n"
+                    f"Response length: {len(response_content)}, Error at position: {error_pos}\n"
+                    f"Context around error: {repr(response_content[start:end])}"
+                )
+            else:
+                self.logger.warning(f"Failed to parse thinking response as JSON: {error_msg}")
+            
+            # Return fallback response
             return {
-                "reasoning": response_content[:200] + "..." if len(response_content) > 200 else response_content,
+                "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
+                "strategy": "Basic preference-driven approach",
+                "target_items": [],
+                "anticipated_resistance": []
+            }
+        except Exception as e:
+            self.logger.warning(f"Failed to parse thinking response: {e}\nResponse length: {len(response_content)}\nFirst 200 chars: {response_content[:200]}")
+            return {
+                "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
                 "strategy": "Basic preference-driven approach",
                 "target_items": [],
                 "anticipated_resistance": []
