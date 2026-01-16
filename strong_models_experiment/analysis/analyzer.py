@@ -46,15 +46,49 @@ class ExperimentAnalyzer:
         """Analyze performance of each agent."""
         performance = {}
         for agent in agents:
+            # Try to get model name from agent's model_name attribute
+            model_name = ExperimentAnalyzer.get_model_name_from_agent(agent)
             performance[agent.agent_id] = {
                 "final_utility": final_utilities.get(agent.agent_id, 0),
-                "model": ExperimentAnalyzer.get_model_name(agent.agent_id)
+                "model": model_name
             }
         return performance
     
     @staticmethod
+    def get_model_name_from_agent(agent: Any) -> str:
+        """Get model name from agent object."""
+        # First try to get from agent's model_name attribute
+        if hasattr(agent, 'model_name') and agent.model_name:
+            model_name = agent.model_name
+            
+            # Check if it matches a config key exactly
+            if model_name in STRONG_MODELS_CONFIG:
+                return model_name
+            
+            # Try to find a matching config key by comparing model_id values
+            # The agent's model_name might be a full model_id (e.g., "gpt-4o-2024-05-13")
+            # but we want the config key (e.g., "gpt-4o")
+            for config_key, config_data in STRONG_MODELS_CONFIG.items():
+                config_model_id = config_data.get("model_id", "")
+                # Check if model_name matches the config's model_id
+                if model_name == config_model_id:
+                    return config_key
+                # Also check if config_key is a prefix of model_name (e.g., "gpt-4o" in "gpt-4o-2024-05-13")
+                if model_name.startswith(config_key + "-") or model_name.startswith(config_key + "_"):
+                    return config_key
+                # Check reverse: if model_name is in config_model_id
+                if config_model_id and (config_key in model_name or model_name in config_model_id):
+                    return config_key
+            
+            # Return the model_name as-is if no match found (better than "unknown")
+            return model_name
+        
+        # Fallback: try to extract from agent_id (for backward compatibility)
+        return ExperimentAnalyzer.get_model_name(agent.agent_id)
+    
+    @staticmethod
     def get_model_name(agent_id: str) -> str:
-        """Extract model name from agent ID."""
+        """Extract model name from agent ID (fallback method)."""
         for model_key in STRONG_MODELS_CONFIG.keys():
             if model_key.replace("-", "_") in agent_id:
                 return model_key
