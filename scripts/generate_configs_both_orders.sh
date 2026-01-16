@@ -183,7 +183,7 @@ for weak_model in "${WEAK_MODELS[@]}"; do
     "max_rounds": ${MAX_ROUNDS},
     "random_seed": ${SEED},
     "discussion_turns": ${DISCUSSION_TURNS},
-    "output_dir": "experiments/results/scaling_experiment/${weak_model}_vs_${strong_model}/${OUTPUT_SUBDIR}/comp_${comp_level}/run_${RUN_NUM}"
+    "output_dir": "experiments/results/scaling_experiment_${TIMESTAMP}/${weak_model}_vs_${strong_model}/${OUTPUT_SUBDIR}/comp_${comp_level}/run_${RUN_NUM}"
 }
 EOF
 
@@ -195,22 +195,44 @@ done
 
 TOTAL_COUNT=${EXPERIMENT_ID}
 
+# Handle the scaling_experiment directory BEFORE creating symlinks inside it
+# This syncs the non-timestamped scaling_experiment folder to the latest timestamped one
+SCALING_EXPERIMENT_SYMLINK="${BASE_DIR}/experiments/results/scaling_experiment"
+SCALING_EXPERIMENT_TARGET="${BASE_DIR}/experiments/results/scaling_experiment_${TIMESTAMP}"
+if [[ -L "${SCALING_EXPERIMENT_SYMLINK}" ]]; then
+    # Remove old symlink
+    rm "${SCALING_EXPERIMENT_SYMLINK}"
+    echo "Removed old symlink: ${SCALING_EXPERIMENT_SYMLINK}"
+elif [[ -d "${SCALING_EXPERIMENT_SYMLINK}" ]] && [[ ! -L "${SCALING_EXPERIMENT_SYMLINK}" ]]; then
+    # If it's a real directory, backup it to preserve old results
+    OLD_SCALING_DIR="${SCALING_EXPERIMENT_SYMLINK}_old_$(date +%Y%m%d_%H%M%S)"
+    echo "Warning: ${SCALING_EXPERIMENT_SYMLINK} exists as a directory."
+    echo "         Moving it to ${OLD_SCALING_DIR} to preserve it."
+    echo "         Note: Old results are preserved in ${OLD_SCALING_DIR}"
+    mv "${SCALING_EXPERIMENT_SYMLINK}" "${OLD_SCALING_DIR}"
+fi
+# Create symlink pointing to the timestamped scaling_experiment directory
+# Use relative path from symlink location
+ln -sf "scaling_experiment_${TIMESTAMP}" "${SCALING_EXPERIMENT_SYMLINK}"
+echo "✅ Created symlink: ${SCALING_EXPERIMENT_SYMLINK} -> scaling_experiment_${TIMESTAMP}"
+
 # Create symlink to latest configs directory for easy access
 # This allows SLURM scripts to reference a consistent path
+# Note: This is created AFTER the scaling_experiment symlink, so it will resolve through the symlink
 CONFIGS_SYMLINK="${BASE_DIR}/experiments/results/scaling_experiment/configs"
-SYMLINK_PARENT_DIR="$(dirname "${CONFIGS_SYMLINK}")"
 if [[ -L "${CONFIGS_SYMLINK}" ]]; then
     # Remove old symlink
     rm "${CONFIGS_SYMLINK}"
-elif [[ -d "${CONFIGS_SYMLINK}" ]] && [[ ! -L "${CONFIGS_SYMLINK}" ]]; then
-    # If it's a real directory, rename it to preserve it
+elif [[ -e "${CONFIGS_SYMLINK}" ]] && [[ ! -L "${CONFIGS_SYMLINK}" ]]; then
+    # If it exists as a file or directory, rename it to preserve it
     OLD_DIR="${CONFIGS_SYMLINK}_old_$(date +%Y%m%d_%H%M%S)"
-    echo "Warning: ${CONFIGS_SYMLINK} exists as a directory."
+    echo "Warning: ${CONFIGS_SYMLINK} exists."
     echo "         Moving it to ${OLD_DIR} to preserve it."
     mv "${CONFIGS_SYMLINK}" "${OLD_DIR}"
 fi
 # Create symlink pointing to the timestamped configs directory
 # Use relative path from symlink location
+# Note: scaling_experiment is now a symlink, so this will create configs inside the timestamped directory
 ln -sf "../scaling_experiment_${TIMESTAMP}/configs" "${CONFIGS_SYMLINK}"
 echo "✅ Created symlink: ${CONFIGS_SYMLINK} -> ../scaling_experiment_${TIMESTAMP}/configs"
 
