@@ -68,7 +68,8 @@ echo ""
 # Weak models - baseline models for exploitation experiments
 # From Multi-Agent Strategic Games Evaluation Models (Weak Tier - Elo < 1290)
 WEAK_MODELS=(
-    "gpt-4o" # May 2024 version
+    gpt-5-nano
+    # "gpt-4o" # May 2024 version
     # "gemini-1-5-pro"
 )
 
@@ -94,12 +95,14 @@ STRONG_MODELS=(
 )
 
 # Competition levels
-COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
+# COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
+COMPETITION_LEVELS=(0.0)
 
 # Base parameters
 NUM_ITEMS=5
 MAX_ROUNDS=10
-NUM_RUNS=6  # Number of runs per configuration
+# NUM_RUNS=6  # Number of runs per configuration
+NUM_RUNS=1  # Number of runs per configuration
 DISCUSSION_TURNS=3  # Number of discussion exchanges per round
 
 # Seeds for each scenario (used for both weak_first and strong_first orderings)
@@ -617,7 +620,9 @@ cat > "${SUBMIT_SCRIPT}" << 'SUBMIT_SCRIPT_EOF'
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# Go up 5 levels: slurm/ -> configs/ -> scaling_experiment/ -> results/ -> experiments/ -> project root
+# Path: experiments/results/scaling_experiment/configs/slurm -> project root
+BASE_DIR="$(cd "${SCRIPT_DIR}/../../../../.." && pwd)"
 cd "${BASE_DIR}"
 
 # Parse arguments

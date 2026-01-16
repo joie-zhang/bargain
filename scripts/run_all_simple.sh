@@ -14,11 +14,9 @@ MAX_PARALLEL_JOBS=${1:-4}
 # Create directories
 mkdir -p "${RESULTS_DIR}" "${LOGS_DIR}" "${CONFIG_DIR}"
 
-# Activate conda environment if available
-if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniconda3/etc/profile.d/conda.sh"
-    conda activate negotiation-research
-fi
+# Activate the Python virtual environment for bargain and cd to bargain directory
+cd "${BASE_DIR}/bargain"
+source .venv/bin/activate
 
 echo "============================================================"
 echo "SIMPLE EXPERIMENT RUNNER (No Timeouts)"
