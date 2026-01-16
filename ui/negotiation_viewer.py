@@ -78,51 +78,185 @@ RESULTS_DIR = Path(__file__).parent.parent / "experiments" / "results"
 # =============================================================================
 
 def load_experiment_folders() -> List[str]:
-    """Find all experiment result folders."""
+    """
+    Find all experiment result folders, including nested scaling experiment runs.
+
+    Returns folder identifiers in the format:
+    - "folder_name" for flat experiments
+    - "scaling_experiment/weak_vs_strong/order/comp_X" for scaling experiments
+    """
     if not RESULTS_DIR.exists():
         return []
 
     folders = []
     for item in sorted(RESULTS_DIR.iterdir()):
-        if item.is_dir() and not item.name.startswith('.'):
+        if not item.is_dir() or item.name.startswith('.'):
+            continue
+
+        # Check if this is a scaling_experiment directory
+        if item.name.startswith("scaling_experiment"):
+            # Skip symlinks to avoid duplicates
+            if item.is_symlink():
+                continue
+
+            # Traverse the nested structure
+            for model_pair_dir in item.iterdir():
+                if not model_pair_dir.is_dir() or model_pair_dir.name == "configs":
+                    continue
+
+                for order_dir in model_pair_dir.iterdir():
+                    if not order_dir.is_dir():
+                        continue
+                    if order_dir.name not in ["weak_first", "strong_first"]:
+                        continue
+
+                    for comp_dir in order_dir.iterdir():
+                        if not comp_dir.is_dir():
+                            continue
+                        if not comp_dir.name.startswith("comp_"):
+                            continue
+
+                        # Check if any runs exist with data
+                        has_runs = any(
+                            (comp_dir / run_dir).glob("*interactions*.json")
+                            for run_dir in comp_dir.iterdir()
+                            if run_dir.is_dir() and run_dir.name.startswith("run_")
+                        )
+
+                        if has_runs:
+                            # Create a virtual folder path
+                            rel_path = f"{item.name}/{model_pair_dir.name}/{order_dir.name}/{comp_dir.name}"
+                            folders.append(rel_path)
+        else:
+            # Regular flat experiment folder
             folders.append(item.name)
+
     return folders
 
 
-def load_all_interactions(folder_name: str) -> List[Dict]:
+def get_folder_display_name(folder: str) -> str:
+    """Get a human-readable display name for a folder."""
+    if "/" in folder:
+        # Scaling experiment - parse the path
+        parts = folder.split("/")
+        if len(parts) >= 4:
+            model_pair = parts[1]  # weak_vs_strong
+            order = parts[2]       # weak_first or strong_first
+            comp = parts[3]        # comp_X.X
+
+            order_label = "W→S" if order == "weak_first" else "S→W"
+            comp_val = comp.replace("comp_", "γ=")
+            return f"{model_pair} [{order_label}] {comp_val}"
+    return folder.replace("_", " ")
+
+
+def is_scaling_experiment(folder: str) -> bool:
+    """Check if a folder is a scaling experiment path."""
+    return "/" in folder and folder.startswith("scaling_experiment")
+
+
+def _get_folder_path(folder_name: str) -> Path:
+    """Get the actual filesystem path for a folder (handles nested scaling experiment paths)."""
+    return RESULTS_DIR / folder_name
+
+
+def _get_run_folder_path(folder_name: str, run_num: int) -> Path:
+    """Get the path for a specific run, handling both flat and nested structures."""
+    base_path = _get_folder_path(folder_name)
+
+    if is_scaling_experiment(folder_name):
+        # For scaling experiments, runs are in subdirectories
+        return base_path / f"run_{run_num}"
+    else:
+        # For flat experiments, runs are files in the same directory
+        return base_path
+
+
+def load_all_interactions(folder_name: str, run_num: int = 1) -> List[Dict]:
     """Load the all_interactions.json file for an experiment folder."""
-    # Try multiple possible file patterns
-    patterns = [
-        RESULTS_DIR / folder_name / "run_1_all_interactions.json",
-        RESULTS_DIR / folder_name / "all_interactions.json",
-    ]
+    if is_scaling_experiment(folder_name):
+        # Scaling experiment - look in run subdirectory
+        run_path = _get_run_folder_path(folder_name, run_num)
+        patterns = [
+            run_path / f"run_{run_num}_all_interactions.json",
+            run_path / "all_interactions.json",
+        ]
 
-    for pattern in patterns:
-        if pattern.exists():
-            with open(pattern, 'r') as f:
+        for pattern in patterns:
+            if pattern.exists():
+                with open(pattern, 'r') as f:
+                    return json.load(f)
+
+        # Try glob
+        matches = list(run_path.glob("*all_interactions*.json"))
+        if matches:
+            with open(matches[0], 'r') as f:
                 return json.load(f)
+    else:
+        # Flat experiment structure
+        folder_path = _get_folder_path(folder_name)
+        patterns = [
+            folder_path / f"run_{run_num}_all_interactions.json",
+            folder_path / "all_interactions.json",
+        ]
 
-    # Try glob for any all_interactions file
-    matches = list((RESULTS_DIR / folder_name).glob("*all_interactions*.json"))
-    if matches:
-        with open(matches[0], 'r') as f:
-            return json.load(f)
+        for pattern in patterns:
+            if pattern.exists():
+                with open(pattern, 'r') as f:
+                    return json.load(f)
+
+        # Try glob for any all_interactions file
+        matches = list(folder_path.glob("*all_interactions*.json"))
+        if matches:
+            with open(matches[0], 'r') as f:
+                return json.load(f)
 
     return []
 
 
 def load_experiment_results(folder_name: str, run_num: int = 1) -> Optional[Dict]:
     """Load experiment results for a specific run."""
-    result_file = RESULTS_DIR / folder_name / f"run_{run_num}_experiment_results.json"
-    if result_file.exists():
-        with open(result_file, 'r') as f:
-            return json.load(f)
+    if is_scaling_experiment(folder_name):
+        # Scaling experiment - look in run subdirectory
+        run_path = _get_run_folder_path(folder_name, run_num)
+        patterns = [
+            run_path / f"run_{run_num}_experiment_results.json",
+            run_path / "experiment_results.json",
+        ]
+
+        for pattern in patterns:
+            if pattern.exists():
+                with open(pattern, 'r') as f:
+                    return json.load(f)
+
+        # Try glob
+        matches = list(run_path.glob("*experiment_results*.json"))
+        if matches:
+            with open(matches[0], 'r') as f:
+                return json.load(f)
+    else:
+        # Flat experiment structure
+        result_file = _get_folder_path(folder_name) / f"run_{run_num}_experiment_results.json"
+        if result_file.exists():
+            with open(result_file, 'r') as f:
+                return json.load(f)
+
     return None
 
 
-def load_summary(folder_name: str) -> Optional[Dict]:
+def load_summary(folder_name: str, run_num: int = None) -> Optional[Dict]:
     """Load the batch summary for an experiment folder."""
-    summary_file = RESULTS_DIR / folder_name / "_summary.json"
+    if is_scaling_experiment(folder_name):
+        if run_num is not None:
+            # Look in run subdirectory
+            run_path = _get_run_folder_path(folder_name, run_num)
+            summary_file = run_path / "_summary.json"
+        else:
+            # Look in the comp_ directory
+            summary_file = _get_folder_path(folder_name) / "_summary.json"
+    else:
+        summary_file = _get_folder_path(folder_name) / "_summary.json"
+
     if summary_file.exists():
         with open(summary_file, 'r') as f:
             return json.load(f)
@@ -131,15 +265,41 @@ def load_summary(folder_name: str) -> Optional[Dict]:
 
 def get_available_runs(folder_name: str) -> List[int]:
     """Get list of available run numbers for an experiment."""
-    folder_path = RESULTS_DIR / folder_name
-    runs = []
-    for f in folder_path.glob("run_*_experiment_results.json"):
-        try:
-            run_num = int(f.stem.split('_')[1])
-            runs.append(run_num)
-        except (ValueError, IndexError):
-            pass
-    return sorted(runs)
+    folder_path = _get_folder_path(folder_name)
+
+    if is_scaling_experiment(folder_name):
+        # Scaling experiment - runs are subdirectories
+        runs = []
+        for item in folder_path.iterdir():
+            if item.is_dir() and item.name.startswith("run_"):
+                try:
+                    run_num = int(item.name.split('_')[1])
+                    # Check if the run has any data files
+                    if any(item.glob("*.json")):
+                        runs.append(run_num)
+                except (ValueError, IndexError):
+                    pass
+        return sorted(runs)
+    else:
+        # Flat experiment structure
+        runs = []
+        for f in folder_path.glob("run_*_experiment_results.json"):
+            try:
+                run_num = int(f.stem.split('_')[1])
+                runs.append(run_num)
+            except (ValueError, IndexError):
+                pass
+
+        # If no experiment_results files, try interactions files
+        if not runs:
+            for f in folder_path.glob("run_*_all_interactions.json"):
+                try:
+                    run_num = int(f.stem.split('_')[1])
+                    runs.append(run_num)
+                except (ValueError, IndexError):
+                    pass
+
+        return sorted(runs)
 
 
 # =============================================================================
@@ -670,8 +830,12 @@ def main():
             selected_folder = st.selectbox(
                 "Experiment",
                 folders,
-                format_func=lambda x: x.replace("_", " ").replace("runs", "| runs").replace("comp", "| comp")
+                format_func=get_folder_display_name
             )
+
+            # Show folder type indicator
+            if is_scaling_experiment(selected_folder):
+                st.caption("📈 Scaling Experiment")
 
             # Run selection
             runs = get_available_runs(selected_folder)
@@ -712,9 +876,9 @@ def main():
             return
 
         # Load data
-        interactions = load_all_interactions(selected_folder)
+        interactions = load_all_interactions(selected_folder, selected_run)
         results = load_experiment_results(selected_folder, selected_run)
-        summary = load_summary(selected_folder)
+        summary = load_summary(selected_folder, selected_run)
 
         if not interactions:
             st.error(f"No interaction data found for {selected_folder}")

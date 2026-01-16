@@ -38,6 +38,23 @@ from analysis import (
     PhaseTokens,
 )
 
+# Import scaling experiment analysis
+try:
+    from scaling_experiment_analysis import (
+        discover_scaling_experiments,
+        analyze_scaling_experiments,
+        get_scaling_experiment_summary,
+        create_model_pair_comparison,
+        create_order_effect_comparison,
+        create_competition_level_comparison,
+        load_scaling_experiment_run,
+        ScalingExperimentConfig,
+        ScalingBatchMetrics,
+    )
+    SCALING_ANALYSIS_AVAILABLE = True
+except ImportError:
+    SCALING_ANALYSIS_AVAILABLE = False
+
 # Default results directory
 RESULTS_DIR = Path(__file__).parent.parent / "experiments" / "results"
 
@@ -1755,6 +1772,300 @@ def render_aggregated_effort_view():
             st.plotly_chart(fig_diff, use_container_width=True)
 
 
+def render_scaling_experiment_view():
+    """Render the scaling experiment comparison view."""
+    if not SCALING_ANALYSIS_AVAILABLE:
+        st.error("Scaling experiment analysis module not available. Check ui/scaling_experiment_analysis.py exists.")
+        return
+
+    st.header("📈 Scaling Experiment Analysis")
+    st.markdown("""
+    *Analyze experiments from the scaling_experiment series with nested directory structure.*
+
+    These experiments compare weak vs strong models across different:
+    - Model pairs (weak_model vs strong_model)
+    - Orderings (weak_first vs strong_first)
+    - Competition levels (γ = 0.0, 0.25, 0.5, 0.75, 1.0)
+    """)
+
+    # Get summary
+    with st.spinner("Discovering scaling experiments..."):
+        summary = get_scaling_experiment_summary(RESULTS_DIR)
+
+    if summary["total_runs"] == 0:
+        st.warning("No scaling experiments found. Run `./scripts/generate_configs_both_orders.sh` and submit experiments first.")
+        return
+
+    # Summary cards
+    st.subheader("📦 Experiment Summary")
+    cols = st.columns(4)
+
+    with cols[0]:
+        st.metric("Total Runs", summary["total_runs"])
+
+    with cols[1]:
+        st.metric("Model Pairs", len(summary.get("model_pairs", [])))
+
+    with cols[2]:
+        st.metric("Competition Levels", len(summary.get("competition_levels", [])))
+
+    with cols[3]:
+        st.metric("Orderings", len(summary.get("orders", [])))
+
+    # Show unique models
+    with st.expander("📋 Experiment Details", expanded=False):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Weak Models:**")
+            for m in summary.get("weak_models", []):
+                st.markdown(f"- {m}")
+        with col2:
+            st.markdown("**Strong Models:**")
+            for m in summary.get("strong_models", []):
+                st.markdown(f"- {m}")
+
+        st.markdown("**Competition Levels:**")
+        st.markdown(", ".join(str(c) for c in summary.get("competition_levels", [])))
+
+    st.markdown("---")
+
+    # Analysis tabs
+    analysis_tabs = st.tabs([
+        "🎯 Model Pair Comparison",
+        "🔄 Order Effect Analysis",
+        "📊 Competition Level Analysis",
+        "📋 Full Data Table"
+    ])
+
+    with analysis_tabs[0]:
+        st.markdown("### Model Pair Comparison")
+        st.markdown("*Compare performance across different weak vs strong model pairings.*")
+
+        with st.spinner("Analyzing model pairs..."):
+            df = create_model_pair_comparison(RESULTS_DIR)
+
+        if df is not None:
+            st.dataframe(df, use_container_width=True)
+
+            # Download button
+            if hasattr(df, 'to_csv'):
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "📥 Download Model Pair Comparison CSV",
+                    csv,
+                    "scaling_model_pair_comparison.csv",
+                    "text/csv"
+                )
+
+            # Visualizations
+            if PLOTLY_AVAILABLE and len(df) > 0:
+                st.markdown("#### Utility Comparison")
+
+                # Create utility comparison chart
+                fig = go.Figure()
+
+                # Check if we have the data in DataFrame format
+                if hasattr(df, 'iterrows'):
+                    model_pairs = []
+                    weak_utils = []
+                    strong_utils = []
+
+                    for _, row in df.iterrows():
+                        model_pairs.append(row.get("Model Pair", ""))
+                        # Parse utility values (they're formatted as strings)
+                        weak_str = row.get("Weak Utility", "0")
+                        strong_str = row.get("Strong Utility", "0")
+                        try:
+                            weak_utils.append(float(weak_str))
+                            strong_utils.append(float(strong_str))
+                        except (ValueError, TypeError):
+                            weak_utils.append(0)
+                            strong_utils.append(0)
+
+                    fig.add_trace(go.Bar(
+                        name="Weak Model",
+                        x=model_pairs,
+                        y=weak_utils,
+                        marker_color="#22c55e"
+                    ))
+                    fig.add_trace(go.Bar(
+                        name="Strong Model",
+                        x=model_pairs,
+                        y=strong_utils,
+                        marker_color="#ef4444"
+                    ))
+
+                    fig.update_layout(
+                        title="Weak vs Strong Model Utility by Pairing",
+                        xaxis_title="Model Pair",
+                        yaxis_title="Average Utility (Discounted)",
+                        barmode="group",
+                        xaxis_tickangle=-45,
+                        height=450,
+                    )
+
+                    st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No model pair data available yet.")
+
+    with analysis_tabs[1]:
+        st.markdown("### Order Effect Analysis")
+        st.markdown("""
+        *Compare how order (weak_first vs strong_first) affects outcomes.*
+
+        - **Weak First (W→S)**: Weak model plays as Agent_Alpha (moves first)
+        - **Strong First (S→W)**: Strong model plays as Agent_Alpha (moves first)
+        """)
+
+        with st.spinner("Analyzing order effects..."):
+            df = create_order_effect_comparison(RESULTS_DIR)
+
+        if df is not None:
+            st.dataframe(df, use_container_width=True)
+
+            if hasattr(df, 'to_csv'):
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "📥 Download Order Effect CSV",
+                    csv,
+                    "scaling_order_effect.csv",
+                    "text/csv"
+                )
+
+            # Visualizations
+            if PLOTLY_AVAILABLE and len(df) > 0 and hasattr(df, 'iterrows'):
+                st.markdown("#### Order Effect on Utility")
+
+                # Group by model pair and show order effect
+                fig = go.Figure()
+
+                weak_first_data = df[df["Order"] == "Weak First"] if "Order" in df.columns else pd.DataFrame()
+                strong_first_data = df[df["Order"] == "Strong First"] if "Order" in df.columns else pd.DataFrame()
+
+                if len(weak_first_data) > 0:
+                    try:
+                        utility_diffs = [float(str(v).replace("+", "")) for v in weak_first_data.get("Utility Diff (Strong-Weak)", [0])]
+                        fig.add_trace(go.Bar(
+                            name="Weak First (W→S)",
+                            x=list(weak_first_data.get("Model Pair", [])),
+                            y=utility_diffs,
+                            marker_color="#3b82f6"
+                        ))
+                    except (ValueError, TypeError):
+                        pass
+
+                if len(strong_first_data) > 0:
+                    try:
+                        utility_diffs = [float(str(v).replace("+", "")) for v in strong_first_data.get("Utility Diff (Strong-Weak)", [0])]
+                        fig.add_trace(go.Bar(
+                            name="Strong First (S→W)",
+                            x=list(strong_first_data.get("Model Pair", [])),
+                            y=utility_diffs,
+                            marker_color="#ef4444"
+                        ))
+                    except (ValueError, TypeError):
+                        pass
+
+                fig.update_layout(
+                    title="Utility Difference (Strong - Weak) by Order",
+                    xaxis_title="Model Pair",
+                    yaxis_title="Utility Difference",
+                    barmode="group",
+                    xaxis_tickangle=-45,
+                    height=450,
+                )
+                fig.add_hline(y=0, line_dash="dash", line_color="gray")
+
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No order effect data available yet.")
+
+    with analysis_tabs[2]:
+        st.markdown("### Competition Level Analysis")
+        st.markdown("""
+        *Analyze how competition level (γ) affects negotiation outcomes.*
+
+        - **γ = 0.0**: Fully cooperative (items have complementary values)
+        - **γ = 1.0**: Fully competitive (zero-sum preferences)
+        """)
+
+        with st.spinner("Analyzing competition levels..."):
+            df = create_competition_level_comparison(RESULTS_DIR)
+
+        if df is not None:
+            st.dataframe(df, use_container_width=True)
+
+            if hasattr(df, 'to_csv'):
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "📥 Download Competition Level CSV",
+                    csv,
+                    "scaling_competition_level.csv",
+                    "text/csv"
+                )
+
+            # Visualizations
+            if PLOTLY_AVAILABLE and len(df) > 0 and hasattr(df, 'iterrows'):
+                st.markdown("#### Nash Welfare by Competition Level")
+
+                # Group by competition level
+                try:
+                    fig = px.scatter(
+                        df,
+                        x="Competition γ",
+                        y="Nash Welfare",
+                        color="Model Pair",
+                        size="Runs",
+                        hover_data=["Consensus Rate", "Avg Round"],
+                        title="Nash Welfare vs Competition Level",
+                    )
+                    fig.update_layout(height=450)
+                    st.plotly_chart(fig, use_container_width=True)
+                except Exception as e:
+                    st.warning(f"Could not create visualization: {e}")
+        else:
+            st.info("No competition level data available yet.")
+
+    with analysis_tabs[3]:
+        st.markdown("### Full Data Table")
+        st.markdown("*All scaling experiments with full granularity (model pair + order + competition level).*")
+
+        with st.spinner("Loading full data..."):
+            batches = analyze_scaling_experiments(RESULTS_DIR, group_by=["model_pair", "model_order", "competition_level"])
+
+        if batches:
+            data = []
+            for key, batch in sorted(batches.items()):
+                order_label = "W→S" if batch.model_order == "weak_first" else "S→W" if batch.model_order else "All"
+                data.append({
+                    "Weak Model": batch.weak_model,
+                    "Strong Model": batch.strong_model,
+                    "Order": order_label,
+                    "Competition γ": f"{batch.competition_level:.2f}" if batch.competition_level is not None else "All",
+                    "Runs": batch.num_runs,
+                    "Consensus Rate": f"{batch.consensus_rate:.0%}",
+                    "Avg Round": f"{batch.avg_consensus_round:.1f}",
+                    "Weak Utility": f"{batch.avg_weak_utility:.1f} ± {batch.std_weak_utility:.1f}",
+                    "Strong Utility": f"{batch.avg_strong_utility:.1f} ± {batch.std_strong_utility:.1f}",
+                    "Nash Welfare": f"{batch.avg_nash_welfare:.1f}",
+                    "Total Tokens": batch.avg_total_tokens,
+                })
+
+            df = pd.DataFrame(data) if PANDAS_AVAILABLE else data
+            st.dataframe(df, use_container_width=True)
+
+            if hasattr(df, 'to_csv'):
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    "📥 Download Full Data CSV",
+                    csv,
+                    "scaling_full_data.csv",
+                    "text/csv"
+                )
+        else:
+            st.info("No data available yet.")
+
+
 def render_comparison_view():
     """Render the main comparison view."""
     st.header("📊 Batch Comparison View")
@@ -1762,14 +2073,23 @@ def render_comparison_view():
 
     # Add view mode selector at the top
     st.sidebar.markdown("## 🎛️ View Mode")
+
+    view_options = ["Individual Batches", "Aggregated by Effort Level"]
+    if SCALING_ANALYSIS_AVAILABLE:
+        view_options.append("Scaling Experiments")
+
     view_mode = st.sidebar.radio(
         "Select view mode",
-        ["Individual Batches", "Aggregated by Effort Level"],
-        help="Aggregated mode combines all folders of the same experiment type (e.g., all low_vs_low folders) into single statistical buckets."
+        view_options,
+        help="Scaling Experiments mode analyzes the nested scaling_experiment directory structure."
     )
 
     if view_mode == "Aggregated by Effort Level":
         render_aggregated_effort_view()
+        return
+
+    if view_mode == "Scaling Experiments":
+        render_scaling_experiment_view()
         return
 
     # Original individual batch view continues below...

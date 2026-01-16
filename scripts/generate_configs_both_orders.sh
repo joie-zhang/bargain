@@ -80,9 +80,9 @@ STRONG_MODELS=(
     "gemini-3-pro"  # Strong tier, Elo: 1492, Closed-source, Reasoning
     "gpt-5.2-high"  # Strong tier, Elo: 1465, Closed-source, Reasoning
     "claude-opus-4-5"  # Strong tier, Elo: 1462, Closed-source, Non-reasoning
-    "kimi-k2-thinking"  # Strong tier, Elo: 1438, Open-source, Reasoning
-    "deepseek-r1-0528"  # Strong tier, Elo: 1426, Open-source, Reasoning
-    "qwen3-235b-a22b-instruct-2507"  # Strong tier, Elo: 1418, Open-source, Non-reasoning
+    # "kimi-k2-thinking"  # Strong tier, Elo: 1438, Open-source, Reasoning
+    # "deepseek-r1-0528"  # Strong tier, Elo: 1426, Open-source, Reasoning
+    # "qwen3-235b-a22b-instruct-2507"  # Strong tier, Elo: 1418, Open-source, Non-reasoning
     
     # MEDIUM TIER - 1290 ≤ Elo < 1415 (3 models)
     "claude-4-5-haiku"  # Medium tier, Elo: 1378, Closed-source, Non-reasoning
@@ -95,14 +95,14 @@ STRONG_MODELS=(
 )
 
 # Competition levels
-# COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
-COMPETITION_LEVELS=(0.0)
+COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
+# COMPETITION_LEVELS=(0.0)
 
 # Base parameters
 NUM_ITEMS=5
 MAX_ROUNDS=10
-# NUM_RUNS=6  # Number of runs per configuration
-NUM_RUNS=1  # Number of runs per configuration
+NUM_RUNS=6  # Number of runs per configuration
+# NUM_RUNS=1  # Number of runs per configuration
 DISCUSSION_TURNS=3  # Number of discussion exchanges per round
 
 # Seeds for each scenario (used for both weak_first and strong_first orderings)
