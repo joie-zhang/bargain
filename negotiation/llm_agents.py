@@ -1188,7 +1188,7 @@ class AnthropicAgent(BaseLLMAgent):
                 raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call Anthropic API."""
+        """Call Anthropic API with explicit rate limit handling."""
         start_time = time.time()
         
         # Extract system message
@@ -1213,43 +1213,81 @@ class AnthropicAgent(BaseLLMAgent):
             **kwargs
         }
         
-        # Use streaming to handle long requests
-        stream = await self.client.messages.create(**api_params)
-        
-        # Collect the streamed response
-        full_text = ""
-        input_tokens = 0
-        output_tokens = 0
-        stop_reason = None
-        
-        async for event in stream:
-            if hasattr(event, 'type'):
-                if event.type == 'content_block_delta':
-                    full_text += event.delta.text
-                elif event.type == 'message_start':
-                    if hasattr(event.message, 'usage'):
-                        input_tokens = event.message.usage.input_tokens
-                elif event.type == 'message_delta':
-                    if hasattr(event, 'usage'):
-                        output_tokens = event.usage.output_tokens
-                    if hasattr(event.delta, 'stop_reason'):
-                        stop_reason = event.delta.stop_reason
-        
-        response_time = time.time() - start_time
-        total_tokens = input_tokens + output_tokens
-        
-        return AgentResponse(
-            content=full_text,
-            model_used=self.model_name,
-            response_time=response_time,
-            tokens_used=total_tokens,
-            cost_estimate=self._estimate_cost(input_tokens, output_tokens),
-            metadata={
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "stop_reason": stop_reason
-            }
-        )
+        # Retry logic with explicit rate limit handling
+        max_retries = self.config.max_retries
+        for attempt in range(max_retries):
+            try:
+                # Use streaming to handle long requests
+                stream = await self.client.messages.create(**api_params)
+                
+                # Collect the streamed response
+                full_text = ""
+                input_tokens = 0
+                output_tokens = 0
+                stop_reason = None
+                
+                async for event in stream:
+                    if hasattr(event, 'type'):
+                        if event.type == 'content_block_delta':
+                            full_text += event.delta.text
+                        elif event.type == 'message_start':
+                            if hasattr(event.message, 'usage'):
+                                input_tokens = event.message.usage.input_tokens
+                        elif event.type == 'message_delta':
+                            if hasattr(event, 'usage'):
+                                output_tokens = event.usage.output_tokens
+                            if hasattr(event.delta, 'stop_reason'):
+                                stop_reason = event.delta.stop_reason
+                
+                response_time = time.time() - start_time
+                total_tokens = input_tokens + output_tokens
+                
+                return AgentResponse(
+                    content=full_text,
+                    model_used=self.model_name,
+                    response_time=response_time,
+                    tokens_used=total_tokens,
+                    cost_estimate=self._estimate_cost(input_tokens, output_tokens),
+                    metadata={
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "stop_reason": stop_reason
+                    }
+                )
+                
+            except anthropic.RateLimitError as e:
+                # Explicit handling of rate limit errors
+                self.logger.warning(
+                    f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
+                    f"Waiting before retry..."
+                )
+                
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 2^attempt seconds, with jitter
+                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    # Cap wait time at 60 seconds to avoid excessive delays
+                    wait_time = min(wait_time, 60.0)
+                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
+                    raise
+                    
+            except anthropic.APIStatusError as e:
+                # Handle other API errors (500s, etc.)
+                self.logger.warning(
+                    f"API error (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+                if attempt < max_retries - 1:
+                    wait_time = self.config.retry_delay * (2 ** attempt)
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
+                    
+            except Exception as e:
+                # Re-raise non-API exceptions immediately
+                self.logger.error(f"Unexpected error in Anthropic API call: {e}")
+                raise
     
     def _estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Estimate cost based on Anthropic pricing (as of 2024)."""
@@ -1315,7 +1353,7 @@ class OpenAIAgent(BaseLLMAgent):
                 raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call OpenAI API."""
+        """Call OpenAI API with explicit rate limit handling."""
         start_time = time.time()
         
         # O3 models have specific parameter requirements
@@ -1337,25 +1375,62 @@ class OpenAIAgent(BaseLLMAgent):
         custom_params = {k: v for k, v in self.config.custom_parameters.items() 
                         if k not in ['max_tokens', 'max_completion_tokens']}
         
-        response = await self.client.chat.completions.create(
-            **api_params,
-            **custom_params,
-            **kwargs
-        )
-        
-        response_time = time.time() - start_time
-
-        return AgentResponse(
-            content=response.choices[0].message.content,  # Keep original - no masking
-            model_used=self.model_name,
-            response_time=response_time,
-            tokens_used=response.usage.total_tokens if response.usage else None,
-            cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
-            metadata={
-                "finish_reason": response.choices[0].finish_reason,
-                "usage": response.usage.dict() if response.usage else None
-            }
-        )
+        # Retry logic with explicit rate limit handling
+        max_retries = self.config.max_retries
+        for attempt in range(max_retries):
+            try:
+                response = await self.client.chat.completions.create(
+                    **api_params,
+                    **custom_params,
+                    **kwargs
+                )
+                
+                response_time = time.time() - start_time
+                return AgentResponse(
+                    content=response.choices[0].message.content,  # Keep original - no masking
+                    model_used=self.model_name,
+                    response_time=response_time,
+                    tokens_used=response.usage.total_tokens if response.usage else None,
+                    cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
+                    metadata={
+                        "finish_reason": response.choices[0].finish_reason,
+                        "usage": response.usage.dict() if response.usage else None
+                    }
+                )
+                
+            except openai.RateLimitError as e:
+                # Explicit handling of rate limit errors
+                self.logger.warning(
+                    f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
+                    f"Waiting before retry..."
+                )
+                
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 2^attempt seconds, with jitter
+                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    # Cap wait time at 60 seconds to avoid excessive delays
+                    wait_time = min(wait_time, 60.0)
+                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
+                    raise
+                    
+            except openai.APIError as e:
+                # Handle other API errors (500s, etc.)
+                self.logger.warning(
+                    f"API error (attempt {attempt + 1}/{max_retries}): {e}"
+                )
+                if attempt < max_retries - 1:
+                    wait_time = self.config.retry_delay * (2 ** attempt)
+                    await asyncio.sleep(wait_time)
+                else:
+                    raise
+                    
+            except Exception as e:
+                # Re-raise non-API exceptions immediately
+                self.logger.error(f"Unexpected error in OpenAI API call: {e}")
+                raise
     
     def _estimate_cost(self, usage) -> float:
         """Estimate cost based on OpenAI pricing."""
@@ -1595,63 +1670,130 @@ class GoogleAgent(BaseLLMAgent):
         self.model = self.genai.GenerativeModel(model_name=self.model_name)
 
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call Google Gemini API."""
+        """Call Google Gemini API with explicit rate limit handling."""
         start_time = time.time()
 
-        try:
-            # Convert messages to Gemini format
-            prompt_text = self._messages_to_prompt(messages)
+        # Retry logic with explicit rate limit handling
+        max_retries = self.config.max_retries
+        for attempt in range(max_retries):
+            try:
+                # Convert messages to Gemini format
+                prompt_text = self._messages_to_prompt(messages)
 
-            # Create generation config
-            generation_config = self.genai.types.GenerationConfig(
-                temperature=self.config.temperature,
-                max_output_tokens=self.config.max_tokens,
-            )
-
-            # Generate response synchronously (wrapped in async)
-            import asyncio
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.model.generate_content(
-                    prompt_text,
-                    generation_config=generation_config
+                # Create generation config
+                generation_config = self.genai.types.GenerationConfig(
+                    temperature=self.config.temperature,
+                    max_output_tokens=self.config.max_tokens,
                 )
-            )
 
-            response_time = time.time() - start_time
+                # Generate response synchronously (wrapped in async)
+                import asyncio
+                response = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: self.model.generate_content(
+                        prompt_text,
+                        generation_config=generation_config
+                    )
+                )
 
-            # Extract token usage if available
-            tokens_used = None
-            token_metadata = {}
-            if hasattr(response, 'usage_metadata') and response.usage_metadata:
-                prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
-                completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
-                total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
-                # tokens_used should be an int, not a dict!
-                tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
-                # Store detailed breakdown in metadata instead
-                token_metadata = {
-                    'prompt_tokens': prompt_tokens,
-                    'completion_tokens': completion_tokens,
-                    'total_tokens': tokens_used
-                }
+                response_time = time.time() - start_time
 
-            return AgentResponse(
-                content=response.text,
-                model_used=self.model_name,
-                response_time=response_time,
-                tokens_used=tokens_used,  # Now an int, not a dict
-                cost_estimate=None,
-                metadata={
-                    "finish_reason": response.candidates[0].finish_reason.name if response.candidates else None,
-                    "safety_ratings": [str(r) for r in response.candidates[0].safety_ratings] if response.candidates else [],
-                    "usage": token_metadata  # Detailed token info goes in metadata
-                }
-            )
+                # Extract token usage if available
+                tokens_used = None
+                token_metadata = {}
+                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                    prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+                    completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+                    total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
+                    # tokens_used should be an int, not a dict!
+                    tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
+                    # Store detailed breakdown in metadata instead
+                    token_metadata = {
+                        'prompt_tokens': prompt_tokens,
+                        'completion_tokens': completion_tokens,
+                        'total_tokens': tokens_used
+                    }
 
-        except Exception as e:
-            self.logger.error(f"Google Gemini API error: {e}")
-            raise
+                return AgentResponse(
+                    content=response.text,
+                    model_used=self.model_name,
+                    response_time=response_time,
+                    tokens_used=tokens_used,  # Now an int, not a dict
+                    cost_estimate=None,
+                    metadata={
+                        "finish_reason": response.candidates[0].finish_reason.name if response.candidates else None,
+                        "safety_ratings": [str(r) for r in response.candidates[0].safety_ratings] if response.candidates else [],
+                        "usage": token_metadata  # Detailed token info goes in metadata
+                    }
+                )
+                
+            except Exception as e:
+                error_str = str(e).lower()
+                error_repr = repr(e)
+                
+                # Check for rate limit errors (429, RESOURCE_EXHAUSTED, quota exceeded)
+                is_rate_limit = (
+                    "429" in error_str or 
+                    "429" in error_repr or
+                    "resource_exhausted" in error_str or
+                    "rate limit" in error_str or
+                    "rate_limit" in error_str or
+                    "quota" in error_str
+                )
+                
+                # Check if it's a daily quota (don't retry these)
+                is_daily_quota = (
+                    "daily" in error_str or
+                    "free tier" in error_str or
+                    "quota exceeded" in error_str
+                )
+                
+                if is_rate_limit:
+                    if is_daily_quota:
+                        # Daily quota exceeded - don't retry
+                        self.logger.error(
+                            f"Daily quota exceeded: {e}. Stopping retries."
+                        )
+                        raise
+                    
+                    # Rate limit error - retry with exponential backoff
+                    self.logger.warning(
+                        f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
+                        f"Waiting before retry..."
+                    )
+                    
+                    if attempt < max_retries - 1:
+                        # Exponential backoff: 2^attempt seconds, with jitter
+                        wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                        # Cap wait time at 60 seconds to avoid excessive delays
+                        wait_time = min(wait_time, 60.0)
+                        self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
+                        raise
+                else:
+                    # Other errors - check if retryable (5xx errors)
+                    # Google API doesn't have specific exception types, so we check error message
+                    is_server_error = (
+                        "500" in error_str or
+                        "502" in error_str or
+                        "503" in error_str or
+                        "504" in error_str or
+                        "internal error" in error_str or
+                        "service unavailable" in error_str
+                    )
+                    
+                    if is_server_error and attempt < max_retries - 1:
+                        self.logger.warning(
+                            f"Server error (attempt {attempt + 1}/{max_retries}): {e}"
+                        )
+                        wait_time = self.config.retry_delay * (2 ** attempt)
+                        await asyncio.sleep(wait_time)
+                    else:
+                        # Non-retryable error or max retries exceeded
+                        self.logger.error(f"Error in Google API call: {e}")
+                        raise
 
     def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert OpenAI-style messages to Gemini prompt format."""
