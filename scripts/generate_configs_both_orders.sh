@@ -304,7 +304,8 @@ echo "Generating SLURM scripts..."
 # Models that require GPUs (local inference)
 # Llama 3.1 8B: 1 GPU (80GB)
 # Llama 3.3 70B: 4 GPUs (320GB)
-LOCAL_MODELS=("llama-3.3-70b-instruct" "llama-3.1-8b-instruct")
+# GPT-OSS 20B: 1 GPU (80GB)
+LOCAL_MODELS=("llama-3.3-70b-instruct" "llama-3.1-8b-instruct" "gpt-oss-20b")
 
 # Function to check if a model is local (needs GPU)
 is_local_model() {
@@ -323,6 +324,7 @@ get_gpu_count() {
     case "$model" in
         "llama-3.3-70b-instruct") echo 4 ;;
         "llama-3.1-8b-instruct") echo 1 ;;
+        "gpt-oss-20b") echo 1 ;;
         *) echo 0 ;;
     esac
 }
@@ -781,7 +783,7 @@ submit_api_jobs() {
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check if both models are API-based (not local)
-            LOCAL_MODELS="llama-3.3-70b-instruct llama-3.1-8b-instruct"
+            LOCAL_MODELS="llama-3.3-70b-instruct llama-3.1-8b-instruct gpt-oss-20b"
             IS_LOCAL=false
             for lm in $LOCAL_MODELS; do
                 if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
@@ -809,8 +811,8 @@ submit_gpu_jobs() {
 
     # Large models (70B+): 4 GPUs, 320GB
     LARGE_GPU_MODELS="llama-3.3-70b-instruct"
-    # Small models (8B): 1 GPU, 80GB
-    SMALL_GPU_MODELS="llama-3.1-8b-instruct"
+    # Small models (8B-20B): 1 GPU, 80GB
+    SMALL_GPU_MODELS="llama-3.1-8b-instruct gpt-oss-20b"
 
     GPU_LARGE_IDS=""
     GPU_SMALL_IDS=""
@@ -905,5 +907,39 @@ echo "  ${SUBMIT_SCRIPT} all --staggered 2      # Submit all jobs with 2s delay 
 echo "  ${SUBMIT_SCRIPT} api --staggered 5       # Submit API jobs with 5s delay"
 echo "  ${SUBMIT_SCRIPT} gpu                     # Submit GPU jobs (array mode)"
 echo ""
-echo "Note: Use --staggered to avoid API rate limits when submitting many jobs."
-echo "      See scripts/EXPERIMENT_WORKFLOW.md for detailed workflow guide."
+echo "Using --max-concurrent to limit concurrent jobs:"
+echo "  The --max-concurrent option limits how many array jobs can run simultaneously."
+echo "  This is useful for:"
+echo "    - Controlling API rate limits (e.g., max 10 concurrent API calls)"
+echo "    - Managing cluster resource usage"
+echo "    - Preventing overwhelming shared resources"
+echo ""
+echo "  Examples:"
+echo "    ${SUBMIT_SCRIPT} all --max-concurrent 10"
+echo "      # Submit all jobs, but only allow 10 to run at once"
+echo ""
+echo "    ${SUBMIT_SCRIPT} api --max-concurrent 5"
+echo "      # Submit API jobs, limit to 5 concurrent (good for rate-limited APIs)"
+echo ""
+echo "    ${SUBMIT_SCRIPT} gpu --max-concurrent 2"
+echo "      # Submit GPU jobs, limit to 2 concurrent (conserves GPU resources)"
+echo ""
+echo "  How it works:"
+echo "    - SLURM array jobs are submitted with format: 0-N%MAX_CONCURRENT"
+echo "    - Example: 0-239%10 means jobs 0-239, max 10 running at once"
+echo "    - As jobs complete, SLURM automatically starts the next ones"
+echo "    - Use 'squeue -u \$USER' to monitor running jobs"
+echo ""
+echo "  Combining with --staggered:"
+echo "    - --staggered and --max-concurrent are mutually exclusive"
+echo "    - --staggered submits jobs one-by-one with delays (no concurrency limit)"
+echo "    - --max-concurrent uses SLURM array job throttling (more efficient)"
+echo "    - For API rate limits, prefer --max-concurrent over --staggered"
+echo ""
+echo "  Recommended settings:"
+echo "    - API models: --max-concurrent 5-10  (depends on API provider limits)"
+echo "    - GPU models: --max-concurrent 2-4   (depends on available GPUs)"
+echo "    - Mixed jobs: Submit separately (api with --max-concurrent, gpu separately)"
+echo ""
+echo "Note: Use --staggered for simple sequential submission, --max-concurrent for"
+echo "      controlled parallel execution. See scripts/EXPERIMENT_WORKFLOW.md for details."
