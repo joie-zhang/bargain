@@ -331,7 +331,10 @@ get_gpu_count() {
 
 # Generate SLURM script for CPU jobs (API-based models)
 CPU_SLURM="${SLURM_DIR}/run_api_experiments.sbatch"
-cat > "${CPU_SLURM}" << 'SLURM_CPU'
+# Use absolute path to timestamped config directory to avoid symlink issues
+# This ensures queued jobs always use the correct config directory even if configs are regenerated
+CONFIG_DIR_ABSOLUTE="${BASE_DIR}/experiments/results/scaling_experiment_${TIMESTAMP}/configs"
+cat > "${CPU_SLURM}" << SLURM_CPU
 #!/bin/bash
 #SBATCH --job-name=bargain-api
 #SBATCH --nodes=1
@@ -346,15 +349,15 @@ set -e
 
 # Change to project directory first
 BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
-cd "${BASE_DIR}"
+cd "\${BASE_DIR}"
 
 # Create logs directory if it doesn't exist
 mkdir -p logs/cluster
 
 echo "============================================================"
-echo "SLURM Job ID: $SLURM_JOB_ID, Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Started at: $(date)"
-echo "Node: $SLURM_NODELIST"
+echo "SLURM Job ID: \$SLURM_JOB_ID, Array Task ID: \$SLURM_ARRAY_TASK_ID"
+echo "Started at: \$(date)"
+echo "Node: \$SLURM_NODELIST"
 echo "============================================================"
 
 # Load required modules
@@ -365,83 +368,86 @@ module load anaconda3/2024.2
 module load proxy/default
 
 # Activate virtual environment
-source "${BASE_DIR}/.venv/bin/activate"
-echo "Activated virtual environment: ${BASE_DIR}/.venv"
-echo "Python version: $(python3 --version)"
+source "\${BASE_DIR}/.venv/bin/activate"
+echo "Activated virtual environment: \${BASE_DIR}/.venv"
+echo "Python version: \$(python3 --version)"
 echo ""
 
 # Get config file for this array task
-# Note: This uses the symlink 'configs' which points to the latest timestamped config directory
-CONFIG_DIR="experiments/results/scaling_experiment/configs"
+# IMPORTANT: Use absolute path to timestamped config directory (not symlink)
+# This ensures queued jobs always read from the correct config directory
+# even if configs are regenerated and the symlink is updated mid-experiment
+CONFIG_DIR="${CONFIG_DIR_ABSOLUTE}"
 
 # Determine padding width by finding the highest config number
-MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
-if [[ -n "$MAX_CONFIG" ]]; then
-    PADDING_WIDTH=${#MAX_CONFIG}
+MAX_CONFIG=\$(ls "\${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\\([0-9]*\\)\\.json/\\1/' | sort -n | tail -1)
+if [[ -n "\$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=\${#MAX_CONFIG}
 else
     PADDING_WIDTH=3  # Default to 3 digits if no configs found
 fi
 
 # Use zero-padded config ID to match generated file names
-CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
-CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
+CONFIG_ID_PADDED=\$(printf "%0\${PADDING_WIDTH}d" \${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="\${CONFIG_DIR}/config_\${CONFIG_ID_PADDED}.json"
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "ERROR: Config file not found: $CONFIG_FILE"
+if [[ ! -f "\$CONFIG_FILE" ]]; then
+    echo "ERROR: Config file not found: \$CONFIG_FILE"
     exit 1
 fi
 
-echo "Config file: $CONFIG_FILE"
+echo "Config file: \$CONFIG_FILE"
+echo "Config directory: \${CONFIG_DIR}"
 
 # Extract config values
-WEAK_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
-STRONG_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
-COMP_LEVEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['competition_level'])")
-RUN_NUM=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
-SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_seed'])")
-MODEL_ORDER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['model_order'])")
-DISCUSSION_TURNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['discussion_turns'])")
-OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
+WEAK_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
+STRONG_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+COMP_LEVEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['competition_level'])")
+RUN_NUM=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
+SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['random_seed'])")
+MODEL_ORDER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['model_order'])")
+DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
+OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
 
 # Get models in correct order
-if [[ "$MODEL_ORDER" == "weak_first" ]]; then
-    MODELS="$WEAK_MODEL $STRONG_MODEL"
+if [[ "\$MODEL_ORDER" == "weak_first" ]]; then
+    MODELS="\$WEAK_MODEL \$STRONG_MODEL"
 else
-    MODELS="$STRONG_MODEL $WEAK_MODEL"
+    MODELS="\$STRONG_MODEL \$WEAK_MODEL"
 fi
 
-echo "Models: $MODELS"
-echo "Model order: $MODEL_ORDER"
-echo "Competition level: $COMP_LEVEL"
-echo "Run number: $RUN_NUM"
-echo "Random seed: $SEED"
-echo "Discussion turns: $DISCUSSION_TURNS"
-echo "Output dir: $OUTPUT_DIR"
+echo "Models: \$MODELS"
+echo "Model order: \$MODEL_ORDER"
+echo "Competition level: \$COMP_LEVEL"
+echo "Run number: \$RUN_NUM"
+echo "Random seed: \$SEED"
+echo "Discussion turns: \$DISCUSSION_TURNS"
+echo "Output dir: \$OUTPUT_DIR"
 echo ""
 
 # Run experiment
-echo "Running: python3 run_strong_models_experiment.py --models $MODELS ..."
+echo "Running: python3 run_strong_models_experiment.py --models \$MODELS ..."
 echo ""
 
 if python3 run_strong_models_experiment.py \
-    --models $MODELS \
+    --models \$MODELS \
     --batch \
     --num-runs 1 \
-    --run-number $RUN_NUM \
-    --competition-level $COMP_LEVEL \
-    --random-seed $SEED \
-    --discussion-turns $DISCUSSION_TURNS \
-    --model-order $MODEL_ORDER \
-    --output-dir "$OUTPUT_DIR" \
-    --job-id $SLURM_ARRAY_TASK_ID; then
+    --run-number \$RUN_NUM \
+    --competition-level \$COMP_LEVEL \
+    --random-seed \$SEED \
+    --discussion-turns \$DISCUSSION_TURNS \
+    --model-order \$MODEL_ORDER \
+    --output-dir "\$OUTPUT_DIR" \
+    --job-id \$SLURM_ARRAY_TASK_ID; then
     echo ""
     echo "============================================================"
-    echo "✅ Experiment completed successfully at: $(date)"
+    echo "✅ Experiment completed successfully at: \$(date)"
     echo "============================================================"
 else
     echo ""
     echo "============================================================"
-    echo "❌ Experiment failed at: $(date)"
+    echo "❌ Experiment failed at: \$(date)"
     echo "============================================================"
     exit 1
 fi
@@ -451,7 +457,7 @@ echo "✅ Created CPU SLURM script: ${CPU_SLURM}"
 
 # Generate SLURM script for SMALL GPU jobs (e.g., Llama 3.1 8B - 1 GPU, 80GB)
 GPU_SMALL_SLURM="${SLURM_DIR}/run_gpu_small.sbatch"
-cat > "${GPU_SMALL_SLURM}" << 'SLURM_GPU_SMALL'
+cat > "${GPU_SMALL_SLURM}" << SLURM_GPU_SMALL
 #!/bin/bash
 # =============================================================================
 # GPU SLURM Script for SMALL Local Models (e.g., Llama 3.1 8B)
@@ -474,57 +480,60 @@ cat > "${GPU_SMALL_SLURM}" << 'SLURM_GPU_SMALL'
 set -e
 
 BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
-cd "${BASE_DIR}"
+cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 
 echo "============================================================"
-echo "SLURM Job ID: $SLURM_JOB_ID, Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Started at: $(date)"
-echo "Node: $SLURM_NODELIST"
+echo "SLURM Job ID: \$SLURM_JOB_ID, Array Task ID: \$SLURM_ARRAY_TASK_ID"
+echo "Started at: \$(date)"
+echo "Node: \$SLURM_NODELIST"
 echo "Cluster: PLI (H100 GPU - 1 GPU, 80GB)"
 echo "============================================================"
 
 module load proxy/default
-source "${BASE_DIR}/.venv/bin/activate"
-echo "Python version: $(python3 --version)"
-echo "CUDA available: $(python3 -c 'import torch; print(torch.cuda.is_available())')"
-echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())')"
+source "\${BASE_DIR}/.venv/bin/activate"
+echo "Python version: \$(python3 --version)"
+echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
+echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
 
-# Note: Uses symlink 'configs' which points to the latest timestamped config directory
-CONFIG_DIR="experiments/results/scaling_experiment/configs"
+# IMPORTANT: Use absolute path to timestamped config directory (not symlink)
+# This ensures queued jobs always read from the correct config directory
+# even if configs are regenerated and the symlink is updated mid-experiment
+CONFIG_DIR="${CONFIG_DIR_ABSOLUTE}"
 # Determine padding width by finding the highest config number
-MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
-if [[ -n "$MAX_CONFIG" ]]; then
-    PADDING_WIDTH=${#MAX_CONFIG}
+MAX_CONFIG=\$(ls "\${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\\([0-9]*\\)\\.json/\\1/' | sort -n | tail -1)
+if [[ -n "\$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=\${#MAX_CONFIG}
 else
     PADDING_WIDTH=3  # Default to 3 digits if no configs found
 fi
 # Use zero-padded config ID to match generated file names
-CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
-CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
-[[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
+CONFIG_ID_PADDED=\$(printf "%0\${PADDING_WIDTH}d" \${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="\${CONFIG_DIR}/config_\${CONFIG_ID_PADDED}.json"
+[[ ! -f "\$CONFIG_FILE" ]] && echo "ERROR: Config not found: \$CONFIG_FILE" && exit 1
 
-WEAK_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
-STRONG_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
-COMP_LEVEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['competition_level'])")
-RUN_NUM=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
-SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_seed'])")
-MODEL_ORDER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['model_order'])")
-DISCUSSION_TURNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['discussion_turns'])")
-OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
+WEAK_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
+STRONG_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+COMP_LEVEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['competition_level'])")
+RUN_NUM=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
+SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['random_seed'])")
+MODEL_ORDER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['model_order'])")
+DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
+OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
 
-[[ "$MODEL_ORDER" == "weak_first" ]] && MODELS="$WEAK_MODEL $STRONG_MODEL" || MODELS="$STRONG_MODEL $WEAK_MODEL"
+[[ "\$MODEL_ORDER" == "weak_first" ]] && MODELS="\$WEAK_MODEL \$STRONG_MODEL" || MODELS="\$STRONG_MODEL \$WEAK_MODEL"
 
-echo "Models: $MODELS | Order: $MODEL_ORDER | Comp: $COMP_LEVEL | Run: $RUN_NUM | Seed: $SEED"
+echo "Models: \$MODELS | Order: \$MODEL_ORDER | Comp: \$COMP_LEVEL | Run: \$RUN_NUM | Seed: \$SEED"
+echo "Config directory: \${CONFIG_DIR}"
 
-if python3 run_strong_models_experiment.py --models $MODELS --batch --num-runs 1 \
-    --run-number $RUN_NUM --competition-level $COMP_LEVEL --random-seed $SEED \
-    --discussion-turns $DISCUSSION_TURNS --model-order $MODEL_ORDER \
-    --output-dir "$OUTPUT_DIR" --job-id $SLURM_ARRAY_TASK_ID; then
-    echo "✅ Completed at: $(date)"
+if python3 run_strong_models_experiment.py --models \$MODELS --batch --num-runs 1 \
+    --run-number \$RUN_NUM --competition-level \$COMP_LEVEL --random-seed \$SEED \
+    --discussion-turns \$DISCUSSION_TURNS --model-order \$MODEL_ORDER \
+    --output-dir "\$OUTPUT_DIR" --job-id \$SLURM_ARRAY_TASK_ID; then
+    echo "✅ Completed at: \$(date)"
 else
-    echo "❌ Failed at: $(date)" && exit 1
+    echo "❌ Failed at: \$(date)" && exit 1
 fi
 SLURM_GPU_SMALL
 
@@ -532,7 +541,7 @@ echo "✅ Created small GPU SLURM script: ${GPU_SMALL_SLURM}"
 
 # Generate SLURM script for LARGE GPU jobs (e.g., Llama 3.3 70B - 4 GPUs, 320GB)
 GPU_LARGE_SLURM="${SLURM_DIR}/run_gpu_large.sbatch"
-cat > "${GPU_LARGE_SLURM}" << 'SLURM_GPU_LARGE'
+cat > "${GPU_LARGE_SLURM}" << SLURM_GPU_LARGE
 #!/bin/bash
 # =============================================================================
 # GPU SLURM Script for LARGE Local Models (e.g., Llama 3.3 70B, Qwen 72B)
@@ -555,57 +564,60 @@ cat > "${GPU_LARGE_SLURM}" << 'SLURM_GPU_LARGE'
 set -e
 
 BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
-cd "${BASE_DIR}"
+cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 
 echo "============================================================"
-echo "SLURM Job ID: $SLURM_JOB_ID, Array Task ID: $SLURM_ARRAY_TASK_ID"
-echo "Started at: $(date)"
-echo "Node: $SLURM_NODELIST"
+echo "SLURM Job ID: \$SLURM_JOB_ID, Array Task ID: \$SLURM_ARRAY_TASK_ID"
+echo "Started at: \$(date)"
+echo "Node: \$SLURM_NODELIST"
 echo "Cluster: PLI (H100 GPUs - 4 GPUs, 320GB total)"
 echo "============================================================"
 
 module load proxy/default
-source "${BASE_DIR}/.venv/bin/activate"
-echo "Python version: $(python3 --version)"
-echo "CUDA available: $(python3 -c 'import torch; print(torch.cuda.is_available())')"
-echo "CUDA devices: $(python3 -c 'import torch; print(torch.cuda.device_count())')"
+source "\${BASE_DIR}/.venv/bin/activate"
+echo "Python version: \$(python3 --version)"
+echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
+echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
 
-# Note: Uses symlink 'configs' which points to the latest timestamped config directory
-CONFIG_DIR="experiments/results/scaling_experiment/configs"
+# IMPORTANT: Use absolute path to timestamped config directory (not symlink)
+# This ensures queued jobs always read from the correct config directory
+# even if configs are regenerated and the symlink is updated mid-experiment
+CONFIG_DIR="${CONFIG_DIR_ABSOLUTE}"
 # Determine padding width by finding the highest config number
-MAX_CONFIG=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\([0-9]*\)\.json/\1/' | sort -n | tail -1)
-if [[ -n "$MAX_CONFIG" ]]; then
-    PADDING_WIDTH=${#MAX_CONFIG}
+MAX_CONFIG=\$(ls "\${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\\([0-9]*\\)\\.json/\\1/' | sort -n | tail -1)
+if [[ -n "\$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=\${#MAX_CONFIG}
 else
     PADDING_WIDTH=3  # Default to 3 digits if no configs found
 fi
 # Use zero-padded config ID to match generated file names
-CONFIG_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${SLURM_ARRAY_TASK_ID})
-CONFIG_FILE="${CONFIG_DIR}/config_${CONFIG_ID_PADDED}.json"
-[[ ! -f "$CONFIG_FILE" ]] && echo "ERROR: Config not found: $CONFIG_FILE" && exit 1
+CONFIG_ID_PADDED=\$(printf "%0\${PADDING_WIDTH}d" \${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="\${CONFIG_DIR}/config_\${CONFIG_ID_PADDED}.json"
+[[ ! -f "\$CONFIG_FILE" ]] && echo "ERROR: Config not found: \$CONFIG_FILE" && exit 1
 
-WEAK_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['weak_model'])")
-STRONG_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
-COMP_LEVEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['competition_level'])")
-RUN_NUM=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
-SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_seed'])")
-MODEL_ORDER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['model_order'])")
-DISCUSSION_TURNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['discussion_turns'])")
-OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
+WEAK_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
+STRONG_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+COMP_LEVEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['competition_level'])")
+RUN_NUM=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
+SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['random_seed'])")
+MODEL_ORDER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['model_order'])")
+DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
+OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
 
-[[ "$MODEL_ORDER" == "weak_first" ]] && MODELS="$WEAK_MODEL $STRONG_MODEL" || MODELS="$STRONG_MODEL $WEAK_MODEL"
+[[ "\$MODEL_ORDER" == "weak_first" ]] && MODELS="\$WEAK_MODEL \$STRONG_MODEL" || MODELS="\$STRONG_MODEL \$WEAK_MODEL"
 
-echo "Models: $MODELS | Order: $MODEL_ORDER | Comp: $COMP_LEVEL | Run: $RUN_NUM | Seed: $SEED"
+echo "Models: \$MODELS | Order: \$MODEL_ORDER | Comp: \$COMP_LEVEL | Run: \$RUN_NUM | Seed: \$SEED"
+echo "Config directory: \${CONFIG_DIR}"
 
-if python3 run_strong_models_experiment.py --models $MODELS --batch --num-runs 1 \
-    --run-number $RUN_NUM --competition-level $COMP_LEVEL --random-seed $SEED \
-    --discussion-turns $DISCUSSION_TURNS --model-order $MODEL_ORDER \
-    --output-dir "$OUTPUT_DIR" --job-id $SLURM_ARRAY_TASK_ID; then
-    echo "✅ Completed at: $(date)"
+if python3 run_strong_models_experiment.py --models \$MODELS --batch --num-runs 1 \
+    --run-number \$RUN_NUM --competition-level \$COMP_LEVEL --random-seed \$SEED \
+    --discussion-turns \$DISCUSSION_TURNS --model-order \$MODEL_ORDER \
+    --output-dir "\$OUTPUT_DIR" --job-id \$SLURM_ARRAY_TASK_ID; then
+    echo "✅ Completed at: \$(date)"
 else
-    echo "❌ Failed at: $(date)" && exit 1
+    echo "❌ Failed at: \$(date)" && exit 1
 fi
 SLURM_GPU_LARGE
 

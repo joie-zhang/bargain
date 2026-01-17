@@ -153,9 +153,50 @@ Each run of `generate_configs_both_orders.sh` creates a timestamped directory:
 - Specific version: `experiments/results/scaling_experiment/configs_20250115_143022/`
 
 **Symlink Management:**
-- **Location:** The symlink is defined in `scripts/generate_configs_both_orders.sh` at lines 175-188
-- **Path:** `experiments/results/scaling_experiment/configs` → points to `configs_YYYYMMDD_HHMMSS/`
+- **Location:** The symlink is defined in `scripts/generate_configs_both_orders.sh` at lines 198-218
+- **Path:** `experiments/results/scaling_experiment/configs` → points to `scaling_experiment_YYYYMMDD_HHMMSS/`
 - **Update:** The symlink is automatically updated every time you run `generate_configs_both_orders.sh`
 - **No manual update needed:** Just run `./scripts/generate_configs_both_orders.sh` and the symlink will be refreshed
 
 The symlink always points to the most recent config directory, so scripts continue to work without modification.
+
+## Workflow Safety: Regenerating Configs During Active Experiments
+
+### The Problem (Fixed)
+
+Previously, if you regenerated configs while jobs were queued or running, there was a risk that:
+1. Queued jobs would read config files from the updated symlink (pointing to new configs)
+2. This could cause jobs to use wrong config files or fail to find their configs
+3. Results might be saved to unexpected directories
+
+### The Solution
+
+**SLURM scripts now use absolute paths to timestamped config directories** instead of the symlink. This ensures:
+
+1. **Queued jobs are safe**: Each SLURM script embeds the absolute path to its timestamped config directory at generation time
+2. **No symlink confusion**: Jobs always read from the correct config directory, even if configs are regenerated
+3. **Results go to correct location**: The `output_dir` in each config file contains the timestamp, so results are always saved to the correct experiment directory
+
+### How It Works
+
+When `generate_configs_both_orders.sh` runs:
+1. Creates a new timestamped directory: `scaling_experiment_YYYYMMDD_HHMMSS/`
+2. Generates config files with `output_dir` containing the timestamp
+3. Generates SLURM scripts with **absolute paths** to the timestamped config directory
+4. Updates the symlink for convenience (used by `submit_all.sh` and manual access)
+
+**Example:**
+- Config generation creates: `scaling_experiment_20250116_052234/`
+- SLURM script embeds: `CONFIG_DIR="/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20250116_052234/configs"`
+- Even if you regenerate configs later, queued jobs from this batch will still use `scaling_experiment_20250116_052234/`
+
+### Safe Workflow
+
+✅ **Safe to do:**
+- Regenerate configs while jobs are running (they use absolute paths)
+- Submit new jobs after regenerating configs (new jobs use new config directory)
+- Run multiple experiment batches simultaneously (each uses its own timestamped directory)
+
+⚠️ **Still be careful:**
+- Don't delete timestamped config directories while jobs are running
+- Check that `submit_all.sh` is using the correct config directory (it uses the symlink, which is fine for submitting new jobs)
