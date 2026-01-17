@@ -512,9 +512,15 @@ class PhaseHandler:
                 if item_indices:
                     item_names = []
                     for idx in item_indices:
-                        if 0 <= idx < len(items):
-                            item_names.append(f"{idx}:{items[idx]['name']}")
-                        else:
+                        # Convert idx to int if it's a string (can happen when parsing JSON)
+                        try:
+                            idx_int = int(idx)
+                            if 0 <= idx_int < len(items):
+                                item_names.append(f"{idx_int}:{items[idx_int]['name']}")
+                            else:
+                                item_names.append(f"{idx}:unknown")
+                        except (ValueError, TypeError):
+                            # If conversion fails, just use the original value
                             item_names.append(f"{idx}:unknown")
                     proposal_display_lines.append(f"    → {agent_id}: {', '.join(item_names)}")
                 else:

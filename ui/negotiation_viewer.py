@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Any
+from dataclasses import dataclass
 import pandas as pd
 
 # Try to import plotly for charts
@@ -76,6 +77,168 @@ RESULTS_DIR = Path(__file__).parent.parent / "experiments" / "results"
 # =============================================================================
 # DATA LOADING FUNCTIONS
 # =============================================================================
+
+@dataclass
+class ScalingExperimentInfo:
+    """Information about a scaling experiment."""
+    timestamp: str  # e.g., "scaling_experiment_20260116_052234"
+    weak_model: str
+    strong_model: str
+    model_order: str  # "weak_first" or "strong_first"
+    competition_level: float
+    run_number: int
+    folder_path: str  # Full path like "scaling_experiment_20260116_052234/weak_vs_strong/order/comp_X"
+
+
+def discover_all_scaling_experiments() -> List[ScalingExperimentInfo]:
+    """
+    Discover all scaling experiments and return structured information.
+    
+    Returns:
+        List of ScalingExperimentInfo objects for all discovered experiments
+    """
+    experiments = []
+    
+    if not RESULTS_DIR.exists():
+        return experiments
+    
+    # Find all scaling_experiment directories
+    for item in sorted(RESULTS_DIR.iterdir()):
+        if not item.is_dir() or item.name.startswith('.'):
+            continue
+        
+        if not item.name.startswith("scaling_experiment"):
+            continue
+        
+        # Skip symlinks to avoid duplicates
+        if item.is_symlink():
+            continue
+        
+        timestamp = item.name
+        
+        # Traverse the nested structure
+        for model_pair_dir in item.iterdir():
+            if not model_pair_dir.is_dir() or model_pair_dir.name == "configs":
+                continue
+            
+            # Parse model pair from directory name (e.g., "gpt-5-nano_vs_lama-3.1-8b-instruct")
+            if "_vs_" not in model_pair_dir.name:
+                continue
+            
+            parts = model_pair_dir.name.split("_vs_", 1)
+            if len(parts) != 2:
+                continue
+            
+            weak_model = parts[0]
+            strong_model = parts[1]
+            
+            for order_dir in model_pair_dir.iterdir():
+                if not order_dir.is_dir():
+                    continue
+                if order_dir.name not in ["weak_first", "strong_first"]:
+                    continue
+                
+                model_order = order_dir.name
+                
+                for comp_dir in order_dir.iterdir():
+                    if not comp_dir.is_dir():
+                        continue
+                    if not comp_dir.name.startswith("comp_"):
+                        continue
+                    
+                    try:
+                        competition_level = float(comp_dir.name.replace("comp_", ""))
+                    except ValueError:
+                        continue
+                    
+                    # Check for runs
+                    for run_dir in comp_dir.iterdir():
+                        if not run_dir.is_dir():
+                            continue
+                        if not run_dir.name.startswith("run_"):
+                            continue
+                        
+                        try:
+                            run_number = int(run_dir.name.split("_")[1])
+                        except (ValueError, IndexError):
+                            continue
+                        
+                        # Check if run has data
+                        has_data = any(run_dir.glob("*.json"))
+                        if has_data:
+                            folder_path = f"{timestamp}/{model_pair_dir.name}/{order_dir.name}/{comp_dir.name}"
+                            experiments.append(ScalingExperimentInfo(
+                                timestamp=timestamp,
+                                weak_model=weak_model,
+                                strong_model=strong_model,
+                                model_order=model_order,
+                                competition_level=competition_level,
+                                run_number=run_number,
+                                folder_path=folder_path
+                            ))
+    
+    return experiments
+
+
+def get_unique_values(experiments: List[ScalingExperimentInfo]) -> Dict[str, List]:
+    """Extract unique values for filtering dimensions."""
+    weak_models = sorted(set(e.weak_model for e in experiments))
+    strong_models = sorted(set(e.strong_model for e in experiments))
+    model_orders = sorted(set(e.model_order for e in experiments))
+    competition_levels = sorted(set(e.competition_level for e in experiments))
+    
+    return {
+        "weak_models": weak_models,
+        "strong_models": strong_models,
+        "model_orders": model_orders,
+        "competition_levels": competition_levels,
+    }
+
+
+def filter_experiments(
+    experiments: List[ScalingExperimentInfo],
+    weak_model: Optional[str] = None,
+    strong_model: Optional[str] = None,
+    model_order: Optional[str] = None,
+    competition_level: Optional[float] = None,
+) -> List[ScalingExperimentInfo]:
+    """Filter experiments based on selected criteria."""
+    filtered = experiments
+    
+    if weak_model:
+        filtered = [e for e in filtered if e.weak_model == weak_model]
+    if strong_model:
+        filtered = [e for e in filtered if e.strong_model == strong_model]
+    if model_order:
+        filtered = [e for e in filtered if e.model_order == model_order]
+    if competition_level is not None:
+        filtered = [e for e in filtered if e.competition_level == competition_level]
+    
+    return filtered
+
+
+def get_available_timestamps_and_runs(
+    experiments: List[ScalingExperimentInfo]
+) -> Dict[str, List[int]]:
+    """
+    Get available timestamps and their runs from filtered experiments.
+    
+    Returns:
+        Dict mapping timestamp to list of run numbers
+    """
+    timestamp_runs = {}
+    for exp in experiments:
+        if exp.timestamp not in timestamp_runs:
+            timestamp_runs[exp.timestamp] = []
+        if exp.run_number not in timestamp_runs[exp.timestamp]:
+            timestamp_runs[exp.timestamp].append(exp.run_number)
+    
+    # Sort runs for each timestamp
+    for timestamp in timestamp_runs:
+        timestamp_runs[timestamp] = sorted(timestamp_runs[timestamp])
+    
+    return timestamp_runs
+
 
 def load_experiment_folders() -> List[str]:
     """
@@ -711,6 +874,130 @@ def render_experiment_overview(summary: Dict, results: Dict):
             st.metric("Batch Consensus Rate", f"{consensus_rate:.0f}%")
 
 
+def _render_experiment_content(
+    interactions: List[Dict],
+    results: Dict,
+    summary: Dict,
+    preferences: Dict[str, List[float]],
+    show_prompts: bool,
+    show_private: bool,
+    comparison_mode: bool,
+    experiment_id: str = "default"
+):
+    """Render the main experiment content (tabs, etc.)
+    
+    Args:
+        experiment_id: Unique identifier for this experiment (used for widget keys)
+    """
+    # Tabs for different views
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📜 Timeline View",
+        "👥 Agent Comparison",
+        "📊 Analytics",
+        "🔍 Raw Data"
+    ])
+
+    with tab1:
+        st.subheader("Round-by-Round Timeline")
+
+        # Group by round
+        rounds = group_by_round(interactions)
+
+        # Round selector
+        if rounds:
+            selected_rounds = st.multiselect(
+                "Filter Rounds",
+                options=list(rounds.keys()),
+                default=list(rounds.keys()),
+                key=f"rounds_filter_{experiment_id}"
+            )
+
+            for round_num in selected_rounds:
+                entries = rounds[round_num]
+
+                with st.expander(f"🔄 Round {round_num}", expanded=(round_num == max(selected_rounds) if selected_rounds else True)):
+                    render_round_summary(round_num, entries, preferences)
+                    st.divider()
+
+                    for entry in entries:
+                        phase = parse_phase_from_entry(entry)
+
+                        # Skip private thinking if disabled
+                        if phase == "private_thinking" and not show_private:
+                            continue
+
+                        render_interaction_card(entry, show_prompt=show_prompts)
+
+    with tab2:
+        st.subheader("Side-by-Side Agent Comparison")
+
+        rounds = group_by_round(interactions)
+        if rounds:
+            compare_round = st.selectbox(
+                "Select Round to Compare",
+                options=list(rounds.keys()),
+                index=len(rounds) - 1 if rounds else 0,
+                key=f"compare_round_{experiment_id}"
+            )
+
+            render_agent_comparison(interactions, compare_round)
+
+    with tab3:
+        st.subheader("Experiment Analytics")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 📈 Utility Tracking")
+            render_utility_chart(interactions, preferences)
+
+        with col2:
+            st.markdown("### 🗳️ Voting Patterns")
+            render_voting_heatmap(interactions)
+
+        # Strategic behavior analysis
+        if results and "strategic_behaviors" in results:
+            st.markdown("### 🧠 Strategic Behaviors")
+            behaviors = results["strategic_behaviors"]
+
+            cols = st.columns(4)
+            metrics = [
+                ("Manipulation", behaviors.get("manipulation_attempts", 0)),
+                ("Anger", behaviors.get("anger_expressions", 0)),
+                ("Gaslighting", behaviors.get("gaslighting_attempts", 0)),
+                ("Cooperation", behaviors.get("cooperation_signals", 0)),
+            ]
+
+            for col, (name, value) in zip(cols, metrics):
+                with col:
+                    st.metric(name, value)
+
+    with tab4:
+        st.subheader("Raw Data Explorer")
+
+        data_type = st.selectbox(
+            "Select Data Type",
+            ["Interactions", "Results", "Summary", "Preferences"],
+            key=f"data_type_{experiment_id}"
+        )
+
+        if data_type == "Interactions":
+            st.json(interactions[:10] if len(interactions) > 10 else interactions)
+            st.caption(f"Showing first 10 of {len(interactions)} interactions")
+        elif data_type == "Results":
+            if results:
+                st.json(results)
+            else:
+                st.info("No results data available")
+        elif data_type == "Summary":
+            if summary:
+                st.json(summary)
+            else:
+                st.info("No summary data available")
+        elif data_type == "Preferences":
+            st.json(preferences)
+
+
 # =============================================================================
 # LIVE STREAMING COMPONENT
 # =============================================================================
@@ -819,47 +1106,128 @@ def main():
         )
 
         if mode == "📂 Post-hoc Analysis":
-            # Folder selection
-            folders = load_experiment_folders()
-
-            if not folders:
-                st.warning(f"No experiments found in {RESULTS_DIR}")
+            # Discover all scaling experiments
+            with st.spinner("Loading experiments..."):
+                all_experiments = discover_all_scaling_experiments()
+            
+            if not all_experiments:
+                st.warning(f"No scaling experiments found in {RESULTS_DIR}")
                 st.info("Run some experiments first!")
                 return
-
-            selected_folder = st.selectbox(
-                "Experiment",
-                folders,
-                format_func=get_folder_display_name
+            
+            st.caption("📈 Scaling Experiment Filter")
+            
+            # Get unique values for dropdowns
+            unique_values = get_unique_values(all_experiments)
+            
+            # Filter dropdowns
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_weak_model = st.selectbox(
+                    "Weak Model",
+                    options=["All"] + unique_values["weak_models"],
+                    index=0,
+                    key="selected_weak_model"
+                )
+                selected_model_order = st.selectbox(
+                    "Model Order",
+                    options=["All"] + unique_values["model_orders"],
+                    format_func=lambda x: "W→S" if x == "weak_first" else "S→W" if x == "strong_first" else x,
+                    index=0,
+                    key="selected_model_order"
+                )
+            
+            with col2:
+                selected_strong_model = st.selectbox(
+                    "Strong Model",
+                    options=["All"] + unique_values["strong_models"],
+                    index=0,
+                    key="selected_strong_model"
+                )
+                selected_competition_level = st.selectbox(
+                    "Competition Level (γ)",
+                    options=["All"] + [str(c) for c in unique_values["competition_levels"]],
+                    format_func=lambda x: f"γ={x}" if x != "All" else x,
+                    index=0,
+                    key="selected_competition_level"
+                )
+            
+            # Apply filters
+            filtered_experiments = all_experiments
+            if selected_weak_model != "All":
+                filtered_experiments = filter_experiments(
+                    filtered_experiments, weak_model=selected_weak_model
+                )
+            if selected_strong_model != "All":
+                filtered_experiments = filter_experiments(
+                    filtered_experiments, strong_model=selected_strong_model
+                )
+            if selected_model_order != "All":
+                filtered_experiments = filter_experiments(
+                    filtered_experiments, model_order=selected_model_order
+                )
+            if selected_competition_level != "All":
+                comp_level = float(selected_competition_level)
+                filtered_experiments = filter_experiments(
+                    filtered_experiments, competition_level=comp_level
+                )
+            
+            if not filtered_experiments:
+                st.warning("No experiments match the selected filters.")
+                return
+            
+            # Get available timestamps and runs
+            timestamp_runs = get_available_timestamps_and_runs(filtered_experiments)
+            available_timestamps = sorted(timestamp_runs.keys(), reverse=True)  # Most recent first
+            
+            # Timestamp selection (multi-select)
+            st.divider()
+            selected_timestamps = st.multiselect(
+                "Experiment Timestamps",
+                options=available_timestamps,
+                default=available_timestamps[:1] if available_timestamps else [],  # Default to most recent
+                help="Select one or more experiment timestamps to view",
+                key="selected_timestamps"
             )
-
-            # Show folder type indicator
-            if is_scaling_experiment(selected_folder):
-                st.caption("📈 Scaling Experiment")
-
-            # Run selection
-            runs = get_available_runs(selected_folder)
-            if runs:
-                selected_run = st.selectbox("Run", runs)
-            else:
-                selected_run = 1
-
+            
+            if not selected_timestamps:
+                st.info("Please select at least one timestamp.")
+                st.stop()
+            
+            # Run selection (multi-select)
+            # Collect all unique runs across selected timestamps
+            all_runs = set()
+            for timestamp in selected_timestamps:
+                all_runs.update(timestamp_runs[timestamp])
+            all_runs = sorted(all_runs)
+            
+            selected_runs = st.multiselect(
+                "Run Numbers",
+                options=all_runs,
+                default=all_runs[:1] if all_runs else [],  # Default to first run
+                help="Select one or more run numbers to view",
+                key="selected_runs"
+            )
+            
+            if not selected_runs:
+                st.info("Please select at least one run.")
+                st.stop()
+            
             st.divider()
 
             # View options
             st.header("👁️ View Options")
-            show_prompts = st.checkbox("Show Prompts", value=False)
-            show_private = st.checkbox("Show Private Thinking", value=True)
-            comparison_mode = st.checkbox("Agent Comparison Mode", value=False)
+            show_prompts = st.checkbox("Show Prompts", value=False, key="show_prompts")
+            show_private = st.checkbox("Show Private Thinking", value=True, key="show_private")
+            comparison_mode = st.checkbox("Agent Comparison Mode", value=False, key="comparison_mode")
 
             st.divider()
 
-            # Quick stats
+            # Quick stats (aggregate across selected experiments)
             st.header("📊 Quick Stats")
-            summary = load_summary(selected_folder)
-            if summary:
-                st.metric("Total Runs", summary.get("num_runs", "N/A"))
-                st.metric("Consensus Rate", f"{summary.get('consensus_rate', 0) * 100:.0f}%")
+            total_runs_selected = len(selected_timestamps) * len(selected_runs)
+            st.metric("Selected Runs", total_runs_selected)
+            st.metric("Selected Timestamps", len(selected_timestamps))
 
     # Main content area
     if mode == "🔴 Live Streaming":
@@ -871,130 +1239,106 @@ def main():
             st.error("Comparison view module not available. Check ui/comparison_view.py exists.")
     else:
         # Post-hoc analysis mode
-        if 'selected_folder' not in dir() or not selected_folder:
-            st.info("Select an experiment from the sidebar")
-            return
-
-        # Load data
-        interactions = load_all_interactions(selected_folder, selected_run)
-        results = load_experiment_results(selected_folder, selected_run)
-        summary = load_summary(selected_folder, selected_run)
-
-        if not interactions:
-            st.error(f"No interaction data found for {selected_folder}")
-            return
-
-        # Extract preferences
-        preferences = extract_preferences(interactions)
-
-        # Overview section
-        st.header("📈 Experiment Overview")
-        render_experiment_overview(summary, results)
-
-        # Tabs for different views
-        tab1, tab2, tab3, tab4 = st.tabs([
-            "📜 Timeline View",
-            "👥 Agent Comparison",
-            "📊 Analytics",
-            "🔍 Raw Data"
-        ])
-
-        with tab1:
-            st.subheader("Round-by-Round Timeline")
-
-            # Group by round
-            rounds = group_by_round(interactions)
-
-            # Round selector
-            if rounds:
-                selected_rounds = st.multiselect(
-                    "Filter Rounds",
-                    options=list(rounds.keys()),
-                    default=list(rounds.keys())
-                )
-
-                for round_num in selected_rounds:
-                    entries = rounds[round_num]
-
-                    with st.expander(f"🔄 Round {round_num}", expanded=(round_num == max(selected_rounds) if selected_rounds else True)):
-                        render_round_summary(round_num, entries, preferences)
-                        st.divider()
-
-                        for entry in entries:
-                            phase = parse_phase_from_entry(entry)
-
-                            # Skip private thinking if disabled
-                            if phase == "private_thinking" and not show_private:
-                                continue
-
-                            render_interaction_card(entry, show_prompt=show_prompts)
-
-        with tab2:
-            st.subheader("Side-by-Side Agent Comparison")
-
-            rounds = group_by_round(interactions)
-            if rounds:
-                compare_round = st.selectbox(
-                    "Select Round to Compare",
-                    options=list(rounds.keys()),
-                    index=len(rounds) - 1 if rounds else 0
-                )
-
-                render_agent_comparison(interactions, compare_round)
-
-        with tab3:
-            st.subheader("Experiment Analytics")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.markdown("### 📈 Utility Tracking")
-                render_utility_chart(interactions, preferences)
-
-            with col2:
-                st.markdown("### 🗳️ Voting Patterns")
-                render_voting_heatmap(interactions)
-
-            # Strategic behavior analysis
-            if results and "strategic_behaviors" in results:
-                st.markdown("### 🧠 Strategic Behaviors")
-                behaviors = results["strategic_behaviors"]
-
-                cols = st.columns(4)
-                metrics = [
-                    ("Manipulation", behaviors.get("manipulation_attempts", 0)),
-                    ("Anger", behaviors.get("anger_expressions", 0)),
-                    ("Gaslighting", behaviors.get("gaslighting_attempts", 0)),
-                    ("Cooperation", behaviors.get("cooperation_signals", 0)),
-                ]
-
-                for col, (name, value) in zip(cols, metrics):
-                    with col:
-                        st.metric(name, value)
-
-        with tab4:
-            st.subheader("Raw Data Explorer")
-
-            data_type = st.selectbox(
-                "Select Data Type",
-                ["Interactions", "Results", "Summary", "Preferences"]
-            )
-
-            if data_type == "Interactions":
-                st.json(interactions[:10] if len(interactions) > 10 else interactions)
-                st.caption(f"Showing first 10 of {len(interactions)} interactions")
-            elif data_type == "Results":
-                if results:
-                    st.json(results)
-                else:
-                    st.info("No results data available")
-            elif data_type == "Summary":
-                if summary:
-                    st.json(summary)
-                else:
-                    st.info("No summary data available")
-            elif data_type == "Preferences":
-                st.json(preferences)
+        # Check if we have selections from sidebar
+        selected_timestamps = st.session_state.get('selected_timestamps', [])
+        selected_runs = st.session_state.get('selected_runs', [])
+        
+        if not selected_timestamps or not selected_runs:
+            st.info("Select experiment filters from the sidebar")
+            st.stop()
+        
+        # Get filtered experiments
+        all_experiments = discover_all_scaling_experiments()
+        
+        # Reconstruct filters from session state
+        selected_weak_model = st.session_state.get('selected_weak_model', 'All')
+        selected_strong_model = st.session_state.get('selected_strong_model', 'All')
+        selected_model_order = st.session_state.get('selected_model_order', 'All')
+        selected_competition_level = st.session_state.get('selected_competition_level', 'All')
+        
+        filtered_experiments = all_experiments
+        if selected_weak_model != "All":
+            filtered_experiments = filter_experiments(filtered_experiments, weak_model=selected_weak_model)
+        if selected_strong_model != "All":
+            filtered_experiments = filter_experiments(filtered_experiments, strong_model=selected_strong_model)
+        if selected_model_order != "All":
+            filtered_experiments = filter_experiments(filtered_experiments, model_order=selected_model_order)
+        if selected_competition_level != "All":
+            comp_level = float(selected_competition_level)
+            filtered_experiments = filter_experiments(filtered_experiments, competition_level=comp_level)
+        
+        # Filter to selected timestamps and runs
+        selected_experiments = [
+            e for e in filtered_experiments
+            if e.timestamp in selected_timestamps and e.run_number in selected_runs
+        ]
+        
+        if not selected_experiments:
+            st.warning("No experiments match the selected criteria.")
+            st.stop()
+        
+        # Get view options from sidebar
+        show_prompts = st.session_state.get('show_prompts', False)
+        show_private = st.session_state.get('show_private', True)
+        comparison_mode = st.session_state.get('comparison_mode', False)
+        
+        # If multiple experiments selected, show tabs for each
+        if len(selected_experiments) > 1:
+            # Multiple experiments - show tabs
+            tab_labels = [f"{e.timestamp} | Run {e.run_number}" for e in selected_experiments]
+            tabs = st.tabs(tab_labels)
+            
+            for tab, exp in zip(tabs, selected_experiments):
+                with tab:
+                    folder_name = exp.folder_path
+                    run_num = exp.run_number
+                    
+                    # Load data
+                    interactions = load_all_interactions(folder_name, run_num)
+                    results = load_experiment_results(folder_name, run_num)
+                    summary = load_summary(folder_name, run_num)
+                    
+                    if not interactions:
+                        st.error(f"No interaction data found for {folder_name} run {run_num}")
+                        continue
+                    
+                    # Extract preferences
+                    preferences = extract_preferences(interactions)
+                    
+                    # Overview section
+                    st.header("📈 Experiment Overview")
+                    st.caption(f"Timestamp: {exp.timestamp} | Run: {run_num}")
+                    render_experiment_overview(summary, results)
+                    
+                    # Render the rest of the UI for this experiment
+                    exp_id = f"{exp.timestamp}_{exp.run_number}"
+                    _render_experiment_content(interactions, results, summary, preferences, show_prompts, show_private, comparison_mode, experiment_id=exp_id)
+        else:
+            # Single experiment - show normally
+            exp = selected_experiments[0]
+            folder_name = exp.folder_path
+            run_num = exp.run_number
+            
+            # Load data
+            interactions = load_all_interactions(folder_name, run_num)
+            results = load_experiment_results(folder_name, run_num)
+            summary = load_summary(folder_name, run_num)
+            
+            if not interactions:
+                st.error(f"No interaction data found for {folder_name} run {run_num}")
+                st.stop()
+            
+            # Extract preferences
+            preferences = extract_preferences(interactions)
+            
+            # Overview section
+            st.header("📈 Experiment Overview")
+            st.caption(f"Timestamp: {exp.timestamp} | Run: {run_num}")
+            render_experiment_overview(summary, results)
+            
+            # Render the rest of the UI
+            exp_id = f"{exp.timestamp}_{exp.run_number}"
+            _render_experiment_content(interactions, results, summary, preferences, show_prompts, show_private, comparison_mode, experiment_id=exp_id)
 
 
 if __name__ == "__main__":
