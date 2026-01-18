@@ -13,6 +13,9 @@ from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
 import sys
+import shutil
+from pathlib import Path
+
 
 from .llm_agents import BaseLLMAgent, LLMConfig, ModelType
 
@@ -102,6 +105,50 @@ class OpenRouterAgent(BaseLLMAgent):
                 json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
             )
     
+
+    async def send_request(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple[str | None, str | None]:
+        """
+        Write request file, poll for response, return (result, error).
+        Raises TimeoutError if no response within 10 minutes.
+        """
+        POLL_DIR = Path("/home/jz4391/openrouter_proxy")
+        PROCESSED_DIR = POLL_DIR / "processed"
+        POLL_INTERVAL = 0.5
+        CLIENT_TIMEOUT = 6000  # 10 minutes
+
+        timestamp = f"{time.time():.6f}".replace('.', '-')
+        request_path = POLL_DIR / f"request_{timestamp}.json"
+        response_path = POLL_DIR / f"response_{timestamp}.json"
+
+        request_data = {
+            "url": url,
+            "headers": headers,
+            "payload": payload,
+            "timeout": timeout,
+        }
+        with open(request_path, 'w') as f:
+            json.dump(request_data, f)
+        print(f"[client] Wrote {request_path.name}")
+
+        start = time.time()
+        while not response_path.exists():
+            if time.time() - start > CLIENT_TIMEOUT:
+                # Clean up orphaned request if still there
+                if request_path.exists():
+                    request_path.unlink()
+                raise TimeoutError(f"No response after {CLIENT_TIMEOUT}s for {timestamp}")
+            await asyncio.sleep(POLL_INTERVAL)
+
+        with open(response_path, 'r') as f:
+            response_data = json.load(f)
+
+        result, error = response_data["result"], response_data["error"]
+        print(f"[client] Got response for {timestamp}: {'error' if error else 'success'}")
+
+        shutil.move(response_path, PROCESSED_DIR / response_path.name)
+
+        return result, error
+    
     async def _make_request(self, messages: List[Dict[str, str]]) -> str:
         """Make a request to OpenRouter API."""
         await self._ensure_session()
@@ -129,32 +176,37 @@ class OpenRouterAgent(BaseLLMAgent):
         
         for attempt in range(self.openrouter_config.max_retries):
             try:
-                async with self.session.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=self.openrouter_config.timeout)
-                ) as response:
-                    if response.status == 200:
-                        # Ensure proper UTF-8 decoding
-                        data = await response.json(encoding='utf-8')
-                        content = data["choices"][0]["message"]["content"]
-                        # Ensure content is properly encoded
-                        if isinstance(content, bytes):
-                            content = content.decode('utf-8')
-                        return content
-                    else:
-                        error_text = await response.text()
-                        self.logger.error(f"OpenRouter API error: {response.status} - {error_text}")
+                
+                result, error = await self.send_request(url, headers, payload, self.openrouter_config.timeout)
+                if error:
+                    raise Exception(error)
+                return result
+                # async with self.session.post(
+                #     url,
+                #     headers=headers,
+                #     json=payload,
+                #     timeout=aiohttp.ClientTimeout(total=self.openrouter_config.timeout)
+                # ) as response:
+                #     if response.status == 200:
+                #         # Ensure proper UTF-8 decoding
+                #         data = await response.json(encoding='utf-8')
+                #         content = data["choices"][0]["message"]["content"]
+                #         # Ensure content is properly encoded
+                #         if isinstance(content, bytes):
+                #             content = content.decode('utf-8')
+                #         return content
+                #     else:
+                #         error_text = await response.text()
+                #         self.logger.error(f"OpenRouter API error: {response.status} - {error_text}")
                         
-                        if response.status == 429:  # Rate limit
-                            await asyncio.sleep(self.openrouter_config.retry_delay * (attempt + 1))
-                            continue
-                        elif response.status >= 500:  # Server error
-                            await asyncio.sleep(self.openrouter_config.retry_delay)
-                            continue
-                        else:
-                            raise Exception(f"OpenRouter API error: {response.status} - {error_text}")
+                #         if response.status == 429:  # Rate limit
+                #             await asyncio.sleep(self.openrouter_config.retry_delay * (attempt + 1))
+                #             continue
+                #         elif response.status >= 500:  # Server error
+                #             await asyncio.sleep(self.openrouter_config.retry_delay)
+                #             continue
+                #         else:
+                #             raise Exception(f"OpenRouter API error: {response.status} - {error_text}")
                             
             except asyncio.TimeoutError:
                 self.logger.warning(f"Request timeout (attempt {attempt + 1}/{self.openrouter_config.max_retries})")
