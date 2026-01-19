@@ -8,12 +8,12 @@ BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${BASE_DIR}"
 
 # Config directory for this specific experiment batch
-CONFIG_DIR="experiments/results/scaling_experiment_20260116_052234/configs"
+CONFIG_DIR="experiments/results/scaling_experiment/configs"
 SBATCH_SCRIPT="${CONFIG_DIR}/slurm/run_api_experiments.sbatch"
 
 # Experiments to re-run
 # EXPERIMENT_IDS=(23 24 25 26 27 28 29)
-EXPERIMENT_IDS=(97 114)
+EXPERIMENT_IDS=(0)
 # EXPERIMENT_IDS=(18)
 
 echo "============================================================"
@@ -24,7 +24,7 @@ echo ""
 
 # Verify config files exist
 for ID in "${EXPERIMENT_IDS[@]}"; do
-    CONFIG_FILE="${CONFIG_DIR}/config_$(printf "%03d" ${ID}).json"
+    CONFIG_FILE="${CONFIG_DIR}/config_$(printf "%02d" ${ID}).json"
     if [[ ! -f "$CONFIG_FILE" ]]; then
         echo "❌ ERROR: Config file not found: $CONFIG_FILE"
         exit 1

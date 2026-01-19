@@ -47,7 +47,7 @@ class OpenRouterConfig:
     base_url: str = "https://openrouter.ai/api/v1"
     site_url: Optional[str] = "https://github.com/negotiation-research"
     site_name: Optional[str] = "Negotiation Research"
-    timeout: float = 30.0
+    timeout: float = 300.0
     max_retries: int = 3
     retry_delay: float = 1.0
 

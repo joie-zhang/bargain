@@ -30,6 +30,10 @@ async def prompt_openrouter(url, headers, payload, timeout) -> str:
             timeout=aiohttp.ClientTimeout(total=timeout)
         )
         data = await response.json(encoding='utf-8')
+        print("\n")
+        print(f"url={url}, headers={headers}, payload={payload}, timeout={timeout}")
+        print(f"{data}")
+        print("\n")
         return data["choices"][0]["message"]["content"]
 
 async def process_request(request_json_fpath) -> str:
