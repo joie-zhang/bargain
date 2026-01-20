@@ -1288,30 +1288,31 @@ def main():
             tab_labels = [f"{e.timestamp} | Run {e.run_number}" for e in selected_experiments]
             tabs = st.tabs(tab_labels)
             
-            for tab, exp in zip(tabs, selected_experiments):
+            for idx, (tab, exp) in enumerate(zip(tabs, selected_experiments)):
                 with tab:
                     folder_name = exp.folder_path
                     run_num = exp.run_number
-                    
+
                     # Load data
                     interactions = load_all_interactions(folder_name, run_num)
                     results = load_experiment_results(folder_name, run_num)
                     summary = load_summary(folder_name, run_num)
-                    
+
                     if not interactions:
                         st.error(f"No interaction data found for {folder_name} run {run_num}")
                         continue
-                    
+
                     # Extract preferences
                     preferences = extract_preferences(interactions)
-                    
+
                     # Overview section
                     st.header("📈 Experiment Overview")
                     st.caption(f"Timestamp: {exp.timestamp} | Run: {run_num}")
                     render_experiment_overview(summary, results)
-                    
+
                     # Render the rest of the UI for this experiment
-                    exp_id = f"{exp.timestamp}_{exp.run_number}"
+                    # Include idx to ensure unique keys even if same experiment appears multiple times
+                    exp_id = f"{exp.timestamp}_{exp.run_number}_{idx}"
                     _render_experiment_content(interactions, results, summary, preferences, show_prompts, show_private, comparison_mode, experiment_id=exp_id)
         else:
             # Single experiment - show normally
