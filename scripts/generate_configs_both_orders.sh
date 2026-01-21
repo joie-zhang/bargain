@@ -74,35 +74,60 @@ WEAK_MODELS=(
 )
 
 # Strong models - newer/more capable models that may exploit weak models
-# From Multi-Agent Strategic Games Evaluation Models (11 models total)
+# From Hugging Face Chatbot Arena Leaderboard (as of January 16, 2026)
 STRONG_MODELS=(
-    # STRONG TIER - Elo ≥ 1415 (6 models)
-    "gemini-3-pro"  # Strong tier, Elo: 1492, Closed-source, Reasoning
-    "gpt-5.2-high"  # Strong tier, Elo: 1465, Closed-source, Reasoning
-    "claude-opus-4-5"  # Strong tier, Elo: 1462, Closed-source, Non-reasoning
-    # "kimi-k2-thinking"  # Strong tier, Elo: 1438, Open-source, Reasoning
-    # "deepseek-r1-0528"  # Strong tier, Elo: 1426, Open-source, Reasoning
-    # "qwen3-235b-a22b-instruct-2507"  # Strong tier, Elo: 1418, Open-source, Non-reasoning
+    # STRONG TIER - Elo ≥ 1415 (12 models)
+    "gemini-3-pro"  # Rank 1, Elo: 1490, Closed-source
+    "grok-4-1-thinking"  # Rank 2, Elo: 1477, Closed-source, Reasoning
+    "gemini-3-flash"  # Rank 3, Elo: 1472, Closed-source
+    "claude-opus-4-5-thinking-32k"  # Rank 4, Elo: 1470, Closed-source, Reasoning
+    "claude-opus-4-5"  # Rank 5, Elo: 1467, Closed-source, Non-reasoning
+    "claude-sonnet-4-5"  # Rank 6, Elo: 1450, Closed-source, Non-reasoning
+    "gpt-4.5-preview"  # Rank 7, Elo: 1444, Closed-source
+    "glm-4.7"  # Rank 8, Elo: 1441, Open-source
+    "gpt-5.2-high"  # Rank 9, Elo: 1436, Closed-source, Reasoning
+    "qwen3-max"  # Rank 10, Elo: 1434, Open-source
+    "deepseek-r1-0528"  # Rank 11, Elo: 1418, Open-source, Reasoning
+    "grok-4"  # Rank 12, Elo: 1409, Closed-source
     
-    # MEDIUM TIER - 1290 ≤ Elo < 1415 (3 models)
-    "claude-4-5-haiku"  # Medium tier, Elo: 1378, Closed-source, Non-reasoning
-    "o4-mini-2025-04-16"  # Medium tier, Elo: 1362, Closed-source, Reasoning
-    "gpt-oss-20b"  # Medium tier, Elo: 1315, Open-source, Non-reasoning
-
-    # WEAK TIER - Elo < 1290 (2 models)
-    "llama-3.3-70b-instruct"  # Weak tier, Elo: 1276, Open-source, Non-reasoning
-    "llama-3.1-8b-instruct"  # Weak tier, Elo: 1193, Open-source, Non-reasoning
+    # MEDIUM TIER - 1290 ≤ Elo < 1415 (15 models)
+    "claude-haiku-4-5"  # Rank 13, Elo: 1403, Closed-source, Non-reasoning
+    "deepseek-r1"  # Rank 14, Elo: 1397, Open-source, Reasoning
+    "claude-sonnet-4"  # Rank 15, Elo: 1390, Closed-source, Non-reasoning
+    "claude-3.5-sonnet"  # Rank 16, Elo: 1373, Closed-source, Non-reasoning
+    "gemma-3-27b-it"  # Rank 17, Elo: 1365, Open-source
+    "o3-mini-high"  # Rank 18, Elo: 1364, Closed-source, Reasoning
+    "deepseek-v3"  # Rank 19, Elo: 1358, Open-source
+    "gpt-4o"  # Rank 20, Elo: 1346, Closed-source, Non-reasoning
+    "QwQ-32B"  # Rank 21, Elo: 1336, Open-source
+    "llama-3.3-70b-instruct"  # Rank 22, Elo: 1320, Open-source, Non-reasoning
+    "Qwen2.5-72B-Instruct"  # Rank 23, Elo: 1303, Open-source, Non-reasoning
+    "gemma-2-27b-it"  # Rank 24, Elo: 1288, Open-source
+    "Meta-Llama-3-70B-Instruct"  # Rank 25, Elo: 1277, Open-source, Non-reasoning
+    "claude-3-haiku"  # Rank 26, Elo: 1262, Closed-source, Non-reasoning
+    "phi-4"  # Rank 27, Elo: 1256, Open-source
+    
+    # WEAK TIER - Elo < 1290 (9 models)
+    "amazon-nova-micro"  # Rank 28, Elo: 1241, Closed-source
+    "mixtral-8x22b-instruct-v0.1"  # Rank 29, Elo: 1231, Open-source
+    "gpt-3.5-turbo-0125"  # Rank 30, Elo: 1225, Closed-source, Non-reasoning
+    "llama-3.1-8b-instruct"  # Rank 31, Elo: 1212, Open-source, Non-reasoning
+    "mixtral-8x7b-instruct-v0.1"  # Rank 32, Elo: 1198, Open-source
+    "Llama-3.2-3B-Instruct"  # Rank 33, Elo: 1167, Open-source, Non-reasoning
+    "Mistral-7B-Instruct-v0.2"  # Rank 34, Elo: 1151, Open-source
+    "Phi-3-mini-128k-instruct"  # Rank 35, Elo: 1130, Open-source
+    "Llama-3.2-1B-Instruct"  # Rank 36, Elo: 1112, Open-source, Non-reasoning
 )
 
 # Competition levels
-COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
-# COMPETITION_LEVELS=(0.0)
+# COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
+COMPETITION_LEVELS=(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
 
 # Base parameters
 NUM_ITEMS=5
 MAX_ROUNDS=10
-NUM_RUNS=6  # Number of runs per configuration
-# NUM_RUNS=1  # Number of runs per configuration
+# NUM_RUNS=6  # Number of runs per configuration
+NUM_RUNS=2  # Number of runs per configuration
 DISCUSSION_TURNS=3  # Number of discussion exchanges per round
 
 # Seeds for each scenario (used for both weak_first and strong_first orderings)
@@ -302,10 +327,26 @@ echo ""
 echo "Generating SLURM scripts..."
 
 # Models that require GPUs (local inference)
-# Llama 3.1 8B: 1 GPU (80GB)
-# Llama 3.3 70B: 4 GPUs (320GB)
-# GPT-OSS 20B: 1 GPU (80GB)
-LOCAL_MODELS=("llama-3.3-70b-instruct" "llama-3.1-8b-instruct" "gpt-oss-20b")
+# Large models (70B+): 4 GPUs (320GB)
+#   - llama-3.3-70b-instruct, Qwen2.5-72B-Instruct, Meta-Llama-3-70B-Instruct
+# Small models (<70B): 1 GPU (80GB)
+#   - gemma-3-27b-it, QwQ-32B, gemma-2-27b-it, phi-4, llama-3.1-8b-instruct,
+#     Llama-3.2-3B-Instruct, Mistral-7B-Instruct-v0.2, Phi-3-mini-128k-instruct,
+#     Llama-3.2-1B-Instruct
+LOCAL_MODELS=(
+    "gemma-3-27b-it"
+    "QwQ-32B"
+    "llama-3.3-70b-instruct"
+    "Qwen2.5-72B-Instruct"
+    "gemma-2-27b-it"
+    "Meta-Llama-3-70B-Instruct"
+    "phi-4"
+    "llama-3.1-8b-instruct"
+    "Llama-3.2-3B-Instruct"
+    "Mistral-7B-Instruct-v0.2"
+    "Phi-3-mini-128k-instruct"
+    "Llama-3.2-1B-Instruct"
+)
 
 # Function to check if a model is local (needs GPU)
 is_local_model() {
@@ -322,9 +363,21 @@ is_local_model() {
 get_gpu_count() {
     local model="$1"
     case "$model" in
+        # Large models (70B+): 4 GPUs
         "llama-3.3-70b-instruct") echo 4 ;;
+        "Qwen2.5-72B-Instruct") echo 4 ;;
+        "Meta-Llama-3-70B-Instruct") echo 4 ;;
+        # Medium models (27B-32B): 2 GPUs
+        "gemma-3-27b-it") echo 2 ;;
+        "QwQ-32B") echo 2 ;;
+        "gemma-2-27b-it") echo 2 ;;
+        "phi-4") echo 2 ;;
+        # Small models (<27B): 1 GPU
         "llama-3.1-8b-instruct") echo 1 ;;
-        "gpt-oss-20b") echo 1 ;;
+        "Llama-3.2-3B-Instruct") echo 1 ;;
+        "Mistral-7B-Instruct-v0.2") echo 1 ;;
+        "Phi-3-mini-128k-instruct") echo 1 ;;
+        "Llama-3.2-1B-Instruct") echo 1 ;;
         *) echo 0 ;;
     esac
 }
@@ -538,6 +591,90 @@ fi
 SLURM_GPU_SMALL
 
 echo "✅ Created small GPU SLURM script: ${GPU_SMALL_SLURM}"
+
+# Generate SLURM script for MEDIUM GPU jobs (e.g., Gemma 3 27B, QwQ 32B - 2 GPUs, 160GB)
+GPU_MEDIUM_SLURM="${SLURM_DIR}/run_gpu_medium.sbatch"
+cat > "${GPU_MEDIUM_SLURM}" << SLURM_GPU_MEDIUM
+#!/bin/bash
+# =============================================================================
+# GPU SLURM Script for MEDIUM Local Models (e.g., Gemma 3 27B, QwQ 32B)
+# =============================================================================
+# Resources: 2 H100 GPUs, 160GB memory
+# Use run_gpu_small.sbatch for smaller models (<27B), run_gpu_large.sbatch for 70B+ models
+# =============================================================================
+#SBATCH --job-name=bargain-gpu-md
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=6
+#SBATCH --mem=160G
+#SBATCH --time=08:00:00
+#SBATCH --output=logs/cluster/gpu_md_%A_%a.out
+#SBATCH --error=logs/cluster/gpu_md_%A_%a.err
+#SBATCH --constraint=gpu80
+#SBATCH --gres=gpu:h100:2
+#SBATCH --partition=pli-c
+
+set -e
+
+BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+cd "\${BASE_DIR}"
+mkdir -p logs/cluster
+
+echo "============================================================"
+echo "SLURM Job ID: \$SLURM_JOB_ID, Array Task ID: \$SLURM_ARRAY_TASK_ID"
+echo "Started at: \$(date)"
+echo "Node: \$SLURM_NODELIST"
+echo "Cluster: PLI (H100 GPUs - 2 GPUs, 160GB total)"
+echo "============================================================"
+
+module load proxy/default
+source "\${BASE_DIR}/.venv/bin/activate"
+echo "Python version: \$(python3 --version)"
+echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
+echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
+echo ""
+
+# IMPORTANT: Use absolute path to timestamped config directory (not symlink)
+# This ensures queued jobs always read from the correct config directory
+# even if configs are regenerated and the symlink is updated mid-experiment
+CONFIG_DIR="${CONFIG_DIR_ABSOLUTE}"
+# Determine padding width by finding the highest config number
+MAX_CONFIG=\$(ls "\${CONFIG_DIR}"/config_*.json 2>/dev/null | sed 's/.*config_\\([0-9]*\\)\\.json/\\1/' | sort -n | tail -1)
+if [[ -n "\$MAX_CONFIG" ]]; then
+    PADDING_WIDTH=\${#MAX_CONFIG}
+else
+    PADDING_WIDTH=3  # Default to 3 digits if no configs found
+fi
+# Use zero-padded config ID to match generated file names
+CONFIG_ID_PADDED=\$(printf "%0\${PADDING_WIDTH}d" \${SLURM_ARRAY_TASK_ID})
+CONFIG_FILE="\${CONFIG_DIR}/config_\${CONFIG_ID_PADDED}.json"
+[[ ! -f "\$CONFIG_FILE" ]] && echo "ERROR: Config not found: \$CONFIG_FILE" && exit 1
+
+WEAK_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['weak_model'])")
+STRONG_MODEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['strong_model'])")
+COMP_LEVEL=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['competition_level'])")
+RUN_NUM=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
+SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['random_seed'])")
+MODEL_ORDER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['model_order'])")
+DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
+OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
+
+[[ "\$MODEL_ORDER" == "weak_first" ]] && MODELS="\$WEAK_MODEL \$STRONG_MODEL" || MODELS="\$STRONG_MODEL \$WEAK_MODEL"
+
+echo "Models: \$MODELS | Order: \$MODEL_ORDER | Comp: \$COMP_LEVEL | Run: \$RUN_NUM | Seed: \$SEED"
+echo "Config directory: \${CONFIG_DIR}"
+
+if python3 run_strong_models_experiment.py --models \$MODELS --batch --num-runs 1 \
+    --run-number \$RUN_NUM --competition-level \$COMP_LEVEL --random-seed \$SEED \
+    --discussion-turns \$DISCUSSION_TURNS --model-order \$MODEL_ORDER \
+    --output-dir "\$OUTPUT_DIR" --job-id \$SLURM_ARRAY_TASK_ID; then
+    echo "✅ Completed at: \$(date)"
+else
+    echo "❌ Failed at: \$(date)" && exit 1
+fi
+SLURM_GPU_MEDIUM
+
+echo "✅ Created medium GPU SLURM script: ${GPU_MEDIUM_SLURM}"
 
 # Generate SLURM script for LARGE GPU jobs (e.g., Llama 3.3 70B - 4 GPUs, 320GB)
 GPU_LARGE_SLURM="${SLURM_DIR}/run_gpu_large.sbatch"
@@ -795,7 +932,7 @@ submit_api_jobs() {
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check if both models are API-based (not local)
-            LOCAL_MODELS="llama-3.3-70b-instruct llama-3.1-8b-instruct gpt-oss-20b"
+            LOCAL_MODELS="gemma-3-27b-it QwQ-32B llama-3.3-70b-instruct Qwen2.5-72B-Instruct gemma-2-27b-it Meta-Llama-3-70B-Instruct phi-4 llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
             IS_LOCAL=false
             for lm in $LOCAL_MODELS; do
                 if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
@@ -822,11 +959,14 @@ submit_gpu_jobs() {
     echo "Total configs: ${TOTAL_CONFIGS}"
 
     # Large models (70B+): 4 GPUs, 320GB
-    LARGE_GPU_MODELS="llama-3.3-70b-instruct"
-    # Small models (8B-20B): 1 GPU, 80GB
-    SMALL_GPU_MODELS="llama-3.1-8b-instruct gpt-oss-20b"
+    LARGE_GPU_MODELS="llama-3.3-70b-instruct Qwen2.5-72B-Instruct Meta-Llama-3-70B-Instruct"
+    # Medium models (27B-32B): 2 GPUs, 160GB
+    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B gemma-2-27b-it phi-4"
+    # Small models (<27B): 1 GPU, 80GB
+    SMALL_GPU_MODELS="llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
 
     GPU_LARGE_IDS=""
+    GPU_MEDIUM_IDS=""
     GPU_SMALL_IDS=""
 
     for i in $(seq 0 $((TOTAL_CONFIGS - 1))); do
@@ -845,8 +985,18 @@ submit_gpu_jobs() {
                 fi
             done
 
-            # Check for small GPU models (only if not already large)
+            # Check for medium GPU models (only if not already large)
             if ! echo "$GPU_LARGE_IDS" | grep -qw "$i"; then
+                for lm in $MEDIUM_GPU_MODELS; do
+                    if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
+                        [[ -n "$GPU_MEDIUM_IDS" ]] && GPU_MEDIUM_IDS="${GPU_MEDIUM_IDS},${i}" || GPU_MEDIUM_IDS="${i}"
+                        break
+                    fi
+                done
+            fi
+
+            # Check for small GPU models (only if not already large or medium)
+            if ! echo "$GPU_LARGE_IDS" | grep -qw "$i" && ! echo "$GPU_MEDIUM_IDS" | grep -qw "$i"; then
                 for lm in $SMALL_GPU_MODELS; do
                     if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
                         [[ -n "$GPU_SMALL_IDS" ]] && GPU_SMALL_IDS="${GPU_SMALL_IDS},${i}" || GPU_SMALL_IDS="${i}"
@@ -859,6 +1009,10 @@ submit_gpu_jobs() {
 
     if [[ -n "$GPU_LARGE_IDS" ]]; then
         submit_jobs "$GPU_LARGE_IDS" "${SCRIPT_DIR}/run_gpu_large.sbatch" "LARGE GPU"
+    fi
+
+    if [[ -n "$GPU_MEDIUM_IDS" ]]; then
+        submit_jobs "$GPU_MEDIUM_IDS" "${SCRIPT_DIR}/run_gpu_medium.sbatch" "MEDIUM GPU"
     fi
 
     if [[ -n "$GPU_SMALL_IDS" ]]; then
