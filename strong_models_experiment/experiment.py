@@ -51,7 +51,17 @@ class StrongModelsExperiment:
         self.current_experiment_id = None
         self.current_batch_id = None
         self.current_run_number = None
-        
+
+        # Token usage tracking for cost aggregation
+        self.batch_token_usage = {
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "by_agent": {},
+            "by_phase": {},
+            "estimated_count": 0,
+            "actual_count": 0,
+        }
+
         # Initialize phase handler with save callback (token config will be set per experiment)
         self.phase_handler = None
     
@@ -402,7 +412,10 @@ class StrongModelsExperiment:
 
         self.current_batch_id = batch_id
         experiments = []
-        
+
+        # Reset token tracking for this batch
+        self._reset_batch_token_tracking()
+
         self.logger.info(f"Starting batch experiment {batch_id} with {num_runs} runs")
         self.logger.info(f"Batch directory: {batch_dir}")
         
@@ -464,13 +477,16 @@ class StrongModelsExperiment:
         
         # Save batch results
         self.file_manager.save_batch_summary(batch_results.to_dict(), batch_id)
-        
+
+        # Print token usage summary
+        self._print_token_usage_summary(models)
+
         return batch_results
     
     def _save_interaction(self, agent_id: str, phase: str, prompt: str, response: str, round_num: int = None,
                          token_usage: Optional[Dict[str, Any]] = None):
         """Save an interaction to both all_interactions and agent-specific storage.
-        
+
         Args:
             agent_id: Agent identifier
             phase: Phase name
@@ -488,21 +504,124 @@ class StrongModelsExperiment:
             "prompt": prompt,
             "response": response
         }
-        
+
         # Add token usage information if provided
         if token_usage:
             interaction["token_usage"] = token_usage
-        
+
+        # Track token usage for batch aggregation
+        self._track_token_usage(agent_id, phase, prompt, response, token_usage)
+
         # Add to all interactions
         self.all_interactions.append(interaction)
-        
+
         # Add to agent-specific interactions
         if agent_id not in self.agent_interactions:
             self.agent_interactions[agent_id] = []
         self.agent_interactions[agent_id].append(interaction)
-        
+
         # Stream save to JSON files
         self._stream_save_json()
+
+    def _track_token_usage(self, agent_id: str, phase: str, prompt: str, response: str,
+                          token_usage: Optional[Dict[str, Any]] = None):
+        """Track token usage for aggregation and cost calculation.
+
+        Args:
+            agent_id: Agent identifier
+            phase: Phase name
+            prompt: Prompt sent to agent
+            response: Agent's response text
+            token_usage: Optional dict with actual token counts
+        """
+        # Estimate tokens if not provided (approximately 4 chars per token)
+        CHARS_PER_TOKEN = 4.0
+
+        if token_usage:
+            input_tokens = token_usage.get('input_tokens', 0) or 0
+            output_tokens = token_usage.get('output_tokens', 0) or 0
+            self.batch_token_usage["actual_count"] += 1
+        else:
+            # Estimate from text
+            input_tokens = int(len(prompt) / CHARS_PER_TOKEN) if prompt else 0
+            output_tokens = int(len(response) / CHARS_PER_TOKEN) if response else 0
+            self.batch_token_usage["estimated_count"] += 1
+
+        # Update totals
+        self.batch_token_usage["total_input_tokens"] += input_tokens
+        self.batch_token_usage["total_output_tokens"] += output_tokens
+
+        # Update by agent
+        if agent_id not in self.batch_token_usage["by_agent"]:
+            self.batch_token_usage["by_agent"][agent_id] = {"input": 0, "output": 0}
+        self.batch_token_usage["by_agent"][agent_id]["input"] += input_tokens
+        self.batch_token_usage["by_agent"][agent_id]["output"] += output_tokens
+
+        # Update by phase (extract base phase name)
+        base_phase = phase.split('_round_')[0].split('_turn_')[0]
+        if base_phase not in self.batch_token_usage["by_phase"]:
+            self.batch_token_usage["by_phase"][base_phase] = {"input": 0, "output": 0}
+        self.batch_token_usage["by_phase"][base_phase]["input"] += input_tokens
+        self.batch_token_usage["by_phase"][base_phase]["output"] += output_tokens
+
+    def _reset_batch_token_tracking(self):
+        """Reset token tracking for a new batch."""
+        self.batch_token_usage = {
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "by_agent": {},
+            "by_phase": {},
+            "estimated_count": 0,
+            "actual_count": 0,
+        }
+
+    def _print_token_usage_summary(self, models: List[str]):
+        """Print a summary of token usage and estimated costs at the end of a batch.
+
+        Args:
+            models: List of model names used in the experiment
+        """
+        usage = self.batch_token_usage
+        total_in = usage["total_input_tokens"]
+        total_out = usage["total_output_tokens"]
+
+        def format_tokens(count):
+            if count >= 1_000_000:
+                return f"{count/1_000_000:.2f}M"
+            elif count >= 1_000:
+                return f"{count/1_000:.1f}K"
+            return str(count)
+
+        self.logger.info("\n" + "=" * 70)
+        self.logger.info("             TOKEN USAGE & COST SUMMARY")
+        self.logger.info("=" * 70)
+
+        # Overall summary
+        self.logger.info(f"\n  Total Input Tokens:   {format_tokens(total_in)}")
+        self.logger.info(f"  Total Output Tokens:  {format_tokens(total_out)}")
+        self.logger.info(f"  Data Source:          {usage['actual_count']} actual, {usage['estimated_count']} estimated")
+
+        # By agent breakdown
+        if usage["by_agent"]:
+            self.logger.info(f"\n  {'BY AGENT:':<20}")
+            self.logger.info(f"    {'Agent':<20} {'Input':>12} {'Output':>12}")
+            self.logger.info("    " + "-" * 44)
+            for agent_id, tokens in usage["by_agent"].items():
+                self.logger.info(f"    {agent_id:<20} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12}")
+
+        # By phase breakdown
+        if usage["by_phase"]:
+            self.logger.info(f"\n  {'BY PHASE:':<20}")
+            self.logger.info(f"    {'Phase':<25} {'Input':>12} {'Output':>12}")
+            self.logger.info("    " + "-" * 49)
+            for phase, tokens in sorted(usage["by_phase"].items()):
+                self.logger.info(f"    {phase:<25} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12}")
+
+        # Cost estimate (basic - use cost_dashboard.py for detailed analysis)
+        self.logger.info(f"\n  {'COST NOTES:':<20}")
+        self.logger.info("    For detailed cost analysis, run:")
+        self.logger.info("    python visualization/cost_dashboard.py --dir <results_dir>")
+        self.logger.info("\n" + "=" * 70 + "\n")
     
     def _stream_save_json(self):
         """Stream save all interactions to JSON files."""
