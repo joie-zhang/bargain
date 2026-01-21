@@ -3,17 +3,17 @@
 | Rank | Model | Elo | Gap | Provider | Model ID |
 |------|-------|-----|-----|----------|----------|
 | 1 | Gemini-3-Pro | 1490 | — | Google | `gemini-3-pro` |
-| 2 | Grok-4.1-Thinking | 1477 | 13 | xAI | `grok-4-1-thinking` |
+<!-- | 2 | Grok-4.1-Thinking | 1477 | 13 | xAI | `grok-4-1-thinking` | -->
 | 3 | Gemini-3-Flash | 1472 | 5 | Google | `gemini-3-flash` |
 | 4 | Claude Opus 4.5 (thinking-32k) | 1470 | 2 | Anthropic | `claude-opus-4-5-20251101` |
 | 5 | Claude Opus 4.5 | 1467 | 3 | Anthropic | `claude-opus-4-5-20251101` |
 | 6 | Claude Sonnet 4.5 | 1450 | 17 | Anthropic | `claude-sonnet-4-5-20250929` |
-| 7 | GPT-4.5-Preview | 1444 | 6 | OpenAI | `gpt-4.5-preview-2025-02-27` |
+<!-- | 7 | GPT-4.5-Preview | 1444 | 6 | OpenAI | `gpt-4.5-preview-2025-02-27` | -->
 | 8 | GLM-4.7 | 1441 | 3 | OpenRouter | `z-ai/glm-4.7` |
 | 9 | GPT-5.2-high | 1436 | 5 | OpenAI | `gpt-5.2` |
 | 10 | Qwen3-Max | 1434 | 2 | OpenRouter | `qwen/qwen3-max` |
 | 11 | DeepSeek-R1-0528 | 1418 | 16 | OpenRouter | `deepseek/deepseek-r1-0528` |
-| 12 | Grok-4 | 1409 | 9 | OpenRouter | `x-ai/grok-4` |
+| 12 | Grok-4 | 1409 | 9 | OpenRouter | `x-ai/grok-4-0709` |
 | 13 | Claude Haiku 4.5 | 1403 | 6 | Anthropic | `claude-haiku-4-5-20251001` |
 | 14 | DeepSeek-R1 | 1397 | 6 | OpenRouter | `deepseek/deepseek-r1` |
 | 15 | Claude Sonnet 4 | 1390 | 7 | Anthropic | `claude-sonnet-4-20250514` |
