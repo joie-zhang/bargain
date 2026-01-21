@@ -92,7 +92,7 @@ LEADERBOARD_MODELS = [
     (9, "GPT-5.2-high", "gpt-5.2-high", 1436, "openai"),
     (10, "Qwen3-Max", "qwen3-max", 1434, "openrouter"),
     (11, "DeepSeek-R1-0528", "deepseek-r1-0528", 1418, "openrouter"),
-    (12, "Grok-4", "grok-4", 1409, "xai"),
+    (12, "Grok-4", "grok-4", 1409, "xai"),  # WARNING: Extremely slow (~5+ min), use grok-3 for testing
     (13, "Claude Haiku 4.5", "claude-haiku-4-5", 1403, "anthropic"),
     (14, "DeepSeek-R1", "deepseek-r1", 1397, "openrouter"),
     (15, "Claude Sonnet 4", "claude-sonnet-4", 1390, "anthropic"),
@@ -124,7 +124,7 @@ QUICK_TEST_MODELS = {
     "openai": "gpt-4o",
     "anthropic": "claude-3-haiku",
     "google": "gemini-3-flash",
-    "xai": "grok-4",
+    "xai": "grok-3",  # grok-4 is extremely slow on xAI's infrastructure
     "openrouter": "amazon-nova-micro",
     "princeton_cluster": "Llama-3.2-3B-Instruct",
 }

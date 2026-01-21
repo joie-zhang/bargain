@@ -78,12 +78,12 @@ WEAK_MODELS=(
 STRONG_MODELS=(
     # STRONG TIER - Elo ≥ 1415 (12 models)
     "gemini-3-pro"  # Rank 1, Elo: 1490, Closed-source
-    "grok-4-1-thinking"  # Rank 2, Elo: 1477, Closed-source, Reasoning
+    # "grok-4-1-thinking"  # Rank 2, Elo: 1477, Closed-source, Reasoning - NOT AVAILABLE: Not released publicly yet
     "gemini-3-flash"  # Rank 3, Elo: 1472, Closed-source
     "claude-opus-4-5-thinking-32k"  # Rank 4, Elo: 1470, Closed-source, Reasoning
     "claude-opus-4-5"  # Rank 5, Elo: 1467, Closed-source, Non-reasoning
     "claude-sonnet-4-5"  # Rank 6, Elo: 1450, Closed-source, Non-reasoning
-    "gpt-4.5-preview"  # Rank 7, Elo: 1444, Closed-source
+    # "gpt-4.5-preview"  # Rank 7, Elo: 1444, Closed-source - DEPRECATED: Model no longer available
     "glm-4.7"  # Rank 8, Elo: 1441, Open-source
     "gpt-5.2-high"  # Rank 9, Elo: 1436, Closed-source, Reasoning
     "qwen3-max"  # Rank 10, Elo: 1434, Open-source
