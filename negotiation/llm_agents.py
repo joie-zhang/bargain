@@ -1625,79 +1625,87 @@ class LocalModelAgent(BaseLLMAgent):
 
 
 class XAIAgent(BaseLLMAgent):
-    """LLM agent using XAI Grok models."""
-    
+    """LLM agent using XAI Grok models via OpenAI-compatible API.
+
+    xAI provides an OpenAI-compatible API at https://api.x.ai/v1
+    which is faster and more reliable than the xai_sdk.
+    """
+
     def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
         super().__init__(agent_id, config)
-        
+
+        # Use OpenAI client with xAI base URL (much faster than xai_sdk)
         try:
-            from xai_sdk import Client as XAIClient
-            from xai_sdk.chat import user, system
-            self.XAI_AVAILABLE = True
-            self.user = user
-            self.system = system
+            import openai
+            import httpx
+            # Set timeout: 60s connect, 120s for response (Grok-4 can be slow)
+            timeout = httpx.Timeout(60.0, read=120.0)
+            self.client = openai.AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://api.x.ai/v1",
+                timeout=timeout
+            )
+            self.logger.info(f"XAIAgent initialized with OpenAI-compatible API for model: {agent_id}")
         except ImportError:
-            self.XAI_AVAILABLE = False
-            raise ImportError("xai_sdk package not available. Install with: pip install xai-sdk")
-        
-        self.client = XAIClient(api_key=api_key)
-        
+            raise ImportError("openai package not available. Install with: pip install openai")
+
         # Check if we have an actual model ID stored
         if hasattr(config, '_actual_model_id'):
             self.model_name = config._actual_model_id
         else:
             # Default model name
             self.model_name = "grok-3"
-    
+
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call XAI Grok API."""
+        """Call XAI Grok API via OpenAI-compatible endpoint."""
         start_time = time.time()
-        
+        self.logger.info(f"XAI API call starting for model: {self.model_name}")
+
         try:
-            # Create chat with model and temperature
-            chat = self.client.chat.create(
+            response = await self.client.chat.completions.create(
                 model=self.model_name,
-                temperature=self.config.temperature
+                messages=messages,
+                temperature=self.config.temperature,
+                max_tokens=min(self.config.max_tokens, 4096),  # xAI max output
             )
-            
-            # Add messages to chat
-            for msg in messages:
-                if msg['role'] == 'system':
-                    chat.append(self.system(msg['content']))
-                elif msg['role'] == 'user':
-                    chat.append(self.user(msg['content']))
-                # Skip assistant messages for now as they're part of context
-            
-            # Sample response synchronously (wrapped in async)
-            import asyncio
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                chat.sample
-            )
-            
+
             response_time = time.time() - start_time
-            
+            self.logger.info(f"XAI API call completed in {response_time:.2f}s")
+
+            # Extract content
+            content = response.choices[0].message.content
+            if content is None:
+                content = ""
+
+            # Extract token usage
+            tokens_used = None
+            if response.usage:
+                tokens_used = response.usage.total_tokens
+
             return AgentResponse(
-                content=response.content,
+                content=content,
                 model_used=self.model_name,
                 response_time=response_time,
-                tokens_used=None,  # XAI SDK might not provide usage info
+                tokens_used=tokens_used,
                 cost_estimate=None,
                 metadata={
-                    "thinking": kwargs.get("include_thinking", False) and hasattr(response, 'thinking') and response.thinking or None,
-                    "raw_response": str(response)
+                    "finish_reason": response.choices[0].finish_reason,
+                    "usage": {
+                        "prompt_tokens": response.usage.prompt_tokens if response.usage else None,
+                        "completion_tokens": response.usage.completion_tokens if response.usage else None,
+                    }
                 }
             )
-            
+
         except Exception as e:
             self.logger.error(f"XAI API error: {e}")
             raise
-    
+
     def _get_context_limit(self) -> int:
         """Get the context limit for XAI models."""
         # All Grok models support 128k context
         return 128_000
-    
+
     def get_model_info(self) -> Dict[str, Any]:
         """Get XAI model information."""
         return {
@@ -1753,13 +1761,36 @@ class GoogleAgent(BaseLLMAgent):
                     max_output_tokens=self.config.max_tokens,
                 )
 
+                # Configure safety settings to allow negotiation research prompts
+                # These settings reduce false positives for legitimate research use cases
+                # like multi-agent negotiation experiments
+                safety_settings = [
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "threshold": "BLOCK_ONLY_HIGH"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                        "threshold": "BLOCK_ONLY_HIGH"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "threshold": "BLOCK_ONLY_HIGH"
+                    },
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "threshold": "BLOCK_ONLY_HIGH"
+                    },
+                ]
+
                 # Generate response synchronously (wrapped in async)
                 import asyncio
                 response = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: self.model.generate_content(
                         prompt_text,
-                        generation_config=generation_config
+                        generation_config=generation_config,
+                        safety_settings=safety_settings
                     )
                 )
 
@@ -1781,19 +1812,59 @@ class GoogleAgent(BaseLLMAgent):
                         'total_tokens': tokens_used
                     }
 
+                # Handle various finish reasons and extract content
+                content = None
+                finish_reason = None
+                finish_reason_value = None
+                safety_ratings = []
+
+                if response.candidates:
+                    candidate = response.candidates[0]
+                    finish_reason = candidate.finish_reason.name if hasattr(candidate.finish_reason, 'name') else str(candidate.finish_reason)
+                    finish_reason_value = candidate.finish_reason.value if hasattr(candidate.finish_reason, 'value') else candidate.finish_reason
+                    safety_ratings = [str(r) for r in candidate.safety_ratings] if candidate.safety_ratings else []
+
+                    # Try to extract content from parts
+                    if candidate.content and candidate.content.parts:
+                        content = candidate.content.parts[0].text
+
+                # If no content from parts, try response.text accessor
+                if content is None:
+                    try:
+                        content = response.text
+                    except ValueError as ve:
+                        # response.text failed - determine the actual cause
+                        # finish_reason values: 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
+                        if finish_reason_value == 3:  # SAFETY
+                            raise Exception(
+                                f"Response blocked by safety filter. finish_reason={finish_reason}, "
+                                f"safety_ratings={safety_ratings}. Try adjusting safety settings or rephrasing."
+                            )
+                        elif finish_reason_value == 2:  # MAX_TOKENS
+                            raise Exception(
+                                f"Response truncated (MAX_TOKENS) with no content. "
+                                f"The prompt may be too long or max_output_tokens too low. "
+                                f"finish_reason={finish_reason}"
+                            )
+                        else:
+                            raise Exception(
+                                f"Could not extract content from response: {ve}. "
+                                f"finish_reason={finish_reason}, safety_ratings={safety_ratings}"
+                            )
+
                 return AgentResponse(
-                    content=response.text,
+                    content=content,
                     model_used=self.model_name,
                     response_time=response_time,
                     tokens_used=tokens_used,  # Now an int, not a dict
                     cost_estimate=None,
                     metadata={
-                        "finish_reason": response.candidates[0].finish_reason.name if response.candidates else None,
-                        "safety_ratings": [str(r) for r in response.candidates[0].safety_ratings] if response.candidates else [],
+                        "finish_reason": finish_reason,
+                        "safety_ratings": safety_ratings,
                         "usage": token_metadata  # Detailed token info goes in metadata
                     }
                 )
-                
+
             except Exception as e:
                 error_str = str(e).lower()
                 error_repr = repr(e)

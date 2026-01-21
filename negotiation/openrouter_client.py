@@ -180,6 +180,10 @@ class OpenRouterAgent(BaseLLMAgent):
                 result, error = await self.send_request(url, headers, payload, self.openrouter_config.timeout)
                 if error:
                     raise Exception(error)
+                if result is None:
+                    raise Exception("OpenRouter API returned None result")
+                if not result or len(result.strip()) == 0:
+                    raise Exception("OpenRouter API returned empty response content")
                 return result
                 # async with self.session.post(
                 #     url,
