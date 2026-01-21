@@ -258,7 +258,7 @@ STRONG_MODELS_CONFIG = {
     # STRONG TIER - Elo ≥ 1415 (12 models)
     "gemini-3-pro": {
         "name": "Gemini 3 Pro",
-        "model_id": "gemini-3-pro",
+        "model_id": "gemini-3-pro-preview",  # Use preview model name for v1beta API
         "provider": "Google",
         "api_type": "google",
         "description": "Rank 1, Elo: 1490, Closed-source",
@@ -266,19 +266,21 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    # WARNING: grok-4-1-thinking is NOT available in the xAI API yet as it hasn't been released publicly.
+    # This model configuration is kept for reference but should not be used in experiments until it's publicly available.
     "grok-4-1-thinking": {
         "name": "Grok 4.1 Thinking",
         "model_id": "grok-4-1-thinking",
         "provider": "xAI",
         "api_type": "xai",
-        "description": "Rank 2, Elo: 1477, Closed-source, Reasoning",
+        "description": "Rank 2, Elo: 1477, Closed-source, Reasoning - NOT AVAILABLE: Not released publicly yet",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
     "gemini-3-flash": {
         "name": "Gemini 3 Flash",
-        "model_id": "gemini-3-flash",
+        "model_id": "gemini-3-flash-preview",  # Use preview model name for v1beta API
         "provider": "Google",
         "api_type": "google",
         "description": "Rank 3, Elo: 1472, Closed-source",
@@ -316,16 +318,19 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
-    "gpt-4.5-preview": {
-        "name": "GPT-4.5 Preview",
-        "model_id": "gpt-4.5-preview-2025-02-27",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "Rank 7, Elo: 1444, Closed-source",
-        "temperature": 0.7,
-        "system_prompt": "You are a negotiating agent.",
-        "model_category": "strong"
-    },
+    # DEPRECATED: GPT-4.5-Preview is no longer available
+    # "gpt-4.5-preview": {
+    #     "name": "GPT-4.5 Preview",
+    #     "model_id": "gpt-4.5-preview-2025-02-27",
+    #     "provider": "OpenAI",
+    #     "api_type": "openai",
+    #     "description": "Rank 7, Elo: 1444, Closed-source - DEPRECATED: Model no longer available",
+    #     "temperature": 0.7,
+    #     "system_prompt": "You are a negotiating agent.",
+    #     "model_category": "strong",
+    #     "deprecated": True,
+    #     "deprecation_message": "GPT-4.5-Preview (gpt-4.5-preview-2025-02-27) is no longer available. Please use GPT-5.2-high or another available model instead."
+    # },
     "glm-4.7": {
         "name": "GLM-4.7",
         "model_id": "z-ai/glm-4.7",
@@ -369,10 +374,10 @@ STRONG_MODELS_CONFIG = {
     },
     "grok-4": {
         "name": "Grok 4",
-        "model_id": "x-ai/grok-4",
-        "provider": "OpenRouter",
-        "api_type": "openrouter",
-        "description": "Rank 12, Elo: 1409, Open-source",
+        "model_id": "grok-4-0709",
+        "provider": "XAI",
+        "api_type": "xai",
+        "description": "Rank 12, Elo: 1409, Closed-source",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
