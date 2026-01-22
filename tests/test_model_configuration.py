@@ -33,7 +33,6 @@ from negotiation.model_clients import (
     OpenAIClient,
     AnthropicClient,
     GoogleClient,
-    OpenRouterClient,
     PrincetonClusterClient,
     ModelResponse
 )

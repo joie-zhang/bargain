@@ -58,33 +58,32 @@ def test_model_registry():
 
 
 def test_client_factory():
-    """Test that ModelClientFactory can create Grok clients."""
+    """Test that ModelClientFactory correctly rejects XAI provider (use XAIAgent instead)."""
     print("\nTesting Client Factory...")
-    
+
     registry = ModelRegistry()
     grok_model = registry.get_model("grok-3")
-    
-    # Create provider config (without actual API key for testing)
+
     provider_config = ProviderConfig(
         provider=ModelProvider.XAI,
-        api_key="test_key_placeholder"  # Would need real key for actual API calls
+        api_key="test_key_placeholder"
     )
-    
+
     try:
-        # Try to create client (will fail if xai_sdk not installed)
-        from negotiation.model_clients import XAI_AVAILABLE
-        
-        if XAI_AVAILABLE:
-            client = ModelClientFactory.create_client(provider_config, grok_model)
-            print(f"  ✓ Successfully created client for {grok_model.display_name}")
-            print(f"    Client type: {type(client).__name__}")
+        # This should raise ValueError directing users to XAIAgent
+        ModelClientFactory.create_client(provider_config, grok_model)
+        print("  ✗ Expected ValueError but got none")
+        return False
+    except ValueError as e:
+        if "XAIAgent" in str(e):
+            print("  ✓ Correctly directs to XAIAgent in negotiation.llm_agents")
+            return True
         else:
-            print("  ⚠ xai_sdk not installed - client creation would fail")
-            print("    Install with: pip install xai-sdk")
+            print(f"  ✗ Unexpected error: {e}")
+            return False
     except Exception as e:
-        print(f"  ⚠ Client creation test skipped: {e}")
-    
-    return True
+        print(f"  ⚠ Unexpected exception: {e}")
+        return False
 
 
 def test_config_validation():
@@ -170,42 +169,38 @@ def test_config_generation():
 
 
 async def test_model_manager():
-    """Test UnifiedModelManager with Grok models."""
+    """Test UnifiedModelManager correctly rejects XAI provider (use XAIAgent instead)."""
     print("\nTesting Unified Model Manager...")
-    
+
     manager = UnifiedModelManager()
     registry = ModelRegistry()
-    
-    # Register a Grok agent
+
     agent_config = AgentModelConfig(
         agent_id="test_grok_agent",
         model_spec=registry.get_model("grok-3"),
         temperature=0.7
     )
-    
+
     provider_config = ProviderConfig(
         provider=ModelProvider.XAI,
         api_key="test_key"
     )
-    
+
     try:
-        from negotiation.model_clients import XAI_AVAILABLE
-        
-        if XAI_AVAILABLE:
-            manager.register_agent(agent_config, provider_config)
-            print(f"  ✓ Successfully registered Grok agent: {agent_config.agent_id}")
-            
-            # Get agent info
-            info = manager.get_agent_info("test_grok_agent")
-            print(f"    Model: {info['display_name']}")
-            print(f"    Provider: {info['provider']}")
-            print(f"    Context window: {info['capabilities']['context_window']}")
+        # This should raise ValueError directing users to XAIAgent
+        manager.register_agent(agent_config, provider_config)
+        print("  ✗ Expected ValueError but got none")
+        return False
+    except ValueError as e:
+        if "XAIAgent" in str(e):
+            print("  ✓ Correctly directs to XAIAgent in negotiation.llm_agents")
+            return True
         else:
-            print("  ⚠ xai_sdk not installed - manager test skipped")
+            print(f"  ✗ Unexpected error: {e}")
+            return False
     except Exception as e:
-        print(f"  ⚠ Manager test skipped: {e}")
-    
-    return True
+        print(f"  ⚠ Unexpected exception: {e}")
+        return False
 
 
 def main():
@@ -255,7 +250,7 @@ def main():
         print("✓ ALL TESTS PASSED - Grok integration is ready!")
         print("\nNext steps:")
         print("1. Set XAI_API_KEY environment variable")
-        print("2. Install xai-sdk: pip install xai-sdk")
+        print("2. Run xai_proxy_monitor.py on login node (for cluster jobs)")
         print("3. Run: ./scripts/generate_configs_both_orders.sh")
         print("4. Run: ./scripts/run_all_simple.sh")
     else:

@@ -45,16 +45,6 @@ except ImportError:
     genai = None
 
 try:
-    from xai_sdk import Client as XAIClient
-    from xai_sdk.chat import user, system
-    XAI_AVAILABLE = True
-except ImportError:
-    XAI_AVAILABLE = False
-    XAIClient = None
-    user = None
-    system = None
-
-try:
     import requests
     REQUESTS_AVAILABLE = True
 except ImportError:
@@ -363,161 +353,6 @@ class GoogleClient(BaseModelClient):
         return "\n\n".join(prompt_parts) + "\n\nAssistant:"
 
 
-class GrokClient(BaseModelClient):
-    """Client for XAI Grok models via file-based proxy."""
-
-    POLL_DIR = Path("/home/jz4391/xai_proxy")
-    PROCESSED_DIR = POLL_DIR / "processed"
-
-    def __init__(self, config: ProviderConfig, model_spec: ModelSpec):
-        super().__init__(config, model_spec)
-        self.api_key = config.api_key or os.getenv('XAI_API_KEY')
-        self.model_name = model_spec.api_model_name or model_spec.model_id
-
-    async def generate(self, messages: List[Dict[str, str]], **kwargs) -> ModelResponse:
-        """Generate response via xAI proxy."""
-        import shutil
-        start_time = time.time()
-
-        timestamp = f"{time.time():.6f}".replace('.', '-')
-        request_path = self.POLL_DIR / f"request_{timestamp}.json"
-        response_path = self.POLL_DIR / f"response_{timestamp}.json"
-
-        with open(request_path, 'w') as f:
-            json.dump({
-                "api_key": self.api_key,
-                "model": self.model_name,
-                "messages": messages,
-                "temperature": kwargs.get('temperature', 0.7),
-                "timeout": 300
-            }, f)
-
-        # Poll for response (10 min timeout)
-        poll_start = time.time()
-        while not response_path.exists():
-            if time.time() - poll_start > 600:
-                if request_path.exists():
-                    request_path.unlink()
-                raise TimeoutError(f"No response after 600s")
-            await asyncio.sleep(0.5)
-
-        with open(response_path) as f:
-            resp = json.load(f)
-        shutil.move(response_path, self.PROCESSED_DIR / response_path.name)
-
-        if resp["error"]:
-            raise Exception(resp["error"])
-
-        return ModelResponse(
-            content=resp["result"],
-            model_id=self.model_spec.model_id,
-            provider="xai",
-            timestamp=start_time,
-            response_time=time.time() - start_time,
-            metadata={'model': self.model_name}
-        )
-
-        # --- OLD DIRECT XAI SDK CODE (commented out) ---
-        # if not XAI_AVAILABLE:
-        #     raise ImportError("XAI SDK not available. Install with: pip install xai-sdk")
-        # self.client = XAIClient(api_key=config.api_key or os.getenv('XAI_API_KEY'))
-        # try:
-        #     chat = self.client.chat.create(
-        #         model=self.model_name,
-        #         temperature=kwargs.get('temperature', 0.7)
-        #     )
-        #     for msg in messages:
-        #         if msg['role'] == 'system':
-        #             chat.append(system(msg['content']))
-        #         elif msg['role'] == 'user':
-        #             chat.append(user(msg['content']))
-        #         elif msg['role'] == 'assistant':
-        #             chat.append(user(f"Assistant previously said: {msg['content']}"))
-        #     response = await asyncio.get_event_loop().run_in_executor(None, chat.sample)
-        #     response_time = time.time() - start_time
-        #     return ModelResponse(
-        #         content=response.content,
-        #         model_id=self.model_spec.model_id,
-        #         provider="xai",
-        #         timestamp=start_time,
-        #         response_time=response_time,
-        #         metadata={'model': self.model_name}
-        #     )
-        # except Exception as e:
-        #     self.logger.error(f"XAI Grok API error: {e}")
-        #     raise
-    
-    async def generate_stream(self, messages: List[Dict[str, str]], **kwargs) -> AsyncGenerator[str, None]:
-        """Generate streaming response."""
-        # XAI SDK might not support streaming yet
-        yield "Streaming not implemented for Grok client"
-
-
-class OpenRouterClient(BaseModelClient):
-    """Client for models accessed via OpenRouter API."""
-    
-    def __init__(self, config: ProviderConfig, model_spec: ModelSpec):
-        super().__init__(config, model_spec)
-        
-        if not REQUESTS_AVAILABLE:
-            raise ImportError("Requests package not available. Install with: pip install requests")
-        
-        self.api_key = config.api_key or os.getenv('OPENROUTER_API_KEY')
-        self.base_url = config.api_base_url or "https://openrouter.ai/api/v1"
-    
-    async def generate(self, messages: List[Dict[str, str]], **kwargs) -> ModelResponse:
-        """Generate response using OpenRouter API."""
-        start_time = time.time()
-        
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": self.model_spec.api_model_name or self.model_spec.model_id,
-            "messages": messages,
-            "temperature": kwargs.get('temperature', 0.7),
-            "max_tokens": kwargs.get('max_tokens', self.model_spec.max_tokens),
-        }
-        
-        try:
-            async with asyncio.create_task(asyncio.to_thread(
-                requests.post,
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=data,
-                timeout=self.config.read_timeout
-            )) as response:
-                response.raise_for_status()
-                result = response.json()
-                
-                response_time = time.time() - start_time
-                choice = result['choices'][0]
-                usage = result.get('usage', {})
-                
-                return ModelResponse(
-                    content=choice['message']['content'],
-                    model_id=self.model_spec.model_id,
-                    provider="openrouter",
-                    timestamp=start_time,
-                    input_tokens=usage.get('prompt_tokens'),
-                    output_tokens=usage.get('completion_tokens'),
-                    total_tokens=usage.get('total_tokens'),
-                    response_time=response_time,
-                    finish_reason=choice.get('finish_reason'),
-                    metadata={'openrouter_id': result.get('id')}
-                )
-        
-        except Exception as e:
-            self.logger.error(f"OpenRouter API error: {e}")
-            raise
-    
-    async def generate_stream(self, messages: List[Dict[str, str]], **kwargs) -> AsyncGenerator[str, None]:
-        """Generate streaming response."""
-        yield "Streaming not implemented for OpenRouter client"
-
-
 class PrincetonClusterClient(BaseModelClient):
     """Client for models running on Princeton cluster."""
     
@@ -707,10 +542,10 @@ class ModelClientFactory:
             return GoogleClient(config, model_spec)
         
         elif model_spec.provider == ModelProvider.XAI:
-            return GrokClient(config, model_spec)
-        
+            raise ValueError("XAI provider not supported here - use XAIAgent from negotiation.llm_agents")
+
         elif model_spec.provider == ModelProvider.OPENROUTER:
-            return OpenRouterClient(config, model_spec)
+            raise ValueError("OpenRouter provider not supported here - use OpenRouterAgent from negotiation.openrouter_client")
         
         elif model_spec.provider == ModelProvider.PRINCETON_CLUSTER:
             return PrincetonClusterClient(config, model_spec)
