@@ -398,10 +398,17 @@ class PrincetonClusterClient(BaseModelClient):
             tokenizer.pad_token = tokenizer.eos_token
         
         device_map = "auto" if torch.cuda.is_available() else "cpu"
+        # Use bfloat16 for better numerical stability (avoids inf/nan in softmax)
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+            dtype = torch.bfloat16
+        elif torch.cuda.is_available():
+            dtype = torch.float16
+        else:
+            dtype = torch.float32
         model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
             device_map=device_map,
-            dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            torch_dtype=dtype,
             low_cpu_mem_usage=True
         )
         
@@ -488,7 +495,9 @@ class PrincetonClusterClient(BaseModelClient):
     def _generate_text(self, prompt: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Generate text using the local model (runs in executor)."""
         # Use tokenizer properly to get attention mask
-        inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True)
+        # Set max_length based on model's context window (default 4096 for safety)
+        max_length = getattr(self.model.config, 'max_position_embeddings', 4096)
+        inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
         input_ids = inputs['input_ids']
         attention_mask = inputs.get('attention_mask', None)
         input_length = input_ids.shape[1]
@@ -500,14 +509,17 @@ class PrincetonClusterClient(BaseModelClient):
             attention_mask = attention_mask.to(device)
         
         with torch.no_grad():
+            # Ensure temperature is safe (avoid division issues near 0)
+            temperature = max(kwargs.get('temperature', 0.7), 0.01)
             generate_kwargs = {
                 "input_ids": input_ids,
                 "max_new_tokens": kwargs.get('max_tokens', 512),
-                "temperature": kwargs.get('temperature', 0.7),
+                "temperature": temperature,
                 "top_p": kwargs.get('top_p', 0.9),
                 "top_k": kwargs.get('top_k', 50),
                 "do_sample": True,
-                "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
+                "pad_token_id": self.tokenizer.pad_token_id or self.tokenizer.eos_token_id,
+                "renormalize_logits": True,  # Helps with numerical stability
             }
             if attention_mask is not None:
                 generate_kwargs["attention_mask"] = attention_mask

@@ -72,7 +72,24 @@ class OpenRouterAgent(BaseLLMAgent):
         super().__init__(agent_id, llm_config)
         self.llm_config = llm_config
         
-        self.openrouter_config = OpenRouterConfig(api_key=api_key)
+        # Validate API key
+        if not api_key:
+            raise ValueError(
+                f"OpenRouter API key is required but was not provided for agent {agent_id}. "
+                f"Please set OPENROUTER_API_KEY environment variable or pass api_key parameter."
+            )
+        if not isinstance(api_key, str) or len(api_key.strip()) == 0:
+            raise ValueError(
+                f"OpenRouter API key must be a non-empty string for agent {agent_id}. "
+                f"Got: {type(api_key).__name__} with length {len(api_key) if isinstance(api_key, str) else 'N/A'}"
+            )
+        if not api_key.startswith("sk-or-v1-"):
+            self.logger.warning(
+                f"OpenRouter API key for agent {agent_id} doesn't start with 'sk-or-v1-'. "
+                f"This might indicate an invalid key format."
+            )
+        
+        self.openrouter_config = OpenRouterConfig(api_key=api_key.strip())
         self.session: Optional[aiohttp.ClientSession] = None
         
         # Initialize message history (required by BaseLLMAgent)

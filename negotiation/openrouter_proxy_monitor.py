@@ -87,6 +87,18 @@ async def prompt_openrouter(url, headers, payload, timeout) -> str:
         # Check HTTP status
         if response.status != 200:
             error_text = await response.text()
+            # Provide more helpful error messages for authentication issues
+            if response.status == 401:
+                try:
+                    error_data = await response.json()
+                    error_msg = error_data.get("error", {}).get("message", error_text)
+                    raise Exception(
+                        f"HTTP 401: {error_msg}\n"
+                        f"This usually means the OpenRouter API key is invalid, expired, or the account is suspended.\n"
+                        f"Please verify your API key at https://openrouter.ai/keys"
+                    )
+                except:
+                    pass
             raise Exception(f"HTTP {response.status}: {error_text[:500]}")
 
         data = await response.json(encoding='utf-8')
