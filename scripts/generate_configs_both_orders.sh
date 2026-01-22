@@ -329,9 +329,10 @@ echo "Generating SLURM scripts..."
 # Models that require GPUs (local inference)
 # Large models (70B+): 4 GPUs (320GB)
 #   - llama-3.3-70b-instruct, Qwen2.5-72B-Instruct, Meta-Llama-3-70B-Instruct
-# Small models (<70B): 1 GPU (80GB)
-#   - gemma-3-27b-it, QwQ-32B, gemma-2-27b-it, phi-4, llama-3.1-8b-instruct,
-#     Llama-3.2-3B-Instruct, Mistral-7B-Instruct-v0.2, Phi-3-mini-128k-instruct,
+# Medium models (27B-32B): 2 GPUs (160GB)
+#   - gemma-3-27b-it, QwQ-32B, gemma-2-27b-it, phi-4, Phi-3-mini-128k-instruct
+# Small models (<27B): 1 GPU (80GB)
+#   - llama-3.1-8b-instruct, Llama-3.2-3B-Instruct, Mistral-7B-Instruct-v0.2,
 #     Llama-3.2-1B-Instruct
 LOCAL_MODELS=(
     "gemma-3-27b-it"
@@ -372,11 +373,11 @@ get_gpu_count() {
         "QwQ-32B") echo 2 ;;
         "gemma-2-27b-it") echo 2 ;;
         "phi-4") echo 2 ;;
+        "Phi-3-mini-128k-instruct") echo 2 ;;
         # Small models (<27B): 1 GPU
         "llama-3.1-8b-instruct") echo 1 ;;
         "Llama-3.2-3B-Instruct") echo 1 ;;
         "Mistral-7B-Instruct-v0.2") echo 1 ;;
-        "Phi-3-mini-128k-instruct") echo 1 ;;
         "Llama-3.2-1B-Instruct") echo 1 ;;
         *) echo 0 ;;
     esac
@@ -961,9 +962,9 @@ submit_gpu_jobs() {
     # Large models (70B+): 4 GPUs, 320GB
     LARGE_GPU_MODELS="llama-3.3-70b-instruct Qwen2.5-72B-Instruct Meta-Llama-3-70B-Instruct"
     # Medium models (27B-32B): 2 GPUs, 160GB
-    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B gemma-2-27b-it phi-4"
+    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B gemma-2-27b-it phi-4 Phi-3-mini-128k-instruct"
     # Small models (<27B): 1 GPU, 80GB
-    SMALL_GPU_MODELS="llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
+    SMALL_GPU_MODELS="llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Llama-3.2-1B-Instruct"
 
     GPU_LARGE_IDS=""
     GPU_MEDIUM_IDS=""
