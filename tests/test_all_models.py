@@ -124,7 +124,7 @@ QUICK_TEST_MODELS = {
     "openai": "gpt-4o",
     "anthropic": "claude-3-haiku",
     "google": "gemini-3-flash",
-    "xai": "grok-3",  # grok-4 is extremely slow on xAI's infrastructure
+    "xai": "grok-4",  # grok-4 is extremely slow on xAI's infrastructure
     "openrouter": "amazon-nova-micro",
     "princeton_cluster": "Llama-3.2-3B-Instruct",
 }
