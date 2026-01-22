@@ -1625,81 +1625,88 @@ class LocalModelAgent(BaseLLMAgent):
 
 
 class XAIAgent(BaseLLMAgent):
-    """LLM agent using XAI Grok models via OpenAI-compatible API.
+    """LLM agent using XAI Grok models via file-based proxy."""
 
-    xAI provides an OpenAI-compatible API at https://api.x.ai/v1
-    which is faster and more reliable than the xai_sdk.
-    """
+    POLL_DIR = Path("/home/jz4391/xai_proxy")
+    PROCESSED_DIR = POLL_DIR / "processed"
 
     def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
         super().__init__(agent_id, config)
+        self.api_key = api_key
 
-        # Use OpenAI client with xAI base URL (much faster than xai_sdk)
-        try:
-            import openai
-            import httpx
-            # Set timeout: 60s connect, 120s for response (Grok-4 can be slow)
-            timeout = httpx.Timeout(60.0, read=120.0)
-            self.client = openai.AsyncOpenAI(
-                api_key=api_key,
-                base_url="https://api.x.ai/v1",
-                timeout=timeout
-            )
-            self.logger.info(f"XAIAgent initialized with OpenAI-compatible API for model: {agent_id}")
-        except ImportError:
-            raise ImportError("openai package not available. Install with: pip install openai")
-
-        # Check if we have an actual model ID stored
         if hasattr(config, '_actual_model_id'):
             self.model_name = config._actual_model_id
         else:
-            # Default model name
             self.model_name = "grok-3"
 
+        self.logger.info(f"XAIAgent initialized with proxy for model: {self.model_name}")
+
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call XAI Grok API via OpenAI-compatible endpoint."""
+        """Call XAI Grok API via file-based proxy."""
+        import shutil
         start_time = time.time()
         self.logger.info(f"XAI API call starting for model: {self.model_name}")
 
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=self.config.temperature,
-                max_tokens=min(self.config.max_tokens, 4096),  # xAI max output
-            )
+        timestamp = f"{time.time():.6f}".replace('.', '-')
+        request_path = self.POLL_DIR / f"request_{timestamp}.json"
+        response_path = self.POLL_DIR / f"response_{timestamp}.json"
 
-            response_time = time.time() - start_time
-            self.logger.info(f"XAI API call completed in {response_time:.2f}s")
+        with open(request_path, 'w') as f:
+            json.dump({
+                "api_key": self.api_key,
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": self.config.temperature,
+                "timeout": 300
+            }, f)
+        self.logger.info(f"Wrote request file: {request_path.name}")
 
-            # Extract content
-            content = response.choices[0].message.content
-            if content is None:
-                content = ""
+        # Poll for response (10 min timeout)
+        poll_start = time.time()
+        while not response_path.exists():
+            if time.time() - poll_start > 600:
+                if request_path.exists():
+                    request_path.unlink()
+                raise TimeoutError(f"No response after 600s")
+            await asyncio.sleep(0.5)
 
-            # Extract token usage
-            tokens_used = None
-            if response.usage:
-                tokens_used = response.usage.total_tokens
+        with open(response_path) as f:
+            resp = json.load(f)
+        shutil.move(response_path, self.PROCESSED_DIR / response_path.name)
 
-            return AgentResponse(
-                content=content,
-                model_used=self.model_name,
-                response_time=response_time,
-                tokens_used=tokens_used,
-                cost_estimate=None,
-                metadata={
-                    "finish_reason": response.choices[0].finish_reason,
-                    "usage": {
-                        "prompt_tokens": response.usage.prompt_tokens if response.usage else None,
-                        "completion_tokens": response.usage.completion_tokens if response.usage else None,
-                    }
-                }
-            )
+        if resp["error"]:
+            raise Exception(resp["error"])
 
-        except Exception as e:
-            self.logger.error(f"XAI API error: {e}")
-            raise
+        response_time = time.time() - start_time
+        self.logger.info(f"XAI API call completed in {response_time:.2f}s")
+
+        return AgentResponse(
+            content=resp["result"],
+            model_used=self.model_name,
+            response_time=response_time,
+            tokens_used=None,
+            cost_estimate=None,
+            metadata={}
+        )
+
+        # --- OLD DIRECT OPENAI-COMPATIBLE CODE (commented out) ---
+        # try:
+        #     import openai
+        #     import httpx
+        #     timeout = httpx.Timeout(60.0, read=120.0)
+        #     self.client = openai.AsyncOpenAI(
+        #         api_key=api_key, base_url="https://api.x.ai/v1", timeout=timeout
+        #     )
+        # except ImportError:
+        #     raise ImportError("openai package not available")
+        # response = await self.client.chat.completions.create(
+        #     model=self.model_name, messages=messages,
+        #     temperature=self.config.temperature,
+        #     max_tokens=min(self.config.max_tokens, 4096),
+        # )
+        # content = response.choices[0].message.content or ""
+        # tokens_used = response.usage.total_tokens if response.usage else None
+        # return AgentResponse(content=content, model_used=self.model_name, ...)
 
     def _get_context_limit(self) -> int:
         """Get the context limit for XAI models."""
