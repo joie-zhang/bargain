@@ -1873,6 +1873,709 @@ plt.show()
 # In[ ]:
 
 
+# =============================================================================
+# FIGURES E: Rounds to Consensus Analysis
+# =============================================================================
+
+
+# In[ ]:
+
+
+# FIGURE E1: Rounds to Consensus vs Competition Level - OVERALL
+fig, ax = plt.subplots(figsize=(12, 8))
+
+# Filter for experiments that reached consensus
+consensus_df = df[df['consensus_reached'] == True].copy()
+
+# Scatter plot with jitter
+jitter = 0.02
+for tier in TIER_ORDER:
+    tier_data = consensus_df[consensus_df['adversary_tier'] == tier].copy()
+    tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
+    ax.scatter(tier_data['comp_jittered'], tier_data['final_round'],
+               c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
+
+# Add mean line with error bars
+comp_stats = consensus_df.groupby('competition_level')['final_round'].agg(['mean', 'std', 'count'])
+comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
+
+ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
+            fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
+
+# Add regression line
+if len(consensus_df) > 5:
+    z = np.polyfit(consensus_df['competition_level'], consensus_df['final_round'], 1)
+    p = np.poly1d(z)
+    x_line = np.linspace(0, 1, 100)
+    ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
+
+    corr = consensus_df['competition_level'].corr(consensus_df['final_round'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(consensus_df)}',
+                xy=(0.05, 0.95), xycoords='axes fraction',
+                ha='left', va='top', fontsize=11,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+ax.set_xlabel('Competition Level', fontsize=12)
+ax.set_ylabel('Rounds to Consensus', fontsize=12)
+ax.set_title('Rounds to Consensus vs Competition Level (All Adversaries)', fontsize=14)
+ax.set_xlim(-0.05, 1.05)
+ax.legend(loc='upper right')
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_e1_rounds_vs_comp_overall.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE E1-SUB: Rounds to Consensus vs Competition Level - BY ADVERSARY TIER
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+for idx, tier in enumerate(TIER_ORDER):
+    ax = axes[idx]
+    tier_data = consensus_df[consensus_df['adversary_tier'] == tier]
+
+    if len(tier_data) > 0:
+        # Box plot by competition level
+        tier_data_sorted = tier_data.copy()
+        tier_data_sorted['competition_level'] = tier_data_sorted['competition_level'].astype(str)
+
+        comp_order = [str(c) for c in sorted(tier_data['competition_level'].unique())]
+
+        sns.boxplot(data=tier_data_sorted, x='competition_level', y='final_round',
+                    ax=ax, color=TIER_COLORS[tier], order=comp_order)
+
+        # Add mean line
+        tier_comp_means = tier_data.groupby('competition_level')['final_round'].mean()
+        ax.plot(range(len(tier_comp_means)), tier_comp_means.values, 'ko-', linewidth=2, markersize=6)
+
+        # Correlation annotation
+        corr = tier_data['competition_level'].corr(tier_data['final_round'])
+        ax.annotate(f'r={corr:.2f}\nn={len(tier_data)}',
+                    xy=(0.05, 0.95), xycoords='axes fraction',
+                    ha='left', va='top', fontsize=10,
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
+    ax.set_xlabel('Competition Level', fontsize=11)
+    ax.set_ylabel('Rounds to Consensus' if idx == 0 else '', fontsize=11)
+    ax.set_title(f'{tier} Tier Adversaries', fontsize=12)
+    ax.tick_params(axis='x', rotation=45)
+
+plt.suptitle('Rounds to Consensus vs Competition Level by Adversary Tier', fontsize=14, y=1.02)
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_e1_rounds_vs_comp_by_tier.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE E2: Rounds to Consensus by Adversary Tier
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Left: Box plot by tier
+tier_df = consensus_df[consensus_df['adversary_tier'].isin(TIER_ORDER)].copy()
+tier_df['adversary_tier'] = pd.Categorical(tier_df['adversary_tier'], categories=TIER_ORDER, ordered=True)
+
+sns.boxplot(data=tier_df, x='adversary_tier', y='final_round', ax=axes[0],
+            palette=[TIER_COLORS[t] for t in TIER_ORDER])
+sns.stripplot(data=tier_df, x='adversary_tier', y='final_round', ax=axes[0],
+              color='black', alpha=0.3, size=4)
+axes[0].set_xlabel('Adversary Tier', fontsize=12)
+axes[0].set_ylabel('Rounds to Consensus', fontsize=12)
+axes[0].set_title('Distribution of Rounds by Adversary Tier', fontsize=14)
+
+# Right: Bar plot with error bars
+tier_means = tier_df.groupby('adversary_tier')['final_round'].agg(['mean', 'std', 'count'])
+tier_means = tier_means.reindex(TIER_ORDER)
+tier_means['se'] = tier_means['std'] / np.sqrt(tier_means['count'])
+
+bars = axes[1].bar(range(len(TIER_ORDER)), tier_means['mean'],
+                   yerr=tier_means['se'] * 1.96,
+                   color=[TIER_COLORS[t] for t in TIER_ORDER],
+                   capsize=5, edgecolor='black', linewidth=1.5)
+axes[1].set_xticks(range(len(TIER_ORDER)))
+axes[1].set_xticklabels(TIER_ORDER)
+axes[1].set_xlabel('Adversary Tier', fontsize=12)
+axes[1].set_ylabel('Mean Rounds (95% CI)', fontsize=12)
+axes[1].set_title('Mean Rounds to Consensus by Adversary Tier', fontsize=14)
+
+# Add count annotations
+for i, (tier, row) in enumerate(tier_means.iterrows()):
+    axes[1].annotate(f'n={int(row["count"])}\nμ={row["mean"]:.2f}',
+                     xy=(i, row['mean'] + row['se']*1.96 + 0.2),
+                     ha='center', fontsize=10)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_e2_rounds_by_tier.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE E3: Rounds to Consensus by Reasoning vs Non-Reasoning
+fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+
+# Prepare data
+reasoning_df = consensus_df[consensus_df['adversary_reasoning'].notna()].copy()
+reasoning_df['reasoning_label'] = reasoning_df['adversary_reasoning'].map({True: 'Reasoning', False: 'Non-Reasoning'})
+
+# Left: Box plot by reasoning type
+sns.boxplot(data=reasoning_df, x='reasoning_label', y='final_round', ax=axes[0],
+            palette=['#9b59b6', '#1abc9c'])
+sns.stripplot(data=reasoning_df, x='reasoning_label', y='final_round', ax=axes[0],
+              color='black', alpha=0.3, size=4)
+axes[0].set_xlabel('Adversary Model Type', fontsize=12)
+axes[0].set_ylabel('Rounds to Consensus', fontsize=12)
+axes[0].set_title('Rounds by Reasoning Capability', fontsize=14)
+
+# Add stats
+for i, reason_type in enumerate(['Reasoning', 'Non-Reasoning']):
+    type_data = reasoning_df[reasoning_df['reasoning_label'] == reason_type]['final_round']
+    axes[0].annotate(f'n={len(type_data)}\nμ={type_data.mean():.2f}',
+                     xy=(i, type_data.max() + 0.5), ha='center', fontsize=10)
+
+# Middle: Rounds vs Competition, split by reasoning
+for reason_type, color, marker in [('Reasoning', '#9b59b6', 's'), ('Non-Reasoning', '#1abc9c', 'o')]:
+    type_data = reasoning_df[reasoning_df['reasoning_label'] == reason_type]
+    comp_means = type_data.groupby('competition_level')['final_round'].mean()
+    comp_se = type_data.groupby('competition_level')['final_round'].sem()
+    axes[1].errorbar(comp_means.index, comp_means.values, yerr=comp_se*1.96,
+                     fmt=f'{marker}-', color=color, linewidth=2, markersize=8,
+                     capsize=4, label=reason_type)
+
+axes[1].set_xlabel('Competition Level', fontsize=12)
+axes[1].set_ylabel('Mean Rounds to Consensus', fontsize=12)
+axes[1].set_title('Rounds vs Competition by Reasoning Type', fontsize=14)
+axes[1].legend()
+axes[1].set_xlim(-0.05, 1.05)
+
+# Right: Heatmap of mean rounds by reasoning type and competition level
+heatmap_data = reasoning_df.pivot_table(
+    index='reasoning_label',
+    columns='competition_level',
+    values='final_round',
+    aggfunc='mean'
+)
+heatmap_counts = reasoning_df.pivot_table(
+    index='reasoning_label',
+    columns='competition_level',
+    values='final_round',
+    aggfunc='count'
+)
+
+# Create custom annotations with mean and n
+annot_labels = heatmap_data.copy().astype(str)
+for i in range(heatmap_data.shape[0]):
+    for j in range(heatmap_data.shape[1]):
+        mean_val = heatmap_data.iloc[i, j]
+        count_val = heatmap_counts.iloc[i, j]
+        if pd.notna(mean_val) and pd.notna(count_val):
+            annot_labels.iloc[i, j] = f'{mean_val:.1f}\n(n={int(count_val)})'
+        else:
+            annot_labels.iloc[i, j] = ''
+
+sns.heatmap(heatmap_data, annot=annot_labels, fmt='', cmap='YlOrRd', ax=axes[2],
+            cbar_kws={'label': 'Mean Rounds'}, annot_kws={'fontsize': 9})
+axes[2].set_xlabel('Competition Level', fontsize=12)
+axes[2].set_ylabel('Model Type', fontsize=12)
+axes[2].set_title('Rounds Heatmap by Reasoning Type', fontsize=14)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_e3_rounds_by_reasoning.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE E4: Comprehensive Rounds Analysis - Heatmap by Tier and Competition
+fig, ax = plt.subplots(figsize=(14, 6))
+
+# Pivot table for heatmap
+heatmap_data = consensus_df.pivot_table(
+    index='adversary_tier',
+    columns='competition_level',
+    values='final_round',
+    aggfunc='mean'
+)
+heatmap_counts = consensus_df.pivot_table(
+    index='adversary_tier',
+    columns='competition_level',
+    values='final_round',
+    aggfunc='count'
+)
+
+# Reorder tiers
+heatmap_data = heatmap_data.reindex(TIER_ORDER)
+heatmap_counts = heatmap_counts.reindex(TIER_ORDER)
+
+# Create custom annotations with mean and n
+annot_labels = heatmap_data.copy().astype(str)
+for i in range(heatmap_data.shape[0]):
+    for j in range(heatmap_data.shape[1]):
+        mean_val = heatmap_data.iloc[i, j]
+        count_val = heatmap_counts.iloc[i, j]
+        if pd.notna(mean_val) and pd.notna(count_val):
+            annot_labels.iloc[i, j] = f'{mean_val:.1f}\n(n={int(count_val)})'
+        else:
+            annot_labels.iloc[i, j] = ''
+
+sns.heatmap(heatmap_data, annot=annot_labels, fmt='', cmap='YlOrRd', ax=ax,
+            cbar_kws={'label': 'Mean Rounds to Consensus'}, annot_kws={'fontsize': 10})
+ax.set_xlabel('Competition Level', fontsize=12)
+ax.set_ylabel('Adversary Tier', fontsize=12)
+ax.set_title('Rounds to Consensus Heatmap by Adversary Tier and Competition Level', fontsize=14)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_e4_rounds_heatmap_tier_comp.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# =============================================================================
+# FIGURES F: Nash Welfare Analysis (Fairness of Agreed Proposals)
+# =============================================================================
+# Nash Welfare = geometric mean of utilities = sqrt(u1 * u2)
+# Higher Nash welfare indicates more equitable/fair distribution
+# Maximum Nash welfare occurs when utilities are equal (for fixed total)
+
+# Calculate Nash welfare metrics
+df['nash_welfare'] = np.sqrt(df['baseline_utility'] * df['adversary_utility'])
+df['nash_welfare_product'] = df['baseline_utility'] * df['adversary_utility']  # Raw product
+
+# Theoretical maximum Nash welfare given total utility (when split equally)
+df['max_nash_welfare'] = df['total_utility'] / 2  # sqrt((T/2)*(T/2)) = T/2
+df['nash_efficiency'] = df['nash_welfare'] / df['max_nash_welfare']  # How close to optimal fairness
+
+# For fully competitive (comp=1), max total is 100; for cooperative (comp=0), max total is 200
+# Normalized Nash welfare as fraction of best possible
+df['theoretical_max_total'] = 200 - 100 * df['competition_level']  # Approximation
+df['nash_welfare_normalized'] = df['nash_welfare'] / (df['theoretical_max_total'] / 2)
+
+
+# In[ ]:
+
+
+# FIGURE F1: Nash Welfare vs Competition Level - OVERALL
+fig, ax = plt.subplots(figsize=(12, 8))
+
+# Scatter plot with jitter
+jitter = 0.02
+for tier in TIER_ORDER:
+    tier_data = df[df['adversary_tier'] == tier].copy()
+    tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
+    ax.scatter(tier_data['comp_jittered'], tier_data['nash_welfare'],
+               c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
+
+# Add mean line with error bars
+comp_stats = df.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
+comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
+
+ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
+            fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
+
+# Add regression line
+if len(df) > 5:
+    z = np.polyfit(df['competition_level'], df['nash_welfare'], 1)
+    p = np.poly1d(z)
+    x_line = np.linspace(0, 1, 100)
+    ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
+
+    corr = df['competition_level'].corr(df['nash_welfare'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(df)}',
+                xy=(0.95, 0.95), xycoords='axes fraction',
+                ha='right', va='top', fontsize=11,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+ax.set_xlabel('Competition Level', fontsize=12)
+ax.set_ylabel('Nash Welfare (√(u₁ × u₂))', fontsize=12)
+ax.set_title('Nash Welfare vs Competition Level\n(Higher = More Fair/Equitable Distribution)', fontsize=14)
+ax.set_xlim(-0.05, 1.05)
+ax.legend(loc='upper right')
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f1_nash_welfare_vs_comp_overall.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F2: Nash Welfare by Adversary Tier - Box and Bar plots
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Left: Box plot by tier
+tier_df = df[df['adversary_tier'].isin(TIER_ORDER)].copy()
+tier_df['adversary_tier'] = pd.Categorical(tier_df['adversary_tier'], categories=TIER_ORDER, ordered=True)
+
+sns.boxplot(data=tier_df, x='adversary_tier', y='nash_welfare', ax=axes[0],
+            palette=[TIER_COLORS[t] for t in TIER_ORDER])
+sns.stripplot(data=tier_df, x='adversary_tier', y='nash_welfare', ax=axes[0],
+              color='black', alpha=0.3, size=4)
+axes[0].set_xlabel('Adversary Tier', fontsize=12)
+axes[0].set_ylabel('Nash Welfare', fontsize=12)
+axes[0].set_title('Nash Welfare Distribution by Adversary Tier', fontsize=14)
+
+# Right: Bar plot with error bars
+tier_means = tier_df.groupby('adversary_tier')['nash_welfare'].agg(['mean', 'std', 'count'])
+tier_means = tier_means.reindex(TIER_ORDER)
+tier_means['se'] = tier_means['std'] / np.sqrt(tier_means['count'])
+
+bars = axes[1].bar(range(len(TIER_ORDER)), tier_means['mean'],
+                   yerr=tier_means['se'] * 1.96,
+                   color=[TIER_COLORS[t] for t in TIER_ORDER],
+                   capsize=5, edgecolor='black', linewidth=1.5)
+axes[1].set_xticks(range(len(TIER_ORDER)))
+axes[1].set_xticklabels(TIER_ORDER)
+axes[1].set_xlabel('Adversary Tier', fontsize=12)
+axes[1].set_ylabel('Mean Nash Welfare (95% CI)', fontsize=12)
+axes[1].set_title('Mean Nash Welfare by Adversary Tier', fontsize=14)
+
+# Add count annotations
+for i, (tier, row) in enumerate(tier_means.iterrows()):
+    axes[1].annotate(f'n={int(row["count"])}\nμ={row["mean"]:.1f}',
+                     xy=(i, row['mean'] + row['se']*1.96 + 2),
+                     ha='center', fontsize=10)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f2_nash_welfare_by_tier.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F3: Nash Welfare Heatmap (Tier x Competition) with sample sizes
+fig, ax = plt.subplots(figsize=(14, 6))
+
+heatmap_data = df.pivot_table(
+    index='adversary_tier',
+    columns='competition_level',
+    values='nash_welfare',
+    aggfunc='mean'
+)
+heatmap_counts = df.pivot_table(
+    index='adversary_tier',
+    columns='competition_level',
+    values='nash_welfare',
+    aggfunc='count'
+)
+
+heatmap_data = heatmap_data.reindex(TIER_ORDER)
+heatmap_counts = heatmap_counts.reindex(TIER_ORDER)
+
+# Create custom annotations
+annot_labels = heatmap_data.copy().astype(str)
+for i in range(heatmap_data.shape[0]):
+    for j in range(heatmap_data.shape[1]):
+        mean_val = heatmap_data.iloc[i, j]
+        count_val = heatmap_counts.iloc[i, j]
+        if pd.notna(mean_val) and pd.notna(count_val):
+            annot_labels.iloc[i, j] = f'{mean_val:.1f}\n(n={int(count_val)})'
+        else:
+            annot_labels.iloc[i, j] = ''
+
+sns.heatmap(heatmap_data, annot=annot_labels, fmt='', cmap='RdYlGn', ax=ax,
+            cbar_kws={'label': 'Mean Nash Welfare'}, annot_kws={'fontsize': 9})
+ax.set_xlabel('Competition Level', fontsize=12)
+ax.set_ylabel('Adversary Tier', fontsize=12)
+ax.set_title('Nash Welfare Heatmap by Adversary Tier and Competition Level\n(Higher = More Fair)', fontsize=14)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f3_nash_welfare_heatmap.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F4: Nash Welfare vs Total Utility (Efficiency vs Fairness Trade-off)
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+# Left: Scatter plot colored by competition level
+cmap = plt.cm.coolwarm
+norm = plt.Normalize(0, 1)
+
+scatter = axes[0].scatter(df['total_utility'], df['nash_welfare'],
+                          c=df['competition_level'], cmap=cmap, norm=norm,
+                          alpha=0.6, s=50, edgecolors='white')
+cbar = plt.colorbar(scatter, ax=axes[0])
+cbar.set_label('Competition Level', fontsize=11)
+
+# Add theoretical max line (Nash welfare = total/2 when equal split)
+x_range = np.linspace(0, 200, 100)
+axes[0].plot(x_range, x_range/2, 'k--', alpha=0.7, linewidth=2, label='Max (equal split)')
+
+axes[0].set_xlabel('Total Utility (Efficiency)', fontsize=12)
+axes[0].set_ylabel('Nash Welfare (Fairness)', fontsize=12)
+axes[0].set_title('Efficiency vs Fairness Trade-off', fontsize=14)
+axes[0].legend(loc='lower right')
+
+# Right: Nash efficiency (how close to optimal fairness given total utility)
+for tier in TIER_ORDER:
+    tier_data = df[df['adversary_tier'] == tier]
+    comp_means = tier_data.groupby('competition_level')['nash_efficiency'].mean()
+    axes[1].plot(comp_means.index, comp_means.values, 'o-',
+                 color=TIER_COLORS[tier], linewidth=2, markersize=8, label=f'{tier} Tier')
+
+axes[1].axhline(y=1.0, color='gray', linestyle='--', alpha=0.7, label='Perfect fairness')
+axes[1].set_xlabel('Competition Level', fontsize=12)
+axes[1].set_ylabel('Nash Efficiency (actual/max possible)', fontsize=12)
+axes[1].set_title('Fairness Efficiency by Tier and Competition', fontsize=14)
+axes[1].legend()
+axes[1].set_xlim(-0.05, 1.05)
+axes[1].set_ylim(0, 1.1)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f4_efficiency_vs_fairness.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F5: Nash Welfare vs Elo Difference
+fig, ax = plt.subplots(figsize=(12, 8))
+
+for tier in TIER_ORDER:
+    tier_data = df[df['adversary_tier'] == tier]
+    ax.scatter(tier_data['elo_diff'], tier_data['nash_welfare'],
+               c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
+
+# Add regression line
+valid_df = df[df['elo_diff'].notna()]
+if len(valid_df) > 5:
+    z = np.polyfit(valid_df['elo_diff'], valid_df['nash_welfare'], 1)
+    p = np.poly1d(z)
+    x_line = np.linspace(valid_df['elo_diff'].min(), valid_df['elo_diff'].max(), 100)
+    ax.plot(x_line, p(x_line), 'k--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.4f})')
+
+    corr = valid_df['elo_diff'].corr(valid_df['nash_welfare'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(valid_df)}',
+                xy=(0.95, 0.95), xycoords='axes fraction',
+                ha='right', va='top', fontsize=11,
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+ax.axvline(x=0, color='gray', linestyle=':', alpha=0.5)
+ax.set_xlabel(f'Elo Difference (Adversary - Baseline)\n[Baseline Elo = {BASELINE_ELO}]', fontsize=12)
+ax.set_ylabel('Nash Welfare', fontsize=12)
+ax.set_title('Nash Welfare vs Capability Gap', fontsize=14)
+ax.legend(loc='lower left')
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f5_nash_welfare_vs_elo_diff.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F6: Nash Welfare by Competition Level - Subplots by Tier
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+for idx, tier in enumerate(TIER_ORDER):
+    ax = axes[idx]
+    tier_data = df[df['adversary_tier'] == tier]
+
+    if len(tier_data) > 0:
+        tier_data_sorted = tier_data.copy()
+        tier_data_sorted['competition_level'] = tier_data_sorted['competition_level'].astype(str)
+        comp_order = [str(c) for c in sorted(tier_data['competition_level'].unique())]
+
+        sns.boxplot(data=tier_data_sorted, x='competition_level', y='nash_welfare',
+                    ax=ax, color=TIER_COLORS[tier], order=comp_order)
+
+        # Add mean line
+        tier_comp_means = tier_data.groupby('competition_level')['nash_welfare'].mean()
+        ax.plot(range(len(tier_comp_means)), tier_comp_means.values, 'ko-', linewidth=2, markersize=6)
+
+        corr = tier_data['competition_level'].corr(tier_data['nash_welfare'])
+        ax.annotate(f'r={corr:.2f}\nn={len(tier_data)}',
+                    xy=(0.95, 0.95), xycoords='axes fraction',
+                    ha='right', va='top', fontsize=10,
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
+    ax.set_xlabel('Competition Level', fontsize=11)
+    ax.set_ylabel('Nash Welfare' if idx == 0 else '', fontsize=11)
+    ax.set_title(f'{tier} Tier Adversaries', fontsize=12)
+    ax.tick_params(axis='x', rotation=45)
+
+plt.suptitle('Nash Welfare vs Competition Level by Adversary Tier', fontsize=14, y=1.02)
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f6_nash_welfare_vs_comp_by_tier.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F7: Nash Welfare by Reasoning vs Non-Reasoning
+fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+
+reasoning_df = df[df['adversary_reasoning'].notna()].copy()
+reasoning_df['reasoning_label'] = reasoning_df['adversary_reasoning'].map({True: 'Reasoning', False: 'Non-Reasoning'})
+
+# Left: Box plot
+sns.boxplot(data=reasoning_df, x='reasoning_label', y='nash_welfare', ax=axes[0],
+            palette=['#9b59b6', '#1abc9c'])
+sns.stripplot(data=reasoning_df, x='reasoning_label', y='nash_welfare', ax=axes[0],
+              color='black', alpha=0.3, size=4)
+axes[0].set_xlabel('Adversary Model Type', fontsize=12)
+axes[0].set_ylabel('Nash Welfare', fontsize=12)
+axes[0].set_title('Nash Welfare by Reasoning Capability', fontsize=14)
+
+for i, reason_type in enumerate(['Reasoning', 'Non-Reasoning']):
+    type_data = reasoning_df[reasoning_df['reasoning_label'] == reason_type]['nash_welfare']
+    axes[0].annotate(f'n={len(type_data)}\nμ={type_data.mean():.1f}',
+                     xy=(i, type_data.max() + 3), ha='center', fontsize=10)
+
+# Middle: Line plot by competition
+for reason_type, color, marker in [('Reasoning', '#9b59b6', 's'), ('Non-Reasoning', '#1abc9c', 'o')]:
+    type_data = reasoning_df[reasoning_df['reasoning_label'] == reason_type]
+    comp_means = type_data.groupby('competition_level')['nash_welfare'].mean()
+    comp_se = type_data.groupby('competition_level')['nash_welfare'].sem()
+    axes[1].errorbar(comp_means.index, comp_means.values, yerr=comp_se*1.96,
+                     fmt=f'{marker}-', color=color, linewidth=2, markersize=8,
+                     capsize=4, label=reason_type)
+
+axes[1].set_xlabel('Competition Level', fontsize=12)
+axes[1].set_ylabel('Mean Nash Welfare', fontsize=12)
+axes[1].set_title('Nash Welfare vs Competition by Reasoning', fontsize=14)
+axes[1].legend()
+axes[1].set_xlim(-0.05, 1.05)
+
+# Right: Heatmap
+heatmap_data = reasoning_df.pivot_table(
+    index='reasoning_label',
+    columns='competition_level',
+    values='nash_welfare',
+    aggfunc='mean'
+)
+heatmap_counts = reasoning_df.pivot_table(
+    index='reasoning_label',
+    columns='competition_level',
+    values='nash_welfare',
+    aggfunc='count'
+)
+
+annot_labels = heatmap_data.copy().astype(str)
+for i in range(heatmap_data.shape[0]):
+    for j in range(heatmap_data.shape[1]):
+        mean_val = heatmap_data.iloc[i, j]
+        count_val = heatmap_counts.iloc[i, j]
+        if pd.notna(mean_val) and pd.notna(count_val):
+            annot_labels.iloc[i, j] = f'{mean_val:.1f}\n(n={int(count_val)})'
+        else:
+            annot_labels.iloc[i, j] = ''
+
+sns.heatmap(heatmap_data, annot=annot_labels, fmt='', cmap='RdYlGn', ax=axes[2],
+            cbar_kws={'label': 'Mean Nash Welfare'}, annot_kws={'fontsize': 9})
+axes[2].set_xlabel('Competition Level', fontsize=12)
+axes[2].set_ylabel('Model Type', fontsize=12)
+axes[2].set_title('Nash Welfare Heatmap by Reasoning', fontsize=14)
+
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f7_nash_welfare_by_reasoning.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
+# FIGURE F8: Comprehensive 4-panel Nash Welfare Summary
+fig, axes = plt.subplots(2, 2, figsize=(14, 12))
+
+# Panel A: Distribution by competition level (violin plot)
+ax = axes[0, 0]
+comp_data = df.copy()
+comp_data['competition_level'] = comp_data['competition_level'].astype(str)
+comp_order = [str(c) for c in sorted(df['competition_level'].unique())]
+sns.violinplot(data=comp_data, x='competition_level', y='nash_welfare', ax=ax,
+               order=comp_order, palette='coolwarm', inner='box')
+ax.set_xlabel('Competition Level', fontsize=11)
+ax.set_ylabel('Nash Welfare', fontsize=11)
+ax.set_title('A) Nash Welfare Distribution by Competition', fontsize=12)
+ax.tick_params(axis='x', rotation=45)
+
+# Panel B: Mean Nash Welfare comparison (grouped bar)
+ax = axes[0, 1]
+tier_comp_means = df.groupby(['adversary_tier', 'competition_level'])['nash_welfare'].mean().unstack()
+tier_comp_means = tier_comp_means.reindex(TIER_ORDER)
+# Select a few key competition levels for clarity
+key_comps = [0.0, 0.3, 0.5, 0.7, 1.0]
+tier_comp_subset = tier_comp_means[[c for c in key_comps if c in tier_comp_means.columns]]
+
+x = np.arange(len(TIER_ORDER))
+width = 0.15
+for i, comp in enumerate(tier_comp_subset.columns):
+    ax.bar(x + i*width, tier_comp_subset[comp], width, label=f'γ={comp}',
+           color=plt.cm.coolwarm(comp))
+ax.set_xticks(x + width*2)
+ax.set_xticklabels(TIER_ORDER)
+ax.set_xlabel('Adversary Tier', fontsize=11)
+ax.set_ylabel('Mean Nash Welfare', fontsize=11)
+ax.set_title('B) Nash Welfare by Tier and Competition', fontsize=12)
+ax.legend(title='Competition', fontsize=9)
+
+# Panel C: Nash Welfare vs Payoff Difference (relationship between fairness and who wins)
+ax = axes[1, 0]
+scatter = ax.scatter(df['payoff_diff'], df['nash_welfare'],
+                     c=df['competition_level'], cmap='coolwarm',
+                     alpha=0.5, s=40, edgecolors='white')
+cbar = plt.colorbar(scatter, ax=ax)
+cbar.set_label('Competition', fontsize=10)
+ax.axvline(x=0, color='gray', linestyle=':', alpha=0.7)
+ax.set_xlabel('Payoff Difference (Adversary - Baseline)', fontsize=11)
+ax.set_ylabel('Nash Welfare', fontsize=11)
+ax.set_title('C) Fairness vs Who Wins More', fontsize=12)
+
+# Add quadrant labels
+ax.annotate('Baseline wins\nHigh fairness', xy=(-40, 90), fontsize=9, alpha=0.7)
+ax.annotate('Adversary wins\nHigh fairness', xy=(20, 90), fontsize=9, alpha=0.7)
+
+# Panel D: Nash Welfare summary statistics table as text
+ax = axes[1, 1]
+ax.axis('off')
+
+summary_text = "Nash Welfare Summary Statistics\n" + "="*40 + "\n\n"
+
+# By competition level
+summary_text += "By Competition Level:\n"
+comp_summary = df.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
+for comp, row in comp_summary.iterrows():
+    summary_text += f"  γ={comp}: μ={row['mean']:.1f}, σ={row['std']:.1f}, n={int(row['count'])}\n"
+
+summary_text += "\nBy Adversary Tier:\n"
+tier_summary = df.groupby('adversary_tier')['nash_welfare'].agg(['mean', 'std', 'count'])
+tier_summary = tier_summary.reindex(TIER_ORDER)
+for tier, row in tier_summary.iterrows():
+    summary_text += f"  {tier}: μ={row['mean']:.1f}, σ={row['std']:.1f}, n={int(row['count'])}\n"
+
+summary_text += "\nCorrelations with Nash Welfare:\n"
+summary_text += f"  Competition level: r={df['competition_level'].corr(df['nash_welfare']):.3f}\n"
+summary_text += f"  Elo difference: r={df['elo_diff'].corr(df['nash_welfare']):.3f}\n"
+summary_text += f"  Payoff difference: r={df['payoff_diff'].corr(df['nash_welfare']):.3f}\n"
+summary_text += f"  Total utility: r={df['total_utility'].corr(df['nash_welfare']):.3f}\n"
+
+ax.text(0.1, 0.95, summary_text, transform=ax.transAxes, fontsize=10,
+        verticalalignment='top', fontfamily='monospace',
+        bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.3))
+ax.set_title('D) Summary Statistics', fontsize=12)
+
+plt.suptitle('Nash Welfare Analysis: Fairness of Negotiated Outcomes', fontsize=14, y=1.02)
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / 'fig_f8_nash_welfare_summary.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+
+# In[ ]:
+
+
 # Summary of new figures
 print("\n" + "="*60)
 print("NEW FIGURES GENERATED")
@@ -1921,4 +2624,41 @@ print("  - fig_d1_payoff_diff_vs_elo_diff_by_comp.png (subplots by competition l
 
 print("\nFigure D2: Payoff Difference vs Elo Difference (colored by competition)")
 print("  - fig_d2_payoff_diff_vs_elo_diff_colored_by_comp.png")
+
+print("\nFigure E1: Rounds to Consensus vs Competition Level")
+print("  - fig_e1_rounds_vs_comp_overall.png (overall)")
+print("  - fig_e1_rounds_vs_comp_by_tier.png (subplots by adversary tier)")
+
+print("\nFigure E2: Rounds to Consensus by Adversary Tier")
+print("  - fig_e2_rounds_by_tier.png")
+
+print("\nFigure E3: Rounds to Consensus by Reasoning vs Non-Reasoning")
+print("  - fig_e3_rounds_by_reasoning.png")
+
+print("\nFigure E4: Rounds to Consensus Heatmap (Tier x Competition)")
+print("  - fig_e4_rounds_heatmap_tier_comp.png")
+
+print("\nFigure F1: Nash Welfare vs Competition Level")
+print("  - fig_f1_nash_welfare_vs_comp_overall.png")
+
+print("\nFigure F2: Nash Welfare by Adversary Tier")
+print("  - fig_f2_nash_welfare_by_tier.png")
+
+print("\nFigure F3: Nash Welfare Heatmap (Tier x Competition)")
+print("  - fig_f3_nash_welfare_heatmap.png")
+
+print("\nFigure F4: Efficiency vs Fairness Trade-off")
+print("  - fig_f4_efficiency_vs_fairness.png")
+
+print("\nFigure F5: Nash Welfare vs Elo Difference")
+print("  - fig_f5_nash_welfare_vs_elo_diff.png")
+
+print("\nFigure F6: Nash Welfare vs Competition by Tier")
+print("  - fig_f6_nash_welfare_vs_comp_by_tier.png")
+
+print("\nFigure F7: Nash Welfare by Reasoning vs Non-Reasoning")
+print("  - fig_f7_nash_welfare_by_reasoning.png")
+
+print("\nFigure F8: Comprehensive Nash Welfare Summary (4-panel)")
+print("  - fig_f8_nash_welfare_summary.png")
 
