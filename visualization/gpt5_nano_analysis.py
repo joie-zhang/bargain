@@ -338,6 +338,31 @@ print(f"\nDataFrame shape: {df.shape}")
 df.head()
 
 
+# In[ ]:
+
+
+# Create averaged DataFrame: average across model_order (start positions)
+# Each data point becomes the mean of weak_first and strong_first for a given
+# (adversary_model, competition_level) combination
+df_avg = df.groupby(['adversary_model', 'competition_level']).agg({
+    'adversary_tier': 'first',
+    'adversary_elo': 'first',
+    'adversary_source': 'first',
+    'adversary_reasoning': 'first',
+    'elo_diff': 'first',
+    'baseline_utility': 'mean',
+    'adversary_utility': 'mean',
+    'total_utility': 'mean',
+    'utility_share': 'mean',
+    'payoff_diff': 'mean',
+    'consensus_reached': 'mean',
+    'final_round': 'mean',
+    'model_order': 'count',
+}).reset_index()
+df_avg.rename(columns={'model_order': 'n_orders_averaged'}, inplace=True)
+print(f"\nAveraged DataFrame shape (across start positions): {df_avg.shape}")
+
+
 # ## Data Overview
 
 # In[ ]:
@@ -461,17 +486,17 @@ print(agg_by_comp.to_string())
 # Plot 1: Baseline model payoff by adversary model (sorted by Elo)
 fig, ax = plt.subplots(figsize=(14, 8))
 
-# Sort by elo
-model_order = df.groupby('adversary_model')['adversary_elo'].first().sort_values(ascending=False).index.tolist()
+# Sort by elo (averaged across start positions)
+model_order = df_avg.groupby('adversary_model')['adversary_elo'].first().sort_values(ascending=False).index.tolist()
 
 # Create box plot
-plot_df = df[df['adversary_model'].isin(model_order)].copy()
+plot_df = df_avg[df_avg['adversary_model'].isin(model_order)].copy()
 plot_df['adversary_model'] = pd.Categorical(plot_df['adversary_model'], categories=model_order, ordered=True)
 
 colors = [TIER_COLORS.get(MODEL_INFO.get(m, {}).get('tier', 'Unknown'), '#95a5a6') for m in model_order]
 
 bp = sns.boxplot(data=plot_df, x='adversary_model', y='baseline_utility', ax=ax, palette=colors)
-sns.stripplot(data=plot_df, x='adversary_model', y='baseline_utility', ax=ax, 
+sns.stripplot(data=plot_df, x='adversary_model', y='baseline_utility', ax=ax,
               color='black', alpha=0.3, size=4)
 
 ax.axhline(y=50, color='gray', linestyle='--', alpha=0.7, label='Equal Split')
@@ -497,8 +522,8 @@ plt.show()
 # Plot 2: Utility share by adversary tier
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# Left: Box plot of utility share by tier
-tier_df = df[df['adversary_tier'].isin(TIER_ORDER)].copy()
+# Left: Box plot of utility share by tier (averaged across start positions)
+tier_df = df_avg[df_avg['adversary_tier'].isin(TIER_ORDER)].copy()
 tier_df['adversary_tier'] = pd.Categorical(tier_df['adversary_tier'], categories=TIER_ORDER, ordered=True)
 
 sns.boxplot(data=tier_df, x='adversary_tier', y='utility_share', ax=axes[0],
@@ -542,14 +567,14 @@ plt.show()
 # Plot 3: Utility vs Elo scatter with regression
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
-    ax.scatter(tier_data['adversary_elo'], tier_data['baseline_utility'], 
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
+    ax.scatter(tier_data['adversary_elo'], tier_data['baseline_utility'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['adversary_elo'] > 0]
+valid_df = df_avg[df_avg['adversary_elo'] > 0]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['adversary_elo'], valid_df['baseline_utility'], 1)
     p = np.poly1d(z)
@@ -577,8 +602,8 @@ print(f"\nCorrelation between adversary Elo and Baseline model payoff: {corr:.3f
 # Plot 4: Heatmap of utility by adversary model and competition level
 fig, ax = plt.subplots(figsize=(12, 10))
 
-# Pivot table for heatmap
-heatmap_data = df.pivot_table(
+# Pivot table for heatmap (averaged across start positions)
+heatmap_data = df_avg.pivot_table(
     index='adversary_model',
     columns='competition_level',
     values='baseline_utility',
@@ -586,7 +611,7 @@ heatmap_data = df.pivot_table(
 )
 
 # Sort by elo
-elo_order = df.groupby('adversary_model')['adversary_elo'].first().sort_values(ascending=False).index
+elo_order = df_avg.groupby('adversary_model')['adversary_elo'].first().sort_values(ascending=False).index
 heatmap_data = heatmap_data.reindex(elo_order)
 
 # Add tier labels to index
@@ -610,17 +635,17 @@ plt.show()
 # Plot 5: Competition level effect
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# Left: Utility by competition level
-comp_levels = sorted(df['competition_level'].unique())
+# Left: Utility by competition level (averaged across start positions)
+comp_levels = sorted(df_avg['competition_level'].unique())
 colors = plt.cm.coolwarm(np.linspace(0, 1, len(comp_levels)))
 
 for i, comp in enumerate(comp_levels):
-    comp_data = df[df['competition_level'] == comp]
-    axes[0].scatter([comp] * len(comp_data), comp_data['baseline_utility'], 
+    comp_data = df_avg[df_avg['competition_level'] == comp]
+    axes[0].scatter([comp] * len(comp_data), comp_data['baseline_utility'],
                     c=[colors[i]], alpha=0.5, s=50)
 
 # Add mean line
-comp_means = df.groupby('competition_level')['baseline_utility'].mean()
+comp_means = df_avg.groupby('competition_level')['baseline_utility'].mean()
 axes[0].plot(comp_means.index, comp_means.values, 'ko-', linewidth=2, markersize=10, label='Mean')
 axes[0].axhline(y=50, color='gray', linestyle='--', alpha=0.5)
 axes[0].set_xlabel('Competition Level', fontsize=12)
@@ -629,8 +654,8 @@ axes[0].set_title('Utility vs Competition Level', fontsize=14)
 axes[0].legend()
 
 # Right: Total utility (efficiency) by competition level
-total_means = df.groupby('competition_level')['total_utility'].mean()
-total_std = df.groupby('competition_level')['total_utility'].std()
+total_means = df_avg.groupby('competition_level')['total_utility'].mean()
+total_std = df_avg.groupby('competition_level')['total_utility'].std()
 
 axes[1].bar(total_means.index, total_means.values, width=0.15, 
             yerr=total_std.values, capsize=5, color='steelblue', edgecolor='black')
@@ -651,10 +676,10 @@ plt.show()
 # Plot 6: Rounds to consensus
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# Left: Histogram of final rounds
-consensus_df = df[df['consensus_reached'] == True]
+# Left: Histogram of final rounds (averaged across start positions)
+consensus_df = df_avg[df_avg['consensus_reached'] > 0]
 axes[0].hist(consensus_df['final_round'], bins=range(1, 12), edgecolor='black', alpha=0.7, color='steelblue')
-axes[0].axvline(x=consensus_df['final_round'].mean(), color='red', linestyle='--', 
+axes[0].axvline(x=consensus_df['final_round'].mean(), color='red', linestyle='--',
                 label=f'Mean: {consensus_df["final_round"].mean():.1f}')
 axes[0].set_xlabel('Final Round', fontsize=12)
 axes[0].set_ylabel('Count', fontsize=12)
@@ -762,7 +787,7 @@ else:
 # Plot 9: Reasoning vs Non-reasoning models
 fig, ax = plt.subplots(figsize=(10, 6))
 
-reasoning_df = df[df['adversary_reasoning'].notna()].copy()
+reasoning_df = df_avg[df_avg['adversary_reasoning'].notna()].copy()
 reasoning_df['reasoning_label'] = reasoning_df['adversary_reasoning'].map({True: 'Reasoning', False: 'Non-Reasoning'})
 
 sns.boxplot(data=reasoning_df, x='reasoning_label', y='baseline_utility', ax=ax,
@@ -889,7 +914,7 @@ print(f"Full dataset saved to {FIGURES_DIR / 'gpt5_nano_full_data.csv'} ({len(df
 # =============================================================================
 
 # Get unique competition levels for subplot creation
-comp_levels = sorted(df['competition_level'].dropna().unique())
+comp_levels = sorted(df_avg['competition_level'].dropna().unique())
 n_comp_levels = len(comp_levels)
 
 # Calculate subplot grid dimensions (aim for roughly square)
@@ -903,14 +928,14 @@ n_rows = (n_comp_levels + n_cols - 1) // n_cols
 # FIGURE A1: Baseline Model (GPT-5-nano) Payoff vs Adversary Model Elo - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['adversary_elo'], tier_data['baseline_utility'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line with confidence band
-valid_df = df[df['adversary_elo'] > 0]
+valid_df = df_avg[df_avg['adversary_elo'] > 0]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['adversary_elo'], valid_df['baseline_utility'], 1)
     p = np.poly1d(z)
@@ -939,15 +964,15 @@ plt.show()
 
 
 # FIGURE A1-SUB: Baseline Model Payoff vs Adversary Model Elo - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -992,30 +1017,30 @@ plt.show()
 # FIGURE A2: Baseline Model (GPT-5-nano) Payoff vs Competition Level - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot with jitter
+# Scatter plot with jitter (averaged across start positions)
 jitter = 0.02
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier].copy()
+    tier_data = df_avg[df_avg['adversary_tier'] == tier].copy()
     tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
     ax.scatter(tier_data['comp_jittered'], tier_data['baseline_utility'],
                c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
 
 # Add mean line with error bars
-comp_stats = df.groupby('competition_level')['baseline_utility'].agg(['mean', 'std', 'count'])
+comp_stats = df_avg.groupby('competition_level')['baseline_utility'].agg(['mean', 'std', 'count'])
 comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
 
 ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
             fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
 
 # Add regression line
-if len(df) > 5:
-    z = np.polyfit(df['competition_level'], df['baseline_utility'], 1)
+if len(df_avg) > 5:
+    z = np.polyfit(df_avg['competition_level'], df_avg['baseline_utility'], 1)
     p = np.poly1d(z)
     x_line = np.linspace(0, 1, 100)
     ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
 
-    corr = df['competition_level'].corr(df['baseline_utility'])
-    ax.annotate(f'r = {corr:.3f}\nn = {len(df)}',
+    corr = df_avg['competition_level'].corr(df_avg['baseline_utility'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(df_avg)}',
                 xy=(0.95, 0.95), xycoords='axes fraction',
                 ha='right', va='top', fontsize=11,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -1037,11 +1062,11 @@ plt.show()
 
 # FIGURE A2-SUB: Baseline Model Payoff vs Competition Level - BY COMPETITION LEVEL (boxplot per level)
 # Since we can't filter competition by competition, we'll do it by OPPONENT TIER instead
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
 for idx, tier in enumerate(TIER_ORDER):
     ax = axes[idx]
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
 
     if len(tier_data) > 0:
         # Box plot by competition level
@@ -1082,14 +1107,14 @@ plt.show()
 # FIGURE A3: Adversary Model (Non-GPT-5-nano) Payoff vs Adversary Model Elo - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['adversary_elo'], tier_data['adversary_utility'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['adversary_elo'] > 0]
+valid_df = df_avg[df_avg['adversary_elo'] > 0]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['adversary_elo'], valid_df['adversary_utility'], 1)
     p = np.poly1d(z)
@@ -1117,15 +1142,15 @@ plt.show()
 
 
 # FIGURE A3-SUB: Adversary Model Payoff vs Adversary Model Elo - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -1170,30 +1195,30 @@ plt.show()
 # FIGURE A4: Adversary Model Payoff vs Competition Level - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot with jitter
+# Scatter plot with jitter (averaged across start positions)
 jitter = 0.02
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier].copy()
+    tier_data = df_avg[df_avg['adversary_tier'] == tier].copy()
     tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
     ax.scatter(tier_data['comp_jittered'], tier_data['adversary_utility'],
                c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
 
 # Add mean line with error bars
-comp_stats = df.groupby('competition_level')['adversary_utility'].agg(['mean', 'std', 'count'])
+comp_stats = df_avg.groupby('competition_level')['adversary_utility'].agg(['mean', 'std', 'count'])
 comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
 
 ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
             fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
 
 # Add regression line
-if len(df) > 5:
-    z = np.polyfit(df['competition_level'], df['adversary_utility'], 1)
+if len(df_avg) > 5:
+    z = np.polyfit(df_avg['competition_level'], df_avg['adversary_utility'], 1)
     p = np.poly1d(z)
     x_line = np.linspace(0, 1, 100)
     ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
 
-    corr = df['competition_level'].corr(df['adversary_utility'])
-    ax.annotate(f'r = {corr:.3f}\nn = {len(df)}',
+    corr = df_avg['competition_level'].corr(df_avg['adversary_utility'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(df_avg)}',
                 xy=(0.95, 0.95), xycoords='axes fraction',
                 ha='right', va='top', fontsize=11,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -1214,14 +1239,14 @@ plt.show()
 
 
 # FIGURE A4-SUB: Adversary Model Payoff vs Competition Level - BY OPPONENT TIER
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
 for idx, tier in enumerate(TIER_ORDER):
     ax = axes[idx]
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
 
     if len(tier_data) > 0:
-        # Box plot by competition level
+        # Box plot by competition level (averaged across start positions)
         tier_data_sorted = tier_data.copy()
         tier_data_sorted['competition_level'] = tier_data_sorted['competition_level'].astype(str)
 
@@ -1270,14 +1295,14 @@ df['payoff_diff'] = df['adversary_utility'] - df['baseline_utility']
 # FIGURE B1: Payoff Difference vs Adversary Model Elo - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['adversary_elo'], tier_data['payoff_diff'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['adversary_elo'] > 0]
+valid_df = df_avg[df_avg['adversary_elo'] > 0]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['adversary_elo'], valid_df['payoff_diff'], 1)
     p = np.poly1d(z)
@@ -1309,15 +1334,15 @@ plt.show()
 
 
 # FIGURE B1-SUB: Payoff Difference vs Adversary Model Elo - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -1362,30 +1387,30 @@ plt.show()
 # FIGURE B2: Payoff Difference vs Competition Level - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot with jitter
+# Scatter plot with jitter (averaged across start positions)
 jitter = 0.02
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier].copy()
+    tier_data = df_avg[df_avg['adversary_tier'] == tier].copy()
     tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
     ax.scatter(tier_data['comp_jittered'], tier_data['payoff_diff'],
                c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
 
 # Add mean line with error bars
-comp_stats = df.groupby('competition_level')['payoff_diff'].agg(['mean', 'std', 'count'])
+comp_stats = df_avg.groupby('competition_level')['payoff_diff'].agg(['mean', 'std', 'count'])
 comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
 
 ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
             fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
 
 # Add regression line
-if len(df) > 5:
-    z = np.polyfit(df['competition_level'], df['payoff_diff'], 1)
+if len(df_avg) > 5:
+    z = np.polyfit(df_avg['competition_level'], df_avg['payoff_diff'], 1)
     p = np.poly1d(z)
     x_line = np.linspace(0, 1, 100)
     ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
 
-    corr = df['competition_level'].corr(df['payoff_diff'])
-    ax.annotate(f'r = {corr:.3f}\nn = {len(df)}',
+    corr = df_avg['competition_level'].corr(df_avg['payoff_diff'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(df_avg)}',
                 xy=(0.95, 0.95), xycoords='axes fraction',
                 ha='right', va='top', fontsize=11,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -1406,14 +1431,14 @@ plt.show()
 
 
 # FIGURE B2-SUB: Payoff Difference vs Competition Level - BY OPPONENT TIER
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
 for idx, tier in enumerate(TIER_ORDER):
     ax = axes[idx]
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
 
     if len(tier_data) > 0:
-        # Box plot by competition level
+        # Box plot by competition level (averaged across start positions)
         tier_data_sorted = tier_data.copy()
         tier_data_sorted['competition_level'] = tier_data_sorted['competition_level'].astype(str)
 
@@ -1456,8 +1481,8 @@ fig, ax = plt.subplots(figsize=(14, 8))
 cmap = plt.cm.coolwarm
 norm = plt.Normalize(0, 1)
 
-scatter = ax.scatter(df['adversary_elo'], df['payoff_diff'],
-                     c=df['competition_level'], cmap=cmap, norm=norm,
+scatter = ax.scatter(df_avg['adversary_elo'], df_avg['payoff_diff'],
+                     c=df_avg['competition_level'], cmap=cmap, norm=norm,
                      alpha=0.6, s=60, edgecolors='white')
 
 # Add colorbar
@@ -1468,7 +1493,7 @@ cbar.set_label('Competition Level', fontsize=12)
 for comp_range, color, label in [((0, 0.3), 'blue', 'Low (0-0.3)'),
                                    ((0.4, 0.6), 'gray', 'Mid (0.4-0.6)'),
                                    ((0.7, 1.0), 'red', 'High (0.7-1.0)')]:
-    subset = df[(df['competition_level'] >= comp_range[0]) & (df['competition_level'] <= comp_range[1])]
+    subset = df_avg[(df_avg['competition_level'] >= comp_range[0]) & (df_avg['competition_level'] <= comp_range[1])]
     if len(subset) > 5:
         z = np.polyfit(subset['adversary_elo'], subset['payoff_diff'], 1)
         p = np.poly1d(z)
@@ -1492,12 +1517,12 @@ plt.show()
 # FIGURE B4: Summary - Mean Payoff Difference by Elo Bin and Competition Level (Heatmap)
 fig, ax = plt.subplots(figsize=(14, 10))
 
-# Create Elo bins
-df['elo_bin'] = pd.cut(df['adversary_elo'], bins=[1100, 1200, 1300, 1400, 1500],
-                       labels=['1100-1200', '1200-1300', '1300-1400', '1400-1500'])
+# Create Elo bins (on averaged data)
+df_avg['elo_bin'] = pd.cut(df_avg['adversary_elo'], bins=[1100, 1200, 1300, 1400, 1500],
+                           labels=['1100-1200', '1200-1300', '1300-1400', '1400-1500'])
 
 # Pivot table for heatmap - mean values
-heatmap_data = df.pivot_table(
+heatmap_data = df_avg.pivot_table(
     index='elo_bin',
     columns='competition_level',
     values='payoff_diff',
@@ -1505,7 +1530,7 @@ heatmap_data = df.pivot_table(
 )
 
 # Pivot table for counts
-heatmap_counts = df.pivot_table(
+heatmap_counts = df_avg.pivot_table(
     index='elo_bin',
     columns='competition_level',
     values='payoff_diff',
@@ -1539,7 +1564,7 @@ plt.savefig(FIGURES_DIR / 'fig_b4_payoff_diff_heatmap.png', dpi=150, bbox_inches
 plt.show()
 
 # Clean up temporary column
-df = df.drop('elo_bin', axis=1)
+df_avg = df_avg.drop('elo_bin', axis=1)
 
 
 # In[ ]:
@@ -1559,14 +1584,14 @@ df = df.drop('elo_bin', axis=1)
 # FIGURE C1: Baseline Model Payoff vs Elo Difference - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['elo_diff'], tier_data['baseline_utility'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['elo_diff'].notna()]
+valid_df = df_avg[df_avg['elo_diff'].notna()]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['elo_diff'], valid_df['baseline_utility'], 1)
     p = np.poly1d(z)
@@ -1595,15 +1620,15 @@ plt.show()
 
 
 # FIGURE C1-SUB: Baseline Model Payoff vs Elo Difference - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -1649,14 +1674,14 @@ plt.show()
 # FIGURE C2: Adversary Model Payoff vs Elo Difference - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['elo_diff'], tier_data['adversary_utility'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['elo_diff'].notna()]
+valid_df = df_avg[df_avg['elo_diff'].notna()]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['elo_diff'], valid_df['adversary_utility'], 1)
     p = np.poly1d(z)
@@ -1685,15 +1710,15 @@ plt.show()
 
 
 # FIGURE C2-SUB: Adversary Model Payoff vs Elo Difference - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -1739,14 +1764,14 @@ plt.show()
 # FIGURE D1: Payoff Difference vs Elo Difference - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot colored by tier
+# Scatter plot colored by tier (averaged across start positions)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['elo_diff'], tier_data['payoff_diff'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['elo_diff'].notna()]
+valid_df = df_avg[df_avg['elo_diff'].notna()]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['elo_diff'], valid_df['payoff_diff'], 1)
     p = np.poly1d(z)
@@ -1781,15 +1806,15 @@ plt.show()
 
 
 # FIGURE D1-SUB: Payoff Difference vs Elo Difference - BY COMPETITION LEVEL
-fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows))
+fig, axes = plt.subplots(n_rows, n_cols, figsize=(5*n_cols, 4*n_rows), sharey=True)
 axes = np.atleast_2d(axes)
 axes_flat = axes.flatten()
 
 for idx, comp_level in enumerate(comp_levels):
     ax = axes_flat[idx]
-    comp_df = df[df['competition_level'] == comp_level]
+    comp_df = df_avg[df_avg['competition_level'] == comp_level]
 
-    # Scatter plot colored by tier
+    # Scatter plot colored by tier (averaged across start positions)
     for tier in TIER_ORDER:
         tier_data = comp_df[comp_df['adversary_tier'] == tier]
         if len(tier_data) > 0:
@@ -1839,8 +1864,8 @@ fig, ax = plt.subplots(figsize=(14, 8))
 cmap = plt.cm.coolwarm
 norm = plt.Normalize(0, 1)
 
-scatter = ax.scatter(df['elo_diff'], df['payoff_diff'],
-                     c=df['competition_level'], cmap=cmap, norm=norm,
+scatter = ax.scatter(df_avg['elo_diff'], df_avg['payoff_diff'],
+                     c=df_avg['competition_level'], cmap=cmap, norm=norm,
                      alpha=0.6, s=60, edgecolors='white')
 
 # Add colorbar
@@ -1851,7 +1876,7 @@ cbar.set_label('Competition Level', fontsize=12)
 for comp_range, color, label in [((0, 0.3), 'blue', 'Low (0-0.3)'),
                                    ((0.4, 0.6), 'gray', 'Mid (0.4-0.6)'),
                                    ((0.7, 1.0), 'red', 'High (0.7-1.0)')]:
-    subset = df[(df['competition_level'] >= comp_range[0]) & (df['competition_level'] <= comp_range[1])]
+    subset = df_avg[(df_avg['competition_level'] >= comp_range[0]) & (df_avg['competition_level'] <= comp_range[1])]
     if len(subset) > 5:
         z = np.polyfit(subset['elo_diff'], subset['payoff_diff'], 1)
         p = np.poly1d(z)
@@ -1884,33 +1909,33 @@ plt.show()
 # FIGURE E1: Rounds to Consensus vs Competition Level - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Filter for experiments that reached consensus
-consensus_df = df[df['consensus_reached'] == True].copy()
+# Filter for experiments that reached consensus (averaged across start positions)
+consensus_avg = df_avg[df_avg['consensus_reached'] > 0].copy()
 
 # Scatter plot with jitter
 jitter = 0.02
 for tier in TIER_ORDER:
-    tier_data = consensus_df[consensus_df['adversary_tier'] == tier].copy()
+    tier_data = consensus_avg[consensus_avg['adversary_tier'] == tier].copy()
     tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
     ax.scatter(tier_data['comp_jittered'], tier_data['final_round'],
                c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
 
 # Add mean line with error bars
-comp_stats = consensus_df.groupby('competition_level')['final_round'].agg(['mean', 'std', 'count'])
+comp_stats = consensus_avg.groupby('competition_level')['final_round'].agg(['mean', 'std', 'count'])
 comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
 
 ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
             fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
 
 # Add regression line
-if len(consensus_df) > 5:
-    z = np.polyfit(consensus_df['competition_level'], consensus_df['final_round'], 1)
+if len(consensus_avg) > 5:
+    z = np.polyfit(consensus_avg['competition_level'], consensus_avg['final_round'], 1)
     p = np.poly1d(z)
     x_line = np.linspace(0, 1, 100)
     ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
 
-    corr = consensus_df['competition_level'].corr(consensus_df['final_round'])
-    ax.annotate(f'r = {corr:.3f}\nn = {len(consensus_df)}',
+    corr = consensus_avg['competition_level'].corr(consensus_avg['final_round'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(consensus_avg)}',
                 xy=(0.05, 0.95), xycoords='axes fraction',
                 ha='left', va='top', fontsize=11,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -1930,11 +1955,11 @@ plt.show()
 
 
 # FIGURE E1-SUB: Rounds to Consensus vs Competition Level - BY ADVERSARY TIER
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
 for idx, tier in enumerate(TIER_ORDER):
     ax = axes[idx]
-    tier_data = consensus_df[consensus_df['adversary_tier'] == tier]
+    tier_data = consensus_avg[consensus_avg['adversary_tier'] == tier]
 
     if len(tier_data) > 0:
         # Box plot by competition level
@@ -1974,8 +1999,8 @@ plt.show()
 # FIGURE E2: Rounds to Consensus by Adversary Tier
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# Left: Box plot by tier
-tier_df = consensus_df[consensus_df['adversary_tier'].isin(TIER_ORDER)].copy()
+# Left: Box plot by tier (averaged across start positions)
+tier_df = consensus_avg[consensus_avg['adversary_tier'].isin(TIER_ORDER)].copy()
 tier_df['adversary_tier'] = pd.Categorical(tier_df['adversary_tier'], categories=TIER_ORDER, ordered=True)
 
 sns.boxplot(data=tier_df, x='adversary_tier', y='final_round', ax=axes[0],
@@ -2018,8 +2043,8 @@ plt.show()
 # FIGURE E3: Rounds to Consensus by Reasoning vs Non-Reasoning
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
-# Prepare data
-reasoning_df = consensus_df[consensus_df['adversary_reasoning'].notna()].copy()
+# Prepare data (averaged across start positions)
+reasoning_df = consensus_avg[consensus_avg['adversary_reasoning'].notna()].copy()
 reasoning_df['reasoning_label'] = reasoning_df['adversary_reasoning'].map({True: 'Reasoning', False: 'Non-Reasoning'})
 
 # Left: Box plot by reasoning type
@@ -2094,14 +2119,14 @@ plt.show()
 # FIGURE E4: Comprehensive Rounds Analysis - Heatmap by Tier and Competition
 fig, ax = plt.subplots(figsize=(14, 6))
 
-# Pivot table for heatmap
-heatmap_data = consensus_df.pivot_table(
+# Pivot table for heatmap (averaged across start positions)
+heatmap_data = consensus_avg.pivot_table(
     index='adversary_tier',
     columns='competition_level',
     values='final_round',
     aggfunc='mean'
 )
-heatmap_counts = consensus_df.pivot_table(
+heatmap_counts = consensus_avg.pivot_table(
     index='adversary_tier',
     columns='competition_level',
     values='final_round',
@@ -2157,6 +2182,14 @@ df['nash_efficiency'] = df['nash_welfare'] / df['max_nash_welfare']  # How close
 df['theoretical_max_total'] = 200 - 100 * df['competition_level']  # Approximation
 df['nash_welfare_normalized'] = df['nash_welfare'] / (df['theoretical_max_total'] / 2)
 
+# Also compute Nash welfare on averaged data
+df_avg['nash_welfare'] = np.sqrt(df_avg['baseline_utility'] * df_avg['adversary_utility'])
+df_avg['nash_welfare_product'] = df_avg['baseline_utility'] * df_avg['adversary_utility']
+df_avg['max_nash_welfare'] = df_avg['total_utility'] / 2
+df_avg['nash_efficiency'] = df_avg['nash_welfare'] / df_avg['max_nash_welfare']
+df_avg['theoretical_max_total'] = 200 - 100 * df_avg['competition_level']
+df_avg['nash_welfare_normalized'] = df_avg['nash_welfare'] / (df_avg['theoretical_max_total'] / 2)
+
 
 # In[ ]:
 
@@ -2164,30 +2197,30 @@ df['nash_welfare_normalized'] = df['nash_welfare'] / (df['theoretical_max_total'
 # FIGURE F1: Nash Welfare vs Competition Level - OVERALL
 fig, ax = plt.subplots(figsize=(12, 8))
 
-# Scatter plot with jitter
+# Scatter plot with jitter (averaged across start positions)
 jitter = 0.02
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier].copy()
+    tier_data = df_avg[df_avg['adversary_tier'] == tier].copy()
     tier_data['comp_jittered'] = tier_data['competition_level'] + np.random.uniform(-jitter, jitter, len(tier_data))
     ax.scatter(tier_data['comp_jittered'], tier_data['nash_welfare'],
                c=TIER_COLORS[tier], alpha=0.5, s=50, label=f'{tier} Tier', edgecolors='white')
 
 # Add mean line with error bars
-comp_stats = df.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
+comp_stats = df_avg.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
 comp_stats['se'] = comp_stats['std'] / np.sqrt(comp_stats['count'])
 
 ax.errorbar(comp_stats.index, comp_stats['mean'], yerr=comp_stats['se']*1.96,
             fmt='ko-', linewidth=2, markersize=10, capsize=5, label='Mean (95% CI)')
 
 # Add regression line
-if len(df) > 5:
-    z = np.polyfit(df['competition_level'], df['nash_welfare'], 1)
+if len(df_avg) > 5:
+    z = np.polyfit(df_avg['competition_level'], df_avg['nash_welfare'], 1)
     p = np.poly1d(z)
     x_line = np.linspace(0, 1, 100)
     ax.plot(x_line, p(x_line), 'r--', alpha=0.7, linewidth=2, label=f'Trend (slope={z[0]:.2f})')
 
-    corr = df['competition_level'].corr(df['nash_welfare'])
-    ax.annotate(f'r = {corr:.3f}\nn = {len(df)}',
+    corr = df_avg['competition_level'].corr(df_avg['nash_welfare'])
+    ax.annotate(f'r = {corr:.3f}\nn = {len(df_avg)}',
                 xy=(0.95, 0.95), xycoords='axes fraction',
                 ha='right', va='top', fontsize=11,
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
@@ -2209,8 +2242,8 @@ plt.show()
 # FIGURE F2: Nash Welfare by Adversary Tier - Box and Bar plots
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# Left: Box plot by tier
-tier_df = df[df['adversary_tier'].isin(TIER_ORDER)].copy()
+# Left: Box plot by tier (averaged across start positions)
+tier_df = df_avg[df_avg['adversary_tier'].isin(TIER_ORDER)].copy()
 tier_df['adversary_tier'] = pd.Categorical(tier_df['adversary_tier'], categories=TIER_ORDER, ordered=True)
 
 sns.boxplot(data=tier_df, x='adversary_tier', y='nash_welfare', ax=axes[0],
@@ -2253,13 +2286,13 @@ plt.show()
 # FIGURE F3: Nash Welfare Heatmap (Tier x Competition) with sample sizes
 fig, ax = plt.subplots(figsize=(14, 6))
 
-heatmap_data = df.pivot_table(
+heatmap_data = df_avg.pivot_table(
     index='adversary_tier',
     columns='competition_level',
     values='nash_welfare',
     aggfunc='mean'
 )
-heatmap_counts = df.pivot_table(
+heatmap_counts = df_avg.pivot_table(
     index='adversary_tier',
     columns='competition_level',
     values='nash_welfare',
@@ -2301,8 +2334,8 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 cmap = plt.cm.coolwarm
 norm = plt.Normalize(0, 1)
 
-scatter = axes[0].scatter(df['total_utility'], df['nash_welfare'],
-                          c=df['competition_level'], cmap=cmap, norm=norm,
+scatter = axes[0].scatter(df_avg['total_utility'], df_avg['nash_welfare'],
+                          c=df_avg['competition_level'], cmap=cmap, norm=norm,
                           alpha=0.6, s=50, edgecolors='white')
 cbar = plt.colorbar(scatter, ax=axes[0])
 cbar.set_label('Competition Level', fontsize=11)
@@ -2318,7 +2351,7 @@ axes[0].legend(loc='lower right')
 
 # Right: Nash efficiency (how close to optimal fairness given total utility)
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     comp_means = tier_data.groupby('competition_level')['nash_efficiency'].mean()
     axes[1].plot(comp_means.index, comp_means.values, 'o-',
                  color=TIER_COLORS[tier], linewidth=2, markersize=8, label=f'{tier} Tier')
@@ -2343,12 +2376,12 @@ plt.show()
 fig, ax = plt.subplots(figsize=(12, 8))
 
 for tier in TIER_ORDER:
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
     ax.scatter(tier_data['elo_diff'], tier_data['nash_welfare'],
                c=TIER_COLORS[tier], alpha=0.6, s=60, label=f'{tier} Tier', edgecolors='white')
 
 # Add regression line
-valid_df = df[df['elo_diff'].notna()]
+valid_df = df_avg[df_avg['elo_diff'].notna()]
 if len(valid_df) > 5:
     z = np.polyfit(valid_df['elo_diff'], valid_df['nash_welfare'], 1)
     p = np.poly1d(z)
@@ -2376,11 +2409,11 @@ plt.show()
 
 
 # FIGURE F6: Nash Welfare by Competition Level - Subplots by Tier
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
 
 for idx, tier in enumerate(TIER_ORDER):
     ax = axes[idx]
-    tier_data = df[df['adversary_tier'] == tier]
+    tier_data = df_avg[df_avg['adversary_tier'] == tier]
 
     if len(tier_data) > 0:
         tier_data_sorted = tier_data.copy()
@@ -2417,7 +2450,7 @@ plt.show()
 # FIGURE F7: Nash Welfare by Reasoning vs Non-Reasoning
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
-reasoning_df = df[df['adversary_reasoning'].notna()].copy()
+reasoning_df = df_avg[df_avg['adversary_reasoning'].notna()].copy()
 reasoning_df['reasoning_label'] = reasoning_df['adversary_reasoning'].map({True: 'Reasoning', False: 'Non-Reasoning'})
 
 # Left: Box plot
@@ -2490,11 +2523,11 @@ plt.show()
 # FIGURE F8: Comprehensive 4-panel Nash Welfare Summary
 fig, axes = plt.subplots(2, 2, figsize=(14, 12))
 
-# Panel A: Distribution by competition level (violin plot)
+# Panel A: Distribution by competition level (violin plot, averaged across start positions)
 ax = axes[0, 0]
-comp_data = df.copy()
+comp_data = df_avg.copy()
 comp_data['competition_level'] = comp_data['competition_level'].astype(str)
-comp_order = [str(c) for c in sorted(df['competition_level'].unique())]
+comp_order = [str(c) for c in sorted(df_avg['competition_level'].unique())]
 sns.violinplot(data=comp_data, x='competition_level', y='nash_welfare', ax=ax,
                order=comp_order, palette='coolwarm', inner='box')
 ax.set_xlabel('Competition Level', fontsize=11)
@@ -2504,7 +2537,7 @@ ax.tick_params(axis='x', rotation=45)
 
 # Panel B: Mean Nash Welfare comparison (grouped bar)
 ax = axes[0, 1]
-tier_comp_means = df.groupby(['adversary_tier', 'competition_level'])['nash_welfare'].mean().unstack()
+tier_comp_means = df_avg.groupby(['adversary_tier', 'competition_level'])['nash_welfare'].mean().unstack()
 tier_comp_means = tier_comp_means.reindex(TIER_ORDER)
 # Select a few key competition levels for clarity
 key_comps = [0.0, 0.3, 0.5, 0.7, 1.0]
@@ -2524,8 +2557,8 @@ ax.legend(title='Competition', fontsize=9)
 
 # Panel C: Nash Welfare vs Payoff Difference (relationship between fairness and who wins)
 ax = axes[1, 0]
-scatter = ax.scatter(df['payoff_diff'], df['nash_welfare'],
-                     c=df['competition_level'], cmap='coolwarm',
+scatter = ax.scatter(df_avg['payoff_diff'], df_avg['nash_welfare'],
+                     c=df_avg['competition_level'], cmap='coolwarm',
                      alpha=0.5, s=40, edgecolors='white')
 cbar = plt.colorbar(scatter, ax=ax)
 cbar.set_label('Competition', fontsize=10)
@@ -2546,21 +2579,21 @@ summary_text = "Nash Welfare Summary Statistics\n" + "="*40 + "\n\n"
 
 # By competition level
 summary_text += "By Competition Level:\n"
-comp_summary = df.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
+comp_summary = df_avg.groupby('competition_level')['nash_welfare'].agg(['mean', 'std', 'count'])
 for comp, row in comp_summary.iterrows():
     summary_text += f"  γ={comp}: μ={row['mean']:.1f}, σ={row['std']:.1f}, n={int(row['count'])}\n"
 
 summary_text += "\nBy Adversary Tier:\n"
-tier_summary = df.groupby('adversary_tier')['nash_welfare'].agg(['mean', 'std', 'count'])
+tier_summary = df_avg.groupby('adversary_tier')['nash_welfare'].agg(['mean', 'std', 'count'])
 tier_summary = tier_summary.reindex(TIER_ORDER)
 for tier, row in tier_summary.iterrows():
     summary_text += f"  {tier}: μ={row['mean']:.1f}, σ={row['std']:.1f}, n={int(row['count'])}\n"
 
 summary_text += "\nCorrelations with Nash Welfare:\n"
-summary_text += f"  Competition level: r={df['competition_level'].corr(df['nash_welfare']):.3f}\n"
-summary_text += f"  Elo difference: r={df['elo_diff'].corr(df['nash_welfare']):.3f}\n"
-summary_text += f"  Payoff difference: r={df['payoff_diff'].corr(df['nash_welfare']):.3f}\n"
-summary_text += f"  Total utility: r={df['total_utility'].corr(df['nash_welfare']):.3f}\n"
+summary_text += f"  Competition level: r={df_avg['competition_level'].corr(df_avg['nash_welfare']):.3f}\n"
+summary_text += f"  Elo difference: r={df_avg['elo_diff'].corr(df_avg['nash_welfare']):.3f}\n"
+summary_text += f"  Payoff difference: r={df_avg['payoff_diff'].corr(df_avg['nash_welfare']):.3f}\n"
+summary_text += f"  Total utility: r={df_avg['total_utility'].corr(df_avg['nash_welfare']):.3f}\n"
 
 ax.text(0.1, 0.95, summary_text, transform=ax.transAxes, fontsize=10,
         verticalalignment='top', fontfamily='monospace',
