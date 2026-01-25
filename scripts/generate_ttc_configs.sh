@@ -139,7 +139,7 @@ elif [[ "$MODE" == "claude_prompt" ]]; then
     # Selected budgets for prompt-based experiments
     TOKEN_BUDGETS=(100 500 1000 3000 5000 10000 20000 30000)
 else
-    TOKEN_BUDGETS=(100 500 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000)
+    TOKEN_BUDGETS=(100 500 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000 20000 30000)
 fi
 
 # Competition levels
@@ -184,9 +184,9 @@ if [[ "$MODE" == "claude_prompt" ]]; then
     REASONING_PHASES_JSON='["thinking", "reflection", "discussion", "proposal", "voting"]'
     PROMPT_ONLY="true"
 else
-    REASONING_PHASES="thinking,reflection"
-    REASONING_PHASES_JSON='["thinking", "reflection"]'
-    PROMPT_ONLY="false"
+    REASONING_PHASES="thinking,reflection,discussion,proposal,voting"
+    REASONING_PHASES_JSON='["thinking", "reflection", "discussion", "proposal", "voting"]'
+    PROMPT_ONLY="true"
 fi
 
 # Max tokens per phase (high to allow full reasoning)

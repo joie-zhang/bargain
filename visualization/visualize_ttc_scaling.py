@@ -12,7 +12,7 @@ Usage:
     python scripts/visualize_ttc_scaling.py --single DIR       # Analyze single directory only
 
 What it creates:
-    experiments/results/ttc_scaling_combined/figures/
+    visualization/figures/
     ├── plot1_avg_reasoning_vs_payoff.png    # Avg reasoning tokens vs payoff
     ├── plot2_per_round_reasoning.png        # Per-round reasoning analysis
     ├── plot3_phase_breakdown.png            # Reasoning by phase
@@ -43,9 +43,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Set style
+# Set style with larger fonts globally
 plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("husl")
+plt.rcParams.update({
+    'font.family': 'sans-serif',
+    'font.sans-serif': ['Helvetica', 'DejaVu Sans', 'Liberation Sans', 'sans-serif'],
+    'font.size': 14,
+    'axes.titlesize': 18,
+    'axes.labelsize': 16,
+    'xtick.labelsize': 14,
+    'ytick.labelsize': 14,
+    'legend.fontsize': 12,
+    'legend.title_fontsize': 14,
+    'figure.titlesize': 20,
+    'mathtext.fontset': 'dejavusans',
+})
 
 
 def find_all_ttc_scaling_dirs(results_base: Path) -> List[Path]:
@@ -228,12 +241,19 @@ def collect_all_data(base_dirs: List[Path]) -> pd.DataFrame:
                                      phase_tokens.get("private_thinking_round_9", []) +
                                      phase_tokens.get("private_thinking_round_10", []))
 
-                # Sum all phases containing "thinking"
-                thinking_total = sum(sum(v) for k, v in phase_tokens.items() if "thinking" in k.lower())
-                reflection_total = sum(sum(v) for k, v in phase_tokens.items() if "reflection" in k.lower())
-                discussion_total = sum(sum(v) for k, v in phase_tokens.items() if "discussion" in k.lower())
-                proposal_total = sum(sum(v) for k, v in phase_tokens.items() if "proposal" in k.lower())
-                voting_total = sum(sum(v) for k, v in phase_tokens.items() if "voting" in k.lower())
+                # Calculate average tokens per interaction for each phase type
+                def get_phase_avg(phase_tokens, keyword):
+                    all_tokens = []
+                    for k, v in phase_tokens.items():
+                        if keyword in k.lower():
+                            all_tokens.extend(v)
+                    return np.mean(all_tokens) if all_tokens else 0
+
+                thinking_total = get_phase_avg(phase_tokens, "thinking")
+                reflection_total = get_phase_avg(phase_tokens, "reflection")
+                discussion_total = get_phase_avg(phase_tokens, "discussion")
+                proposal_total = get_phase_avg(phase_tokens, "proposal")
+                voting_total = get_phase_avg(phase_tokens, "voting")
 
                 row = {
                     "experiment_dir": str(exp_dir),
@@ -269,76 +289,47 @@ def collect_all_data(base_dirs: List[Path]) -> pd.DataFrame:
 
 def plot1_avg_reasoning_vs_payoff(df: pd.DataFrame, output_dir: Path):
     """
-    Plot 1: Average reasoning tokens vs payoff
-    X-axis: Average reasoning tokens used across all phases
-    Y-axis: Final payoff (utility)
+    Plot 1: Average payoff vs average reasoning tokens per stage, grouped by budget
+    X-axis: Average reasoning tokens per negotiation stage
+    Y-axis: Average payoff (utility)
     """
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig, ax = plt.subplots(figsize=(10, 7))
 
-    # Filter for reasoning model only (Alpha in weak_first, Beta in strong_first)
-    # In weak_first: Alpha=Claude(reasoning), Beta=GPT(baseline)
-    # In strong_first: Alpha=GPT(baseline), Beta=Claude(reasoning)
-    df_reasoning = df[
-        ((df["model_order"] == "weak_first") & (df["agent_id"] == "Agent_Alpha")) |
-        ((df["model_order"] == "strong_first") & (df["agent_id"] == "Agent_Beta"))
-    ].copy()
+    # Filter for reasoning model by checking who actually has reasoning tokens
+    df_reasoning = df[df["avg_reasoning_tokens"] > 0].copy()
 
     if df_reasoning.empty:
         print("Warning: No reasoning model data found for Plot 1")
         return
 
-    # Plot 1a: Scatter with regression line
-    ax1 = axes[0]
-    sns.regplot(
-        data=df_reasoning,
-        x="total_reasoning_tokens",
-        y="utility",
-        ax=ax1,
-        scatter_kws={"alpha": 0.6, "s": 100},
-        line_kws={"color": "red", "linewidth": 2}
-    )
-    ax1.set_xlabel("Total Reasoning Tokens", fontsize=12)
-    ax1.set_ylabel("Payoff (Utility)", fontsize=12)
-    ax1.set_title("Reasoning Tokens vs Payoff (Reasoning Model)", fontsize=14)
-
-    # Add correlation coefficient
-    corr = df_reasoning["total_reasoning_tokens"].corr(df_reasoning["utility"])
-    ax1.text(0.05, 0.95, f"r = {corr:.3f}", transform=ax1.transAxes,
-             fontsize=12, verticalalignment='top')
-
-    # Plot 1b: Grouped by token budget
-    ax2 = axes[1]
+    # Group by token budget (averaging across model_order)
     budget_groups = df_reasoning.groupby("token_budget_prompted").agg({
-        "total_reasoning_tokens": ["mean", "std"],
-        "utility": ["mean", "std", "count"]
+        "avg_reasoning_tokens": "mean",
+        "utility": "mean"
     }).reset_index()
-    budget_groups.columns = ["budget", "tokens_mean", "tokens_std",
-                            "utility_mean", "utility_std", "count"]
+    budget_groups.columns = ["budget", "tokens_mean", "utility_mean"]
 
-    ax2.errorbar(
+    ax.plot(
         budget_groups["tokens_mean"],
         budget_groups["utility_mean"],
-        xerr=budget_groups["tokens_std"],
-        yerr=budget_groups["utility_std"],
-        fmt='o-',
-        capsize=5,
-        markersize=10,
-        linewidth=2
+        'o-',
+        markersize=16,
+        linewidth=3
     )
 
     # Label points with budget
     for _, row in budget_groups.iterrows():
-        ax2.annotate(
-            f'{int(row["budget"])}',
+        ax.annotate(
+            f'{int(row["budget"]):,}',
             (row["tokens_mean"], row["utility_mean"]),
             textcoords="offset points",
-            xytext=(5, 5),
-            fontsize=9
+            xytext=(10, 10),
+            fontsize=18
         )
 
-    ax2.set_xlabel("Avg Reasoning Tokens (by budget group)", fontsize=12)
-    ax2.set_ylabel("Avg Payoff (Utility)", fontsize=12)
-    ax2.set_title("Reasoning vs Payoff by Prompted Budget", fontsize=14)
+    ax.set_xlabel("Avg Reasoning Tokens per Stage")
+    ax.set_ylabel("Avg Payoff (Utility)")
+    ax.set_title("Average Payoff (Utility) vs Average Reasoning Tokens\nper Stage by Prompting Budget")
 
     plt.tight_layout()
     output_path = output_dir / "plot1_avg_reasoning_vs_payoff.png"
@@ -349,55 +340,118 @@ def plot1_avg_reasoning_vs_payoff(df: pd.DataFrame, output_dir: Path):
 
 def plot2_per_round_reasoning(df: pd.DataFrame, output_dir: Path):
     """
-    Plot 2: Per-round reasoning tokens analysis
-    Subplots for each round showing reasoning tokens vs payoff
+    Plot 2: Payoff vs Reasoning Tokens by Negotiation Stage
+    Subplots for each phase (thinking, discussion, proposal, voting, reflection)
+    - Averages across strong_first and weak_first
+    - Consistent legend and colors across all subplots
+    - Normalized axes
+    - Logarithmic x-axis for clarity
     """
-    # Filter for reasoning model
-    df_reasoning = df[
-        ((df["model_order"] == "weak_first") & (df["agent_id"] == "Agent_Alpha")) |
-        ((df["model_order"] == "strong_first") & (df["agent_id"] == "Agent_Beta"))
-    ].copy()
+    # Filter for reasoning model by checking who actually has reasoning tokens
+    df_reasoning = df[df["total_reasoning_tokens"] > 0].copy()
 
     if df_reasoning.empty:
         print("Warning: No reasoning model data found for Plot 2")
         return
 
-    # Create subplot grid for rounds 1-10
-    fig, axes = plt.subplots(2, 5, figsize=(20, 8))
-    axes = axes.flatten()
+    # Define phases and their display names
+    phases = [
+        ("thinking_tokens", "Private Thinking"),
+        ("discussion_tokens", "Discussion"),
+        ("proposal_tokens", "Proposal"),
+        ("voting_tokens", "Voting"),
+        ("reflection_tokens", "Reflection"),
+    ]
 
-    for round_num in range(1, 11):
-        ax = axes[round_num - 1]
-        col_name = f"round_{round_num}_tokens"
+    # Define budget levels and consistent color mapping
+    budget_levels = [100, 500, 1000, 3000, 5000, 10000, 20000, 30000]
+    colors = plt.cm.viridis(np.linspace(0, 1, len(budget_levels)))
+    budget_color_map = {b: colors[i] for i, b in enumerate(budget_levels)}
 
-        if col_name in df_reasoning.columns:
-            # Filter out zeros for better visualization
-            round_data = df_reasoning[df_reasoning[col_name] > 0]
+    # Average across strong_first and weak_first by grouping
+    # Group by experiment parameters (excluding model_order) and average
+    group_cols = ["token_budget_prompted", "competition_level"]
+    phase_cols = [p[0] for p in phases]
 
-            if not round_data.empty:
-                sns.scatterplot(
-                    data=round_data,
-                    x=col_name,
-                    y="utility",
-                    hue="token_budget_prompted",
-                    palette="viridis",
-                    ax=ax,
-                    alpha=0.7,
-                    s=80
+    # Aggregate: average utility and phase tokens across model orders
+    agg_data = df_reasoning.groupby(group_cols).agg({
+        "utility": "mean",
+        **{col: "mean" for col in phase_cols}
+    }).reset_index()
+
+    # Calculate global axis limits for normalization
+    all_x_vals = []
+    all_y_vals = []
+    for phase_col, _ in phases:
+        phase_data = agg_data[agg_data[phase_col] > 0]
+        if not phase_data.empty:
+            all_x_vals.extend(phase_data[phase_col].tolist())
+            all_y_vals.extend(phase_data["utility"].tolist())
+
+    if not all_x_vals:
+        print("Warning: No phase token data found for Plot 2")
+        return
+
+    # Set axis limits with padding
+    x_min, x_max = min(all_x_vals), max(all_x_vals)
+    y_min, y_max = min(all_y_vals), max(all_y_vals)
+    y_padding = (y_max - y_min) * 0.1
+    y_lim = (y_min - y_padding, y_max + y_padding)
+
+    # For log scale, ensure x_min is positive
+    x_min = max(x_min, 1)
+
+    # Create subplot grid for 5 phases (1 row, 5 columns)
+    fig, axes = plt.subplots(1, 5, figsize=(22, 5.5))
+
+    for idx, (phase_col, phase_name) in enumerate(phases):
+        ax = axes[idx]
+
+        # Filter for non-zero tokens in this phase
+        phase_data = agg_data[agg_data[phase_col] > 0].copy()
+
+        if phase_data.empty:
+            ax.text(0.5, 0.5, "No data", ha='center', va='center', transform=ax.transAxes, fontsize=14)
+            ax.set_title(phase_name, fontweight='bold')
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_lim)
+            continue
+
+        # Plot each budget level with consistent colors
+        for budget in budget_levels:
+            budget_data = phase_data[phase_data["token_budget_prompted"] == budget]
+            if not budget_data.empty:
+                ax.scatter(
+                    budget_data[phase_col],
+                    budget_data["utility"],
+                    c=[budget_color_map[budget]],
+                    s=180,
+                    alpha=0.85,
+                    edgecolors='white',
+                    linewidth=1,
+                    label=f"{budget:,}"
                 )
-                ax.set_xlabel("Reasoning Tokens", fontsize=10)
-                ax.set_ylabel("Payoff", fontsize=10)
-                ax.set_title(f"Round {round_num}", fontsize=12, fontweight='bold')
-                ax.legend(title="Budget", fontsize=8, title_fontsize=9)
-            else:
-                ax.text(0.5, 0.5, "No data", ha='center', va='center', transform=ax.transAxes)
-                ax.set_title(f"Round {round_num}", fontsize=12)
-        else:
-            ax.text(0.5, 0.5, "No data", ha='center', va='center', transform=ax.transAxes)
-            ax.set_title(f"Round {round_num}", fontsize=12)
 
-    plt.suptitle("Reasoning Tokens vs Payoff by Round", fontsize=16, fontweight='bold', y=1.02)
+        ax.set_xscale('log')
+        ax.set_xlim(x_min * 0.8, x_max * 1.2)
+        ax.set_ylim(y_lim)
+        ax.set_xlabel("Reasoning Tokens (log)")
+        ax.set_ylabel("Payoff" if idx == 0 else "")
+        ax.set_title(phase_name, fontweight='bold')
+
+        # Only show y-axis label on leftmost plot
+        if idx > 0:
+            ax.set_yticklabels([])
+
+    # Create single shared legend outside the plots
+    handles = [plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=budget_color_map[b],
+                          markersize=18, label=f"{b:,}") for b in budget_levels if b in agg_data["token_budget_prompted"].values]
+    fig.legend(handles=handles, title="Budget", loc='center left', bbox_to_anchor=(1.01, 0.5),
+               fontsize=14, title_fontsize=16)
+
+    plt.suptitle("Payoff vs Reasoning Tokens by Negotiation Stage", fontweight='bold', y=1.02)
     plt.tight_layout()
+    plt.subplots_adjust(right=0.95)  # Make room for legend
     output_path = output_dir / "plot2_per_round_reasoning.png"
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()
@@ -408,11 +462,8 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
     """
     Plot 3: Stacked bar chart showing reasoning tokens by phase
     """
-    # Filter for reasoning model
-    df_reasoning = df[
-        ((df["model_order"] == "weak_first") & (df["agent_id"] == "Agent_Alpha")) |
-        ((df["model_order"] == "strong_first") & (df["agent_id"] == "Agent_Beta"))
-    ].copy()
+    # Filter for reasoning model by checking who actually has reasoning tokens
+    df_reasoning = df[df["total_reasoning_tokens"] > 0].copy()
 
     if df_reasoning.empty:
         print("Warning: No reasoning model data found for Plot 3")
@@ -425,7 +476,7 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
     agg_data = df_reasoning.groupby("token_budget_prompted")[phase_cols + ["utility"]].mean().reset_index()
     agg_data = agg_data.sort_values("token_budget_prompted")
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
     # Plot 3a: Stacked bar chart of tokens by phase
     ax1 = axes[0]
@@ -437,22 +488,22 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
 
     for i, (col, label) in enumerate(zip(phase_cols, phase_labels)):
         values = agg_data[col].values
-        ax1.bar(x, values, bottom=bottom, label=label, color=colors[i], alpha=0.8)
+        ax1.bar(x, values, bottom=bottom, label=label, color=colors[i], alpha=0.85, width=0.7)
         bottom += values
 
     ax1.set_xticks(x)
-    ax1.set_xticklabels([f"{int(b)}" for b in agg_data["token_budget_prompted"]], rotation=45)
-    ax1.set_xlabel("Prompted Token Budget", fontsize=12)
-    ax1.set_ylabel("Avg Reasoning Tokens", fontsize=12)
-    ax1.set_title("Reasoning Tokens by Phase", fontsize=14)
+    ax1.set_xticklabels([f"{int(b):,}" for b in agg_data["token_budget_prompted"]], rotation=45, ha='right')
+    ax1.set_xlabel("Prompted Token Budget")
+    ax1.set_ylabel("Avg Reasoning Tokens per Stage")
+    ax1.set_title("Reasoning Tokens by Phase (per stage)")
     ax1.legend(title="Phase", loc="upper left")
 
     # Plot 3b: Payoff vs total tokens with phase breakdown
     ax2 = axes[1]
     total_tokens = agg_data[phase_cols].sum(axis=1)
 
-    ax2.scatter(total_tokens, agg_data["utility"], s=150, c=agg_data["token_budget_prompted"],
-                cmap="viridis", alpha=0.8, edgecolors='black', linewidth=1)
+    ax2.scatter(total_tokens, agg_data["utility"], s=220, c=agg_data["token_budget_prompted"],
+                cmap="viridis", alpha=0.85, edgecolors='black', linewidth=1.5)
 
     # Add trend line (only if we have enough data points)
     if len(total_tokens) >= 2 and total_tokens.std() > 0:
@@ -460,7 +511,7 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
             z = np.polyfit(total_tokens, agg_data["utility"], 1)
             p = np.poly1d(z)
             x_line = np.linspace(total_tokens.min(), total_tokens.max(), 100)
-            ax2.plot(x_line, p(x_line), "r--", alpha=0.8, linewidth=2, label="Trend")
+            ax2.plot(x_line, p(x_line), "r--", alpha=0.8, linewidth=3, label="Trend")
         except np.linalg.LinAlgError:
             pass  # Skip trend line if fitting fails
 
@@ -470,11 +521,11 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
                                                   vmax=agg_data["token_budget_prompted"].max()))
     sm.set_array([])
     cbar = plt.colorbar(sm, ax=ax2)
-    cbar.set_label("Prompted Budget", fontsize=10)
+    cbar.set_label("Prompted Budget")
 
-    ax2.set_xlabel("Total Reasoning Tokens", fontsize=12)
-    ax2.set_ylabel("Avg Payoff (Utility)", fontsize=12)
-    ax2.set_title("Payoff vs Total Reasoning (by Budget)", fontsize=14)
+    ax2.set_xlabel("Sum of Avg Tokens per Stage (across phases)")
+    ax2.set_ylabel("Avg Payoff (Utility)")
+    ax2.set_title("Payoff vs Reasoning per Stage")
     ax2.legend()
 
     plt.tight_layout()
@@ -487,89 +538,97 @@ def plot3_phase_breakdown(df: pd.DataFrame, output_dir: Path):
 def plot4_instructed_vs_actual(df: pd.DataFrame, output_dir: Path):
     """
     Plot 4: Instructed (prompted) reasoning tokens vs Actual reasoning tokens used
-    X-axis: Token budget that was prompted/instructed
-    Y-axis: Actual reasoning tokens used
+    X-axis: Token budget that was prompted/instructed (logarithmic)
+    Y-axis: Average reasoning tokens per negotiation stage (not sum)
+    - Averages across weak_first and strong_first for each budget
     """
-    # Filter for reasoning model
-    df_reasoning = df[
-        ((df["model_order"] == "weak_first") & (df["agent_id"] == "Agent_Alpha")) |
-        ((df["model_order"] == "strong_first") & (df["agent_id"] == "Agent_Beta"))
-    ].copy()
+    # Filter for reasoning model by checking who actually has reasoning tokens
+    df_reasoning = df[df["total_reasoning_tokens"] > 0].copy()
 
     if df_reasoning.empty:
         print("Warning: No reasoning model data found for Plot 4")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
-    # Plot 4a: Scatter plot with identity line
+    # First, average across model_order (weak_first/strong_first) for each budget
+    # Use avg_reasoning_tokens (per-stage average) instead of total
+    agg_by_budget = df_reasoning.groupby("token_budget_prompted").agg({
+        "avg_reasoning_tokens": "mean"
+    }).reset_index()
+    agg_by_budget.columns = ["budget", "avg_tokens"]
+
+    # Plot 4a: Scatter plot with averaged data points
     ax1 = axes[0]
 
-    # Get unique budgets for coloring
-    budgets = sorted(df_reasoning["token_budget_prompted"].unique())
-
-    sns.scatterplot(
-        data=df_reasoning,
-        x="token_budget_prompted",
-        y="total_reasoning_tokens",
-        hue="model_order",
-        style="model_order",
-        s=100,
-        alpha=0.7,
-        ax=ax1
+    ax1.scatter(
+        agg_by_budget["budget"],
+        agg_by_budget["avg_tokens"],
+        s=220,
+        alpha=0.85,
+        edgecolors='black',
+        linewidth=1.5,
+        c='steelblue'
     )
 
-    # Add identity line (y = x) for reference
-    max_val = max(df_reasoning["token_budget_prompted"].max(),
-                  df_reasoning["total_reasoning_tokens"].max())
-    ax1.plot([0, max_val], [0, max_val], 'k--', alpha=0.5, label="y = x (perfect compliance)")
+    # Set logarithmic x-axis
+    ax1.set_xscale('log')
 
-    ax1.set_xlabel("Instructed Token Budget", fontsize=12)
-    ax1.set_ylabel("Actual Reasoning Tokens Used", fontsize=12)
-    ax1.set_title("Instructed vs Actual Reasoning Tokens", fontsize=14)
-    ax1.legend(title="Model Order")
+    ax1.set_xlabel("Instructed Token Budget (log scale)")
+    ax1.set_ylabel("Avg Reasoning Tokens per Stage")
+    ax1.set_title("Actual Reasoning Tokens vs Instructed Budget")
 
-    # Plot 4b: Aggregated view with error bars
+    # Label points with budget values
+    for _, row in agg_by_budget.iterrows():
+        # Position 3,000 label below and to the right
+        if row["budget"] == 3000:
+            xytext = (12, -22)
+        else:
+            xytext = (10, 10)
+        ax1.annotate(
+            f'{int(row["budget"]):,}',
+            (row["budget"], row["avg_tokens"]),
+            textcoords="offset points",
+            xytext=xytext,
+            fontsize=18
+        )
+
+    # Plot 4b: Same data with ratio annotations
     ax2 = axes[1]
 
-    agg_data = df_reasoning.groupby("token_budget_prompted").agg({
-        "total_reasoning_tokens": ["mean", "std", "count"]
-    }).reset_index()
-    agg_data.columns = ["budget", "actual_mean", "actual_std", "count"]
-    agg_data["actual_sem"] = agg_data["actual_std"] / np.sqrt(agg_data["count"])
-
-    ax2.errorbar(
-        agg_data["budget"],
-        agg_data["actual_mean"],
-        yerr=agg_data["actual_sem"] * 1.96,  # 95% CI
-        fmt='o-',
-        capsize=5,
-        markersize=10,
-        linewidth=2,
+    ax2.plot(
+        agg_by_budget["budget"],
+        agg_by_budget["avg_tokens"],
+        'o-',
+        markersize=14,
+        linewidth=3,
         color='steelblue',
-        label='Actual tokens'
+        label='Avg tokens per stage'
     )
 
-    # Add identity line
-    max_budget = agg_data["budget"].max()
-    ax2.plot([0, max_budget], [0, max_budget], 'k--', alpha=0.5, label="y = x")
+    # Set logarithmic x-axis
+    ax2.set_xscale('log')
 
     # Add ratio annotations
-    for _, row in agg_data.iterrows():
-        ratio = row["actual_mean"] / row["budget"] if row["budget"] > 0 else 0
+    for _, row in agg_by_budget.iterrows():
+        ratio = row["avg_tokens"] / row["budget"] if row["budget"] > 0 else 0
+        # Position certain labels below and to the right to avoid overlap
+        if row["budget"] in [100, 500, 1000, 3000, 5000]:
+            xytext = (12, -22)  # below and to the right
+        else:
+            xytext = (10, 14)   # above and to the right
         ax2.annotate(
             f'{ratio:.1f}x',
-            (row["budget"], row["actual_mean"]),
+            (row["budget"], row["avg_tokens"]),
             textcoords="offset points",
-            xytext=(5, 10),
-            fontsize=9,
+            xytext=xytext,
+            fontsize=18,
             color='darkred'
         )
 
-    ax2.set_xlabel("Instructed Token Budget", fontsize=12)
-    ax2.set_ylabel("Actual Reasoning Tokens (mean +/- 95% CI)", fontsize=12)
-    ax2.set_title("Compliance with Token Instructions", fontsize=14)
-    ax2.legend()
+    ax2.set_xlabel("Instructed Token Budget (log scale)")
+    ax2.set_ylabel("Avg Reasoning Tokens per Stage")
+    ax2.set_title("Compliance with Token Instructions")
 
     plt.tight_layout()
     output_path = output_dir / "plot4_instructed_vs_actual.png"
@@ -581,74 +640,73 @@ def plot4_instructed_vs_actual(df: pd.DataFrame, output_dir: Path):
 def plot5_instructed_vs_payoff(df: pd.DataFrame, output_dir: Path):
     """
     Plot 5: Instructed (prompted) reasoning tokens vs Model payoff
-    X-axis: Token budget that was prompted/instructed
+    X-axis: Token budget that was prompted/instructed (log scale)
     Y-axis: Final payoff (utility)
+    - Averages across weak_first and strong_first for each budget
     """
-    # Filter for reasoning model
-    df_reasoning = df[
-        ((df["model_order"] == "weak_first") & (df["agent_id"] == "Agent_Alpha")) |
-        ((df["model_order"] == "strong_first") & (df["agent_id"] == "Agent_Beta"))
-    ].copy()
+    # Filter for reasoning model by checking who actually has reasoning tokens
+    df_reasoning = df[df["total_reasoning_tokens"] > 0].copy()
 
     if df_reasoning.empty:
         print("Warning: No reasoning model data found for Plot 5")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    # Average across model_order (weak_first/strong_first) for each budget
+    agg_by_budget = df_reasoning.groupby("token_budget_prompted").agg({
+        "utility": "mean"
+    }).reset_index()
+    agg_by_budget.columns = ["budget", "utility_mean"]
 
-    # Plot 5a: Scatter plot
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+
+    # Plot 5a: Scatter plot with averaged data
     ax1 = axes[0]
 
-    sns.scatterplot(
-        data=df_reasoning,
-        x="token_budget_prompted",
-        y="utility",
-        hue="model_order",
-        style="model_order",
-        s=100,
-        alpha=0.7,
-        ax=ax1
+    ax1.scatter(
+        agg_by_budget["budget"],
+        agg_by_budget["utility_mean"],
+        s=220,
+        alpha=0.85,
+        edgecolors='black',
+        linewidth=1.5,
+        c='steelblue'
     )
 
-    ax1.set_xlabel("Instructed Token Budget", fontsize=12)
-    ax1.set_ylabel("Payoff (Utility)", fontsize=12)
-    ax1.set_title("Instructed Reasoning Budget vs Payoff", fontsize=14)
-    ax1.legend(title="Model Order")
+    ax1.set_xscale('log')
+    ax1.set_xlabel("Instructed Token Budget (log scale)")
+    ax1.set_ylabel("Payoff (Utility)")
+    ax1.set_title("Instructed Reasoning Budget vs Payoff")
 
-    # Plot 5b: Aggregated view with error bars, split by order
-    ax2 = axes[1]
-
-    for order, color in [("weak_first", "steelblue"), ("strong_first", "darkorange")]:
-        order_data = df_reasoning[df_reasoning["model_order"] == order]
-        if order_data.empty:
-            continue
-
-        agg_data = order_data.groupby("token_budget_prompted").agg({
-            "utility": ["mean", "std", "count"]
-        }).reset_index()
-        agg_data.columns = ["budget", "utility_mean", "utility_std", "count"]
-        agg_data["utility_sem"] = agg_data["utility_std"] / np.sqrt(agg_data["count"])
-
-        label = "Reasoning First" if order == "strong_first" else "Baseline First"
-        ax2.errorbar(
-            agg_data["budget"],
-            agg_data["utility_mean"],
-            yerr=agg_data["utility_sem"] * 1.96,  # 95% CI
-            fmt='o-',
-            capsize=5,
-            markersize=10,
-            linewidth=2,
-            color=color,
-            label=label
+    # Label points with budget values
+    for _, row in agg_by_budget.iterrows():
+        ax1.annotate(
+            f'{int(row["budget"]):,}',
+            (row["budget"], row["utility_mean"]),
+            textcoords="offset points",
+            xytext=(10, 10),
+            fontsize=18
         )
 
-    ax2.set_xlabel("Instructed Token Budget", fontsize=12)
-    ax2.set_ylabel("Payoff (mean +/- 95% CI)", fontsize=12)
-    ax2.set_title("Payoff vs Instructed Budget by Order", fontsize=14)
-    ax2.legend()
+    # Plot 5b: Line plot with averaged data
+    ax2 = axes[1]
+
+    ax2.plot(
+        agg_by_budget["budget"],
+        agg_by_budget["utility_mean"],
+        'o-',
+        markersize=14,
+        linewidth=3,
+        color='steelblue'
+    )
+
+    ax2.set_xscale('log')
+    ax2.set_xlabel("Instructed Token Budget (log scale)")
+    ax2.set_ylabel("Avg Payoff (Utility)")
+    ax2.set_title("Payoff vs Instructed Budget")
 
     # Add horizontal line at 50 (fair split)
-    ax2.axhline(y=50, color='gray', linestyle=':', alpha=0.7, label='Fair split (50)')
+    ax2.axhline(y=50, color='gray', linestyle=':', alpha=0.7, linewidth=2, label='Fair split (50)')
+    ax2.legend(loc='best')
 
     plt.tight_layout()
     output_path = output_dir / "plot5_instructed_vs_payoff.png"
@@ -664,7 +722,7 @@ def main():
     parser.add_argument("--results-base", type=str, default="experiments/results",
                        help="Base directory containing ttc_scaling_* folders (default: experiments/results)")
     parser.add_argument("--output-dir", "-o", type=str, default=None,
-                       help="Output directory for figures (default: results_base/ttc_scaling_combined/figures)")
+                       help="Output directory for figures (default: visualization/figures)")
     args = parser.parse_args()
 
     results_base = Path(args.results_base)
@@ -690,7 +748,7 @@ def main():
             print(f"Error: No ttc_scaling_* directories found in {results_base}")
             return 1
 
-        output_dir = Path(args.output_dir) if args.output_dir else results_base / "ttc_scaling_combined" / "figures"
+        output_dir = Path(args.output_dir) if args.output_dir else Path("visualization/figures")
         print(f"Aggregating results from {len(base_dirs)} ttc_scaling directories:")
         for d in base_dirs:
             print(f"  - {d.name}")
