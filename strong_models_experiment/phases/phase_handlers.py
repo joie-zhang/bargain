@@ -76,15 +76,34 @@ class PhaseHandler:
 
         return token_usage
 
-    def _get_reasoning_budget(self, phase: str) -> Optional[int]:
-        """Get reasoning token budget for a specific phase if applicable."""
+    def _get_reasoning_budget(self, phase: str, agent_id: Optional[str] = None) -> Optional[int]:
+        """Get reasoning token budget for a specific phase and agent if applicable.
+
+        Args:
+            phase: The negotiation phase (thinking, reflection, discussion, etc.)
+            agent_id: The agent ID to check. If provided and reasoning_agent_ids is set,
+                     only returns budget if this agent is in the list.
+
+        Returns:
+            The reasoning token budget if applicable, None otherwise.
+        """
         if not self.reasoning_config:
             return None
         budget = self.reasoning_config.get("budget")
         phases = self.reasoning_config.get("phases", [])
-        if budget and phase in phases:
-            return budget
-        return None
+
+        # Check if this phase should have reasoning budget
+        if not (budget and phase in phases):
+            return None
+
+        # Check if this agent should receive the reasoning prompt
+        # If reasoning_agent_ids is set, only those agents get the prompt
+        reasoning_agent_ids = self.reasoning_config.get("reasoning_agent_ids")
+        if reasoning_agent_ids and agent_id:
+            if agent_id not in reasoning_agent_ids:
+                return None  # This agent (e.g., baseline) doesn't get reasoning prompt
+
+        return budget
 
     def _build_game_state(self, agents: List[BaseLLMAgent], items: List[Dict],
                           preferences: Dict, round_num: int, max_rounds: int,
@@ -246,9 +265,6 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["discussion"])
 
-        # Get reasoning budget for discussion phase
-        reasoning_budget = self._get_reasoning_budget("discussion")
-
         # Outer loop: go around the circle discussion_turns times
         for turn in range(discussion_turns):
             self.logger.info(f"  --- Discussion Turn {turn + 1}/{discussion_turns} ---")
@@ -281,6 +297,9 @@ class PhaseHandler:
                             agent.agent_id, "discussion",
                             conversation_history=messages
                         )
+
+                    # Get reasoning budget for this specific agent
+                    reasoning_budget = self._get_reasoning_budget("discussion", agent.agent_id)
 
                     full_discussion_prompt = self.game_environment.get_discussion_prompt(
                         agent_id=agent.agent_id,
@@ -343,11 +362,11 @@ class PhaseHandler:
         if self.token_config["thinking"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["thinking"])
-        
-        # Get reasoning budget for thinking phase
-        reasoning_budget = self._get_reasoning_budget("thinking")
 
         for agent in agents:
+            # Get reasoning budget for this specific agent
+            reasoning_budget = self._get_reasoning_budget("thinking", agent.agent_id)
+
             # Use GameEnvironment if available, otherwise fall back to PromptGenerator
             if self.game_environment is not None:
                 # Get the original game_state if stored in preferences
@@ -438,10 +457,10 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["proposal"])
 
-        # Get reasoning budget for proposal phase
-        reasoning_budget = self._get_reasoning_budget("proposal")
-
         for agent in agents:
+            # Get reasoning budget for this specific agent
+            reasoning_budget = self._get_reasoning_budget("proposal", agent.agent_id)
+
             context = NegotiationContext(
                 current_round=round_num,
                 max_rounds=max_rounds,
@@ -613,10 +632,10 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["voting"])
 
-        # Get reasoning budget for voting phase
-        reasoning_budget = self._get_reasoning_budget("voting")
-
         for agent in agents:
+            # Get reasoning budget for this specific agent
+            reasoning_budget = self._get_reasoning_budget("voting", agent.agent_id)
+
             agent_votes = []
 
             self.logger.info(f"🗳️ Collecting private votes from {agent.agent_id}...")
@@ -870,10 +889,10 @@ Vote must be either "accept" or "reject"."""
             for agent in agents:
                 agent.update_max_tokens(self.token_config["reflection"])
 
-        # Get reasoning budget for reflection phase
-        reasoning_budget = self._get_reasoning_budget("reflection")
-
         for agent in agents:
+            # Get reasoning budget for this specific agent
+            reasoning_budget = self._get_reasoning_budget("reflection", agent.agent_id)
+
             # Use GameEnvironment if available, otherwise use default prompt
             if self.game_environment is not None:
                 # Get the original game_state if stored in preferences

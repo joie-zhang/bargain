@@ -342,11 +342,13 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     thinking_result["_token_usage"] = {
                         "input_tokens": usage.get("prompt_tokens"),
                         "output_tokens": usage.get("completion_tokens"),
-                        "total_tokens": usage.get("total_tokens")
+                        "total_tokens": usage.get("total_tokens"),
+                        "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
                     }
                 elif response.tokens_used:
                     thinking_result["_token_usage"] = {
-                        "total_tokens": response.tokens_used
+                        "total_tokens": response.tokens_used,
+                        "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
                     }
                 
                 # Store in strategic memory
@@ -886,9 +888,9 @@ Respond with ONLY a JSON object in this exact format:
 }}
 
 Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as values."""
-        
+
         response = await self.generate_response(context, prompt)
-        
+
         # Extract token usage info
         token_usage = None
         if response.metadata and response.metadata.get("usage"):
@@ -896,13 +898,15 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
             token_usage = {
                 "input_tokens": usage.get("prompt_tokens"),
                 "output_tokens": usage.get("completion_tokens"),
-                "total_tokens": usage.get("total_tokens")
+                "total_tokens": usage.get("total_tokens"),
+                "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
             }
         elif response.tokens_used:
             token_usage = {
-                "total_tokens": response.tokens_used
+                "total_tokens": response.tokens_used,
+                "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
             }
-        
+
         # Handle empty or None responses
         if not response.content or not response.content.strip():
             self.logger.warning(f"Empty response from {self.agent_id} for proposal. Using fallback.")
@@ -1028,9 +1032,9 @@ Respond with ONLY a JSON object in this exact format:
 }}
 
 Vote must be either "accept" or "reject"."""
-        
+
         response = await self.generate_response(context, prompt)
-        
+
         # Extract token usage info
         token_usage = None
         if response.metadata and response.metadata.get("usage"):
@@ -1038,13 +1042,15 @@ Vote must be either "accept" or "reject"."""
             token_usage = {
                 "input_tokens": usage.get("prompt_tokens"),
                 "output_tokens": usage.get("completion_tokens"),
-                "total_tokens": usage.get("total_tokens")
+                "total_tokens": usage.get("total_tokens"),
+                "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
             }
         elif response.tokens_used:
             token_usage = {
-                "total_tokens": response.tokens_used
+                "total_tokens": response.tokens_used,
+                "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
             }
-        
+
         # Handle empty or None responses
         if not response.content or not response.content.strip():
             self.logger.warning(f"Empty response from {self.agent_id} for vote. Defaulting to reject.")

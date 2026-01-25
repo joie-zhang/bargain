@@ -198,11 +198,25 @@ class StrongModelsExperiment:
             game_environment=game_environment,
             reasoning_config=reasoning_config
         )
-        
+
         # Create agents
         agents = await self.agent_factory.create_agents(models, config)
         if not agents:
             raise ValueError("Failed to create agents")
+
+        # Determine which agent(s) should receive reasoning budget prompt
+        # Only the reasoning model should get the prompt instruction, not the baseline
+        model_order = config.get("model_order", "weak_first")
+        if reasoning_config.get("budget"):
+            # Agent mapping: first model in list -> Agent_Alpha, second -> Agent_Beta
+            # weak_first: models = [baseline, reasoning] -> Agent_Beta is reasoning
+            # strong_first: models = [reasoning, baseline] -> Agent_Alpha is reasoning
+            if model_order == "weak_first":
+                reasoning_agent_ids = ["Agent_Beta"]
+            else:  # strong_first
+                reasoning_agent_ids = ["Agent_Alpha"]
+            self.phase_handler.reasoning_config["reasoning_agent_ids"] = reasoning_agent_ids
+            self.logger.info(f"Reasoning prompt will be applied to: {reasoning_agent_ids}")
 
         # Create game state using GameEnvironment
         # This generates items/issues and preferences based on game type

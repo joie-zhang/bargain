@@ -52,14 +52,19 @@ while [[ $# -gt 0 ]]; do
             MODE="batch4"
             shift
             ;;
+        --claude-prompt)
+            MODE="claude_prompt"
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--derisk|--small|--batch4]"
+            echo "Usage: $0 [--derisk|--small|--batch4|--claude-prompt]"
             echo ""
             echo "Options:"
-            echo "  --derisk    Minimal test: 1 model, 1 budget, 1 competition level (1 config)"
-            echo "  --small     Reduced test: 2 models, 3 budgets, 2 competition levels (~24 configs)"
-            echo "  --batch4    Focused experiment: 3 models (Claude/O3/GPT-5.2), 5 budgets, comp=1.0 (30 configs)"
-            echo "  (default)   Full experiment: all combinations (720 configs)"
+            echo "  --derisk       Minimal test: 1 model, 1 budget, 1 competition level (1 config)"
+            echo "  --small        Reduced test: 2 models, 3 budgets, 2 competition levels (~24 configs)"
+            echo "  --batch4       Focused experiment: 3 models (Claude/O3/GPT-5.2), 5 budgets, comp=1.0 (30 configs)"
+            echo "  --claude-prompt  Claude only, 12 budgets, prompt-only control, all phases, 3 runs (72 configs)"
+            echo "  (default)      Full experiment: all combinations (720 configs)"
             exit 0
             ;;
         *)
@@ -106,6 +111,11 @@ elif [[ "$MODE" == "batch4" ]]; then
         "o3-mini-high"                   # OpenAI - reasoning_effort
         "gpt-5.2-high"                   # OpenAI - reasoning_effort
     )
+elif [[ "$MODE" == "claude_prompt" ]]; then
+    # Claude only, prompt-based control
+    REASONING_MODELS=(
+        "claude-opus-4-5-thinking-32k"
+    )
 else
     # Full experiment: all 6 reasoning models
     REASONING_MODELS=(
@@ -118,13 +128,16 @@ else
     )
 fi
 
-# Reasoning token budgets (API-enforced where supported)
+# Reasoning token budgets (API-enforced where supported, or prompt-only)
 if [[ "$MODE" == "derisk" ]]; then
     TOKEN_BUDGETS=(100)
 elif [[ "$MODE" == "small" ]]; then
     TOKEN_BUDGETS=(100 1000 5000)
 elif [[ "$MODE" == "batch4" ]]; then
     TOKEN_BUDGETS=(100 500 1000 5000 10000)
+elif [[ "$MODE" == "claude_prompt" ]]; then
+    # Selected budgets for prompt-based experiments
+    TOKEN_BUDGETS=(100 500 1000 3000 5000 10000 20000 30000)
 else
     TOKEN_BUDGETS=(100 500 1000 2000 3000 4000 5000 6000 7000 8000 9000 10000)
 fi
@@ -135,6 +148,8 @@ if [[ "$MODE" == "derisk" ]]; then
 elif [[ "$MODE" == "small" ]]; then
     COMPETITION_LEVELS=(0.0 1.0)
 elif [[ "$MODE" == "batch4" ]]; then
+    COMPETITION_LEVELS=(1.0)  # Fully competitive only
+elif [[ "$MODE" == "claude_prompt" ]]; then
     COMPETITION_LEVELS=(1.0)  # Fully competitive only
 else
     COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
@@ -147,9 +162,14 @@ elif [[ "$MODE" == "small" ]]; then
     MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "batch4" ]]; then
     MODEL_ORDERS=("weak_first" "strong_first")  # Both orders
+elif [[ "$MODE" == "claude_prompt" ]]; then
+    MODEL_ORDERS=("weak_first" "strong_first")  # Both orders
 else
     MODEL_ORDERS=("weak_first" "strong_first")
 fi
+
+# Number of runs per configuration (1 for all modes)
+NUM_RUNS=1
 
 # Game configuration
 NUM_ITEMS=5
@@ -158,7 +178,16 @@ GAMMA_DISCOUNT=0.9
 DISCUSSION_TURNS=3
 
 # Phases to apply reasoning budget instruction
-REASONING_PHASES="thinking,reflection"
+if [[ "$MODE" == "claude_prompt" ]]; then
+    # All phases for prompt-based experiment
+    REASONING_PHASES="thinking,reflection,discussion,proposal,voting"
+    REASONING_PHASES_JSON='["thinking", "reflection", "discussion", "proposal", "voting"]'
+    PROMPT_ONLY="true"
+else
+    REASONING_PHASES="thinking,reflection"
+    REASONING_PHASES_JSON='["thinking", "reflection"]'
+    PROMPT_ONLY="false"
+fi
 
 # Max tokens per phase (high to allow full reasoning)
 MAX_TOKENS_PER_PHASE=10500
@@ -172,11 +201,14 @@ echo "  Baseline model: ${BASELINE_MODEL}"
 echo "  Token budgets: ${#TOKEN_BUDGETS[@]}"
 echo "  Competition levels: ${#COMPETITION_LEVELS[@]}"
 echo "  Model orders: ${#MODEL_ORDERS[@]}"
+echo "  Runs per config: ${NUM_RUNS}"
+echo "  Prompt only (no API enforcement): ${PROMPT_ONLY}"
 echo "  Total configs: $((${#REASONING_MODELS[@]} * ${#TOKEN_BUDGETS[@]} * ${#COMPETITION_LEVELS[@]} * ${#MODEL_ORDERS[@]}))"
+echo "  Total runs: $((${#REASONING_MODELS[@]} * ${#TOKEN_BUDGETS[@]} * ${#COMPETITION_LEVELS[@]} * ${#MODEL_ORDERS[@]} * ${NUM_RUNS}))"
 echo ""
 
-# Calculate total number of experiments for zero-padding
-TOTAL_EXPERIMENTS=$((${#REASONING_MODELS[@]} * ${#TOKEN_BUDGETS[@]} * ${#COMPETITION_LEVELS[@]} * ${#MODEL_ORDERS[@]}))
+# Calculate total number of experiments for zero-padding (including multiple runs)
+TOTAL_EXPERIMENTS=$((${#REASONING_MODELS[@]} * ${#TOKEN_BUDGETS[@]} * ${#COMPETITION_LEVELS[@]} * ${#MODEL_ORDERS[@]} * ${NUM_RUNS}))
 PADDING_WIDTH=${#TOTAL_EXPERIMENTS}
 if [[ $PADDING_WIDTH -lt 4 ]]; then
     PADDING_WIDTH=4
@@ -185,30 +217,38 @@ fi
 # Counter for experiment ID
 EXPERIMENT_ID=0
 
-# Generate configs
+# Generate configs - each unique combination gets NUM_RUNS configs with different seeds
 for reasoning_model in "${REASONING_MODELS[@]}"; do
     for token_budget in "${TOKEN_BUDGETS[@]}"; do
         for comp_level in "${COMPETITION_LEVELS[@]}"; do
             for model_order in "${MODEL_ORDERS[@]}"; do
-                # Create config file with zero-padded experiment ID
-                EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
-                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
+                for ((run_num=1; run_num<=NUM_RUNS; run_num++)); do
+                    # Create config file with zero-padded experiment ID
+                    EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
+                    CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
 
-                # Determine model order in array
-                if [[ "$model_order" == "weak_first" ]]; then
-                    MODELS_ARRAY="[\"${BASELINE_MODEL}\", \"${reasoning_model}\"]"
-                else
-                    MODELS_ARRAY="[\"${reasoning_model}\", \"${BASELINE_MODEL}\"]"
-                fi
+                    # Determine model order in array
+                    if [[ "$model_order" == "weak_first" ]]; then
+                        MODELS_ARRAY="[\"${BASELINE_MODEL}\", \"${reasoning_model}\"]"
+                    else
+                        MODELS_ARRAY="[\"${reasoning_model}\", \"${BASELINE_MODEL}\"]"
+                    fi
 
-                # Compute seed
-                SEED=$((BASE_SEED + EXPERIMENT_ID))
+                    # Compute seed - unique per experiment ID
+                    SEED=$((BASE_SEED + EXPERIMENT_ID))
 
-                # Format competition level without trailing zeros for directory name
-                COMP_STR=$(echo "${comp_level}" | sed 's/\./_/g')
+                    # Format competition level without trailing zeros for directory name
+                    COMP_STR=$(echo "${comp_level}" | sed 's/\./_/g')
 
-                # Write configuration as JSON
-                cat > "${CONFIG_FILE}" << EOF
+                    # Include run number in output directory for multiple runs
+                    if [[ ${NUM_RUNS} -gt 1 ]]; then
+                        OUTPUT_DIR_SUFFIX="run_${run_num}"
+                    else
+                        OUTPUT_DIR_SUFFIX=""
+                    fi
+
+                    # Write configuration as JSON
+                    cat > "${CONFIG_FILE}" << EOF
 {
     "experiment_id": ${EXPERIMENT_ID},
     "reasoning_model": "${reasoning_model}",
@@ -216,7 +256,10 @@ for reasoning_model in "${REASONING_MODELS[@]}"; do
     "models": ${MODELS_ARRAY},
     "model_order": "${model_order}",
     "reasoning_token_budget": ${token_budget},
-    "reasoning_budget_phases": ["thinking", "reflection"],
+    "reasoning_budget_phases": ${REASONING_PHASES_JSON},
+    "prompt_only": ${PROMPT_ONLY},
+    "run_number": ${run_num},
+    "num_runs": ${NUM_RUNS},
     "max_tokens_per_phase": ${MAX_TOKENS_PER_PHASE},
     "competition_level": ${comp_level},
     "num_items": ${NUM_ITEMS},
@@ -224,11 +267,12 @@ for reasoning_model in "${REASONING_MODELS[@]}"; do
     "gamma_discount": ${GAMMA_DISCOUNT},
     "discussion_turns": ${DISCUSSION_TURNS},
     "random_seed": ${SEED},
-    "output_dir": "experiments/results/ttc_scaling_${TIMESTAMP}/${reasoning_model}_vs_${BASELINE_MODEL}/${model_order}/budget_${token_budget}/comp_${COMP_STR}"
+    "output_dir": "experiments/results/ttc_scaling_${TIMESTAMP}/${reasoning_model}_vs_${BASELINE_MODEL}/${model_order}/budget_${token_budget}/comp_${COMP_STR}${OUTPUT_DIR_SUFFIX:+/$OUTPUT_DIR_SUFFIX}"
 }
 EOF
 
-                EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
+                    EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
+                done
             done
         done
     done
@@ -284,7 +328,8 @@ Game configuration:
 Reasoning configuration:
   Phases with budget instruction: ${REASONING_PHASES}
   Max tokens per phase: ${MAX_TOKENS_PER_PHASE}
-  (Budget is prompted, not API-enforced)
+  Prompt only (no API enforcement): ${PROMPT_ONLY}
+  Runs per configuration: ${NUM_RUNS}
 
 Key analysis variable:
   X-axis: Actual reasoning tokens used (from API response)
@@ -294,7 +339,7 @@ echo "✅ Created summary: ${SUMMARY_FILE}"
 
 # Create CSV index
 CSV_FILE="${CONFIG_DIR}/experiment_index.csv"
-echo "experiment_id,reasoning_model,baseline_model,model_order,token_budget,competition_level,seed,config_file" > "${CSV_FILE}"
+echo "experiment_id,reasoning_model,baseline_model,model_order,token_budget,competition_level,run_number,seed,config_file" > "${CSV_FILE}"
 
 for config_file in "${CONFIG_DIR}"/config_*.json; do
     if [[ -f "$config_file" ]]; then
@@ -304,9 +349,10 @@ for config_file in "${CONFIG_DIR}"/config_*.json; do
         order=$(grep -o '"model_order": "[^"]*"' "$config_file" | cut -d'"' -f4)
         budget=$(grep -o '"reasoning_token_budget": [0-9]*' "$config_file" | grep -o '[0-9]*')
         comp=$(grep -o '"competition_level": [0-9.]*' "$config_file" | grep -o '[0-9.]*')
+        run_num=$(grep -o '"run_number": [0-9]*' "$config_file" | grep -o '[0-9]*' || echo "1")
         seed=$(grep -o '"random_seed": [0-9]*' "$config_file" | grep -o '[0-9]*')
 
-        echo "${exp_id},${reasoning},${baseline},${order},${budget},${comp},${seed},$(basename $config_file)" >> "${CSV_FILE}"
+        echo "${exp_id},${reasoning},${baseline},${order},${budget},${comp},${run_num},${seed},$(basename $config_file)" >> "${CSV_FILE}"
     fi
 done
 echo "✅ Created experiment index: ${CSV_FILE}"
@@ -383,6 +429,8 @@ SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['rando
 DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
 OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
 MAX_TOKENS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['max_tokens_per_phase'])")
+REASONING_PHASES=\$(python3 -c "import json; print(' '.join(json.load(open('\${CONFIG_FILE}'))['reasoning_budget_phases']))")
+PROMPT_ONLY=\$(python3 -c "import json; print(str(json.load(open('\${CONFIG_FILE}')).get('prompt_only', False)).lower())")
 
 # Get models in correct order
 if [[ "\$MODEL_ORDER" == "weak_first" ]]; then
@@ -397,9 +445,17 @@ echo "Model order: \$MODEL_ORDER"
 echo "Models: \$MODELS"
 echo "Token budget: \$TOKEN_BUDGET"
 echo "Competition level: \$COMP_LEVEL"
+echo "Reasoning phases: \$REASONING_PHASES"
+echo "Prompt only: \$PROMPT_ONLY"
 echo "Random seed: \$SEED"
 echo "Output dir: \$OUTPUT_DIR"
 echo ""
+
+# Build command with optional --prompt-only flag
+PROMPT_ONLY_FLAG=""
+if [[ "\$PROMPT_ONLY" == "true" ]]; then
+    PROMPT_ONLY_FLAG="--prompt-only"
+fi
 
 # Run experiment with reasoning token budget
 echo "Running: python3 run_strong_models_experiment.py ..."
@@ -415,10 +471,11 @@ if python3 run_strong_models_experiment.py \\
     --discussion-turns \$DISCUSSION_TURNS \\
     --model-order \$MODEL_ORDER \\
     --reasoning-token-budget \$TOKEN_BUDGET \\
-    --reasoning-budget-phases thinking reflection \\
+    --reasoning-budget-phases \$REASONING_PHASES \\
     --max-tokens-per-phase \$MAX_TOKENS \\
     --output-dir "\$OUTPUT_DIR" \\
-    --job-id \$SLURM_ARRAY_TASK_ID; then
+    --job-id \$SLURM_ARRAY_TASK_ID \\
+    \$PROMPT_ONLY_FLAG; then
     echo ""
     echo "============================================================"
     echo "✅ Experiment completed successfully at: \$(date)"
@@ -549,6 +606,8 @@ SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_
 DISCUSSION_TURNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['discussion_turns'])")
 OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
 MAX_TOKENS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['max_tokens_per_phase'])")
+REASONING_PHASES=$(python3 -c "import json; print(' '.join(json.load(open('${CONFIG_FILE}'))['reasoning_budget_phases']))")
+PROMPT_ONLY=$(python3 -c "import json; print(str(json.load(open('${CONFIG_FILE}')).get('prompt_only', False)).lower())")
 
 # Get models in correct order
 if [[ "$MODEL_ORDER" == "weak_first" ]]; then
@@ -562,7 +621,15 @@ echo "Baseline model: $BASELINE_MODEL"
 echo "Model order: $MODEL_ORDER"
 echo "Token budget: $TOKEN_BUDGET"
 echo "Competition level: $COMP_LEVEL"
+echo "Reasoning phases: $REASONING_PHASES"
+echo "Prompt only: $PROMPT_ONLY"
 echo ""
+
+# Build command with optional --prompt-only flag
+PROMPT_ONLY_FLAG=""
+if [[ "$PROMPT_ONLY" == "true" ]]; then
+    PROMPT_ONLY_FLAG="--prompt-only"
+fi
 
 # Run experiment
 python3 run_strong_models_experiment.py \
@@ -575,10 +642,11 @@ python3 run_strong_models_experiment.py \
     --discussion-turns $DISCUSSION_TURNS \
     --model-order $MODEL_ORDER \
     --reasoning-token-budget $TOKEN_BUDGET \
-    --reasoning-budget-phases thinking reflection \
+    --reasoning-budget-phases $REASONING_PHASES \
     --max-tokens-per-phase $MAX_TOKENS \
     --output-dir "$OUTPUT_DIR" \
-    --job-id $CONFIG_ID
+    --job-id $CONFIG_ID \
+    $PROMPT_ONLY_FLAG
 LOCAL_EOF
 chmod +x "${LOCAL_RUN_SCRIPT}"
 

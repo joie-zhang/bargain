@@ -262,6 +262,12 @@ async def main():
         help="Set max_tokens for EACH individual phase/API call (default: 10500)"
     )
 
+    parser.add_argument(
+        "--prompt-only",
+        action="store_true",
+        help="Use only prompt-based reasoning budget instruction, disable API-level control (no thinking.budget_tokens or reasoning_effort)"
+    )
+
     args = parser.parse_args()
     
     # Check for at least one API key
@@ -355,10 +361,14 @@ async def main():
 
     # Show reasoning token budget if specified
     if args.reasoning_token_budget:
-        print(f"Reasoning Token Budget: {args.reasoning_token_budget} tokens (API-enforced where supported)")
-        print(f"  - Anthropic: thinking.budget_tokens={max(args.reasoning_token_budget, 1024)}")
-        print(f"  - OpenAI O3/GPT-5: reasoning_effort={'low' if args.reasoning_token_budget <= 2000 else 'medium' if args.reasoning_token_budget <= 5000 else 'high'}")
-        print(f"  - Others: Prompt instruction only")
+        if args.prompt_only:
+            print(f"Reasoning Token Budget: {args.reasoning_token_budget} tokens (PROMPT-ONLY, no API enforcement)")
+            print(f"  - All models: Prompt instruction only (API control disabled)")
+        else:
+            print(f"Reasoning Token Budget: {args.reasoning_token_budget} tokens (API-enforced where supported)")
+            print(f"  - Anthropic: thinking.budget_tokens={max(args.reasoning_token_budget, 1024)}")
+            print(f"  - OpenAI O3/GPT-5: reasoning_effort={'low' if args.reasoning_token_budget <= 2000 else 'medium' if args.reasoning_token_budget <= 5000 else 'high'}")
+            print(f"  - Others: Prompt instruction only")
         print(f"Reasoning Budget Phases: {', '.join(args.reasoning_budget_phases)}")
         print(f"Max Tokens Per Phase: {args.max_tokens_per_phase}")
     
@@ -405,14 +415,18 @@ async def main():
         if "all" in phases:
             phases = ["thinking", "reflection", "discussion", "proposal", "voting"]
 
-        # For prompt-based reasoning instructions (legacy, still useful for non-API-controllable models)
+        # For prompt-based reasoning instructions
         experiment_config["reasoning_config"] = {
             "budget": args.reasoning_token_budget,
             "phases": phases
         }
+
         # For API-based reasoning control (passed to agent factory)
         # This enables Anthropic's thinking.budget_tokens and OpenAI's reasoning_effort
-        experiment_config["reasoning_token_budget"] = args.reasoning_token_budget
+        # Skip this when --prompt-only is set to use only prompt-based control
+        if not args.prompt_only:
+            experiment_config["reasoning_token_budget"] = args.reasoning_token_budget
+
         # Apply max_tokens_per_phase to all phases if reasoning budget is specified
         experiment_config["max_tokens_per_phase"] = args.max_tokens_per_phase
     
