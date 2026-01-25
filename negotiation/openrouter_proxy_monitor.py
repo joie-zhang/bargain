@@ -70,7 +70,8 @@ def extract_content_from_response(data: dict, model_id: str = None) -> str:
     return content
 
 
-async def prompt_openrouter(url, headers, payload, timeout) -> str:
+async def prompt_openrouter(url, headers, payload, timeout) -> tuple:
+    """Make OpenRouter request and return (content, usage) tuple."""
     model_id = payload.get("model", "unknown")
     connector = aiohttp.TCPConnector(force_close=True)
     async with aiohttp.ClientSession(
@@ -108,9 +109,12 @@ async def prompt_openrouter(url, headers, payload, timeout) -> str:
         log.debug(f"Request payload: {json.dumps(payload)[:200]}")
         log.debug(f"Response: {json.dumps(data)[:500]}")
 
-        return extract_content_from_response(data, model_id)
+        content = extract_content_from_response(data, model_id)
+        usage = data.get("usage", {})
+        return content, usage
 
-async def process_request(request_json_fpath) -> str:
+async def process_request(request_json_fpath) -> tuple:
+    """Process request file and return (content, usage) tuple."""
     with open(request_json_fpath, 'r') as f:
         request_json = json.load(f)
     url, headers, payload, timeout = request_json['url'], request_json['headers'], request_json['payload'], request_json['timeout']
@@ -121,13 +125,21 @@ async def handle_request(request_path: Path):
     response_path = POLL_DIR / f"response_{suffix}.json"
     log.info(f"Processing {request_path.name}")
 
-    result = None
     try:
-        result = await process_request(str(request_path))
-        response = {"result": result, "error": None}
-        log.info(f"Success {suffix} ({len(result)} chars)")
+        content, usage = await process_request(str(request_path))
+        response = {
+            "result": content,
+            "error": None,
+            "usage": {
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "reasoning_tokens": usage.get("reasoning_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }
+        }
+        log.info(f"Success {suffix} ({len(content)} chars)")
     except Exception as e:
-        response = {"result": None, "error": f"{type(e).__name__}: {e}"}
+        response = {"result": None, "error": f"{type(e).__name__}: {e}", "usage": None}
         log.error(f"Failed {suffix}: {type(e).__name__}: {e}")
 
     with open(response_path, 'w') as f:

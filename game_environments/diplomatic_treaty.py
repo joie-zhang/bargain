@@ -8,7 +8,7 @@ importance weights.
 
 import json
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
@@ -284,7 +284,8 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
         agent_id: str,
         game_state: Dict[str, Any],
         round_num: int,
-        agents: List[str]
+        agents: List[str],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate proposal prompt for diplomatic negotiation."""
         issues = game_state["issues"]
@@ -292,12 +293,16 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
 
         issues_list = "\n".join([f"  {i}: {issue}" for i, issue in enumerate(issues)])
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""Please propose a treaty agreement.
 
 **Current Context:**
 - Issues being negotiated:
 {issues_list}
-- Round: {round_num}/{self.config.t_rounds}
+- Round: {round_num}/{self.config.t_rounds}{reasoning_instruction}
 
 **Instructions:**
 Propose a resolution for each issue as a value in [0.0, 1.0].
@@ -430,7 +435,8 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[Dict[str, Any]],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate diplomatic discussion prompt."""
         issues = game_state["issues"]
@@ -460,18 +466,23 @@ Share your diplomatic position and initial thoughts on reaching an agreement."""
 
 Share your updated diplomatic position."""
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""🗣️ DIPLOMATIC DISCUSSION - Round {round_num}/{max_rounds}
 
 Issues under negotiation: {issues_text}
 
-{context}"""
+{context}{reasoning_instruction}"""
 
     def get_voting_prompt(
         self,
         agent_id: str,
         proposal: Dict[str, Any],
         game_state: Dict[str, Any],
-        round_num: int
+        round_num: int,
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate diplomatic voting prompt."""
         issues = game_state["issues"]
@@ -485,6 +496,10 @@ Issues under negotiation: {issues_text}
 
         agreement_display = "\n".join(agreement_lines)
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""A treaty proposal has been submitted:
 
 **PROPOSED AGREEMENT:**
@@ -496,7 +511,7 @@ Issues under negotiation: {issues_text}
 Please vote on this proposal. Consider:
 - How close is this agreement to your ideal positions?
 - Could you get a better deal by continuing negotiation?
-- The cost of delay (utility discounting)
+- The cost of delay (utility discounting){reasoning_instruction}
 
 Respond with ONLY a JSON object:
 {{
@@ -512,7 +527,8 @@ Vote must be either "accept" or "reject"."""
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[Dict[str, Any]],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate diplomatic thinking prompt."""
         issues = game_state["issues"]
@@ -530,6 +546,13 @@ Vote must be either "accept" or "reject"."""
         if round_num >= max_rounds - 1:
             urgency = "\n⚠️ **CRITICAL**: Final rounds - agreement urgency is high!"
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"""
+
+**REASONING DEPTH:**
+Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."""
+
         return f"""🧠 PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
 {urgency}
 
@@ -540,7 +563,7 @@ Vote must be either "accept" or "reject"."""
 1. What have you learned about other parties' priorities?
 2. Where might they be willing to compromise?
 3. What agreement would maximize your utility while being acceptable to all?
-4. Which issues could you concede on to gain elsewhere?
+4. Which issues could you concede on to gain elsewhere?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:

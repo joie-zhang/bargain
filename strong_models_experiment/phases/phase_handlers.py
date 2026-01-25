@@ -25,7 +25,8 @@ class PhaseHandler:
     """
 
     def __init__(self, save_interaction_callback=None, token_config=None,
-                 game_environment: Optional["GameEnvironment"] = None):
+                 game_environment: Optional["GameEnvironment"] = None,
+                 reasoning_config: Optional[Dict[str, Any]] = None):
         self.logger = logging.getLogger(__name__)
         self.prompt_gen = PromptGenerator()
         self.save_interaction = save_interaction_callback or (lambda *args: None)
@@ -42,12 +43,16 @@ class PhaseHandler:
             "thinking": None,
             "default": None
         }
+
+        # Reasoning token budget configuration (for test-time compute scaling)
+        # Format: {"budget": int, "phases": ["thinking", "reflection", ...]}
+        self.reasoning_config = reasoning_config or {"budget": None, "phases": []}
     
     def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
         """Extract token usage information from an AgentResponse object."""
         if not agent_response:
             return None
-        
+
         token_usage = None
         if agent_response.metadata and agent_response.metadata.get("usage"):
             usage = agent_response.metadata["usage"]
@@ -56,12 +61,30 @@ class PhaseHandler:
                 "output_tokens": usage.get("completion_tokens"),
                 "total_tokens": usage.get("total_tokens")
             }
+            # Extract reasoning tokens if available
+            if agent_response.metadata.get("reasoning_tokens"):
+                token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
+            elif usage.get("reasoning_tokens"):
+                token_usage["reasoning_tokens"] = usage.get("reasoning_tokens")
         elif agent_response.tokens_used:
             token_usage = {
                 "total_tokens": agent_response.tokens_used
             }
+            # Check for reasoning tokens in metadata
+            if agent_response.metadata and agent_response.metadata.get("reasoning_tokens"):
+                token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
 
         return token_usage
+
+    def _get_reasoning_budget(self, phase: str) -> Optional[int]:
+        """Get reasoning token budget for a specific phase if applicable."""
+        if not self.reasoning_config:
+            return None
+        budget = self.reasoning_config.get("budget")
+        phases = self.reasoning_config.get("phases", [])
+        if budget and phase in phases:
+            return budget
+        return None
 
     def _build_game_state(self, agents: List[BaseLLMAgent], items: List[Dict],
                           preferences: Dict, round_num: int, max_rounds: int,
@@ -223,6 +246,9 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["discussion"])
 
+        # Get reasoning budget for discussion phase
+        reasoning_budget = self._get_reasoning_budget("discussion")
+
         # Outer loop: go around the circle discussion_turns times
         for turn in range(discussion_turns):
             self.logger.info(f"  --- Discussion Turn {turn + 1}/{discussion_turns} ---")
@@ -261,7 +287,8 @@ class PhaseHandler:
                         game_state=game_state,
                         round_num=round_num,
                         max_rounds=max_rounds,
-                        discussion_history=current_discussion_history
+                        discussion_history=current_discussion_history,
+                        reasoning_token_budget=reasoning_budget
                     )
                 else:
                     # Legacy mode: use PromptGenerator
@@ -317,6 +344,9 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["thinking"])
         
+        # Get reasoning budget for thinking phase
+        reasoning_budget = self._get_reasoning_budget("thinking")
+
         for agent in agents:
             # Use GameEnvironment if available, otherwise fall back to PromptGenerator
             if self.game_environment is not None:
@@ -334,7 +364,8 @@ class PhaseHandler:
                     game_state=game_state,
                     round_num=round_num,
                     max_rounds=max_rounds,
-                    discussion_history=[msg.get("content", "") for msg in discussion_messages] if discussion_messages else []
+                    discussion_history=[msg.get("content", "") for msg in discussion_messages] if discussion_messages else [],
+                    reasoning_token_budget=reasoning_budget
                 )
             else:
                 thinking_prompt = self.prompt_gen.create_thinking_prompt(items, round_num, max_rounds, discussion_messages)
@@ -407,6 +438,9 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["proposal"])
 
+        # Get reasoning budget for proposal phase
+        reasoning_budget = self._get_reasoning_budget("proposal")
+
         for agent in agents:
             context = NegotiationContext(
                 current_round=round_num,
@@ -432,7 +466,8 @@ class PhaseHandler:
                     agent_id=agent.agent_id,
                     game_state=game_state,
                     round_num=round_num,
-                    agents=[a.agent_id for a in agents]
+                    agents=[a.agent_id for a in agents],
+                    reasoning_token_budget=reasoning_budget
                 )
             else:
                 proposal_prompt = f"Please propose an allocation for round {round_num}."
@@ -578,6 +613,9 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["voting"])
 
+        # Get reasoning budget for voting phase
+        reasoning_budget = self._get_reasoning_budget("voting")
+
         for agent in agents:
             agent_votes = []
 
@@ -618,7 +656,8 @@ class PhaseHandler:
                             agent_id=agent.agent_id,
                             proposal=proposal_for_voting,
                             game_state=game_state,
-                            round_num=round_num
+                            round_num=round_num,
+                            reasoning_token_budget=reasoning_budget
                         )
                     else:
                         # Legacy mode: use default voting prompt
@@ -831,6 +870,9 @@ Vote must be either "accept" or "reject"."""
             for agent in agents:
                 agent.update_max_tokens(self.token_config["reflection"])
 
+        # Get reasoning budget for reflection phase
+        reasoning_budget = self._get_reasoning_budget("reflection")
+
         for agent in agents:
             # Use GameEnvironment if available, otherwise use default prompt
             if self.game_environment is not None:
@@ -847,7 +889,8 @@ Vote must be either "accept" or "reject"."""
                     game_state=game_state,
                     round_num=round_num,
                     max_rounds=max_rounds,
-                    tabulation_result=tabulation_result
+                    tabulation_result=tabulation_result,
+                    reasoning_token_budget=reasoning_budget
                 )
             else:
                 reflection_prompt = f"""Reflect on the outcome of round {round_num}.

@@ -14,7 +14,8 @@ PROCESSED_DIR = POLL_DIR / "processed"
 POLL_INTERVAL = 1.0
 
 
-async def make_request(api_key: str, model: str, messages: list, temperature: float, timeout: float) -> str:
+async def make_request(api_key: str, model: str, messages: list, temperature: float, timeout: float) -> tuple:
+    """Make a request to XAI API and return (content, usage_data)."""
     async with aiohttp.ClientSession() as session:
         resp = await session.post(
             "https://api.x.ai/v1/chat/completions",
@@ -25,7 +26,9 @@ async def make_request(api_key: str, model: str, messages: list, temperature: fl
         if resp.status != 200:
             raise Exception(f"HTTP {resp.status}: {await resp.text()}")
         data = await resp.json()
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"]["content"]
+        usage = data.get("usage", {})
+        return content, usage
 
 
 async def handle_request(request_path: Path):
@@ -36,11 +39,20 @@ async def handle_request(request_path: Path):
     try:
         with open(request_path) as f:
             req = json.load(f)
-        result = await make_request(req['api_key'], req['model'], req['messages'], req.get('temperature', 0.7), req.get('timeout', 300))
-        response = {"result": result, "error": None}
+        content, usage = await make_request(req['api_key'], req['model'], req['messages'], req.get('temperature', 0.7), req.get('timeout', 300))
+        response = {
+            "result": content,
+            "error": None,
+            "usage": {
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "reasoning_tokens": usage.get("reasoning_tokens"),
+                "total_tokens": usage.get("total_tokens")
+            }
+        }
         log.info(f"Success {suffix}")
     except Exception as e:
-        response = {"result": None, "error": f"{type(e).__name__}: {e}"}
+        response = {"result": None, "error": f"{type(e).__name__}: {e}", "usage": None}
         log.error(f"Failed {suffix}: {e}")
 
     with open(response_path, 'w') as f:

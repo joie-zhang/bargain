@@ -75,6 +75,7 @@ class ModelResponse:
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
     total_tokens: Optional[int] = None
+    reasoning_tokens: Optional[int] = None  # Internal reasoning tokens from API (thinking/reasoning)
     
     # Performance metrics
     response_time: float = 0.0
@@ -158,11 +159,23 @@ class OpenAIClient(BaseModelClient):
         try:
             response = await self.client.chat.completions.create(**params)
             response_time = time.time() - start_time
-            
+
             # Extract response details
             choice = response.choices[0]
             usage = response.usage
-            
+
+            # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
+            reasoning_tokens = None
+            if usage:
+                # Direct field on usage
+                if hasattr(usage, 'reasoning_tokens') and usage.reasoning_tokens:
+                    reasoning_tokens = usage.reasoning_tokens
+                # Or in completion_tokens_details
+                elif hasattr(usage, 'completion_tokens_details'):
+                    details = usage.completion_tokens_details
+                    if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
+                        reasoning_tokens = details.reasoning_tokens
+
             return ModelResponse(
                 content=choice.message.content,
                 model_id=self.model_spec.model_id,
@@ -171,6 +184,7 @@ class OpenAIClient(BaseModelClient):
                 input_tokens=usage.prompt_tokens if usage else None,
                 output_tokens=usage.completion_tokens if usage else None,
                 total_tokens=usage.total_tokens if usage else None,
+                reasoning_tokens=reasoning_tokens,
                 response_time=response_time,
                 cost_estimate=self.estimate_cost(
                     usage.prompt_tokens if usage else 0,
@@ -252,7 +266,12 @@ class AnthropicClient(BaseModelClient):
         try:
             response = await self.client.messages.create(**params)
             response_time = time.time() - start_time
-            
+
+            # Extract thinking tokens for Claude extended thinking models
+            thinking_tokens = None
+            if hasattr(response.usage, 'thinking_tokens') and response.usage.thinking_tokens:
+                thinking_tokens = response.usage.thinking_tokens
+
             return ModelResponse(
                 content=response.content[0].text,
                 model_id=self.model_spec.model_id,
@@ -261,6 +280,7 @@ class AnthropicClient(BaseModelClient):
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
                 total_tokens=response.usage.input_tokens + response.usage.output_tokens,
+                reasoning_tokens=thinking_tokens,
                 response_time=response_time,
                 cost_estimate=self.estimate_cost(
                     response.usage.input_tokens,
@@ -432,7 +452,7 @@ class PrincetonClusterClient(BaseModelClient):
             )
             
             response_time = time.time() - start_time
-            
+
             return ModelResponse(
                 content=result['generated_text'],
                 model_id=self.model_spec.model_id,
@@ -441,7 +461,11 @@ class PrincetonClusterClient(BaseModelClient):
                 response_time=response_time,
                 input_tokens=result.get('input_tokens'),
                 output_tokens=result.get('output_tokens'),
-                metadata={'model_path': self.model_path}
+                reasoning_tokens=result.get('reasoning_tokens'),
+                metadata={
+                    'model_path': self.model_path,
+                    'full_text': result.get('full_text')  # Original text with <think> blocks
+                }
             )
         
         except Exception as e:
@@ -452,8 +476,13 @@ class PrincetonClusterClient(BaseModelClient):
         """Generate streaming response."""
         yield "Streaming not implemented for Princeton cluster client"
     
-    def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
-        """Convert messages to model-specific prompt format."""
+    def _messages_to_prompt(self, messages: List[Dict[str, str]], enable_thinking: bool = True) -> str:
+        """Convert messages to model-specific prompt format.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            enable_thinking: Whether to enable thinking mode for QwQ models (default True)
+        """
         # Try to use tokenizer's chat template if available (for Qwen models)
         if self.tokenizer is not None and hasattr(self.tokenizer, 'apply_chat_template'):
             try:
@@ -466,12 +495,19 @@ class PrincetonClusterClient(BaseModelClient):
                         chat_messages.append({"role": "user", "content": msg['content']})
                     elif msg['role'] == 'assistant':
                         chat_messages.append({"role": "assistant", "content": msg['content']})
-                
-                # Apply chat template
+
+                # Apply chat template with optional thinking mode for QwQ models
+                template_kwargs = {
+                    "tokenize": False,
+                    "add_generation_prompt": True
+                }
+                # Enable thinking mode for QwQ models if supported
+                if enable_thinking and "qwq" in self.model_path.lower():
+                    template_kwargs["enable_thinking"] = True
+
                 prompt = self.tokenizer.apply_chat_template(
                     chat_messages,
-                    tokenize=False,
-                    add_generation_prompt=True
+                    **template_kwargs
                 )
                 return prompt
             except Exception as e:
@@ -494,6 +530,8 @@ class PrincetonClusterClient(BaseModelClient):
     
     def _generate_text(self, prompt: str, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Generate text using the local model (runs in executor)."""
+        import re
+
         # Use tokenizer properly to get attention mask
         # Set max_length based on model's context window (default 4096 for safety)
         max_length = getattr(self.model.config, 'max_position_embeddings', 4096)
@@ -501,13 +539,13 @@ class PrincetonClusterClient(BaseModelClient):
         input_ids = inputs['input_ids']
         attention_mask = inputs.get('attention_mask', None)
         input_length = input_ids.shape[1]
-        
+
         # Move inputs to the same device as the model
         device = next(self.model.parameters()).device
         input_ids = input_ids.to(device)
         if attention_mask is not None:
             attention_mask = attention_mask.to(device)
-        
+
         with torch.no_grad():
             # Ensure temperature is safe (avoid division issues near 0)
             temperature = max(kwargs.get('temperature', 0.7), 0.01)
@@ -523,17 +561,36 @@ class PrincetonClusterClient(BaseModelClient):
             }
             if attention_mask is not None:
                 generate_kwargs["attention_mask"] = attention_mask
-                
+
             outputs = self.model.generate(**generate_kwargs)
-        
+
         # Extract only the newly generated tokens
         new_tokens = outputs[0][input_length:]
         generated_text = self.tokenizer.decode(new_tokens, skip_special_tokens=True)
-        
+
+        # Parse <think>...</think> blocks for QwQ models to extract reasoning tokens
+        reasoning_tokens = 0
+        final_text = generated_text
+
+        # Check for thinking blocks (used by QwQ and other reasoning models)
+        think_match = re.search(r'<think>(.*?)</think>', generated_text, re.DOTALL)
+        if think_match:
+            think_content = think_match.group(1)
+            # Count tokens in the thinking block
+            think_tokens = self.tokenizer.encode(think_content, add_special_tokens=False)
+            reasoning_tokens = len(think_tokens)
+            # Extract the content after the </think> tag for the final response
+            final_text = generated_text[think_match.end():].strip()
+            if not final_text:
+                # If nothing after </think>, use the full text
+                final_text = generated_text
+
         return {
-            'generated_text': generated_text,
+            'generated_text': final_text,
             'input_tokens': input_length,
-            'output_tokens': len(new_tokens)
+            'output_tokens': len(new_tokens),
+            'reasoning_tokens': reasoning_tokens if reasoning_tokens > 0 else None,
+            'full_text': generated_text  # Keep original for logging
         }
 
 

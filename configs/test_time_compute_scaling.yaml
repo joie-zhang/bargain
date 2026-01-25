@@ -1,0 +1,132 @@
+# =============================================================================
+# Test-Time Compute Scaling Experiments Configuration
+# =============================================================================
+#
+# This configuration defines parameters for evaluating how reasoning token
+# budgets affect negotiation performance for reasoning models against a
+# GPT-5 nano baseline.
+#
+# Usage:
+#   python scripts/generate_ttc_experiments.py --config configs/test_time_compute_scaling.yaml
+#
+# Total experiments: 6 models x 12 budgets x 5 competition levels x 2 orders = 720
+#
+# =============================================================================
+
+experiment_name: test_time_compute_scaling
+description: >
+  Evaluate how reasoning token budgets (test-time compute) affect negotiation
+  performance for various reasoning models against a fixed baseline.
+
+# Reasoning models to test (6 total)
+reasoning_models:
+  # Anthropic - Extended thinking model
+  - model_id: claude-opus-4-5-thinking-32k
+    provider: anthropic
+    description: Claude Opus 4.5 with extended thinking (32k thinking tokens)
+
+  # OpenAI - Reasoning models
+  - model_id: gpt-5.2-high
+    provider: openai
+    description: GPT 5.2 with high reasoning effort
+
+  - model_id: o3-mini-high
+    provider: openai
+    description: O3-mini with high reasoning effort
+
+  # XAI - via proxy
+  - model_id: grok-4
+    provider: xai
+    description: Grok 4 reasoning model
+
+  # OpenRouter - DeepSeek
+  - model_id: deepseek-r1
+    provider: openrouter
+    description: DeepSeek R1 reasoning model
+
+  # Princeton Cluster - Local model
+  - model_id: QwQ-32B
+    provider: princeton_cluster
+    description: QwQ-32B reasoning model (local HuggingFace)
+
+# Baseline model (non-reasoning)
+baseline_model:
+  model_id: gpt-5-nano
+  provider: openai
+  description: GPT-5 nano as fixed baseline
+
+# Reasoning token budgets to test (API-enforced where supported)
+# - Anthropic: thinking.budget_tokens parameter (min 1024, enforced)
+# - OpenAI O3/GPT-5: reasoning_effort (low/medium/high based on budget)
+# - DeepSeek/Grok/QwQ: Prompt instruction only (no API control available)
+reasoning_token_budgets:
+  - 100
+  - 500
+  - 1000
+  - 2000
+  - 3000
+  - 4000
+  - 5000
+  - 6000
+  - 7000
+  - 8000
+  - 9000
+  - 10000
+
+# Competition levels (cosine similarity between preference vectors)
+competition_levels:
+  - 0.0    # Fully cooperative
+  - 0.25   # Mostly cooperative
+  - 0.5    # Neutral
+  - 0.75   # Mostly competitive
+  - 1.0    # Fully competitive
+
+# Model ordering in negotiation
+model_orders:
+  - strong_first   # Reasoning model speaks first
+  - weak_first     # Baseline speaks first
+
+# Which phases should include the reasoning budget instruction
+reasoning_budget_phases:
+  - thinking
+  - reflection
+
+# Token settings for API calls
+# max_tokens_per_phase: Maximum tokens for EACH individual API call
+# This should be high enough to allow full reasoning output
+max_tokens_per_phase: 10500
+
+# Game configuration
+game_config:
+  game_type: item_allocation
+  num_items: 5
+  max_rounds: 10
+  gamma_discount: 0.9
+
+# Experiment settings
+experiment_settings:
+  runs_per_config: 1  # Number of runs per configuration
+  random_seed_base: 42
+
+# SLURM job settings for Princeton cluster
+slurm_settings:
+  partition: gpu
+  time: "04:00:00"
+  memory: "32G"
+  gpus_per_node: 1
+  cpus_per_task: 4
+  array_size: 720  # Total configurations
+
+# Output settings
+output:
+  base_dir: experiments/results/ttc_scaling
+  log_dir: logs/cluster/ttc_scaling
+
+# Key analysis variables
+analysis:
+  x_axis: actual_reasoning_tokens  # Use empirical tokens, not prompted budget
+  y_axis: normalized_utility
+  group_by:
+    - model_id
+    - competition_level
+    - model_order

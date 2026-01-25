@@ -56,6 +56,7 @@ class StrongModelsExperiment:
         self.batch_token_usage = {
             "total_input_tokens": 0,
             "total_output_tokens": 0,
+            "total_reasoning_tokens": 0,  # Track reasoning tokens separately
             "by_agent": {},
             "by_phase": {},
             "estimated_count": 0,
@@ -187,11 +188,15 @@ class StrongModelsExperiment:
         else:
             raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation' or 'diplomacy'")
 
-        # Initialize phase handler with token config and game environment
+        # Extract reasoning configuration if present
+        reasoning_config = config.get("reasoning_config", {"budget": None, "phases": []})
+
+        # Initialize phase handler with token config, game environment, and reasoning config
         self.phase_handler = PhaseHandler(
             save_interaction_callback=self._save_interaction,
             token_config=token_config,
-            game_environment=game_environment
+            game_environment=game_environment,
+            reasoning_config=reasoning_config
         )
         
         # Create agents
@@ -508,6 +513,9 @@ class StrongModelsExperiment:
         # Add token usage information if provided
         if token_usage:
             interaction["token_usage"] = token_usage
+            # Also save reasoning_tokens at top level for easy access
+            if "reasoning_tokens" in token_usage and token_usage["reasoning_tokens"]:
+                interaction["reasoning_tokens"] = token_usage["reasoning_tokens"]
 
         # Track token usage for batch aggregation
         self._track_token_usage(agent_id, phase, prompt, response, token_usage)
@@ -540,35 +548,41 @@ class StrongModelsExperiment:
         if token_usage:
             input_tokens = token_usage.get('input_tokens', 0) or 0
             output_tokens = token_usage.get('output_tokens', 0) or 0
+            reasoning_tokens = token_usage.get('reasoning_tokens', 0) or 0
             self.batch_token_usage["actual_count"] += 1
         else:
             # Estimate from text
             input_tokens = int(len(prompt) / CHARS_PER_TOKEN) if prompt else 0
             output_tokens = int(len(response) / CHARS_PER_TOKEN) if response else 0
+            reasoning_tokens = 0
             self.batch_token_usage["estimated_count"] += 1
 
         # Update totals
         self.batch_token_usage["total_input_tokens"] += input_tokens
         self.batch_token_usage["total_output_tokens"] += output_tokens
+        self.batch_token_usage["total_reasoning_tokens"] += reasoning_tokens
 
         # Update by agent
         if agent_id not in self.batch_token_usage["by_agent"]:
-            self.batch_token_usage["by_agent"][agent_id] = {"input": 0, "output": 0}
+            self.batch_token_usage["by_agent"][agent_id] = {"input": 0, "output": 0, "reasoning": 0}
         self.batch_token_usage["by_agent"][agent_id]["input"] += input_tokens
         self.batch_token_usage["by_agent"][agent_id]["output"] += output_tokens
+        self.batch_token_usage["by_agent"][agent_id]["reasoning"] += reasoning_tokens
 
         # Update by phase (extract base phase name)
         base_phase = phase.split('_round_')[0].split('_turn_')[0]
         if base_phase not in self.batch_token_usage["by_phase"]:
-            self.batch_token_usage["by_phase"][base_phase] = {"input": 0, "output": 0}
+            self.batch_token_usage["by_phase"][base_phase] = {"input": 0, "output": 0, "reasoning": 0}
         self.batch_token_usage["by_phase"][base_phase]["input"] += input_tokens
         self.batch_token_usage["by_phase"][base_phase]["output"] += output_tokens
+        self.batch_token_usage["by_phase"][base_phase]["reasoning"] += reasoning_tokens
 
     def _reset_batch_token_tracking(self):
         """Reset token tracking for a new batch."""
         self.batch_token_usage = {
             "total_input_tokens": 0,
             "total_output_tokens": 0,
+            "total_reasoning_tokens": 0,
             "by_agent": {},
             "by_phase": {},
             "estimated_count": 0,
@@ -584,6 +598,7 @@ class StrongModelsExperiment:
         usage = self.batch_token_usage
         total_in = usage["total_input_tokens"]
         total_out = usage["total_output_tokens"]
+        total_reasoning = usage.get("total_reasoning_tokens", 0)
 
         def format_tokens(count):
             if count >= 1_000_000:
@@ -597,25 +612,28 @@ class StrongModelsExperiment:
         self.logger.info("=" * 70)
 
         # Overall summary
-        self.logger.info(f"\n  Total Input Tokens:   {format_tokens(total_in)}")
-        self.logger.info(f"  Total Output Tokens:  {format_tokens(total_out)}")
-        self.logger.info(f"  Data Source:          {usage['actual_count']} actual, {usage['estimated_count']} estimated")
+        self.logger.info(f"\n  Total Input Tokens:     {format_tokens(total_in)}")
+        self.logger.info(f"  Total Output Tokens:    {format_tokens(total_out)}")
+        self.logger.info(f"  Total Reasoning Tokens: {format_tokens(total_reasoning)}")
+        self.logger.info(f"  Data Source:            {usage['actual_count']} actual, {usage['estimated_count']} estimated")
 
         # By agent breakdown
         if usage["by_agent"]:
             self.logger.info(f"\n  {'BY AGENT:':<20}")
-            self.logger.info(f"    {'Agent':<20} {'Input':>12} {'Output':>12}")
-            self.logger.info("    " + "-" * 44)
+            self.logger.info(f"    {'Agent':<20} {'Input':>12} {'Output':>12} {'Reasoning':>12}")
+            self.logger.info("    " + "-" * 56)
             for agent_id, tokens in usage["by_agent"].items():
-                self.logger.info(f"    {agent_id:<20} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12}")
+                reasoning = tokens.get('reasoning', 0)
+                self.logger.info(f"    {agent_id:<20} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12} {format_tokens(reasoning):>12}")
 
         # By phase breakdown
         if usage["by_phase"]:
             self.logger.info(f"\n  {'BY PHASE:':<20}")
-            self.logger.info(f"    {'Phase':<25} {'Input':>12} {'Output':>12}")
-            self.logger.info("    " + "-" * 49)
+            self.logger.info(f"    {'Phase':<25} {'Input':>12} {'Output':>12} {'Reasoning':>12}")
+            self.logger.info("    " + "-" * 61)
             for phase, tokens in sorted(usage["by_phase"].items()):
-                self.logger.info(f"    {phase:<25} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12}")
+                reasoning = tokens.get('reasoning', 0)
+                self.logger.info(f"    {phase:<25} {format_tokens(tokens['input']):>12} {format_tokens(tokens['output']):>12} {format_tokens(reasoning):>12}")
 
         # Cost estimate (basic - use cost_dashboard.py for detailed analysis)
         self.logger.info(f"\n  {'COST NOTES:':<20}")

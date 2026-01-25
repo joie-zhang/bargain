@@ -1268,17 +1268,36 @@ class AnthropicAgent(BaseLLMAgent):
             else:
                 user_messages.append(msg)
         
+        # Check for extended thinking budget in custom_parameters
+        thinking_budget = self.config.custom_parameters.get("thinking_budget_tokens")
+
+        # Build API params - filter out our custom keys that aren't direct API params
+        filtered_custom_params = {k: v for k, v in self.config.custom_parameters.items()
+                                  if k not in ["thinking_budget_tokens"]}
+
         # Call Anthropic API (max_tokens is required)
         api_params = {
             "model": self.model_name,
-            "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,  # Required by Anthropic API
             "system": system_message,
             "messages": user_messages,
             "stream": True,  # Enable streaming for long requests
-            **self.config.custom_parameters,
+            **filtered_custom_params,
             **kwargs
         }
+
+        # Add extended thinking if budget is specified
+        # Note: Extended thinking is incompatible with temperature modification
+        if thinking_budget is not None:
+            api_params["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": thinking_budget
+            }
+            # Extended thinking requires temperature=1 (or omitted), remove any custom temperature
+            api_params.pop("temperature", None)
+        else:
+            # Only set temperature if not using extended thinking
+            api_params["temperature"] = self.config.temperature
         
         # Retry logic with explicit rate limit handling
         max_retries = self.config.max_retries
@@ -1291,24 +1310,33 @@ class AnthropicAgent(BaseLLMAgent):
                 full_text = ""
                 input_tokens = 0
                 output_tokens = 0
+                thinking_tokens = 0  # For extended thinking models
                 stop_reason = None
-                
+
                 async for event in stream:
                     if hasattr(event, 'type'):
                         if event.type == 'content_block_delta':
-                            full_text += event.delta.text
+                            # Handle both text and thinking content blocks
+                            if hasattr(event.delta, 'text'):
+                                full_text += event.delta.text
+                            elif hasattr(event.delta, 'thinking'):
+                                # Extended thinking content - count but don't include in output
+                                pass
                         elif event.type == 'message_start':
                             if hasattr(event.message, 'usage'):
                                 input_tokens = event.message.usage.input_tokens
                         elif event.type == 'message_delta':
                             if hasattr(event, 'usage'):
                                 output_tokens = event.usage.output_tokens
+                                # Extract thinking_tokens for extended thinking models
+                                if hasattr(event.usage, 'thinking_tokens'):
+                                    thinking_tokens = event.usage.thinking_tokens
                             if hasattr(event.delta, 'stop_reason'):
                                 stop_reason = event.delta.stop_reason
-                
+
                 response_time = time.time() - start_time
                 total_tokens = input_tokens + output_tokens
-                
+
                 return AgentResponse(
                     content=full_text,
                     model_used=self.model_name,
@@ -1318,7 +1346,8 @@ class AnthropicAgent(BaseLLMAgent):
                     metadata={
                         "input_tokens": input_tokens,
                         "output_tokens": output_tokens,
-                        "stop_reason": stop_reason
+                        "stop_reason": stop_reason,
+                        "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None
                     }
                 )
                 
@@ -1453,6 +1482,19 @@ class OpenAIAgent(BaseLLMAgent):
                 )
                 
                 response_time = time.time() - start_time
+
+                # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
+                reasoning_tokens = None
+                if response.usage:
+                    # Direct field on usage
+                    if hasattr(response.usage, 'reasoning_tokens') and response.usage.reasoning_tokens:
+                        reasoning_tokens = response.usage.reasoning_tokens
+                    # Or in completion_tokens_details
+                    elif hasattr(response.usage, 'completion_tokens_details'):
+                        details = response.usage.completion_tokens_details
+                        if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
+                            reasoning_tokens = details.reasoning_tokens
+
                 return AgentResponse(
                     content=response.choices[0].message.content,  # Keep original - no masking
                     model_used=self.model_name,
@@ -1461,7 +1503,8 @@ class OpenAIAgent(BaseLLMAgent):
                     cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
                     metadata={
                         "finish_reason": response.choices[0].finish_reason,
-                        "usage": response.usage.dict() if response.usage else None
+                        "usage": response.usage.dict() if response.usage else None,
+                        "reasoning_tokens": reasoning_tokens
                     }
                 )
                 
@@ -1680,13 +1723,21 @@ class XAIAgent(BaseLLMAgent):
         response_time = time.time() - start_time
         self.logger.info(f"XAI API call completed in {response_time:.2f}s")
 
+        # Extract usage data from proxy response
+        usage = resp.get("usage", {}) or {}
+        tokens_used = usage.get("total_tokens")
+        reasoning_tokens = usage.get("reasoning_tokens")
+
         return AgentResponse(
             content=resp["result"],
             model_used=self.model_name,
             response_time=response_time,
-            tokens_used=None,
+            tokens_used=tokens_used,
             cost_estimate=None,
-            metadata={}
+            metadata={
+                "usage": usage,
+                "reasoning_tokens": reasoning_tokens
+            }
         )
 
         # --- OLD DIRECT OPENAI-COMPATIBLE CODE (commented out) ---

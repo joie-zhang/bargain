@@ -94,6 +94,7 @@ class OpenRouterAgent(BaseLLMAgent):
         
         # Initialize message history (required by BaseLLMAgent)
         self.message_history = []
+        self._last_usage = None  # Store last usage data for access
         
         # Determine model ID
         if model_id:
@@ -123,9 +124,9 @@ class OpenRouterAgent(BaseLLMAgent):
             )
     
 
-    async def send_request(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple[str | None, str | None]:
+    async def send_request(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple:
         """
-        Write request file, poll for response, return (result, error).
+        Write request file, poll for response, return (result, error, usage).
         Raises TimeoutError if no response within 10 minutes.
         """
         POLL_DIR = Path("/home/jz4391/openrouter_proxy")
@@ -160,23 +161,24 @@ class OpenRouterAgent(BaseLLMAgent):
             response_data = json.load(f)
 
         result, error = response_data["result"], response_data["error"]
+        usage = response_data.get("usage", {}) or {}
         print(f"[client] Got response for {timestamp}: {'error' if error else 'success'}")
 
         shutil.move(response_path, PROCESSED_DIR / response_path.name)
 
-        return result, error
+        return result, error, usage
     
-    async def _make_request(self, messages: List[Dict[str, str]]) -> str:
-        """Make a request to OpenRouter API."""
+    async def _make_request(self, messages: List[Dict[str, str]]) -> tuple:
+        """Make a request to OpenRouter API. Returns (content, usage)."""
         await self._ensure_session()
-        
+
         headers = {
             "Authorization": f"Bearer {self.openrouter_config.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": self.openrouter_config.site_url or "",
             "X-Title": self.openrouter_config.site_name or ""
         }
-        
+
         # Prepare request payload
         payload = {
             "model": self.model_id,
@@ -184,24 +186,24 @@ class OpenRouterAgent(BaseLLMAgent):
             "temperature": self.llm_config.temperature,
             "max_tokens": min(self.llm_config.max_tokens, 4000),  # Cap at 4000 for safety
         }
-        
+
         # Add any custom parameters
         if self.llm_config.custom_parameters:
             payload.update(self.llm_config.custom_parameters)
-        
+
         url = f"{self.openrouter_config.base_url}/chat/completions"
-        
+
         for attempt in range(self.openrouter_config.max_retries):
             try:
-                
-                result, error = await self.send_request(url, headers, payload, self.openrouter_config.timeout)
+
+                result, error, usage = await self.send_request(url, headers, payload, self.openrouter_config.timeout)
                 if error:
                     raise Exception(error)
                 if result is None:
                     raise Exception("OpenRouter API returned None result")
                 if not result or len(result.strip()) == 0:
                     raise Exception("OpenRouter API returned empty response content")
-                return result
+                return result, usage
                 # async with self.session.post(
                 #     url,
                 #     headers=headers,
@@ -241,7 +243,7 @@ class OpenRouterAgent(BaseLLMAgent):
                     await asyncio.sleep(self.openrouter_config.retry_delay)
                 else:
                     raise
-        
+
         raise Exception(f"Failed after {self.openrouter_config.max_retries} attempts")
     
     async def discuss(self, context: Any, prompt: str) -> str:
@@ -301,17 +303,18 @@ class OpenRouterAgent(BaseLLMAgent):
                 "content": str(prompt)
             })
         
-        # Make request
-        response = await self._make_request(messages)
-        
+        # Make request (returns tuple of content, usage)
+        response_content, usage = await self._make_request(messages)
+        self._last_usage = usage  # Store for potential later access
+
         # Update history
         self.message_history.append({
             "type": message_type,
             "prompt": prompt,
-            "response": response
+            "response": response_content
         })
-        
-        return response
+
+        return response_content
     
     def _build_prompt(self, context: Any, message_type: str) -> str:
         """Build prompt based on message type and context."""
@@ -391,21 +394,29 @@ Your reflection:"""
         
         return prompt
     
-    async def _call_llm_api(self, messages: List[Dict[str, str]], 
+    async def _call_llm_api(self, messages: List[Dict[str, str]],
                            **kwargs) -> 'AgentResponse':
         """Call the underlying LLM API. Required by BaseLLMAgent."""
         from .llm_agents import AgentResponse
-        
+
         start_time = time.time()
-        response_content = await self._make_request(messages)
+        response_content, usage = await self._make_request(messages)
         response_time = time.time() - start_time
-        
+
+        # Extract token counts from usage
+        tokens_used = usage.get("total_tokens") if usage else None
+        reasoning_tokens = usage.get("reasoning_tokens") if usage else None
+
         return AgentResponse(
             content=response_content,
             model_used=self.model_id,
             response_time=response_time,
-            tokens_used=None,  # OpenRouter doesn't provide token counts in basic API
-            cost_estimate=None
+            tokens_used=tokens_used,
+            cost_estimate=None,
+            metadata={
+                "usage": usage,
+                "reasoning_tokens": reasoning_tokens
+            }
         )
     
     def get_model_info(self) -> Dict[str, Any]:

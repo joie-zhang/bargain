@@ -121,7 +121,8 @@ class GameEnvironment(ABC):
         agent_id: str,
         game_state: Dict[str, Any],
         round_num: int,
-        agents: List[str]
+        agents: List[str],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """
         Generate proposal prompt for a specific agent.
@@ -131,6 +132,7 @@ class GameEnvironment(ABC):
             game_state: Current game state
             round_num: Current round number
             agents: List of all agent IDs
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
 
         Returns:
             Prompt string requesting a proposal
@@ -206,7 +208,8 @@ class GameEnvironment(ABC):
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[Dict[str, Any]],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """
         Generate discussion prompt.
@@ -217,6 +220,7 @@ class GameEnvironment(ABC):
             round_num: Current round number
             max_rounds: Total rounds in negotiation
             discussion_history: Previous discussion messages
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
 
         Returns:
             Prompt string for discussion phase
@@ -229,7 +233,8 @@ class GameEnvironment(ABC):
         agent_id: str,
         proposal: Dict[str, Any],
         game_state: Dict[str, Any],
-        round_num: int
+        round_num: int,
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """
         Generate voting prompt for a specific proposal.
@@ -239,6 +244,7 @@ class GameEnvironment(ABC):
             proposal: The proposal to vote on
             game_state: Current game state
             round_num: Current round number
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
 
         Returns:
             Prompt string requesting a vote
@@ -252,7 +258,8 @@ class GameEnvironment(ABC):
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[Dict[str, Any]],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """
         Generate private thinking prompt.
@@ -263,6 +270,7 @@ class GameEnvironment(ABC):
             round_num: Current round number
             max_rounds: Total rounds
             discussion_history: Previous discussion messages
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
 
         Returns:
             Prompt string for strategic thinking
@@ -321,7 +329,8 @@ class GameEnvironment(ABC):
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        tabulation_result: Dict[str, Any]
+        tabulation_result: Dict[str, Any],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """
         Generate reflection prompt after a round.
@@ -334,13 +343,18 @@ class GameEnvironment(ABC):
             round_num: Current round number
             max_rounds: Total rounds
             tabulation_result: Results from vote tabulation
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
 
         Returns:
             Prompt string for reflection
         """
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""Reflect on the outcome of round {round_num}.
 No proposal achieved unanimous acceptance.
-Consider what adjustments might lead to consensus in future rounds."""
+Consider what adjustments might lead to consensus in future rounds.{reasoning_instruction}"""
 
     def get_contextual_discussion_prompt(
         self,

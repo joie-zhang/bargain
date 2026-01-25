@@ -239,6 +239,29 @@ async def main():
         help="Custom output directory for results (overrides default timestamped directory)",
     )
 
+    # Reasoning token budget arguments for test-time compute scaling experiments
+    parser.add_argument(
+        "--reasoning-token-budget",
+        type=int,
+        default=None,
+        help="Target reasoning tokens to prompt for (added to prompt instructions, NOT API-enforced)"
+    )
+
+    parser.add_argument(
+        "--reasoning-budget-phases",
+        nargs="+",
+        choices=["thinking", "reflection", "discussion", "proposal", "voting", "all"],
+        default=["thinking", "reflection"],
+        help="Phases to apply reasoning token budget instruction to (default: thinking, reflection)"
+    )
+
+    parser.add_argument(
+        "--max-tokens-per-phase",
+        type=int,
+        default=10500,
+        help="Set max_tokens for EACH individual phase/API call (default: 10500)"
+    )
+
     args = parser.parse_args()
     
     # Check for at least one API key
@@ -329,6 +352,15 @@ async def main():
         print(f"Token Limits: {', '.join(token_limits)}")
     else:
         print("Token Limits: Unlimited (no limits specified)")
+
+    # Show reasoning token budget if specified
+    if args.reasoning_token_budget:
+        print(f"Reasoning Token Budget: {args.reasoning_token_budget} tokens (API-enforced where supported)")
+        print(f"  - Anthropic: thinking.budget_tokens={max(args.reasoning_token_budget, 1024)}")
+        print(f"  - OpenAI O3/GPT-5: reasoning_effort={'low' if args.reasoning_token_budget <= 2000 else 'medium' if args.reasoning_token_budget <= 5000 else 'high'}")
+        print(f"  - Others: Prompt instruction only")
+        print(f"Reasoning Budget Phases: {', '.join(args.reasoning_budget_phases)}")
+        print(f"Max Tokens Per Phase: {args.max_tokens_per_phase}")
     
     print("=" * 60)
     
@@ -365,6 +397,24 @@ async def main():
         experiment_config["max_tokens_thinking"] = args.max_tokens_thinking
     if args.max_tokens_default is not None:
         experiment_config["max_tokens_default"] = args.max_tokens_default
+
+    # Add reasoning token budget configuration
+    if args.reasoning_token_budget is not None:
+        # Expand "all" to all phases
+        phases = args.reasoning_budget_phases
+        if "all" in phases:
+            phases = ["thinking", "reflection", "discussion", "proposal", "voting"]
+
+        # For prompt-based reasoning instructions (legacy, still useful for non-API-controllable models)
+        experiment_config["reasoning_config"] = {
+            "budget": args.reasoning_token_budget,
+            "phases": phases
+        }
+        # For API-based reasoning control (passed to agent factory)
+        # This enables Anthropic's thinking.budget_tokens and OpenAI's reasoning_effort
+        experiment_config["reasoning_token_budget"] = args.reasoning_token_budget
+        # Apply max_tokens_per_phase to all phases if reasoning budget is specified
+        experiment_config["max_tokens_per_phase"] = args.max_tokens_per_phase
     
     # Create output directory name if not provided
     if args.output_dir:

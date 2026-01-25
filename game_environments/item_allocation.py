@@ -7,7 +7,7 @@ agents compete to allocate discrete items based on private preference vectors.
 
 import json
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .base import GameEnvironment, GameType, ItemAllocationConfig
 
@@ -164,7 +164,8 @@ Please acknowledge that you understand your private preferences."""
         agent_id: str,
         game_state: Dict[str, Any],
         round_num: int,
-        agents: List[str]
+        agents: List[str],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate proposal prompt for item allocation."""
         items = game_state["items"]
@@ -175,12 +176,16 @@ Please acknowledge that you understand your private preferences."""
         for i, aid in enumerate(agents):
             example_alloc[aid] = [i] if i < len(items) else []
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""Please propose an allocation of items among all agents.
 
 **Current Context:**
 - Items: {item_names} (indices 0-{len(items)-1})
 - Agents: {agents}
-- Round: {round_num}/{self.config.t_rounds}
+- Round: {round_num}/{self.config.t_rounds}{reasoning_instruction}
 
 **Instructions:**
 Respond with ONLY a JSON object in this exact format:
@@ -307,7 +312,8 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[str]
+        discussion_history: List[str],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate discussion prompt with conversation history.
 
@@ -317,6 +323,7 @@ Respond with ONLY a JSON object in this exact format:
             round_num: Current negotiation round
             max_rounds: Maximum number of rounds
             discussion_history: List of previous discussion messages (strings)
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
         """
         items = game_state["items"]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
@@ -362,6 +369,10 @@ Keep the conversation flowing naturally."""
 
 Given what happened in previous rounds, what's your updated strategy?"""
 
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""🗣️ PUBLIC DISCUSSION PHASE - Round {round_num}/{max_rounds}
 
 This is the open discussion phase where all agents can share information about their preferences.
@@ -369,16 +380,21 @@ This is the open discussion phase where all agents can share information about t
 **ITEMS AVAILABLE:**
 {items_text}
 
-{history_section}{context}"""
+{history_section}{context}{reasoning_instruction}"""
 
     def get_voting_prompt(
         self,
         agent_id: str,
         proposal: Dict[str, Any],
         game_state: Dict[str, Any],
-        round_num: int
+        round_num: int,
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate voting prompt."""
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+
         return f"""A proposal has been made for item allocation:
 
 PROPOSAL: {json.dumps(proposal.get('allocation', {}), indent=2)}
@@ -388,7 +404,7 @@ PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}
 Please vote on this proposal. Consider:
 - How this allocation affects your utility
 - Whether you might get a better deal by continuing negotiation
-- The strategic implications of accepting vs. rejecting
+- The strategic implications of accepting vs. rejecting{reasoning_instruction}
 
 Respond with ONLY a JSON object in this exact format:
 {{
@@ -404,15 +420,32 @@ Vote must be either "accept" or "reject"."""
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]]
+        discussion_history: List[Dict[str, Any]],
+        reasoning_token_budget: Optional[int] = None
     ) -> str:
-        """Generate private thinking prompt."""
+        """Generate private thinking prompt.
+
+        Args:
+            agent_id: ID of the thinking agent
+            game_state: Current game state
+            round_num: Current round number
+            max_rounds: Total rounds
+            discussion_history: Previous discussion messages
+            reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
+        """
         items = game_state["items"]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
 
         urgency = ""
         if round_num >= max_rounds - 1:
             urgency = "\n⚠️ **CRITICAL**: This is one of your final opportunities!"
+
+        reasoning_instruction = ""
+        if reasoning_token_budget:
+            reasoning_instruction = f"""
+
+**REASONING DEPTH:**
+Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."""
 
         return f"""🧠 PRIVATE THINKING PHASE - Round {round_num}/{max_rounds}
 
@@ -425,7 +458,7 @@ This is your private strategic planning time.
 1. What did you learn about other agents' preferences?
 2. Which items do others value less that you value highly?
 3. What allocation would maximize your utility while achieving consensus?
-4. What concessions might be necessary?
+4. What concessions might be necessary?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:
