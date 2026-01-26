@@ -33,12 +33,14 @@ python visualization/visualize_ttc_scaling.py
 
 By default, this aggregates results from **all** `ttc_scaling_*` directories in `experiments/results/`.
 
-**Output:** Figures are saved to `experiments/results/ttc_scaling_combined/figures/`
+**Output:** Figures are saved to `visualization/figures/`
 
-To analyze a single TTC scaling directory:
+To analyze the most recent TTC scaling run with specific model pairs:
 
 ```bash
-python visualization/visualize_ttc_scaling.py --single experiments/results/ttc_scaling_20260124_222356
+python visualization/visualize_ttc_scaling.py \
+    --single experiments/results/ttc_scaling_20260125_050451 \
+    --model-pairs o3-mini-high_vs_gpt-5-nano gpt-5.2-high_vs_gpt-5-nano
 ```
 
 ---
@@ -138,13 +140,28 @@ The script will:
 
 The `visualize_ttc_scaling.py` script analyzes test-time compute (TTC) scaling experiments, focusing on the relationship between reasoning tokens and negotiation payoff. It processes experiments where models are given different reasoning token budgets.
 
+### Available Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `visualization/visualize_ttc_scaling.py` | **Current** - Full TTC analysis with multi-model comparison |
+| `visualization/visualize_ttc_scaling_derisk.py` | **Archive** - Original derisk version (simpler, single model pair) |
+
+### Recent TTC Experiment Runs
+
+| Directory | Date | Models | Description |
+|-----------|------|--------|-------------|
+| `ttc_scaling_20260125_050451` | Jan 25, 2026 | o3-mini-high, gpt-5.2-high, claude-opus-4-5-thinking-32k, deepseek-r1, grok-4, QwQ-32B vs gpt-5-nano | Full-scale TTC experiment with multiple reasoning models |
+| `ttc_scaling_20260124_224426` | Jan 24, 2026 | claude-opus-4-5-thinking-32k vs gpt-5-nano | Derisk run (archived) |
+
 ### What It Analyzes
 
 - **Reasoning tokens vs payoff**: How reasoning token usage correlates with negotiation outcomes
-- **Per-round analysis**: Reasoning token usage across negotiation rounds
-- **Phase breakdown**: Reasoning tokens by phase (thinking, reflection, discussion, proposal, voting)
+- **Per-phase analysis**: Reasoning tokens by phase (thinking, reflection, discussion, proposal, voting)
+- **Multi-model comparison**: Compare adversary vs baseline model performance (Plot 6)
 - **Compliance analysis**: Comparison of instructed token budgets vs actual token usage
 - **Budget vs payoff**: How prompted token budgets affect negotiation outcomes
+- **Competition level breakdown**: Separate analysis for each competition level (0.0, 0.25, 0.5, 0.75, 1.0)
 
 ### Command-Line Options
 
@@ -153,7 +170,11 @@ The `visualize_ttc_scaling.py` script analyzes test-time compute (TTC) scaling e
 python visualization/visualize_ttc_scaling.py
 
 # Analyze a single directory
-python visualization/visualize_ttc_scaling.py --single experiments/results/ttc_scaling_20260124_222356
+python visualization/visualize_ttc_scaling.py --single experiments/results/ttc_scaling_20260125_050451
+
+# Filter for specific model pairs (recommended for focused analysis)
+python visualization/visualize_ttc_scaling.py --single experiments/results/ttc_scaling_20260125_050451 \
+    --model-pairs o3-mini-high_vs_gpt-5-nano gpt-5.2-high_vs_gpt-5-nano
 
 # Specify custom results base directory
 python visualization/visualize_ttc_scaling.py --results-base /path/to/results
@@ -164,38 +185,48 @@ python visualization/visualize_ttc_scaling.py --output-dir /path/to/output
 
 ### Generated Figures
 
-The script generates 5 main plots plus a data summary CSV:
+The script generates 6 main plot types plus a data summary CSV:
 
 1. **plot1_avg_reasoning_vs_payoff.png**
-   - Scatter plot with regression line: Total reasoning tokens vs payoff
-   - Grouped analysis by token budget with error bars
+   - Scatter plot: Average reasoning tokens per stage vs payoff
+   - Points labeled with prompted token budget
 
 2. **plot2_per_round_reasoning.png**
-   - 10 subplots (one per round) showing reasoning tokens vs payoff
-   - Color-coded by token budget
+   - 5 subplots (one per phase: Thinking, Discussion, Proposal, Voting, Reflection)
+   - Reasoning tokens vs payoff, color-coded by token budget
 
 3. **plot3_phase_breakdown.png**
-   - Stacked bar chart: Reasoning tokens by phase (thinking, reflection, discussion, proposal, voting)
+   - Stacked bar chart: Reasoning tokens by phase
    - Scatter plot: Payoff vs total reasoning tokens (colored by budget)
 
 4. **plot4_instructed_vs_actual.png**
    - Scatter plot: Instructed token budget vs actual reasoning tokens used
-   - Aggregated view with error bars showing compliance with instructions
+   - Shows compliance ratio annotations
 
 5. **plot5_instructed_vs_payoff.png**
    - Scatter plot: Instructed token budget vs payoff
-   - Aggregated view with error bars, split by model order
+   - Includes fair split reference line at y=50
 
-6. **data_summary.csv**
+6. **plot6_payoff_vs_reasoning_by_phase_comp_{level}.png** (NEW)
+   - **5 plots**, one for each competition level (0.0, 0.25, 0.5, 0.75, 1.0)
+   - Each plot is a 5×2 grid:
+     - 5 rows: Private Thinking, Discussion, Proposal, Voting, Reflection
+     - 2 columns: o3-mini-high vs gpt-5-nano (left), gpt-5.2-high vs gpt-5-nano (right)
+   - Each subplot shows:
+     - Scatter points for adversary model (blue circles) and baseline model (coral squares)
+     - Linear trendlines with equation, R², and p-values
+     - Normalized axes across all subplots for easy comparison
+     - Fair split reference line at y=50
+
+7. **data_summary.csv**
    - Extracted data for further analysis
    - Includes all experiment parameters, token usage metrics, and outcomes
 
 ### Output Location
 
-By default, figures are saved to:
-- **Aggregate mode**: `experiments/results/ttc_scaling_combined/figures/`
-- **Single directory mode**: `{directory}/figures/`
-- **Custom output**: Use `--output-dir` to specify
+All figures are saved to `visualization/figures/` by default.
+
+To specify a custom output directory, use `--output-dir`.
 
 ### Data Collection
 
@@ -204,6 +235,7 @@ The script automatically:
 - Discovers all experiment directories (those containing `experiment_results.json`)
 - Loads experiment results and agent interactions
 - Extracts reasoning token usage from `run_*_all_interactions.json` files
+- Identifies which agent received the prompted reasoning budget vs baseline
 - Aggregates data across all experiments into a single DataFrame
 
 ### Key Metrics Extracted
@@ -217,8 +249,31 @@ For each experiment and agent:
 - Token budget (prompted/instructed)
 - Competition level
 - Model order (weak_first vs strong_first)
+- **is_prompted_reasoning**: Whether this agent received the reasoning budget prompt (True = adversary, False = baseline)
 - Consensus reached status
 - Final round number
+
+### Example: Analyzing Jan 25 TTC Run
+
+```bash
+# Full analysis of the main TTC experiment with o3-mini-high and gpt-5.2-high
+python visualization/visualize_ttc_scaling.py \
+    --single experiments/results/ttc_scaling_20260125_050451 \
+    --model-pairs o3-mini-high_vs_gpt-5-nano gpt-5.2-high_vs_gpt-5-nano
+```
+
+This generates:
+- `visualization/figures/plot1_avg_reasoning_vs_payoff.png`
+- `visualization/figures/plot2_per_round_reasoning.png`
+- `visualization/figures/plot3_phase_breakdown.png`
+- `visualization/figures/plot4_instructed_vs_actual.png`
+- `visualization/figures/plot5_instructed_vs_payoff.png`
+- `visualization/figures/plot6_payoff_vs_reasoning_by_phase_comp_0_0.png`
+- `visualization/figures/plot6_payoff_vs_reasoning_by_phase_comp_0_25.png`
+- `visualization/figures/plot6_payoff_vs_reasoning_by_phase_comp_0_5.png`
+- `visualization/figures/plot6_payoff_vs_reasoning_by_phase_comp_0_75.png`
+- `visualization/figures/plot6_payoff_vs_reasoning_by_phase_comp_1_0.png`
+- `visualization/figures/data_summary.csv`
 
 ---
 
@@ -290,16 +345,18 @@ pip install plotly  # For interactive plots (if used)
 
 ### Scripts
 - `visualization/gpt5_nano_analysis.py` - GPT-5-nano scaling analysis
-- `visualization/visualize_ttc_scaling.py` - TTC scaling visualization
+- `visualization/visualize_ttc_scaling.py` - TTC scaling visualization (current)
+- `visualization/visualize_ttc_scaling_derisk.py` - TTC scaling visualization (archived original)
+- `visualization/visualize_nonreasoning_tokens.py` - Non-reasoning model token analysis
 
 ### Output Directories
-- `visualization/figures/` - GPT-5-nano analysis figures
-- `experiments/results/ttc_scaling_combined/figures/` - TTC scaling figures (aggregate mode)
-- `experiments/results/ttc_scaling_*/figures/` - TTC scaling figures (single directory mode)
+- `visualization/figures/` - All visualization figures (GPT-5-nano and TTC scaling)
 
 ### Experiment Data
 - `experiments/results/scaling_experiment_*/` - GPT-5-nano scaling experiments
 - `experiments/results/ttc_scaling_*/` - TTC scaling experiments
+  - `ttc_scaling_20260125_050451/` - Latest full TTC run (Jan 25, 2026)
+  - `ttc_scaling_20260124_224426/` - Derisk run (Jan 24, 2026)
 
 ---
 
