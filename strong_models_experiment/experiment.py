@@ -503,7 +503,7 @@ class StrongModelsExperiment:
         return batch_results
     
     def _save_interaction(self, agent_id: str, phase: str, prompt: str, response: str, round_num: int = None,
-                         token_usage: Optional[Dict[str, Any]] = None):
+                         token_usage: Optional[Dict[str, Any]] = None, model_name: Optional[str] = None):
         """Save an interaction to both all_interactions and agent-specific storage.
 
         Args:
@@ -521,7 +521,8 @@ class StrongModelsExperiment:
             "phase": phase,
             "round": round_num,
             "prompt": prompt,
-            "response": response
+            "response": response,
+            "model_name": model_name if model_name else None
         }
 
         # Add token usage information if provided

@@ -18,7 +18,7 @@ class StrongModelAgentFactory:
     
     async def create_agents(self, models: List[str], config: Dict[str, Any]) -> List[BaseLLMAgent]:
         """Create agents for the specified models.
-        
+
         Args:
             models: List of model names to use
             config: Configuration dictionary including token limits
@@ -42,6 +42,16 @@ class StrongModelAgentFactory:
         # Get reasoning token budget for API-based control (test-time compute scaling)
         reasoning_token_budget = config.get("reasoning_token_budget", None)
         
+        # Determine which agent index should receive the reasoning budget
+        # Based on model_order:
+        #   - strong_first: models = [reasoning, baseline] -> index 0 gets budget
+        #   - weak_first: models = [baseline, reasoning] -> index 1 gets budget
+        model_order = config.get("model_order", "weak_first")
+        if model_order == "weak_first":
+            reasoning_agent_index = 1  # Second agent (Agent_Beta) is reasoning
+        else:  # strong_first or random (random is handled earlier in experiment.py)
+            reasoning_agent_index = 0  # First agent (Agent_Alpha) is reasoning
+
         # If only one model specified, create 3 agents of that model for negotiation
         if len(models) == 1:
             models = models * 3
@@ -66,13 +76,12 @@ class StrongModelAgentFactory:
             else:
                 agent_id = f"Agent_{i+1}"  # Fallback to numbers if we run out of Greek letters
 
-            # DEBUG: Log the mapping
-            self.logger.info(f"DEBUG: Creating {agent_id} -> {model_name} (api_type={api_type})")
-            
+            # Only apply reasoning_token_budget to the reasoning agent, not the baseline
+            agent_reasoning_budget = reasoning_token_budget if i == reasoning_agent_index else None
             agent = self._create_agent_by_type(
                 api_type, model_name, model_config, agent_id,
                 anthropic_key, openai_key, openrouter_key, xai_key, google_key, max_tokens,
-                reasoning_token_budget=reasoning_token_budget
+                reasoning_token_budget=agent_reasoning_budget
             )
             
             if agent:

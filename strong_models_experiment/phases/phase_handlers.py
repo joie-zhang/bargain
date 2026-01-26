@@ -181,7 +181,7 @@ class PhaseHandler:
             
             self.logger.info(f"  📬 {agent.agent_id} response:")
             self.logger.info(f"    {response_content}")
-            self.save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response_content, 0, token_usage)
+            self.save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response_content, 0, token_usage, model_name=agent.get_model_info()["model_name"])
         
         self.logger.info("Game setup phase completed - all agents briefed on rules")
     
@@ -235,7 +235,7 @@ class PhaseHandler:
             
             self.logger.info(f"  📬 {agent.agent_id} acknowledgment:")
             self.logger.info(f"    {response_content}")
-            self.save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response_content, 0, token_usage)
+            self.save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response_content, 0, token_usage, model_name=agent.get_model_info()["model_name"])
         
         self.logger.info("Private preference assignment completed")
     
@@ -345,7 +345,7 @@ class PhaseHandler:
                 self.logger.info(f"    {response_content}")
 
                 self.save_interaction(agent.agent_id, f"discussion_round_{round_num}_turn_{turn+1}",
-                                    full_discussion_prompt, response_content, round_num, token_usage)
+                                    full_discussion_prompt, response_content, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
 
         self.logger.info(f"Discussion phase completed - {len(messages)} messages exchanged across {discussion_turns} turns")
         return {"messages": messages}
@@ -415,7 +415,7 @@ class PhaseHandler:
                 
                 thinking_response_str = json.dumps(thinking_response, default=str)
                 self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", 
-                                    thinking_prompt, thinking_response_str, round_num, token_usage)
+                                    thinking_prompt, thinking_response_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
                 
                 thinking_results.append({
                     "agent_id": agent.agent_id,
@@ -501,7 +501,7 @@ class PhaseHandler:
             
             proposal_str = json.dumps(proposal, default=str)
             self.save_interaction(agent.agent_id, f"proposal_round_{round_num}", 
-                                proposal_prompt, proposal_str, round_num, token_usage)
+                                proposal_prompt, proposal_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
             
             message = {
                 "phase": "proposal",
@@ -738,7 +738,8 @@ Vote must be either "accept" or "reject"."""
                         voting_prompt, 
                         vote_response_str, 
                         round_num,
-                        token_usage
+                        token_usage,
+                        model_name=agent.get_model_info()["model_name"]
                     )
                 
                 private_votes.extend(agent_votes)
@@ -942,7 +943,7 @@ Consider what adjustments might lead to consensus in future rounds."""
                 self.logger.info(f"    {reflection}")
                 
                 self.save_interaction(agent.agent_id, f"reflection_round_{round_num}", 
-                                    reflection_prompt, reflection, round_num, token_usage)
+                                    reflection_prompt, reflection, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
             except Exception as e:
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {e}")
         
