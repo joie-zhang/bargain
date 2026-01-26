@@ -61,8 +61,9 @@ def main():
                 print("BLOCKED: Access to sensitive file", file=sys.stderr)
                 sys.exit(2)
 
-        # Log activity
-        log_dir = Path.cwd() / ".claude" / "logs"
+        # Log activity - use absolute path to project root
+        project_root = Path("/scratch/gpfs/DANQIC/jz4391/bargain")
+        log_dir = project_root / ".claude" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Save to JSON log

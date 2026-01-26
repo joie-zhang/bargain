@@ -45,8 +45,8 @@ def main():
         base_name = os.path.basename(abs_path)
         dir_name = os.path.dirname(abs_path)
 
-        # Get the project root (where .claude directory is)
-        project_root = os.getcwd()
+        # Get the project root (use absolute path for reliability)
+        project_root = "/scratch/gpfs/DANQIC/jz4391/bargain"
 
         # Check if file is being created in project root
         if os.path.dirname(abs_path) == project_root:
