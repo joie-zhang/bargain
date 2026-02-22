@@ -126,13 +126,6 @@ async def main():
     )
 
     parser.add_argument(
-        "--lam",
-        type=float,
-        default=0.0,
-        help="Issue compatibility [-1, 1]: 1=win-win, -1=zero-sum (diplomacy only, default: 0.0)"
-    )
-
-    parser.add_argument(
         "--random-seed",
         type=int,
         help="Random seed for reproducibility"
@@ -306,7 +299,6 @@ async def main():
         print(f"Issues: {args.n_issues}")
         print(f"Rho (preference correlation): {args.rho}")
         print(f"Theta (interest overlap): {args.theta}")
-        print(f"Lambda (issue compatibility): {args.lam}")
 
     print(f"Discount Factor: {args.gamma_discount}")
     if args.random_seed:
@@ -391,7 +383,6 @@ async def main():
         "n_issues": args.n_issues,
         "rho": args.rho,
         "theta": args.theta,
-        "lam": args.lam,
     }
     
     # Only add token limits if they're specified
@@ -441,7 +432,7 @@ async def main():
         if args.game_type == "item_allocation":
             game_str = f"items{args.num_items}_comp{args.competition_level}".replace(".", "_")
         else:  # diplomacy
-            game_str = f"diplo_issues{args.n_issues}_rho{args.rho}_theta{args.theta}_lam{args.lam}".replace(".", "_").replace("-", "n")
+            game_str = f"diplo_issues{args.n_issues}_rho{args.rho}_theta{args.theta}".replace(".", "_").replace("-", "n")
 
         if args.job_id is not None:
             config_str = f"config{args.job_id:03d}"

@@ -117,7 +117,6 @@ class StrongModelsExperiment:
             "n_issues": 5,
             "rho": -1,      # Preference correlation [-1, 1]
             "theta": 1,    # Interest overlap [0, 1]
-            "lam": -1,      # Issue compatibility [-1, 1]
         }
 
         # Merge with provided config
@@ -182,8 +181,7 @@ class StrongModelsExperiment:
                 random_seed=config.get("random_seed"),
                 n_issues=config.get("n_issues", 5),
                 rho=config.get("rho", 0.0),
-                theta=config.get("theta", 0.5),
-                lam=config.get("lam", 0.0)
+                theta=config.get("theta", 0.5)
             )
         else:
             raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation' or 'diplomacy'")
@@ -234,10 +232,9 @@ class StrongModelsExperiment:
             preferences = {
                 "agent_preferences": game_state["agent_positions"],
                 "agent_weights": game_state["agent_weights"],
-                "issue_types": game_state["issue_types"],
                 "game_state": game_state  # Full state for utility calculation
             }
-            self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}, lam={config.get('lam')}")
+            self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}")
         else:
             raise ValueError(f"Unknown game type: {game_type}")
 

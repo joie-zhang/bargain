@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+
 
 class GameType(Enum):
     """Supported game types."""
@@ -39,16 +41,25 @@ class DiplomaticTreatyConfig(GameConfig):
     n_issues: int = 5
     rho: float = 0.0       # Preference correlation [-1, 1]
     theta: float = 0.5     # Interest overlap [0, 1]
-    lam: float = 0.0       # Issue compatibility [-1, 1]
 
     def __post_init__(self):
-        """Validate parameter bounds."""
+        """Validate parameter bounds and PSD feasibility."""
         if not -1 <= self.rho <= 1:
             raise ValueError(f"rho must be in [-1, 1], got {self.rho}")
         if not 0 <= self.theta <= 1:
             raise ValueError(f"theta must be in [0, 1], got {self.theta}")
-        if not -1 <= self.lam <= 1:
-            raise ValueError(f"lam must be in [-1, 1], got {self.lam}")
+
+        # PSD feasibility check for N>2 agents (Section 6.3)
+        if self.n_agents > 2 and self.rho < 0:
+            rho_z = 2 * np.sin(np.pi * self.rho / 6)
+            min_rho_z = -1.0 / (self.n_agents - 1)
+            if rho_z < min_rho_z:
+                raise ValueError(
+                    f"rho={self.rho} is infeasible for N={self.n_agents} agents. "
+                    f"Latent correlation rho_z={rho_z:.4f} < minimum "
+                    f"{min_rho_z:.4f} = -1/(N-1) required for PSD "
+                    f"equicorrelation matrix."
+                )
 
 
 class GameEnvironment(ABC):

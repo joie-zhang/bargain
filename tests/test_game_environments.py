@@ -96,12 +96,10 @@ class TestFactoryFunction:
             n_issues=8,
             rho=0.5,
             theta=0.3,
-            lam=-0.2
         )
         assert game.config.n_issues == 8
         assert game.config.rho == 0.5
         assert game.config.theta == 0.3
-        assert game.config.lam == -0.2
 
 
 class TestCreateFromConfig:

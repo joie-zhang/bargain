@@ -1,0 +1,297 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+
+\title{Diplomatic Treaty Negotiation: A Multi-Agent Bargaining Environment}
+\author{Joie Zhang}
+\date{February 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Overview}
+
+The diplomatic treaty negotiation environment is a multi-agent, multi-issue bargaining game where agents negotiate over multiple dimensions simultaneously. The environment allows smooth variation between cooperative and competitive scenarios through two orthogonal parameters that control preference alignment and priority overlap.
+
+\section{Game Setup}
+
+\subsection{Basic Components}
+
+\begin{itemize}
+    \item \textbf{Agents}: $N$ agents indexed by $i \in \{1, 2, \ldots, N\}$
+    \item \textbf{Issues}: $K$ negotiation issues indexed by $k \in \{1, 2, \ldots, K\}$
+    \item \textbf{Agreement Space}: An agreement is a vector $A = [a_1, a_2, \ldots, a_K]$ where each $a_k \in [0,1]$ represents the negotiated outcome on issue $k$
+\end{itemize}
+
+\subsection{Agent Preferences}
+
+Each agent $i$ is characterized by two preference components:
+
+\paragraph{Position Preferences:} $p_i = [p_{i1}, p_{i2}, \ldots, p_{iK}]$ where $p_{ik} \in [0,1]$
+
+This represents agent $i$'s ideal outcome on each issue $k$. For example, if issue $k$ represents a trade tariff rate from 0\% to 100\%, then $p_{ik} = 0.3$ means agent $i$ ideally wants a 30\% tariff rate.
+
+\paragraph{Importance Weights:} $w_i = [w_{i1}, w_{i2}, \ldots, w_{iK}]$ where $w_{ik} \geq 0$ and $\sum_{k=1}^{K} w_{ik} = 1$
+
+This represents how much agent $i$ cares about each issue. Higher weights indicate greater importance. The normalization constraint ensures utilities are comparable across agents.
+
+\subsection{Utility Function}
+
+Agent $i$'s utility from agreement $A$ is:
+
+\begin{equation}
+U_i(A) = \sum_{k=1}^{K} w_{ik} \cdot v_{ik}(a_k)
+\end{equation}
+
+where $v_{ik}(a_k)$ is the value agent $i$ receives from outcome $a_k$ on issue $k$, defined as the linear distance penalty:
+\begin{equation}
+v_{ik}(a_k) = 1 - |p_{ik} - a_k|
+\end{equation}
+
+This gives $v_{ik} \in [0,1]$ where $v_{ik} = 1$ when $a_k = p_{ik}$ (perfect match) and $v_{ik} = 0$ when $a_k$ is maximally far from $p_{ik}$.
+
+\paragraph{Utility normalization.}
+Since weights lie on the simplex ($w_{ik} \geq 0$, $\sum_k w_{ik} = 1$) and each $v_{ik} \in [0,1]$, the utility satisfies $U_i \in [0,1]$ for all agents and all parameter configurations.
+The maximum $U_i = 1$ is achieved when the agreement matches every ideal position ($a_k = p_{ik}$ for all $k$), and the minimum $U_i = 0$ is achieved at timeout (no agreement).
+This fixed ceiling makes raw utility values directly comparable across competition levels.
+
+\section{Competition-Cooperation Parameters}
+
+The environment uses two orthogonal parameters to control the degree of competition versus cooperation:
+
+\subsection{Parameter 1: Preference Correlation ($\rho$)}
+
+\textbf{What it controls}: Whether agents want similar or opposite outcomes on the issues.
+
+\textbf{Range}: $\rho \in [-1, 1]$
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\rho = 1$: Agents have identical position preferences (pure cooperation)
+    \item $\rho = 0$: Agent preferences are uncorrelated (mixed motives)
+    \item $\rho < 0$: Agents have opposing preferences (competitive); note that $\rho = -1$ is infeasible for $K > 2$ (see Section~\ref{sec:rho_infeasibility})
+\end{itemize}
+
+\textbf{Implementation}: Generate position preferences using a Gaussian copula:
+
+\begin{enumerate}
+    \item Generate $\bm{z} \sim \mathcal{N}(\bm{0}, \Sigma_z)$ where $(\Sigma_z)_{ij} = \rho_z$ for $i \neq j$, $(\Sigma_z)_{ii} = 1$.
+    \item Apply $p^i_k = \Phi(z^i_k)$ component-wise, where $\Phi$ is the standard normal CDF.
+    \item Result: $p^i_k \in [0,1]$ with exactly $\text{Uniform}(0,1)$ marginals.
+\end{enumerate}
+
+The latent correlation $\rho_z$ is calibrated so that the Pearson correlation of the resulting position vectors equals $\rho_{\text{target}}$.
+Since $\Phi$ is the rank transform, the Pearson correlation of $(\Phi(Z_1), \Phi(Z_2))$ equals the Spearman correlation of $(Z_1, Z_2)$, which for bivariate normals has a closed form:
+\begin{equation}
+    \rho_{\text{Pearson}} = \frac{6}{\pi} \arcsin\!\left(\frac{\rho_z}{2}\right)
+\end{equation}
+Inverting, the latent correlation needed to achieve a target Pearson correlation is:
+\begin{equation}
+    \rho_z = 2\sin\!\left(\frac{\pi\,\rho_{\text{target}}}{6}\right)
+\end{equation}
+The mapping is monotone and nearly linear (e.g., latent $\rho_z = 0.8$ yields realized $\rho_{\text{Pearson}} \approx 0.786$), with exact agreement at $\rho_z \in \{-1, 0, 1\}$.
+
+For $N > 2$ agents with equicorrelation, the latent correlation matrix must be positive semi-definite, requiring $\rho_z \geq -1/(N-1)$.
+
+\subsection{Parameter 2: Interest Overlap ($\theta$)}
+
+\textbf{What it controls}: Whether agents care about the same issues or have different priorities.
+
+\textbf{Range}: $\theta \in [0, 1]$
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\theta = 1$: Agents have identical importance weights (high competition for same issues)
+    \item $\theta \approx 0$: Agents have orthogonal priorities (high potential for integrative tradeoffs)
+\end{itemize}
+
+\textbf{Measurement}: For agents $i$ and $j$:
+\begin{equation}
+\theta_{ij} = \frac{w_i \cdot w_j}{\|w_i\| \|w_j\|} = \frac{\sum_{k=1}^{K} w_{ik} w_{jk}}{\sqrt{\sum_{k=1}^{K} w_{ik}^2} \sqrt{\sum_{k=1}^{K} w_{jk}^2}}
+\end{equation}
+
+Note that although weights sum to 1 ($\sum_k w_{ik} = 1$), the $L_2$ norm $\|w_i\|$ is generally not equal to 1, so the denominator cannot be dropped.
+
+\textbf{Implementation}: Generate weight vectors with exact target overlap using SLSQP optimization:
+\begin{equation}
+    \min_{\bm{w}^1, \bm{w}^2} \left(\cos(\bm{w}^1, \bm{w}^2) - \theta_{\text{target}}\right)^2 \quad \text{s.t.} \;\; w^i_k \geq 0, \;\; \sum_k w^i_k = 1 \;\; \forall i
+\end{equation}
+
+This is identical to the parameter generation used in Games 1 and 3 (cosine similarity of valuation vectors on the simplex), with $\sum_k w^i_k = 1$ instead of $\sum_j v^i_j = 100$.
+SLSQP achieves exact target similarities (up to numerical tolerance), unlike the Dirichlet mixing heuristic previously used (see Section~\ref{sec:theta_approximate}).
+
+\section{Example Scenarios}
+
+\subsection{Pure Cooperation}
+\begin{itemize}
+    \item $\rho = 1$: Agents want the same outcomes
+    \item $\theta = 0$: But care about different issues
+\end{itemize}
+
+Expected behavior: Easy to find Pareto-optimal agreements; high social welfare. Agents can give each other what they want on their highest-priority issues at little cost.
+
+\subsection{Pure Competition}
+\begin{itemize}
+    \item $\rho = \rho_{\min}$: Agents want maximally opposing outcomes (subject to feasibility; see Section~\ref{sec:rho_infeasibility})
+    \item $\theta = 1$: And care about the same issues
+\end{itemize}
+
+Expected behavior: Difficult negotiation; low social welfare; agreements near the Pareto frontier but with highly asymmetric utility splits.
+
+\subsection{Integrative Bargaining (Classic Scenario)}
+\begin{itemize}
+    \item $\rho = 0$: Uncorrelated preferences
+    \item $\theta = 0.3$: Different priorities (logrolling potential)
+\end{itemize}
+
+Expected behavior: Potential for value creation through tradeoffs; agents concede on low-priority issues to gain on high-priority ones.
+
+\section{Negotiation Protocol}
+
+\subsection{Propose-and-Vote Protocol}
+
+At each round $t = 1, \ldots, T$:
+\begin{enumerate}
+    \item Each agent $i$ simultaneously proposes an agreement $\bm{A}^i = [a^i_1, \ldots, a^i_K]$.
+    \item All agents privately vote yes/no on each proposal.
+    \item If any proposal receives unanimous approval, it is implemented (random tiebreaker if multiple proposals are approved).
+    \item Otherwise, the game continues to the next round.
+\end{enumerate}
+
+Failure to agree by round $T$ yields utility 0 for all agents.
+A discount factor $\delta \in (0,1)$ can optionally be applied per round to encourage early agreement: $U_i = \delta^t \sum_k w_{ik} \cdot v_{ik}(a_k)$.
+
+\subsection{Discussion-Based Protocol (for LLM Agents)}
+\begin{enumerate}
+    \item \textbf{Initialization}: Agents receive their private preferences and game instructions.
+    \item \textbf{Discussion}: Agents take turns discussing preferences (agents may misrepresent).
+    \item \textbf{Private Thinking}: Each agent consolidates strategy using a private scratchpad.
+    \item \textbf{Proposal}: Each agent proposes an agreement.
+    \item \textbf{Private Voting}: Agents vote yes/no on each proposal (simultaneously, so voting order does not affect results).
+    \item \textbf{Evaluation}: If any proposal has unanimous support, it is implemented. Otherwise, repeat.
+    \item \textbf{Reflection}: Agents privately reflect before the next round.
+\end{enumerate}
+
+\section{Evaluation Metrics}
+
+\subsection{Efficiency Metrics}
+
+\paragraph{Social Welfare.}
+\begin{equation}
+SW(A) = \sum_{i=1}^{N} U_i(A)
+\end{equation}
+
+Optimal social welfare: $SW^* = \max_{A} SW(A)$.
+Since the social welfare function decomposes per issue, $SW^*$ is computed by setting each $a_k$ to the weighted median of agent positions with weights $\{w_{ik}\}$.
+For $N = 2$, the optimal $a_k$ is the ideal position of whichever agent has higher weight on issue $k$.
+
+\paragraph{Utilitarian efficiency.}
+\begin{equation}
+\eta = \frac{SW(A)}{SW^*}
+\end{equation}
+Measures what fraction of the available surplus the agents captured through negotiation.
+
+\subsection{Fairness Benchmarks}
+
+\paragraph{Nash Bargaining Solution (NBS).}
+The NBS maximizes the product of agents' gains over the disagreement point (utility 0 from timeout):
+\begin{equation}
+    \bm{a}^{\text{NBS}} = \arg\max_{\bm{a} \in [0,1]^K} \prod_{i=1}^{N} U_i(\bm{a})
+\end{equation}
+For $N = 2$ and $K = 5$, the objective $U_1(\bm{a}) \cdot U_2(\bm{a})$ is smooth and can be maximized via standard nonlinear optimization (e.g., L-BFGS-B with box constraints $a_k \in [0,1]$).
+The NBS is unique, Pareto efficient, and captures the notion of a fair outcome under equal bargaining power.
+
+Note that the NBS and the utilitarian optimum are generally \emph{different}: $SW^*$ maximizes total utility (which may favor one agent), while the NBS balances efficiency with equity.
+
+\paragraph{Distance from NBS.}
+\begin{equation}
+    D_{\text{NBS}} = \left\|\bm{u}_{\text{actual}} - \bm{u}_{\text{NBS}}\right\|_2
+\end{equation}
+where $\bm{u}_{\text{actual}} = (U_1(A_{\text{actual}}), U_2(A_{\text{actual}}))$ and $\bm{u}_{\text{NBS}} = (U_1(\bm{a}^{\text{NBS}}), U_2(\bm{a}^{\text{NBS}}))$.
+
+\paragraph{Exploitation index.}
+\begin{equation}
+    E_i = \frac{U_i(A_{\text{actual}}) - U_i(\bm{a}^{\text{NBS}})}{U_i(\bm{a}^{\text{NBS}})}
+\end{equation}
+When $E_i > 0$, agent $i$ extracted more than their fair share.
+This enables analysis of whether stronger models (higher Elo) systematically exploit weaker negotiation partners: the key hypothesis is that the Elo gap predicts asymmetric exploitation.
+
+\subsection{Other Metrics}
+
+\paragraph{Pareto Efficiency.}
+An agreement $A$ is Pareto efficient if there is no alternative agreement $A'$ such that $U_i(A') \geq U_i(A)$ for all $i$ and $U_j(A') > U_j(A)$ for some $j$.
+
+\paragraph{Kalai-Smorodinsky Fairness.}
+For two agents, compute the ratio of utility gains over disagreement point:
+\begin{equation}
+F = \min\left(\frac{U_1(A) - d_1}{U_2(A) - d_2}, \frac{U_2(A) - d_2}{U_1(A) - d_1}\right)
+\end{equation}
+where $d_i$ is agent $i$'s disagreement utility. $F = 1$ indicates perfectly balanced agreement.
+
+\paragraph{Efficiency--fairness decomposition.}
+The deviation from optimal decomposes into:
+\begin{itemize}
+    \item \textbf{Efficiency loss}: $SW^* - SW_{\text{actual}}$ (surplus destroyed by suboptimal agreement or timeout).
+    \item \textbf{Fairness deviation}: $D_{\text{NBS}}$ among outcomes with the same SW (surplus captured but split unevenly).
+\end{itemize}
+
+\section{Implementation Caveats and Known Issues}
+
+\subsection{Position Correlation ($\rho$): Infeasible Range and Original Clipping Bug}
+\label{sec:rho_infeasibility}
+
+\paragraph{The original problem.}
+An earlier version of this game generated position preferences by sampling from a multivariate normal $\mathcal{N}(\bm{0.5}, \Sigma)$ and clipping values to $[0,1]$.
+This introduced two compounding problems:
+\begin{enumerate}
+    \item \textbf{Systematic bias toward zero}: Clipping truncates the tails of the normal distribution, which disproportionately affects extreme correlations. For a target $\rho_{\text{target}} = -0.8$, the realized Pearson correlation after clipping was approximately $-0.3$ to $-0.4$.
+    \item \textbf{Non-monotonic distortion}: The mapping from $\rho_{\text{target}}$ to $\rho_{\text{realized}}$ is nonlinear and depends on the variance parameter $\sigma^2$, meaning that equally spaced target values did not produce equally spaced realized values.
+\end{enumerate}
+
+\paragraph{Why $\rho = -1$ is infeasible.}
+Even with the Gaussian copula fix now in Section 3.1, the fundamental geometric constraint remains: for position vectors on $[0,1]^K$, Pearson $\rho = -1$ requires a perfect negative linear relationship ($p^2_k = a - b \cdot p^1_k$ for all $k$, with $b > 0$).
+For $K = 2$, this is achievable (e.g., $p^1 = (0, 1)$, $p^2 = (1, 0)$).
+But for uniformly distributed vectors on $[0,1]^K$, the minimum achievable Pearson correlation converges to $-1/(K-1)$, which for $K=5$ gives approximately $-0.25$.
+
+While specific vector pairs with $\rho = -1$ can be \emph{constructed} for any $K$ (e.g., $p^2 = 1 - p^1$), such constructions are degenerate and cannot serve as a distribution from which to sample multiple experimental instances.
+The Gaussian copula correctly handles this: if the target $\rho$ requires a latent $\rho_z$ that makes $\Sigma_z$ non-positive-semi-definite, the Cholesky decomposition fails loudly rather than silently producing biased results.
+
+\paragraph{Practical recommendation.}
+Empirically characterize the feasible range of $\rho$ for $K = 5$ by sweeping the latent $\rho_z$ and recording the achieved Pearson correlation.
+Restrict experimental conditions to the verified feasible range.
+
+\subsection{Interest Overlap ($\theta$): Original Generation Was Approximate}
+\label{sec:theta_approximate}
+
+\paragraph{The original problem.}
+An earlier version generated weight vectors via a Dirichlet mixing heuristic: $\bm{w}^2 = \theta_{\text{target}} \cdot \bm{w}^1 + (1 - \theta_{\text{target}}) \cdot \bm{w}^{2\prime}$, followed by renormalization.
+The resulting cosine similarity $\cos(\bm{w}^1, \bm{w}^2)$ was not equal to $\theta_{\text{target}}$; it was a nonlinear function of $\theta_{\text{target}}$, $\bm{w}^1$, and $\bm{w}^{2\prime}$, with variance of $\pm 0.1$ or more for $K = 5$.
+
+\paragraph{Current fix.}
+Section 3.2 now uses SLSQP optimization to achieve exact target cosine similarities on the simplex.
+This is identical to the parameter generation used in Games 1 and 3.
+
+\subsection{Scaling to $N > 2$: Equicorrelation Feasibility}
+\label{sec:n_greater_2}
+
+For $N > 2$ agents where all pairwise correlations must equal the target, the correlation matrix must be positive semi-definite.
+The equicorrelation matrix with all off-diagonal entries equal to $\rho$ has eigenvalues $1 + (N-1)\rho$ and $1 - \rho$ (with multiplicity $N-1$).
+Positive semi-definiteness requires both eigenvalues to be non-negative, giving:
+\begin{equation}
+    \rho \geq -\frac{1}{N-1}
+\end{equation}
+
+For the position preference correlation $\rho$, this further restricts the already-limited negative range:
+$N=3$: $\rho \geq -0.5$; $N=5$: $\rho \geq -0.25$; $N=10$: $\rho \geq -0.11$.
+This constraint compounds with the box-constraint infeasibility from Section~\ref{sec:rho_infeasibility}.
+
+For the interest overlap $\theta \in [0,1]$, the equicorrelation constraint is always satisfied.
+
+\end{document}

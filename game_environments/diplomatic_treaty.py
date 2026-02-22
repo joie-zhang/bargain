@@ -8,9 +8,12 @@ importance weights.
 
 import json
 import re
+import warnings
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from scipy.optimize import minimize
+from scipy.stats import norm
 
 from .base import GameEnvironment, GameType, DiplomaticTreatyConfig
 
@@ -27,10 +30,9 @@ class DiplomaticTreatyGame(GameEnvironment):
     - Proposals are agreement vectors A = [a_1, ..., a_k] where a_k ∈ [0,1]
     - Utility = Σ_k w_ik × (1 - |p_ik - a_k|)
 
-    Three control parameters:
+    Two control parameters:
     - ρ (rho): Preference correlation [-1, 1]
     - θ (theta): Interest overlap [0, 1]
-    - λ (lam): Issue compatibility [-1, 1]
     """
 
     # Thematic issue names for diplomatic negotiations
@@ -52,7 +54,7 @@ class DiplomaticTreatyGame(GameEnvironment):
         Initialize Diplomatic Treaty game.
 
         Args:
-            config: DiplomaticTreatyConfig with n_issues, rho, theta, lam, etc.
+            config: DiplomaticTreatyConfig with n_issues, rho, theta, etc.
         """
         super().__init__(config)
         self.config: DiplomaticTreatyConfig = config
@@ -77,9 +79,6 @@ class DiplomaticTreatyGame(GameEnvironment):
         # Generate weights with overlap theta
         weights = self._generate_weights(n_agents, n_issues)
 
-        # Generate issue types with compatibility lambda
-        issue_types = self._generate_issue_types(n_issues, positions)
-
         # Map to agent IDs
         agent_positions = {}
         agent_weights = {}
@@ -99,18 +98,20 @@ class DiplomaticTreatyGame(GameEnvironment):
             "n_issues": n_issues,
             "agent_positions": agent_positions,
             "agent_weights": agent_weights,
-            "issue_types": issue_types.tolist(),
             "parameters": {
                 "rho": self.config.rho,
                 "theta": self.config.theta,
-                "lambda": self.config.lam
             },
             "game_type": "diplomatic_treaty"
         }
 
     def _generate_positions(self, n_agents: int, n_issues: int) -> np.ndarray:
         """
-        Generate position preferences with correlation rho.
+        Generate position preferences using the Gaussian copula (Section 3.1).
+
+        Samples latent z_k ~ N(0, Σ_z) for each issue k, then transforms
+        p_ik = Φ(z_ik) to obtain Uniform[0,1] marginals with the desired
+        rank correlation controlled by rho.
 
         Args:
             n_agents: Number of agents
@@ -119,77 +120,169 @@ class DiplomaticTreatyGame(GameEnvironment):
         Returns:
             positions: Shape (n_agents, n_issues), values in [0, 1]
         """
-        sigma = 0.25  # Standard deviation
-        cov_matrix = np.full((n_agents, n_agents), self.config.rho * sigma**2)
-        np.fill_diagonal(cov_matrix, sigma**2)
+        # Convert target correlation to latent correlation via inverse relationship
+        rho_z = 2 * np.sin(np.pi * self.config.rho / 6)
+
+        # Build equicorrelation matrix Σ_z
+        cov_matrix = np.full((n_agents, n_agents), rho_z)
+        np.fill_diagonal(cov_matrix, 1.0)
+
+        # PSD validation (should already be caught by config, but defensive)
+        if rho_z < -1.0 / (n_agents - 1):
+            raise ValueError(
+                f"Latent correlation rho_z={rho_z:.4f} (from rho={self.config.rho}) "
+                f"violates PSD constraint for N={n_agents} agents. "
+                f"Need rho_z >= {-1.0/(n_agents-1):.4f}."
+            )
 
         positions = np.zeros((n_agents, n_issues))
-        mean = np.full(n_agents, 0.5)
+        mean = np.zeros(n_agents)
 
         for k in range(n_issues):
-            # Sample from multivariate normal
-            pos_k = self._rng.multivariate_normal(mean, cov_matrix)
-            # Clip to [0, 1]
-            positions[:, k] = np.clip(pos_k, 0, 1)
+            # Sample from multivariate normal in latent space
+            z_k = self._rng.multivariate_normal(mean, cov_matrix)
+            # Transform through Φ (standard normal CDF) -> Uniform[0,1]
+            positions[:, k] = norm.cdf(z_k)
 
         return positions
 
     def _generate_weights(self, n_agents: int, n_issues: int) -> np.ndarray:
         """
-        Generate importance weights with overlap theta.
+        Generate importance weights with exact cosine similarity theta (Section 3.2).
+
+        Uses SLSQP joint optimization of all weight vectors on the simplex,
+        following the same pattern as RandomVectorGenerator._optimize_vectors()
+        but with sum=1 instead of sum=100.
 
         Args:
             n_agents: Number of agents
             n_issues: Number of issues
 
         Returns:
-            weights: Shape (n_agents, n_issues), normalized to sum to 1
+            weights: Shape (n_agents, n_issues), each row sums to 1, all >= 0
         """
-        alpha = 2.0  # Dirichlet concentration parameter
+        alpha = 2.0  # Dirichlet concentration for random initialization
+        theta = self.config.theta
 
+        if theta == 1.0:
+            # Special case: identical weights
+            w0 = self._rng.dirichlet(np.full(n_issues, alpha))
+            return np.tile(w0, (n_agents, 1))
+
+        K = n_issues
+
+        # For 2 agents: jointly optimize both vectors for exact cosine
+        if n_agents == 2:
+            best_x = None
+            best_error = float('inf')
+            max_attempts = 15
+
+            def objective_2(x):
+                w1 = x[:K]
+                w2 = x[K:]
+                n1 = np.linalg.norm(w1)
+                n2 = np.linalg.norm(w2)
+                if n1 < 1e-12 or n2 < 1e-12:
+                    return 1e10
+                cos_sim = np.dot(w1, w2) / (n1 * n2)
+                return (cos_sim - theta) ** 2
+
+            constraints_2 = [
+                {'type': 'eq', 'fun': lambda x: np.sum(x[:K]) - 1.0},
+                {'type': 'eq', 'fun': lambda x: np.sum(x[K:]) - 1.0},
+            ]
+            bounds_2 = [(0.0, 1.0)] * (2 * K)
+
+            for attempt in range(max_attempts):
+                conc = self._rng.uniform(0.5, 3.0)
+                x0 = np.concatenate([
+                    self._rng.dirichlet(np.full(K, conc)),
+                    self._rng.dirichlet(np.full(K, conc)),
+                ])
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    result = minimize(
+                        objective_2, x0, method='SLSQP',
+                        bounds=bounds_2, constraints=constraints_2,
+                        options={'maxiter': 2000, 'ftol': 1e-14}
+                    )
+
+                error = objective_2(result.x)
+                if error < best_error:
+                    best_error = error
+                    best_x = result.x.copy()
+                if best_error < 1e-10:
+                    break
+
+            if best_x is None or best_error > 0.0001:
+                raise RuntimeError(
+                    f"Failed to generate weights with cosine similarity "
+                    f"theta={theta} after {max_attempts} attempts. "
+                    f"Best error: {best_error:.6f}"
+                )
+
+            weights = np.zeros((2, K))
+            weights[0] = np.maximum(best_x[:K], 0.0)
+            weights[0] /= weights[0].sum()
+            weights[1] = np.maximum(best_x[K:], 0.0)
+            weights[1] /= weights[1].sum()
+            return weights
+
+        # For N>2 agents: generate w0, then optimize each subsequent agent
         weights = np.zeros((n_agents, n_issues))
         weights[0] = self._rng.dirichlet(np.full(n_issues, alpha))
+        w0 = weights[0]
+        w0_norm = np.linalg.norm(w0)
 
         for i in range(1, n_agents):
-            # Generate candidate weights
-            w_candidate = self._rng.dirichlet(np.full(n_issues, alpha))
+            best_x = None
+            best_error = float('inf')
+            max_attempts = 20
 
-            # Mix with first agent to achieve target overlap
-            w_mixed = self.config.theta * weights[0] + (1 - self.config.theta) * w_candidate
+            def objective(w):
+                w_norm = np.linalg.norm(w)
+                if w_norm < 1e-12:
+                    return 1e10
+                cos_sim = np.dot(w0, w) / (w0_norm * w_norm)
+                return (cos_sim - theta) ** 2
 
-            # Renormalize
-            weights[i] = w_mixed / w_mixed.sum()
+            constraints = [
+                {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
+            ]
+            bounds = [(0.0, 1.0)] * n_issues
+
+            for attempt in range(max_attempts):
+                conc = self._rng.uniform(0.5, 3.0)
+                x0 = self._rng.dirichlet(np.full(n_issues, conc))
+
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    result = minimize(
+                        objective, x0, method='SLSQP',
+                        bounds=bounds, constraints=constraints,
+                        options={'maxiter': 2000, 'ftol': 1e-14}
+                    )
+
+                error = objective(result.x)
+                if error < best_error:
+                    best_error = error
+                    best_x = result.x.copy()
+                if best_error < 1e-10:
+                    break
+
+            if best_x is None or best_error > 0.0001:
+                raise RuntimeError(
+                    f"Failed to generate weights with cosine similarity "
+                    f"theta={theta} for agent {i} after "
+                    f"{max_attempts} attempts. Best error: {best_error:.6f}"
+                )
+
+            w = np.maximum(best_x, 0.0)
+            w = w / w.sum()
+            weights[i] = w
 
         return weights
-
-    def _generate_issue_types(self, n_issues: int, positions: np.ndarray) -> np.ndarray:
-        """
-        Generate issue types (compatible or conflicting) based on lambda.
-
-        Args:
-            n_issues: Number of issues
-            positions: Position preferences (modified in place for conflicting issues)
-
-        Returns:
-            issue_types: Shape (n_issues,), values in {-1, 1}
-        """
-        # Probability of compatible issue
-        p_compatible = (self.config.lam + 1) / 2
-
-        # Sample issue types
-        issue_types = self._rng.choice(
-            [1, -1],
-            size=n_issues,
-            p=[p_compatible, 1 - p_compatible]
-        )
-
-        # For conflicting issues with 2 agents, make positions opposing
-        if positions.shape[0] == 2:
-            for k in range(n_issues):
-                if issue_types[k] == -1:
-                    positions[1, k] = 1 - positions[0, k]
-
-        return issue_types
 
     def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
         """Generate diplomatic negotiation rules explanation."""
@@ -250,17 +343,15 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
         issues = game_state["issues"]
         positions = game_state["agent_positions"][agent_id]
         weights = game_state["agent_weights"][agent_id]
-        issue_types = game_state["issue_types"]
 
         lines = ["🔒 CONFIDENTIAL: Your Diplomatic Preferences", ""]
         lines.append(f"{agent_id}, you have been assigned the following SECRET preferences:")
         lines.append("")
         lines.append("**YOUR IDEAL POSITIONS** (what outcome you want on each issue):")
 
-        for i, (issue, pos) in enumerate(zip(issues, positions)):
-            issue_type = "win-win" if issue_types[i] == 1 else "zero-sum"
+        for issue, pos in zip(issues, positions):
             pos_desc = self._describe_position(pos)
-            lines.append(f"  {issue}: {pos:.3f} ({pos_desc}, {issue_type})")
+            lines.append(f"  {issue}: {pos:.3f} ({pos_desc})")
 
         lines.append("")
         lines.append("**YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):")
@@ -273,7 +364,6 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
         lines.append("**STRATEGIC INSIGHT:**")
         lines.append("- Focus on issues with HIGH weights - they matter most for your utility")
         lines.append("- Consider trading concessions on low-weight issues for gains on high-weight ones")
-        lines.append("- Zero-sum issues have directly opposing interests; win-win issues may allow mutual gains")
         lines.append("")
         lines.append("Please acknowledge that you understand your diplomatic preferences.")
 

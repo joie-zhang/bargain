@@ -25,6 +25,18 @@ from .base import (
 )
 from .item_allocation import ItemAllocationGame
 from .diplomatic_treaty import DiplomaticTreatyGame
+from .metrics import (
+    compute_utility,
+    social_welfare,
+    optimal_social_welfare,
+    utilitarian_efficiency,
+    nash_bargaining_solution,
+    distance_from_nbs,
+    exploitation_index,
+    is_pareto_efficient,
+    kalai_smorodinsky_fairness,
+    efficiency_fairness_decomposition,
+)
 
 
 def create_game_environment(
@@ -52,7 +64,6 @@ def create_game_environment(
                 - n_issues: Number of issues (default: 5)
                 - rho: Preference correlation [-1, 1] (default: 0.0)
                 - theta: Interest overlap [0, 1] (default: 0.5)
-                - lam: Issue compatibility [-1, 1] (default: 0.0)
 
     Returns:
         GameEnvironment instance for the specified game type
@@ -77,8 +88,7 @@ def create_game_environment(
             t_rounds=10,
             n_issues=5,
             rho=0.0,
-            theta=0.3,
-            lam=0.5
+            theta=0.3
         )
     """
     if game_type == "item_allocation":
@@ -100,8 +110,7 @@ def create_game_environment(
             random_seed=random_seed,
             n_issues=kwargs.get("n_issues", 5),
             rho=kwargs.get("rho", 0.0),
-            theta=kwargs.get("theta", 0.5),
-            lam=kwargs.get("lam", 0.0)
+            theta=kwargs.get("theta", 0.5)
         )
         return DiplomaticTreatyGame(config)
 
@@ -150,4 +159,15 @@ __all__ = [
     # Factory functions
     "create_game_environment",
     "create_game_from_config",
+    # Metrics
+    "compute_utility",
+    "social_welfare",
+    "optimal_social_welfare",
+    "utilitarian_efficiency",
+    "nash_bargaining_solution",
+    "distance_from_nbs",
+    "exploitation_index",
+    "is_pareto_efficient",
+    "kalai_smorodinsky_fairness",
+    "efficiency_fairness_decomposition",
 ]
