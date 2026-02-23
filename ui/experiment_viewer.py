@@ -975,7 +975,7 @@ def _render_cofunding_analytics(results: Dict, experiment_id: str):
     preferences = results.get("agent_preferences", {})
     item_names = get_item_names(config)
     item_costs = get_item_costs(config)
-    agent_budgets = _get_agent_budgets(config, results, game_type, item_costs)
+    agent_budgets = _get_agent_budgets(config, results, "co_funding", item_costs)
     agents = config.get("agents", ["Agent_Alpha", "Agent_Beta"])
 
     # --- Funding progress per round ---
