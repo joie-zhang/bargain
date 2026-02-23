@@ -61,9 +61,10 @@ GAME_TYPES = {
 }
 
 PHASE_CONFIG = {
-    # Diplomacy phases
+    # Setup phases (round 0, from all_interactions)
     "game_setup":             {"icon": "🎮", "color": "#6366f1", "label": "Game Setup"},
     "preference_assignment":  {"icon": "🔒", "color": "#8b5cf6", "label": "Preferences"},
+    # Diplomacy phases
     "discussion":             {"icon": "💬", "color": "#3b82f6", "label": "Discussion"},
     "private_thinking":       {"icon": "🧠", "color": "#64748b", "label": "Private Thinking"},
     "proposal":               {"icon": "📝", "color": "#10b981", "label": "Proposal"},
@@ -134,13 +135,14 @@ def discover_experiments() -> List[ExperimentInfo]:
 
         # Check for flat experiment (JSON files directly in top_dir)
         if _has_result_files(top_dir):
+            model_pair, model_order, params = _extract_flat_metadata(top_dir, name)
             experiments.append(ExperimentInfo(
                 game_type=game_type,
                 experiment_name=name,
                 sub_experiment="flat",
-                model_pair="(flat)",
-                model_order="(flat)",
-                params="(flat)",
+                model_pair=model_pair,
+                model_order=model_order,
+                params=params,
                 budget_level="",
                 folder_path=str(top_dir),
             ))
@@ -212,6 +214,64 @@ def _discover_from_pair_dir(experiments, game_type, exp_name, sub_exp, pair_dir)
                     budget_level="",
                     folder_path=str(param_or_budget_dir),
                 ))
+
+
+def _extract_flat_metadata(top_dir: Path, name: str) -> Tuple[str, str, str]:
+    """Extract model pair, order, and params from a flat experiment directory.
+
+    Tries:
+      1. Parse directory name for _vs_ pattern and parameter suffixes
+      2. Load experiment_results.json to get model info from agent_performance
+    Returns (model_pair, model_order, params).
+    """
+    model_pair = "(flat)"
+    model_order = "(flat)"
+    params = "(flat)"
+
+    # Try to extract from directory name (e.g. "gpt-5-nano_vs_gpt-5-nano_config_..._rho0_0_theta0_5")
+    vs_match = re.match(r"(.+?)_vs_(.+?)_config", name)
+    if vs_match:
+        model_pair = f"{vs_match.group(1)}_vs_{vs_match.group(2)}"
+
+    # Extract params from name (rho, theta, alpha, sigma)
+    param_parts = []
+    for pat, key in [
+        (r"_rho(n?\d+_\d+)", "rho"),
+        (r"_theta(\d+_\d+)", "theta"),
+        (r"_alpha(\d+_\d+)", "alpha"),
+        (r"_sigma(\d+_\d+)", "sigma"),
+    ]:
+        m = re.search(pat, name)
+        if m:
+            param_parts.append(f"{key}_{m.group(1)}")
+    if param_parts:
+        params = "_".join(param_parts)
+
+    # If directory name didn't have _vs_, try loading from experiment results
+    if model_pair == "(flat)":
+        for pattern in ["run_1_experiment_results.json", "experiment_results.json"]:
+            f = top_dir / pattern
+            if f.exists():
+                try:
+                    with open(f) as fh:
+                        data = json.load(fh)
+                    perf = data.get("agent_performance", {})
+                    models = []
+                    for agent in sorted(perf.keys()):
+                        m = perf[agent].get("model", "unknown")
+                        models.append(m)
+                    if models:
+                        model_pair = "_vs_".join(models)
+                    # Extract order from config
+                    config = data.get("config", {})
+                    order = config.get("model_order") or config.get("actual_order", "")
+                    if order:
+                        model_order = order
+                except (json.JSONDecodeError, OSError):
+                    pass
+                break
+
+    return model_pair, model_order, params
 
 
 def _has_result_files(directory: Path) -> bool:
@@ -648,6 +708,19 @@ def render_feedback(entry: Dict):
         )
 
 
+def _render_setup_entry(entry: Dict, phase: str):
+    """Render game_setup or preference_assignment phase entries."""
+    speaker = entry.get("from", "system")
+    content = entry.get("content", "")
+    cfg = PHASE_CONFIG.get(phase, {"icon": "❓", "color": "#6b7280", "label": phase})
+    color = AGENT_COLORS.get(speaker, cfg["color"])
+    with st.expander(f'{cfg["icon"]} {cfg["label"]} — {speaker}', expanded=False):
+        st.markdown(
+            f'<div style="border-left: 3px solid {color}; padding: 8px 12px;">{content}</div>',
+            unsafe_allow_html=True,
+        )
+
+
 # ---------------------------------------------------------------------------
 # TAB RENDERERS
 # ---------------------------------------------------------------------------
@@ -697,7 +770,8 @@ def render_metrics_overview(results: Dict, game_type: str):
 
 
 def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
-                        show_private: bool, experiment_id: str):
+                        show_private: bool, experiment_id: str,
+                        interactions: Optional[List[Dict]] = None):
     """Render the timeline tab — round-by-round conversation."""
     config = results.get("config", {})
     logs = results.get("conversation_logs", [])
@@ -706,11 +780,57 @@ def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
     item_costs = get_item_costs(config)
     agent_budgets = _get_agent_budgets(config, results, game_type, item_costs)
 
-    if not logs:
+    if not logs and not interactions:
         st.warning("No conversation logs found in this experiment.")
         return
 
     rounds = group_by_round(logs)
+
+    # Build a prompt lookup from all_interactions keyed by (round, agent, phase_prefix)
+    # Use a list to handle multiple entries per key (e.g. discussion turns)
+    prompt_lookup: Dict[Tuple, List[str]] = defaultdict(list)
+    if interactions:
+        for e in interactions:
+            r = e.get("round", -1)
+            agent = e.get("agent_id", "")
+            phase_raw = e.get("phase", "")
+            prompt_text = e.get("prompt", "")
+            if prompt_text:
+                # Normalize phase for matching: "discussion_round_1_turn_1" → "discussion"
+                phase_key = classify_phase({"phase": phase_raw})
+                prompt_lookup[(r, agent, phase_key)].append(prompt_text)
+
+    # Merge round 0 (setup phases) from all_interactions if available
+    if interactions and 0 not in rounds:
+        round_0_entries = [
+            e for e in interactions if e.get("round", -1) == 0
+        ]
+        if round_0_entries:
+            # Convert all_interactions format to conversation_log format
+            converted = []
+            for e in round_0_entries:
+                converted.append({
+                    "phase": e.get("phase", "unknown"),
+                    "round": 0,
+                    "from": e.get("agent_id", "system"),
+                    "content": e.get("response", ""),
+                    "prompt": e.get("prompt", ""),
+                    "timestamp": e.get("timestamp"),
+                })
+            rounds[0] = converted
+
+    # Inject prompts from all_interactions into conversation_log entries
+    if show_prompts and prompt_lookup:
+        for r, entries in rounds.items():
+            for entry in entries:
+                if not entry.get("prompt"):
+                    agent = entry.get("from", "")
+                    phase_key = classify_phase(entry)
+                    key = (r, agent, phase_key)
+                    prompts = prompt_lookup.get(key, [])
+                    if prompts:
+                        entry["prompt"] = prompts.pop(0)
+
     round_nums = sorted(rounds.keys())
 
     selected_rounds = st.multiselect(
@@ -738,8 +858,17 @@ def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
                 if phase == "private_thinking" and not show_private:
                     continue
 
+                # Show prompt if requested and available
+                if show_prompts and entry.get("prompt"):
+                    with st.expander("📨 Prompt", expanded=False):
+                        st.code(entry["prompt"][:3000], language=None)
+
                 # Dispatch to game-specific renderers
-                if phase == "discussion":
+                if phase == "game_setup":
+                    _render_setup_entry(entry, phase)
+                elif phase == "preference_assignment":
+                    _render_setup_entry(entry, phase)
+                elif phase == "discussion":
                     render_discussion_entry(entry)
                 elif phase == "private_thinking":
                     render_private_thinking(entry)
@@ -904,19 +1033,21 @@ def render_agent_comparison_tab(results: Dict, interactions: List[Dict],
                 st.markdown("---")
 
 
-def render_analytics_tab(results: Dict, game_type: str, experiment_id: str):
+def render_analytics_tab(results: Dict, game_type: str, experiment_id: str,
+                         interactions: Optional[List[Dict]] = None):
     """Render analytics charts — game-specific."""
     if not PLOTLY_AVAILABLE:
         st.warning("Plotly not available. Install with: `pip install plotly`")
         return
 
     if game_type == "diplomacy":
-        _render_diplomacy_analytics(results, experiment_id)
+        _render_diplomacy_analytics(results, experiment_id, interactions)
     elif game_type == "co_funding":
         _render_cofunding_analytics(results, experiment_id)
 
 
-def _render_diplomacy_analytics(results: Dict, experiment_id: str):
+def _render_diplomacy_analytics(results: Dict, experiment_id: str,
+                                 interactions: Optional[List[Dict]] = None):
     """Diplomacy-specific analytics: utility evolution + voting heatmap."""
     logs = results.get("conversation_logs", [])
     preferences = results.get("agent_preferences", {})
@@ -929,9 +1060,20 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str):
     utility_data = []
 
     # Get positions/weights for diplomacy utility calculation
-    # Saved in config for new experiments; fall back to game_state for older ones
     agent_positions = config.get("agent_positions", {})
     agent_weights = config.get("agent_weights", {})
+
+    # Fallback: use agent_preferences as positions (ideal positions)
+    # and equal weights if not stored in config
+    if not agent_positions and preferences:
+        agent_positions = preferences
+    if not agent_weights and preferences:
+        n_issues = len(next(iter(preferences.values()), []))
+        if n_issues > 0:
+            agent_weights = {
+                agent: [1.0 / n_issues] * n_issues
+                for agent in preferences
+            }
 
     for entry in logs:
         if classify_phase(entry) != "proposal":
@@ -962,7 +1104,8 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str):
                     "Proposer": proposer,
                 })
         elif allocation:
-            # Legacy item allocation: utility = sum of prefs for allocated items
+            # Item allocation format: compute utility for each agent
+            # For diplomacy data, preferences = ideal positions; sum assigned values
             for agent, items in allocation.items():
                 if agent in preferences:
                     prefs = preferences[agent]
@@ -990,32 +1133,83 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str):
     # --- Voting heatmap ---
     st.subheader("Voting Patterns")
     vote_data = []
-    for entry in logs:
-        if classify_phase(entry) == "voting":
-            voter = entry.get("from", "Unknown")
-            content = entry.get("content", "")
+
+    # First try: extract individual votes from all_interactions
+    if interactions:
+        for entry in interactions:
+            phase = entry.get("phase", "")
+            if not phase.startswith("voting_round_"):
+                continue
+            voter = entry.get("agent_id", "Unknown")
+            response = entry.get("response", "")
             round_num = entry.get("round", 0)
+            # Extract proposal number from phase: "voting_round_1_proposal_2"
+            prop_match = re.search(r"proposal_(\d+)", phase)
+            prop_id = prop_match.group(1) if prop_match else "?"
+            # Parse vote from response
             try:
-                parsed = json.loads(content) if isinstance(content, str) else content
+                parsed = json.loads(response) if isinstance(response, str) else response
                 if isinstance(parsed, dict):
-                    decision = parsed.get("vote_decision") or parsed.get("vote", "unknown")
-                    # Try to get which proposals were voted on
-                    votes = parsed.get("votes", {})
-                    if votes:
-                        for prop_id, vote in votes.items():
+                    decision = (parsed.get("vote_decision")
+                                or parsed.get("vote", "unknown"))
+                else:
+                    decision = "accept" if "accept" in response.lower() else "reject"
+            except (json.JSONDecodeError, TypeError):
+                decision = "accept" if "accept" in response.lower() else "reject"
+            vote_data.append({
+                "Voter": voter,
+                "Proposal": f"R{round_num}-P{prop_id}",
+                "Vote": 1 if decision == "accept" else 0,
+            })
+
+    # Fallback: try conversation_logs voting entries
+    if not vote_data:
+        for entry in logs:
+            phase = classify_phase(entry)
+            if phase == "voting":
+                voter = entry.get("from", "Unknown")
+                content = entry.get("content", "")
+                round_num = entry.get("round", 0)
+                try:
+                    parsed = json.loads(content) if isinstance(content, str) else content
+                    if isinstance(parsed, dict):
+                        decision = (parsed.get("vote_decision")
+                                    or parsed.get("vote", "unknown"))
+                        votes = parsed.get("votes", {})
+                        if votes:
+                            for prop_id, vote in votes.items():
+                                vote_data.append({
+                                    "Voter": voter,
+                                    "Proposal": f"R{round_num}-P{prop_id}",
+                                    "Vote": 1 if vote == "accept" else 0,
+                                })
+                        else:
                             vote_data.append({
                                 "Voter": voter,
-                                "Proposal": f"R{round_num}-P{prop_id}",
-                                "Vote": 1 if vote == "accept" else 0,
+                                "Proposal": f"R{round_num}",
+                                "Vote": 1 if decision == "accept" else 0,
                             })
-                    else:
-                        vote_data.append({
-                            "Voter": voter,
-                            "Proposal": f"R{round_num}",
-                            "Vote": 1 if decision == "accept" else 0,
-                        })
-            except (json.JSONDecodeError, TypeError):
-                pass
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+    # Last fallback: parse vote_tabulation text
+    if not vote_data:
+        for entry in logs:
+            if classify_phase(entry) == "vote_tabulation":
+                content = entry.get("content", "")
+                round_num = entry.get("round", 0)
+                # Parse lines like "Proposal #1: 0 accept, 2 reject"
+                for match in re.finditer(
+                    r"Proposal #(\d+):\s*(\d+)\s*accept,\s*(\d+)\s*reject", content
+                ):
+                    prop_id = match.group(1)
+                    accepts = int(match.group(2))
+                    rejects = int(match.group(3))
+                    vote_data.append({
+                        "Voter": "(aggregate)",
+                        "Proposal": f"R{round_num}-P{prop_id}",
+                        "Vote": round(accepts / max(accepts + rejects, 1), 2),
+                    })
 
     if vote_data:
         df = pd.DataFrame(vote_data)
@@ -1031,10 +1225,10 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str):
         fig.update_layout(height=250, xaxis_title="Proposal", yaxis_title="Voter")
         st.plotly_chart(fig, use_container_width=True, key=f"vote_heatmap_{experiment_id}")
     else:
-        st.info("No structured voting data available.")
+        st.info("No voting data available.")
 
-    # --- Preference heatmap ---
-    st.subheader("Agent Preferences")
+    # --- Preference heatmap (ideal positions for diplomacy) ---
+    st.subheader("Agent Ideal Positions")
     if preferences:
         agents = list(preferences.keys())
         values = [preferences[a] for a in agents]
@@ -1044,7 +1238,7 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str):
             y=agents,
             colorscale="Blues",
             showscale=True,
-            hovertemplate="Agent: %{y}<br>Issue: %{x}<br>Value: %{z:.3f}<extra></extra>",
+            hovertemplate="Agent: %{y}<br>Issue: %{x}<br>Position: %{z:.3f}<extra></extra>",
         ))
         fig.update_layout(height=250)
         st.plotly_chart(fig, use_container_width=True, key=f"pref_heatmap_{experiment_id}")
@@ -1366,8 +1560,12 @@ def main():
     render_metrics_overview(results, selected_exp.game_type)
     st.markdown("---")
 
-    # Create experiment ID for unique widget keys
-    experiment_id = f"{selected_exp.experiment_name}_{selected_exp.params}_{id(selected_exp)}"
+    # Create experiment ID for unique widget keys (must be stable across reruns)
+    experiment_id = (
+        f"{selected_exp.experiment_name}_{selected_exp.sub_experiment}_"
+        f"{selected_exp.model_pair}_{selected_exp.model_order}_"
+        f"{selected_exp.params}_{selected_exp.budget_level}"
+    )
 
     # Main tabs
     tab_timeline, tab_comparison, tab_analytics, tab_raw = st.tabs(
@@ -1378,7 +1576,7 @@ def main():
         render_timeline_tab(
             results, selected_exp.game_type,
             options["show_prompts"], options["show_private"],
-            experiment_id,
+            experiment_id, interactions,
         )
 
     with tab_comparison:
@@ -1388,7 +1586,7 @@ def main():
         )
 
     with tab_analytics:
-        render_analytics_tab(results, selected_exp.game_type, experiment_id)
+        render_analytics_tab(results, selected_exp.game_type, experiment_id, interactions)
 
     with tab_raw:
         render_raw_data_tab(results, interactions, experiment_id)

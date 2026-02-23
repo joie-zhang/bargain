@@ -131,11 +131,12 @@ PROMPT_ONLY="true"
 
 if [[ "$MODE" == "derisk" ]]; then
     MODEL_PAIRS=(
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
+        "gpt-5-nano,gpt-5-nano"
     )
-    MS_ALPHA_VALUES=(0.5)
-    MS_SIGMA_VALUES=(0.5)
+    MS_ALPHA_VALUES=(1.0)
+    MS_SIGMA_VALUES=(1.0)
     MS_MODEL_ORDERS=("weak_first")
+    MAX_ROUNDS=2
 elif [[ "$MODE" == "small" ]]; then
     MODEL_PAIRS=(
         "gpt-5-nano,claude-opus-4-5-thinking-32k"
@@ -567,6 +568,9 @@ SEED=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['rando
 DISCUSSION_TURNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['discussion_turns'])")
 OUTPUT_DIR=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['output_dir'])")
 MAX_TOKENS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['max_tokens_per_phase'])")
+MAX_ROUNDS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['max_rounds'])")
+NUM_RUNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['num_runs'])")
+RUN_NUMBER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
 
 # Get models list (works for both experiment types)
 MODELS=\$(python3 -c "import json; print(' '.join(json.load(open('\${CONFIG_FILE}'))['models']))")
@@ -577,6 +581,8 @@ echo "Models: \$MODELS"
 echo "Alpha: \$ALPHA"
 echo "Sigma: \$SIGMA"
 echo "Projects: \$M_PROJECTS"
+echo "Max rounds: \$MAX_ROUNDS"
+echo "Num runs: \$NUM_RUNS | Run number: \$RUN_NUMBER"
 echo "Random seed: \$SEED"
 echo "Output dir: \$OUTPUT_DIR"
 
@@ -584,10 +590,11 @@ echo "Output dir: \$OUTPUT_DIR"
 CMD="python3 run_strong_models_experiment.py"
 CMD="\$CMD --game-type co_funding"
 CMD="\$CMD --models \$MODELS"
-CMD="\$CMD --batch --num-runs 1 --run-number 1"
+CMD="\$CMD --batch --num-runs \$NUM_RUNS --run-number \$RUN_NUMBER"
 CMD="\$CMD --m-projects \$M_PROJECTS"
 CMD="\$CMD --alpha \$ALPHA --sigma \$SIGMA"
 CMD="\$CMD --c-min \$C_MIN --c-max \$C_MAX"
+CMD="\$CMD --max-rounds \$MAX_ROUNDS"
 CMD="\$CMD --random-seed \$SEED"
 CMD="\$CMD --discussion-turns \$DISCUSSION_TURNS"
 CMD="\$CMD --model-order \$MODEL_ORDER"
@@ -747,22 +754,27 @@ SEED=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['random_
 DISCUSSION_TURNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['discussion_turns'])")
 OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])")
 MAX_TOKENS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['max_tokens_per_phase'])")
+MAX_ROUNDS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['max_rounds'])")
+NUM_RUNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['num_runs'])")
+RUN_NUMBER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
 MODELS=$(python3 -c "import json; print(' '.join(json.load(open('${CONFIG_FILE}'))['models']))")
 
 echo "Experiment type: $EXPERIMENT_TYPE"
 echo "Model order: $MODEL_ORDER"
 echo "Models: $MODELS"
-echo "Alpha: $ALPHA | Sigma: $SIGMA | Projects: $M_PROJECTS"
+echo "Alpha: $ALPHA | Sigma: $SIGMA | Projects: $M_PROJECTS | Max rounds: $MAX_ROUNDS"
+echo "Num runs: $NUM_RUNS | Run number: $RUN_NUMBER"
 echo ""
 
 # Build command
 CMD="python3 run_strong_models_experiment.py"
 CMD="$CMD --game-type co_funding"
 CMD="$CMD --models $MODELS"
-CMD="$CMD --batch --num-runs 1 --run-number 1"
+CMD="$CMD --batch --num-runs $NUM_RUNS --run-number $RUN_NUMBER"
 CMD="$CMD --m-projects $M_PROJECTS"
 CMD="$CMD --alpha $ALPHA --sigma $SIGMA"
 CMD="$CMD --c-min $C_MIN --c-max $C_MAX"
+CMD="$CMD --max-rounds $MAX_ROUNDS"
 CMD="$CMD --random-seed $SEED"
 CMD="$CMD --discussion-turns $DISCUSSION_TURNS"
 CMD="$CMD --model-order $MODEL_ORDER"

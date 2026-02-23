@@ -17,6 +17,7 @@ What it creates:
     ├── plot2_rho_effect.png                 # Effect of rho on social welfare
     ├── plot3_theta_effect.png               # Effect of theta on social welfare
     ├── plot4_rho_theta_heatmap.png          # Heatmap of SW across rho x theta
+    ├── plot4b_rho_theta_per_agent.png      # Heatmap of per-agent utility across rho x theta
     ├── plot5_exploitation_by_condition.png  # Exploitation rates
     ├── plot6_ttc_scaling.png               # TTC scaling (if available)
     └── diplomacy_results.csv               # Full results table
@@ -389,6 +390,97 @@ def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
     print("  Saved plot4_rho_theta_heatmap.png")
 
 
+def plot_rho_theta_heatmap_per_agent(df: pd.DataFrame, out_dir: str):
+    """Plot 4b: Heatmap of per-agent utility across rho x theta grid.
+
+    Remaps positional alpha/beta roles to weak/strong model identity,
+    so utilities are attributed to the correct model regardless of
+    speaking order.
+    """
+    ms = df[df["experiment_type"] == "model_scale"].copy()
+    if ms.empty:
+        print("  Skipping plot 4b: no model-scale data")
+        return
+
+    # Remap positional alpha/beta to weak/strong model utility
+    # weak_first: alpha = weak model, beta = strong model
+    # strong_first: alpha = strong model, beta = weak model
+    ms["weak_util"] = ms.apply(
+        lambda r: r["alpha_util"]
+        if r["model_order"] == "weak_first"
+        else r["beta_util"],
+        axis=1,
+    )
+    ms["strong_util"] = ms.apply(
+        lambda r: r["beta_util"]
+        if r["model_order"] == "weak_first"
+        else r["alpha_util"],
+        axis=1,
+    )
+
+    pairs = sorted(ms["model_pair"].unique())
+    n_pairs = len(pairs)
+    n_cols = n_pairs + 1  # "All" + each pair
+
+    fig, axes = plt.subplots(2, n_cols, figsize=(6 * n_cols, 10))
+    if n_cols == 1:
+        axes = axes.reshape(2, 1)
+
+    metrics = [
+        ("weak_util", "Weak Model (GPT-5-nano)"),
+        ("strong_util", "Strong Model"),
+    ]
+
+    for row_idx, (metric, row_label) in enumerate(metrics):
+        # Overall heatmap
+        pivot = ms.pivot_table(
+            values=metric, index="rho", columns="theta", aggfunc="mean"
+        )
+        sns.heatmap(
+            pivot,
+            annot=True,
+            fmt=".2f",
+            cmap="YlOrRd",
+            ax=axes[row_idx, 0],
+            cbar_kws={"label": "Utility"},
+        )
+        axes[row_idx, 0].set_title(f"All Pairs — {row_label}")
+        axes[row_idx, 0].set_xlabel(r"$\theta$")
+        axes[row_idx, 0].set_ylabel(r"$\rho$")
+
+        # Per-pair heatmaps
+        for col_idx, pair in enumerate(pairs):
+            pdata = ms[ms["model_pair"] == pair]
+
+            # For strong model label, extract the strong model name from the pair
+            if row_idx == 1:
+                # pair format: "GPT-5-nano vs X" — strong model is X
+                strong_name = pair.split(" vs ")[-1]
+                title = f"{pair}\n{strong_name}"
+            else:
+                title = f"{pair}\nGPT-5-nano"
+
+            pivot = pdata.pivot_table(
+                values=metric, index="rho", columns="theta", aggfunc="mean"
+            )
+            sns.heatmap(
+                pivot,
+                annot=True,
+                fmt=".2f",
+                cmap="YlOrRd",
+                ax=axes[row_idx, col_idx + 1],
+                cbar_kws={"label": "Utility"},
+            )
+            axes[row_idx, col_idx + 1].set_title(title)
+            axes[row_idx, col_idx + 1].set_xlabel(r"$\theta$")
+            axes[row_idx, col_idx + 1].set_ylabel(r"$\rho$")
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, "plot4b_rho_theta_per_agent.png"))
+    plt.close()
+    print("  Saved plot4b_rho_theta_per_agent.png")
+
+
 def plot_exploitation_by_condition(df: pd.DataFrame, out_dir: str):
     """Plot 5: Exploitation rates broken down by model pair, rho, theta."""
     ms = df[df["experiment_type"] == "model_scale"].copy()
@@ -460,15 +552,29 @@ def plot_ttc_scaling(df: pd.DataFrame, out_dir: str):
     axes[0].set_ylabel("Social Welfare")
     axes[0].set_title("Social Welfare vs Token Budget")
 
-    # Alpha and Beta utility vs budget
+    # Remap to reasoning/baseline utility based on actual model assignment
+    # When model_order=strong_first, alpha IS the reasoning model, not baseline
+    ttc["reasoning_util"] = ttc.apply(
+        lambda r: r["alpha_util"]
+        if r["model_alpha"] == r["reasoning_model"]
+        else r["beta_util"],
+        axis=1,
+    )
+    ttc["baseline_util"] = ttc.apply(
+        lambda r: r["alpha_util"]
+        if r["model_alpha"] == r["baseline_model"]
+        else r["beta_util"],
+        axis=1,
+    )
+
     ttc_melted = ttc.melt(
         id_vars=["token_budget", "model_order"],
-        value_vars=["alpha_util", "beta_util"],
+        value_vars=["baseline_util", "reasoning_util"],
         var_name="agent",
         value_name="utility",
     )
     ttc_melted["agent"] = ttc_melted["agent"].map(
-        {"alpha_util": "Baseline (Alpha)", "beta_util": "Reasoning (Beta)"}
+        {"baseline_util": "Baseline (GPT-5-nano)", "reasoning_util": "Reasoning (Claude Opus)"}
     )
     sns.pointplot(
         data=ttc_melted,
@@ -553,6 +659,7 @@ def main():
     plot_rho_effect(df, out_dir)
     plot_theta_effect(df, out_dir)
     plot_rho_theta_heatmap(df, out_dir)
+    plot_rho_theta_heatmap_per_agent(df, out_dir)
     plot_exploitation_by_condition(df, out_dir)
     plot_ttc_scaling(df, out_dir)
 

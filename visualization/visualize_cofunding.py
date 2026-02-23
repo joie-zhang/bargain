@@ -311,7 +311,13 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         else:
             metrics["surplus_ratio"] = 1.0 if actual_sw_allocation >= 0 else 0.0
 
-    # Lindahl equilibrium (always computable)
+    # Coordination failure: computable whenever we have contributions, even if no projects funded
+    if contributions and preferences and costs:
+        metrics["coordination_failure"] = coordination_failure_rate(
+            preferences, costs, contributions
+        )
+
+    # Lindahl equilibrium (requires funded projects)
     if preferences and costs and funded_set:
         lindahl_contribs = lindahl_equilibrium(preferences, costs, funded_set)
 
@@ -330,11 +336,6 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         # If we have actual contributions, compute more metrics
         if contributions:
             metrics["lindahl_distance"] = lindahl_distance(contributions, lindahl_contribs)
-
-            # Coordination failure
-            metrics["coordination_failure"] = coordination_failure_rate(
-                preferences, costs, contributions
-            )
 
             # Free-rider index (average across funded projects)
             # Cap inf at 10.0 (pure free-rider) rather than filtering out

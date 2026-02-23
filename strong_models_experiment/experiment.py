@@ -384,11 +384,10 @@ class StrongModelsExperiment:
                     else:
                         self.logger.info(f"Skipping individual reflection phase (disabled)")
 
-                    # Early termination check
-                    if game_environment.check_early_termination(preferences["game_state"]):
-                        self.logger.info(f"EARLY TERMINATION: pledges converged in round {round_num}")
-                        final_round = round_num
-                        break
+                    # Co-funding always runs all rounds (no early termination).
+                    # Agents observe and revise pledges every round regardless
+                    # of convergence — this is a defining characteristic of the
+                    # talk-pledge-revise protocol.
 
             # Post-round-loop processing
             if protocol == "talk_pledge_revise":
