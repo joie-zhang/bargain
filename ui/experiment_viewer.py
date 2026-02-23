@@ -312,6 +312,88 @@ def _get_agent_budgets(config: Dict, results: Dict, game_type: str,
     return {}
 
 
+def _short_experiment_label(name: str) -> str:
+    """Create a concise sidebar label from a long directory name.
+
+    Examples:
+        "gpt-5-nano_vs_gpt-5-nano_config_unknown_runs10_diplo_issues3_rho0_0_theta0_5"
+        → "nano vs nano 3iss ρ0.0 θ0.5"
+
+        "diplomacy_20260222_004806"
+        → "diplomacy 02-22 00:48"
+
+        "cofunding_smoke_test"
+        → "cofunding_smoke_test"
+    """
+    import re as _re
+
+    def _model_short(s):
+        """Shorten model names: gpt-5-nano→nano, claude-3-5-sonnet→3.5-sonnet."""
+        if s.startswith("claude-"):
+            # claude-3-5-sonnet → 3.5-sonnet, claude-3-7-sonnet → 3.7-sonnet
+            rest = s[len("claude-"):]
+            parts = rest.split("-")
+            if len(parts) >= 3:
+                return f"{parts[0]}.{parts[1]}-{'-'.join(parts[2:])}"
+            return rest
+        if s.startswith("gpt-"):
+            # gpt-5-nano → nano, gpt-4o → 4o
+            parts = s.split("-")
+            return parts[-1] if len(parts) >= 3 else s[4:]
+        return s
+
+    def _fmt_val(raw):
+        if raw is None:
+            return None
+        neg = raw.startswith("n")
+        if neg:
+            raw = raw[1:]
+        val = raw.replace("_", ".")
+        return f"-{val}" if neg else val
+
+    # Extract params directly with individual searches (more robust than one big regex)
+    if "_vs_" in name and "_config" in name:
+        # Extract model pair
+        pair_m = _re.match(r"(.+?)_vs_(.+?)_config", name)
+        if pair_m:
+            m1 = _model_short(pair_m.group(1))
+            m2 = _model_short(pair_m.group(2))
+            parts = [f"{m1} vs {m2}"]
+
+            # Diplomacy params
+            iss_m = _re.search(r"_diplo_issues(\d+)", name)
+            if iss_m:
+                parts.append(f"{iss_m.group(1)}iss")
+            rho_m = _re.search(r"_rho(n?\d+_\d+)", name)
+            if rho_m:
+                parts.append(f"\u03c1{_fmt_val(rho_m.group(1))}")
+            theta_m = _re.search(r"_theta(\d+_\d+)", name)
+            if theta_m:
+                parts.append(f"\u03b8{_fmt_val(theta_m.group(1))}")
+
+            # Co-funding params
+            proj_m = _re.search(r"_cofund_proj(\d+)", name)
+            if proj_m:
+                parts.append(f"{proj_m.group(1)}proj")
+            alpha_m = _re.search(r"_alpha(\d+_\d+)", name)
+            if alpha_m:
+                parts.append(f"\u03b1{_fmt_val(alpha_m.group(1))}")
+            sigma_m = _re.search(r"_sigma(\d+_\d+)", name)
+            if sigma_m:
+                parts.append(f"\u03c3{_fmt_val(sigma_m.group(1))}")
+
+            return " ".join(parts)
+
+    # Pattern: "diplomacy_YYYYMMDD_HHMMSS"
+    ts_m = _re.match(r"(diplomacy|cofunding)_(\d{8})_(\d{6})", name)
+    if ts_m:
+        d, t = ts_m.group(2), ts_m.group(3)
+        return f"{ts_m.group(1)} {d[4:6]}-{d[6:]} {t[:2]}:{t[2:4]}"
+
+    # Fallback: return as-is
+    return name
+
+
 def parse_params(params_str: str) -> Dict[str, float]:
     """Parse parameter string like 'rho_0_5_theta_0_2' into dict."""
     result = {}
@@ -1132,12 +1214,16 @@ def render_sidebar(experiments: List[ExperimentInfo]):
 
     # --- Level 2: Experiment (top-level dir) ---
     exp_names = sorted(set(e.experiment_name for e in filtered))
-    selected_exp = st.sidebar.selectbox(
+    # Build short label → full name mapping for the dropdown
+    exp_label_map = {_short_experiment_label(n): n for n in exp_names}
+    exp_labels = list(exp_label_map.keys())
+    selected_exp_label = st.sidebar.selectbox(
         "Experiment",
-        options=exp_names,
-        index=len(exp_names) - 1 if exp_names else 0,  # default to latest
+        options=exp_labels,
+        index=len(exp_labels) - 1 if exp_labels else 0,  # default to latest
         key="sidebar_experiment",
     )
+    selected_exp = exp_label_map.get(selected_exp_label, selected_exp_label)
     filtered = [e for e in filtered if e.experiment_name == selected_exp]
 
     # --- Level 3: Sub-experiment type ---
