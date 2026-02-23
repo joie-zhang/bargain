@@ -948,3 +948,229 @@ Consider what adjustments might lead to consensus in future rounds."""
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {e}")
         
         return {"reflections": reflections}
+
+    # ---- Co-funding (Talk-Pledge-Revise) phase handlers ----
+
+    async def run_pledge_submission_phase(
+        self,
+        agents: List[BaseLLMAgent],
+        items: List[Dict],
+        preferences: Dict,
+        round_num: int,
+        max_rounds: int,
+    ) -> Dict:
+        """Pledge Submission Phase for co-funding games.
+
+        Each agent submits a contribution vector (pledge) for projects.
+        Uses game_environment.get_proposal_prompt() to generate the pledge prompt
+        and game_environment.parse_proposal() / validate_proposal() to process responses.
+
+        Args:
+            agents: List of agent objects
+            items: List of project dicts
+            preferences: Dict with agent_preferences (valuations) and game_state
+            round_num: Current round number
+            max_rounds: Maximum rounds
+
+        Returns:
+            Dict with "pledges" (agent_id -> parsed pledge) and "messages"
+        """
+        pledges = {}
+        messages = []
+
+        self.logger.info(f"=== PLEDGE SUBMISSION PHASE - Round {round_num} ===")
+
+        # Set token limit for proposal/pledge phase if specified
+        if self.token_config["proposal"] is not None:
+            for agent in agents:
+                agent.update_max_tokens(self.token_config["proposal"])
+
+        game_state = preferences["game_state"]
+
+        for agent in agents:
+            reasoning_budget = self._get_reasoning_budget("proposal", agent.agent_id)
+
+            pledge_prompt = self.game_environment.get_proposal_prompt(
+                agent_id=agent.agent_id,
+                game_state=game_state,
+                round_num=round_num,
+                agents=[a.agent_id for a in agents],
+                reasoning_token_budget=reasoning_budget,
+            )
+
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=[a.agent_id for a in agents],
+                agent_id=agent.agent_id,
+                preferences=preferences["agent_preferences"][agent.agent_id],
+                turn_type="proposal",
+            )
+
+            # Get pledge response via generate_response (NOT propose_allocation)
+            agent_response = await agent.generate_response(context, pledge_prompt)
+            response_content = agent_response.content
+            token_usage = self._extract_token_usage(agent_response)
+
+            # Parse the pledge
+            parsed = self.game_environment.parse_proposal(
+                response=response_content,
+                agent_id=agent.agent_id,
+                game_state=game_state,
+                agents=[a.agent_id for a in agents],
+            )
+
+            # Validate
+            if not self.game_environment.validate_proposal(parsed, game_state):
+                self.logger.warning(
+                    f"  Invalid pledge from {agent.agent_id}, retrying once..."
+                )
+                # Retry with error feedback
+                error_prompt = (
+                    pledge_prompt
+                    + "\n\n**ERROR: Your previous pledge was invalid "
+                    "(negative values, over-budget, or wrong length). "
+                    "Please resubmit a valid pledge.**"
+                )
+                agent_response = await agent.generate_response(context, error_prompt)
+                response_content = agent_response.content
+                token_usage = self._extract_token_usage(agent_response)
+                parsed = self.game_environment.parse_proposal(
+                    response=response_content,
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    agents=[a.agent_id for a in agents],
+                )
+                if not self.game_environment.validate_proposal(parsed, game_state):
+                    self.logger.error(
+                        f"  {agent.agent_id} pledge still invalid after retry, using zero vector"
+                    )
+                    m = game_state["m_projects"]
+                    parsed = {
+                        "contributions": [0.0] * m,
+                        "reasoning": "Fallback: zero contributions after validation failure",
+                        "proposed_by": agent.agent_id,
+                    }
+
+            pledges[agent.agent_id] = parsed
+
+            self.logger.info(f"  Pledge from {agent.agent_id}: {parsed['contributions']}")
+
+            # Save interaction
+            pledge_str = json.dumps(parsed, default=str)
+            self.save_interaction(
+                agent.agent_id,
+                f"pledge_round_{round_num}",
+                pledge_prompt,
+                pledge_str,
+                round_num,
+                token_usage,
+                model_name=agent.get_model_info()["model_name"],
+            )
+
+            message = {
+                "phase": "pledge_submission",
+                "round": round_num,
+                "from": agent.agent_id,
+                "content": f"Pledge: {parsed['contributions']} - {parsed.get('reasoning', '')}",
+                "pledge": parsed,
+                "timestamp": time.time(),
+            }
+            messages.append(message)
+
+        return {"pledges": pledges, "messages": messages}
+
+    async def run_feedback_phase(
+        self,
+        agents: List[BaseLLMAgent],
+        items: List[Dict],
+        preferences: Dict,
+        round_num: int,
+        max_rounds: int,
+        pledges: Dict[str, Dict],
+    ) -> Dict:
+        """Feedback Phase for co-funding games.
+
+        Updates game state with pledges (computes aggregates and funded set),
+        then sends feedback to each agent showing aggregate totals.
+
+        Args:
+            agents: List of agent objects
+            items: List of project dicts
+            preferences: Dict with game_state
+            round_num: Current round number
+            max_rounds: Maximum rounds
+            pledges: Dict mapping agent_id -> parsed pledge dict
+
+        Returns:
+            Dict with aggregate_totals, funded_projects, and messages
+        """
+        messages = []
+
+        self.logger.info(f"=== FEEDBACK PHASE - Round {round_num} ===")
+
+        game_state = preferences["game_state"]
+
+        # Update game state with pledges
+        self.game_environment.update_game_state_with_pledges(game_state, pledges)
+
+        aggregates = game_state["aggregate_totals"]
+        funded = game_state["funded_projects"]
+        projects = game_state["projects"]
+
+        self.logger.info(f"  Aggregate totals: {[round(a, 2) for a in aggregates]}")
+        self.logger.info(f"  Funded projects: {[projects[j]['name'] for j in funded] if funded else 'None'}")
+
+        # Set token limit
+        if self.token_config["default"] is not None:
+            for agent in agents:
+                agent.update_max_tokens(self.token_config["default"])
+
+        # Send feedback to each agent
+        for agent in agents:
+            feedback_prompt = self.game_environment.get_feedback_prompt(
+                agent_id=agent.agent_id,
+                game_state=game_state,
+            )
+
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=[a.agent_id for a in agents],
+                agent_id=agent.agent_id,
+                preferences=preferences["agent_preferences"][agent.agent_id],
+                turn_type="feedback",
+            )
+
+            agent_response = await agent.generate_response(context, feedback_prompt)
+            response_content = agent_response.content
+            token_usage = self._extract_token_usage(agent_response)
+
+            self.logger.info(f"  {agent.agent_id} feedback response: {response_content[:200]}...")
+
+            self.save_interaction(
+                agent.agent_id,
+                f"feedback_round_{round_num}",
+                feedback_prompt,
+                response_content,
+                round_num,
+                token_usage,
+                model_name=agent.get_model_info()["model_name"],
+            )
+
+            message = {
+                "phase": "feedback",
+                "round": round_num,
+                "from": agent.agent_id,
+                "content": response_content,
+                "timestamp": time.time(),
+            }
+            messages.append(message)
+
+        return {
+            "aggregate_totals": aggregates,
+            "funded_projects": funded,
+            "messages": messages,
+        }

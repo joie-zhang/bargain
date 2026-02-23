@@ -22,9 +22,11 @@ from .base import (
     GameType,
     ItemAllocationConfig,
     DiplomaticTreatyConfig,
+    CoFundingConfig,
 )
 from .item_allocation import ItemAllocationGame
 from .diplomatic_treaty import DiplomaticTreatyGame
+from .co_funding import CoFundingGame
 from .metrics import (
     compute_utility,
     social_welfare,
@@ -114,6 +116,20 @@ def create_game_environment(
         )
         return DiplomaticTreatyGame(config)
 
+    elif game_type == "co_funding":
+        config = CoFundingConfig(
+            n_agents=n_agents,
+            t_rounds=t_rounds,
+            gamma_discount=gamma_discount,
+            random_seed=random_seed,
+            m_projects=kwargs.get("m_projects", 5),
+            alpha=kwargs.get("alpha", 0.5),
+            sigma=kwargs.get("sigma", 0.5),
+            c_min=kwargs.get("c_min", 10.0),
+            c_max=kwargs.get("c_max", 50.0),
+        )
+        return CoFundingGame(config)
+
     else:
         valid_types = [gt.value for gt in GameType]
         raise ValueError(
@@ -139,10 +155,12 @@ def create_game_from_config(config: GameConfig) -> GameEnvironment:
         return ItemAllocationGame(config)
     elif isinstance(config, DiplomaticTreatyConfig):
         return DiplomaticTreatyGame(config)
+    elif isinstance(config, CoFundingConfig):
+        return CoFundingGame(config)
     else:
         raise ValueError(
             f"Unknown config type: {type(config).__name__}. "
-            f"Expected ItemAllocationConfig or DiplomaticTreatyConfig."
+            f"Expected ItemAllocationConfig, DiplomaticTreatyConfig, or CoFundingConfig."
         )
 
 
@@ -153,9 +171,11 @@ __all__ = [
     "GameType",
     "ItemAllocationConfig",
     "DiplomaticTreatyConfig",
+    "CoFundingConfig",
     # Game implementations
     "ItemAllocationGame",
     "DiplomaticTreatyGame",
+    "CoFundingGame",
     # Factory functions
     "create_game_environment",
     "create_game_from_config",

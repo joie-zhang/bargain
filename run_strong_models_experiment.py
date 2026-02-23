@@ -98,7 +98,7 @@ async def main():
     parser.add_argument(
         "--game-type",
         type=str,
-        choices=["item_allocation", "diplomacy"],
+        choices=["item_allocation", "diplomacy", "co_funding"],
         default="item_allocation",
         help="Type of negotiation game (default: item_allocation)"
     )
@@ -123,6 +123,42 @@ async def main():
         type=float,
         default=0.5,
         help="Interest overlap [0, 1]: 1=same priorities, 0=different priorities (diplomacy only, default: 0.5)"
+    )
+
+    # Co-funding specific arguments
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.5,
+        help="Preference alignment [0,1]: 1=identical, 0=orthogonal (co_funding only, default: 0.5)"
+    )
+
+    parser.add_argument(
+        "--sigma",
+        type=float,
+        default=0.5,
+        help="Budget scarcity (0,1]: ratio of total budget to total cost (co_funding only, default: 0.5)"
+    )
+
+    parser.add_argument(
+        "--m-projects",
+        type=int,
+        default=5,
+        help="Number of projects to fund (co_funding only, default: 5)"
+    )
+
+    parser.add_argument(
+        "--c-min",
+        type=float,
+        default=10.0,
+        help="Minimum project cost (co_funding only, default: 10.0)"
+    )
+
+    parser.add_argument(
+        "--c-max",
+        type=float,
+        default=50.0,
+        help="Maximum project cost (co_funding only, default: 50.0)"
     )
 
     parser.add_argument(
@@ -299,6 +335,11 @@ async def main():
         print(f"Issues: {args.n_issues}")
         print(f"Rho (preference correlation): {args.rho}")
         print(f"Theta (interest overlap): {args.theta}")
+    elif args.game_type == "co_funding":
+        print(f"Projects: {args.m_projects}")
+        print(f"Alpha (preference alignment): {args.alpha}")
+        print(f"Sigma (budget scarcity): {args.sigma}")
+        print(f"Cost range: [{args.c_min}, {args.c_max}]")
 
     print(f"Discount Factor: {args.gamma_discount}")
     if args.random_seed:
@@ -383,6 +424,12 @@ async def main():
         "n_issues": args.n_issues,
         "rho": args.rho,
         "theta": args.theta,
+        # Co-funding specific parameters
+        "m_projects": args.m_projects,
+        "alpha": args.alpha,
+        "sigma": args.sigma,
+        "c_min": args.c_min,
+        "c_max": args.c_max,
     }
     
     # Only add token limits if they're specified
@@ -431,8 +478,10 @@ async def main():
         # Game-specific parameters for directory naming
         if args.game_type == "item_allocation":
             game_str = f"items{args.num_items}_comp{args.competition_level}".replace(".", "_")
-        else:  # diplomacy
+        elif args.game_type == "diplomacy":
             game_str = f"diplo_issues{args.n_issues}_rho{args.rho}_theta{args.theta}".replace(".", "_").replace("-", "n")
+        else:  # co_funding
+            game_str = f"cofund_proj{args.m_projects}_alpha{args.alpha}_sigma{args.sigma}".replace(".", "_")
 
         if args.job_id is not None:
             config_str = f"config{args.job_id:03d}"

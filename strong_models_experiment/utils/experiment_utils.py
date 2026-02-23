@@ -44,10 +44,10 @@ class ExperimentUtils:
         }
     
     @staticmethod
-    def create_enhanced_config(config: Dict, agents: List[Any], preferences: Dict, 
+    def create_enhanced_config(config: Dict, agents: List[Any], preferences: Dict,
                               items: List[Dict], start_time: float, experiment_id: str) -> Dict:
         """Create enhanced configuration with all experiment details."""
-        return {
+        enhanced = {
             **config,
             "experiment_id": experiment_id,
             "start_time": start_time,
@@ -58,6 +58,12 @@ class ExperimentUtils:
                 "cosine_similarities": preferences.get("cosine_similarities", {})
             }
         }
+        # For co-funding games, include budget info for metrics computation
+        game_state = preferences.get("game_state", {})
+        if game_state.get("game_type") == "co_funding":
+            enhanced["agent_budgets"] = game_state.get("agent_budgets", {})
+            enhanced["total_budget"] = game_state.get("total_budget", 0.0)
+        return enhanced
     
     @staticmethod
     def generate_experiment_id(batch_id: Optional[str] = None, run_number: Optional[int] = None) -> str:

@@ -183,8 +183,21 @@ class StrongModelsExperiment:
                 rho=config.get("rho", 0.0),
                 theta=config.get("theta", 0.5)
             )
+        elif game_type == "co_funding":
+            game_environment = create_game_environment(
+                game_type="co_funding",
+                n_agents=config["n_agents"],
+                t_rounds=config["t_rounds"],
+                gamma_discount=config.get("gamma_discount", 1.0),
+                random_seed=config.get("random_seed"),
+                m_projects=config.get("m_projects", 5),
+                alpha=config.get("alpha", 0.5),
+                sigma=config.get("sigma", 0.5),
+                c_min=config.get("c_min", 10.0),
+                c_max=config.get("c_max", 50.0),
+            )
         else:
-            raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation' or 'diplomacy'")
+            raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation', 'diplomacy', or 'co_funding'")
 
         # Extract reasoning configuration if present
         reasoning_config = config.get("reasoning_config", {"budget": None, "phases": []})
@@ -235,6 +248,15 @@ class StrongModelsExperiment:
                 "game_state": game_state  # Full state for utility calculation
             }
             self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}")
+        elif game_type == "co_funding":
+            items = game_state["projects"]
+            preferences = {
+                "agent_preferences": game_state["agent_valuations"],
+                "game_state": game_state,
+            }
+            self.logger.info(
+                f"Created {len(items)} projects with alpha={config.get('alpha')}, sigma={config.get('sigma')}"
+            )
         else:
             raise ValueError(f"Unknown game type: {game_type}")
 
@@ -255,13 +277,17 @@ class StrongModelsExperiment:
             # Phase 1B: Private Preference Assignment
             await self.phase_handler.run_private_preference_assignment(agents, items, preferences, config)
             
+            # Determine negotiation protocol
+            protocol = game_environment.get_protocol_type()
+            self.logger.info(f"Using protocol: {protocol}")
+
             # Main negotiation rounds
             for round_num in range(1, config["t_rounds"] + 1):
                 self.logger.info(f"\n{'='*60}")
                 self.logger.info(f"ROUND {round_num}/{config['t_rounds']}")
                 self.logger.info(f"{'='*60}")
-                
-                # Phase 2: Public Discussion (optional)
+
+                # Phase 2: Public Discussion (optional, shared by both protocols)
                 discussion_result = {"messages": []}
                 if not config.get("disable_discussion", False):
                     discussion_result = await self.phase_handler.run_discussion_phase(
@@ -270,9 +296,9 @@ class StrongModelsExperiment:
                     )
                     conversation_logs.extend(discussion_result.get("messages", []))
                 else:
-                    self.logger.info(f"⏭️  Skipping discussion phase (disabled)")
-                
-                # Phase 3: Private Thinking (optional)
+                    self.logger.info(f"Skipping discussion phase (disabled)")
+
+                # Phase 3: Private Thinking (optional, shared by both protocols)
                 thinking_result = {}
                 if not config.get("disable_thinking", False):
                     thinking_result = await self.phase_handler.run_private_thinking_phase(
@@ -280,60 +306,113 @@ class StrongModelsExperiment:
                         discussion_result.get("messages", [])
                     )
                 else:
-                    self.logger.info(f"⏭️  Skipping private thinking phase (disabled)")
-                
-                # Phase 4A: Proposal Submission
-                proposal_result = await self.phase_handler.run_proposal_phase(
-                    agents, items, preferences, round_num, config["t_rounds"]
-                )
-                conversation_logs.extend(proposal_result.get("messages", []))
-                
-                # Phase 4B: Proposal Enumeration
-                enumeration_result = await self.phase_handler.run_proposal_enumeration_phase(
-                    agents, items, preferences, round_num, config["t_rounds"],
-                    proposal_result.get("proposals", [])
-                )
-                conversation_logs.extend(enumeration_result.get("messages", []))
-                
-                # Phase 5A: Private Voting
-                voting_result = await self.phase_handler.run_private_voting_phase(
-                    agents, items, preferences, round_num, config["t_rounds"],
-                    proposal_result.get("proposals", []),
-                    enumeration_result.get("enumerated_proposals", [])
-                )
-                
-                # Phase 5B: Vote Tabulation
-                tabulation_result = await self.phase_handler.run_vote_tabulation_phase(
-                    agents, items, preferences, round_num, config["t_rounds"],
-                    voting_result.get("private_votes", []),
-                    enumeration_result.get("enumerated_proposals", [])
-                )
-                conversation_logs.extend(tabulation_result.get("messages", []))
-                
-                # Check for consensus
-                if tabulation_result.get("consensus_reached", False):
-                    consensus_reached = True
-                    final_round = round_num
-                    final_utilities = tabulation_result.get("final_utilities", {})
-                    final_allocation = tabulation_result.get("final_allocation", {})
-                    agent_preferences_data = tabulation_result.get("agent_preferences", {})
-                    self.logger.info(f"✅ CONSENSUS REACHED in round {round_num}!")
-                    break
-                
-                # Phase 6: Individual Reflection (optional)
-                reflection_result = {}
-                if not config.get("disable_reflection", False):
-                    reflection_result = await self.phase_handler.run_individual_reflection_phase(
+                    self.logger.info(f"Skipping private thinking phase (disabled)")
+
+                if protocol == "propose_and_vote":
+                    # ---- Propose-and-Vote protocol (Games 1 & 2) ----
+
+                    # Phase 4A: Proposal Submission
+                    proposal_result = await self.phase_handler.run_proposal_phase(
+                        agents, items, preferences, round_num, config["t_rounds"]
+                    )
+                    conversation_logs.extend(proposal_result.get("messages", []))
+
+                    # Phase 4B: Proposal Enumeration
+                    enumeration_result = await self.phase_handler.run_proposal_enumeration_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
-                        tabulation_result
+                        proposal_result.get("proposals", [])
+                    )
+                    conversation_logs.extend(enumeration_result.get("messages", []))
+
+                    # Phase 5A: Private Voting
+                    voting_result = await self.phase_handler.run_private_voting_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        proposal_result.get("proposals", []),
+                        enumeration_result.get("enumerated_proposals", [])
+                    )
+
+                    # Phase 5B: Vote Tabulation
+                    tabulation_result = await self.phase_handler.run_vote_tabulation_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        voting_result.get("private_votes", []),
+                        enumeration_result.get("enumerated_proposals", [])
+                    )
+                    conversation_logs.extend(tabulation_result.get("messages", []))
+
+                    # Check for consensus
+                    if tabulation_result.get("consensus_reached", False):
+                        consensus_reached = True
+                        final_round = round_num
+                        final_utilities = tabulation_result.get("final_utilities", {})
+                        final_allocation = tabulation_result.get("final_allocation", {})
+                        agent_preferences_data = tabulation_result.get("agent_preferences", {})
+                        self.logger.info(f"CONSENSUS REACHED in round {round_num}!")
+                        break
+
+                    # Phase 6: Individual Reflection (optional)
+                    reflection_result = {}
+                    if not config.get("disable_reflection", False):
+                        reflection_result = await self.phase_handler.run_individual_reflection_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            tabulation_result
+                        )
+                    else:
+                        self.logger.info(f"Skipping individual reflection phase (disabled)")
+
+                elif protocol == "talk_pledge_revise":
+                    # ---- Talk-Pledge-Revise protocol (Game 3: Co-Funding) ----
+
+                    # Pledge Submission
+                    pledge_result = await self.phase_handler.run_pledge_submission_phase(
+                        agents, items, preferences, round_num, config["t_rounds"]
+                    )
+                    conversation_logs.extend(pledge_result.get("messages", []))
+
+                    # Feedback (updates game_state, shows aggregates)
+                    feedback_result = await self.phase_handler.run_feedback_phase(
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        pledge_result["pledges"]
+                    )
+                    conversation_logs.extend(feedback_result.get("messages", []))
+
+                    # Individual Reflection (optional)
+                    if not config.get("disable_reflection", False):
+                        reflection_result = await self.phase_handler.run_individual_reflection_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            feedback_result
+                        )
+                    else:
+                        self.logger.info(f"Skipping individual reflection phase (disabled)")
+
+                    # Early termination check
+                    if game_environment.check_early_termination(preferences["game_state"]):
+                        self.logger.info(f"EARLY TERMINATION: pledges converged in round {round_num}")
+                        final_round = round_num
+                        break
+
+            # Post-round-loop processing
+            if protocol == "talk_pledge_revise":
+                # Compute final outcome from last pledges
+                final_outcome = game_environment.compute_final_outcome(preferences["game_state"])
+                final_utilities = final_outcome["utilities"]
+                final_allocation = final_outcome["funded_projects"]
+                consensus_reached = len(final_outcome["funded_projects"]) > 0
+                final_round = round_num
+                agent_preferences_data = {
+                    aid: preferences["agent_preferences"][aid]
+                    for aid in preferences["agent_preferences"]
+                }
+                if consensus_reached:
+                    self.logger.info(
+                        f"Co-funding complete: {len(final_allocation)} projects funded"
                     )
                 else:
-                    self.logger.info(f"⏭️  Skipping individual reflection phase (disabled)")
-            
-            # Calculate final utilities if no consensus
-            if not consensus_reached:
+                    self.logger.info("Co-funding complete: no projects funded")
+
+            # Calculate final utilities if no consensus (propose_and_vote only)
+            elif not consensus_reached:
                 final_round = config["t_rounds"]
-                self.logger.info(f"❌ No consensus after {config['t_rounds']} rounds")
+                self.logger.info(f"No consensus after {config['t_rounds']} rounds")
         
         except Exception as e:
             import traceback

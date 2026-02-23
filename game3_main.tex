@@ -1,0 +1,477 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+\geometry{margin=1in}
+
+\title{Participatory Budgeting: A Multi-Agent Co-Funding Environment}
+\author{Joie Zhang}
+\date{February 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Overview}
+
+The participatory budgeting environment is a multi-agent co-funding game where agents collectively decide which projects to fund by pooling their individual budgets. Unlike item allocation, where goods are rivalrous (one agent's gain is another's loss), co-funding introduces a fundamental \emph{non-linearity}: agents can share the cost of a project, and all contributors receive the project's full benefit. This creates natural cooperative incentives---when preferences are aligned, agents can achieve outcomes that are individually unaffordable. The environment allows smooth variation between cooperative and competitive scenarios through two orthogonal parameters that control preference alignment and budget scarcity.
+
+\section{Game Setup}
+
+\subsection{Basic Components}
+
+\begin{itemize}
+    \item \textbf{Agents}: $N$ agents indexed by $i \in \{1, 2, \ldots, N\}$
+    \item \textbf{Projects}: $M$ projects indexed by $j \in \{1, 2, \ldots, M\}$
+    \item \textbf{Project Costs}: $c_j > 0$ for each project $j$, with total cost $C = \sum_{j=1}^{M} c_j$
+    \item \textbf{Agent Budgets}: $B_i > 0$ for each agent $i$, with total budget $B = \sum_{i=1}^{N} B_i$
+\end{itemize}
+
+\subsection{Agent Preferences}
+
+Each agent $i$ has a \emph{valuation vector} $\bm{v}^i = (v^i_1, v^i_2, \ldots, v^i_M)$ where $v^i_j \geq 0$ represents agent $i$'s private value for project $j$ being funded. We normalize so that $\sum_j v^i_j = 100$ for all $i$, making valuations comparable across agents.
+
+\subsection{Contributions and Funding}
+
+An \emph{outcome} consists of:
+\begin{enumerate}
+    \item A contribution matrix $\bm{X} \in \mathbb{R}_{\geq 0}^{N \times M}$, where $x_{ij}$ is agent $i$'s monetary contribution to project $j$.
+    \item A funded set $S \subseteq \{1, \ldots, M\}$, where project $j \in S$ if and only if it receives sufficient contributions:
+    \begin{equation}
+        j \in S \iff \sum_{i=1}^{N} x_{ij} \geq c_j
+    \end{equation}
+\end{enumerate}
+
+Each agent must respect its budget constraint:
+\begin{equation}
+    \sum_{j=1}^{M} x_{ij} \leq B_i \quad \text{for all } i
+\end{equation}
+
+Contributions to unfunded projects are returned (no money is wasted on projects that fail to reach their cost threshold).
+
+\subsection{Utility Function}
+
+Agent $i$'s utility from outcome $(\bm{X}, S)$ is:
+\begin{equation}
+    U_i(\bm{X}, S) = \underbrace{\sum_{j \in S} v^i_j}_{\text{value from funded projects}} - \underbrace{\sum_{j \in S} x_{ij}}_{\text{contributions to funded projects}}
+\end{equation}
+
+This is a \emph{quasi-linear} utility: agents receive the full valuation for each funded project, minus only their share of the cost. The key insight is that $v^i_j$ does not depend on $x_{ij}$---whether agent $i$ pays 10\% or 90\% of a project's cost, they receive the same benefit. This creates the incentive for free-riding alongside the incentive for cooperation.
+
+\paragraph{Utility bounds and comparability.}
+%% [ADDED: ported from game2's utility normalization discussion]
+Unlike Games 1 and 2 (where $U_i \in [0,1]$ by construction), Game 3 utilities are not bounded in a fixed interval.
+The maximum possible utility is $\sum_j v^i_j = 100$ (all projects funded, agent pays nothing---pure free-riding), and the minimum is $-B_i$ (agent exhausts budget on projects that all get funded but provide zero personal value).
+In practice, $U_i$ typically lies in $[0, 100]$ for reasonable parameter settings.
+For cross-game comparison, we use the utilitarian efficiency ratio $\eta = SW / SW^*$, which is normalized to $[0,1]$ regardless of the utility scale.
+
+\subsection{Why Co-Funding Creates Non-Linearity}
+
+In item allocation, agent $i$'s utility from item $j$ is $v^i_j \cdot \mathbf{1}[j \text{ allocated to } i]$, which is a linear function of the allocation. In co-funding, agent $i$'s utility depends on whether $\sum_k x_{kj} \geq c_j$, introducing a \emph{threshold non-linearity}. This creates the following strategic dynamics absent from item allocation:
+
+\begin{itemize}
+    \item \textbf{Coalition formation}: Agents who share interest in a project can split its cost, each paying less than the full price.
+    \item \textbf{Free-riding}: An agent may benefit from a project funded by others without contributing.
+    \item \textbf{Coordination failure}: A project valued by all agents may go unfunded if each agent waits for others to pay.
+\end{itemize}
+
+\section{Competition-Cooperation Parameters}
+
+The environment uses two orthogonal parameters to control the degree of competition versus cooperation.
+
+\subsection{Parameter 1: Preference Alignment ($\alpha$)}
+
+\textbf{What it controls}: Whether agents value the same projects or different ones.
+
+\textbf{Range}: $\alpha \in [0, 1]$
+
+\textbf{Definition}: For agents $i$ and $j$, we measure alignment as the cosine similarity of their valuation vectors:
+\begin{equation}
+    \alpha_{ij} = \frac{\bm{v}^i \cdot \bm{v}^j}{\|\bm{v}^i\| \|\bm{v}^j\|} = \frac{\sum_{k=1}^{M} v^i_k v^j_k}{\sqrt{\sum_{k} (v^i_k)^2} \sqrt{\sum_{k} (v^j_k)^2}} \in [0, 1]
+\end{equation}
+
+Since valuations are non-negative, $\alpha_{ij} \in [0,1]$ (not $[-1,1]$).
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\alpha = 1$: Agents have identical preferences. Co-funding is maximally beneficial since every funded project benefits everyone.
+    \item $\alpha \approx 0$: Agents value entirely different projects. Co-funding provides no benefit---my projects are useless to you and vice versa.
+    \item Intermediate $\alpha$: Partial overlap. Some projects are ``public goods'' that everyone values; others are ``private goods'' valued by subsets.
+\end{itemize}
+
+For $N > 2$ agents, the overall alignment is $\alpha = \frac{2}{N(N-1)} \sum_{i < j} \alpha_{ij}$.
+
+%% [CHANGED: replaced Dirichlet heuristic with SLSQP, matching game2's pattern]
+\textbf{Implementation}: Generate valuation vectors with exact target alignment using SLSQP optimization:
+\begin{equation}
+    \min_{\bm{v}^1, \ldots, \bm{v}^N} \sum_{i < j}\left(\cos(\bm{v}^i, \bm{v}^j) - \alpha_{\text{target}}\right)^2 \quad \text{s.t.} \;\; v^i_k \geq 0, \;\; \sum_k v^i_k = 100 \;\; \forall i
+\end{equation}
+
+This is identical to the parameter generation used in Games 1 and 2 (cosine similarity of vectors on the simplex), with $\sum_k v^i_k = 100$ instead of $\sum_k w^i_k = 1$.
+SLSQP achieves exact target similarities (up to numerical tolerance), unlike the Dirichlet mixing heuristic previously used (see Section~\ref{sec:alpha_approximate}).
+
+\subsection{Parameter 2: Budget Scarcity ($\sigma$)}
+
+\textbf{What it controls}: How constrained agents' budgets are relative to total project costs, and therefore how much agents need each other to fund projects.
+
+\textbf{Range}: $\sigma \in (0, 1]$
+
+\textbf{Definition}:
+\begin{equation}
+    \sigma = \frac{B}{C} = \frac{\sum_{i=1}^{N} B_i}{\sum_{j=1}^{M} c_j}
+\end{equation}
+
+\textbf{Interpretation}:
+\begin{itemize}
+    \item $\sigma = 1$: The agents can collectively afford all projects. Competition is minimal.
+    \item $\sigma \to 0$: Agents can collectively afford almost nothing. Every dollar is contested.
+    \item $\sigma = 1/N$ (per-agent budget = $C/N^2$): Interesting regime where no single agent can fund any reasonably-priced project alone, forcing co-funding.
+\end{itemize}
+
+\textbf{Effect on interdependence}: Define the \emph{individual funding ratio} $\beta_i = B_i / \max_j c_j$. When $\beta_i < 1$, agent $i$ cannot independently fund even the most expensive project. When $\sigma$ is low and per-agent budgets are equal ($B_i = B/N$), agents are forced into coalition dynamics.
+
+\textbf{Implementation}: Given target $\sigma_{\text{target}}$:
+\begin{enumerate}
+    \item Generate project costs $c_j \sim \text{Uniform}(c_{\min}, c_{\max})$.
+    \item Set total budget $B = \sigma_{\text{target}} \cdot C$.
+    \item Distribute equally: $B_i = B / N$ for all $i$.
+\end{enumerate}
+
+\subsection{Orthogonality of Parameters}
+
+The two parameters control independent aspects of the game:
+\begin{itemize}
+    \item $\alpha$ controls the \emph{preference structure} (what agents want): it determines whether cooperation is \emph{desirable}.
+    \item $\sigma$ controls the \emph{resource structure} (what agents can afford): it determines whether cooperation is \emph{necessary}.
+\end{itemize}
+
+You can independently vary each:
+\begin{itemize}
+    \item $(\alpha = 1, \sigma = 0.3)$: Everyone wants the same projects, but can only fund 30\% of them. Pure cooperative prioritization.
+    \item $(\alpha = 0, \sigma = 0.3)$: Everyone wants different projects, but can only fund 30\%. Pure competition for the budget.
+    \item $(\alpha = 1, \sigma = 1)$: Everyone agrees and can afford everything. Trivially cooperative.
+    \item $(\alpha = 0, \sigma = 1)$: Agents disagree but can afford everything. Mild independence---everyone funds their own.
+\end{itemize}
+
+\section{Game-Theoretic Analysis}
+
+\subsection{Nash Equilibrium}
+
+In the non-cooperative game, each agent independently chooses contributions $\bm{x}^i$ to maximize $U_i$. The threshold structure creates a \emph{threshold public goods game} for each project, where the Nash equilibria have well-known properties:
+
+\begin{itemize}
+    \item \textbf{Zero-contribution equilibrium}: If no agent expects others to contribute enough to fund any project, contributing nothing is a best response. This yields $U_i = 0$ for all $i$.
+    \item \textbf{Cooperative equilibria}: For each fundable project $j$ (where $\sum_{i: v^i_j > 0} B_i \geq c_j$), there exist equilibria where exactly enough agents contribute to meet $c_j$, and no contributor can profitably deviate. An agent $i$ contributes to project $j$ in equilibrium only if $v^i_j \geq x_{ij}$ (their value exceeds their share).
+\end{itemize}
+
+The multiplicity of equilibria is itself a diagnostic: as $\alpha$ increases, the cooperative equilibria become easier to coordinate on; as $\sigma$ decreases, the set of simultaneously fundable projects shrinks, making equilibrium selection harder.
+
+\subsection{Social Welfare and Pareto Optimality}
+
+The \emph{social welfare} of outcome $(\bm{X}, S)$ is:
+\begin{equation}
+    SW(\bm{X}, S) = \sum_{i=1}^{N} U_i(\bm{X}, S) = \sum_{j \in S} \left( \sum_{i=1}^{N} v^i_j - c_j \right)
+\end{equation}
+
+Note that individual contributions cancel out in the sum---social welfare depends only on \emph{which} projects are funded, not on how costs are split. A project $j$ contributes positively to social welfare iff $\sum_i v^i_j > c_j$ (total value exceeds cost).
+
+The \emph{welfare-optimal} funded set is:
+\begin{equation}
+    S^* = \arg\max_{S' \subseteq \{1,\ldots,M\}} \sum_{j \in S'} \left(\sum_{i=1}^{N} v^i_j - c_j \right) \quad \text{s.t.} \quad \sum_{j \in S'} c_j \leq B
+\end{equation}
+
+This is a variant of the knapsack problem, where each project's ``profit'' is $\sum_i v^i_j - c_j$ and its ``weight'' is $c_j$.
+
+An outcome is \emph{Pareto optimal} if no alternative funded set and contribution scheme makes some agent better off without making any agent worse off. Note that a welfare-optimal outcome need not be Pareto optimal because cost-sharing matters: two outcomes with the same funded set $S$ but different contribution splits $\bm{X}$ can Pareto-dominate each other.
+
+\subsection{Effect of Parameters on Game-Theoretic Properties}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Property} & \textbf{High $\alpha$, Low $\sigma$} & \textbf{Low $\alpha$, Low $\sigma$} \\
+\midrule
+Cooperative equilibria & Many, easy to coordinate & Few, hard to coordinate \\
+Free-riding incentive & High (others value same projects) & Low (others won't fund yours) \\
+Coalition dynamics & Grand coalition likely & Small coalitions or none \\
+NE--Pareto gap & Small (aligned interests) & Large (competing interests) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Negotiation Protocol: Talk--Pledge--Revise}
+
+Unlike Games 1 and 2, which use a propose-and-vote protocol where agents collectively select a joint plan, the co-funding game uses a \emph{decentralized contribution protocol} in which each agent submits \emph{individual} contribution vectors and the threshold logic mechanically determines the outcome.
+This design follows the standard \emph{provision point mechanism} (PPM) with money-back guarantee from the threshold public goods literature (Bagnoli \& Lipman, 1989), and preserves the coordination problem that makes co-funding strategically interesting.
+
+The key design choice is \emph{revisable pledges}: agents may increase, decrease, or reallocate their contributions at each round.
+This creates richer strategic dynamics than a one-shot simultaneous game.
+Marx \& Matthews (2000) proved that multiple contribution rounds with observable totals can achieve provision levels impossible in a one-shot game---but only when the threshold non-linearity is present (exactly our setting).
+Early contributions serve as credible signals of intent, enabling coordination around emerging coalitions.
+
+\subsection{Protocol Structure}
+At each round $t = 1, \ldots, T$, play proceeds through the following stages:
+\begin{enumerate}
+    \item \textbf{Communication (Talk):} Agents take turns sending natural language messages. Agents may discuss which projects to prioritize, propose coalitions, promise contributions, or make threats. Agents need not be honest about their preferences.
+    \item \textbf{Private Thinking:} Each agent consolidates its strategy using a private scratchpad, taking into account the communication and (for $t > 1$) the observed contribution totals from the previous round.
+    \item \textbf{Contribution (Pledge):} Each agent $i$ submits a contribution vector $\bm{x}^i_t = (x^i_{t,1}, \ldots, x^i_{t,M})$ subject to $\sum_j x^i_{t,j} \leq B_i$.
+    \item \textbf{Feedback:} All agents observe the \emph{aggregate} running totals $\sum_i x^i_{t,j}$ for each project $j$, as well as which projects have crossed their funding threshold. Individual contributions are \emph{not} revealed---only the aggregates---preserving strategic uncertainty about who is contributing what.
+    \item \textbf{Reflection:} Agents privately reflect on the current round before the next round begins.
+\end{enumerate}
+
+\subsection{What Subsequent Rounds Mean}
+In Games 1 and 2, subsequent rounds represent counter-offers in a negotiation toward consensus.
+In Game 3, subsequent rounds serve a fundamentally different purpose: they allow agents to \emph{revise pledges} in response to observed aggregate behavior and communication.
+This enables several dynamics:
+\begin{itemize}
+    \item \textbf{Signaling intent:} An early contribution to a project signals genuine interest and invites others to co-fund.
+    \item \textbf{Coalition building:} Agents can gradually converge on a shared set of projects as they observe which projects are gaining traction.
+    \item \textbf{Brinkmanship:} An agent can threaten to withdraw contributions from a project unless others increase theirs.
+    \item \textbf{Reallocation:} If a project is clearly not going to reach its threshold, agents can redirect funds to more promising projects.
+\end{itemize}
+
+\subsection{Termination and Payoffs}
+%% [CHANGED: simplified discount factor semantics, adopting final-state-only evaluation]
+%% [This resolves the γ ambiguity bug flagged in the previous version's §7.2]
+The game runs for all $T$ rounds unless early termination is triggered (see below).
+After round $T$, the final contribution vectors $\bm{X}_T$ are locked in, threshold logic determines the funded set $S(\bm{X}_T)$, and contributions to unfunded projects are refunded.
+Only the final-round contributions determine the outcome: there is no per-round discount factor.
+
+This \textbf{final-state-only evaluation} avoids the ambiguities of discount-based urgency when pledges are revisable (see Section~\ref{sec:gamma_semantics} for discussion of the previous design).
+Urgency to coordinate early arises naturally from the multi-round structure: agents who commit early provide information that helps others coordinate, while agents who delay risk others reallocating away from their preferred projects.
+
+\subsection{Early Termination}
+%% [CHANGED: promoted from §7.3 design note to main protocol]
+If all agents submit identical contribution vectors for 2 consecutive rounds ($\bm{x}^i_t = \bm{x}^i_{t-1}$ for all $i$), the game terminates early and the current contributions determine the outcome.
+This preserves the dynamic signaling benefits of multiple rounds while avoiding unnecessary computation when agents have converged.
+
+\subsection{Why Not Propose-and-Vote?}
+A propose-and-vote protocol (as in Games 1 and 2) would have agents pitch and vote on matrices of allocations across all agents.
+This is inappropriate for the co-funding setting because it would \emph{eliminate} the coordination problem---the strategically interesting part of the game.
+If agents could vote on a joint plan, the threshold non-linearity becomes irrelevant (any funded set can be proposed directly), and the game collapses into something resembling the treaty negotiation.
+The decentralized contribution protocol preserves the essential features of the co-funding problem: uncertainty about others' contributions, free-riding incentives, and the need for dynamic signaling to achieve coordination.
+
+\section{Evaluation Metrics}
+
+We evaluate outcomes at three levels: efficiency (how well the group performed), individual performance, and strategic behavior (what makes this an LLM evaluation rather than a pure economics experiment).
+
+\subsection{Efficiency Metrics}
+
+\paragraph{Utilitarian efficiency.}
+The headline metric, comparable across parameter settings and across games:
+\begin{equation}
+    \eta = \frac{SW(\bm{X}, S)}{SW^*}, \quad \text{where } SW(\bm{X}, S) = \sum_{i=1}^{N} U_i(\bm{X}, S) \text{ and } SW^* = \max_{S'} \sum_{j \in S'} \left(\sum_i v^i_j - c_j\right)
+\end{equation}
+subject to the budget constraint $\sum_{j \in S'} c_j \leq B$.
+This measures what fraction of the available surplus the agents captured through negotiation.
+
+\paragraph{Provision rate.}
+The fraction of welfare-positive projects that were actually funded:
+\begin{equation}
+    \text{Prov} = \frac{|S \cap S^*|}{|S^*|}, \quad \text{where } S^* \text{ is the welfare-optimal funded set.}
+\end{equation}
+%% [ADDED: note on precision vs. recall]
+Note that this is a \emph{recall} measure: it captures how many optimal projects were funded, but does not penalize funding projects outside $S^*$.
+If agents fund welfare-negative projects (where $\sum_i v^i_j < c_j$), this wastes budget that could have gone to welfare-positive projects, reducing $\eta$ but not directly reducing $\text{Prov}$.
+In practice, we report both $\eta$ and $\text{Prov}$ to distinguish ``funded the wrong projects'' from ``failed to fund enough projects.''
+
+\paragraph{Coordination failure rate.}
+The fraction of projects where $\sum_i v^i_j > c_j$ (positive surplus) but $\sum_i x_{ij} < c_j$ (not funded).
+High coordination failure indicates agents failed to solve the threshold coordination problem despite sufficient collective value and budget.
+
+\subsection{Individual Metrics}
+
+\paragraph{Individual utility.}
+$U_i = \sum_{j \in S} v^i_j - \sum_{j \in S} x_{ij}$, the value from funded projects minus contributions.
+
+\paragraph{Free-rider index.}
+%% [CHANGED: fixed division-by-zero edge cases]
+For each agent $i$ and funded project $j \in S$ where both $\sum_k v^k_j > 0$ and $x_{ij} > 0$:
+\begin{equation}
+    F_{ij} = \frac{v^i_j / \sum_k v^k_j}{x_{ij} / \sum_k x_{kj}}
+\end{equation}
+When $F_{ij} > 1$, agent $i$ is extracting more value than their proportional cost share (free-riding).
+The index is undefined when $x_{ij} = 0$ (agent $i$ did not contribute to project $j$); such agent--project pairs are treated as \emph{pure free-riding} and tracked separately.
+The overall free-rider disparity is $\max_i \bar{F}_i / \min_i \bar{F}_i$, where $\bar{F}_i$ is agent $i$'s average across funded projects to which they contributed.
+
+%% [ADDED: ported from game2's exploitation index]
+\paragraph{Exploitation index.}
+Analogous to Game 2's exploitation index relative to the Nash Bargaining Solution, we define exploitation relative to the Lindahl equilibrium (Section~\ref{sec:lindahl}):
+\begin{equation}
+    E_i = \frac{U_i(\bm{X}_{\text{actual}}, S) - U_i(\bm{X}_{\text{Lindahl}}, S)}{|U_i(\bm{X}_{\text{Lindahl}}, S)|}
+\end{equation}
+When $E_i > 0$, agent $i$ extracted more utility than the Lindahl-fair benchmark.
+This enables analysis of whether stronger models (higher Elo) systematically exploit weaker negotiation partners: the key hypothesis is that the Elo gap predicts asymmetric exploitation.
+
+\subsection{Strategic Behavior Metrics}
+
+These metrics are unique to the LLM evaluation setting and are designed to be extractable at scale from thousands of game transcripts using a hybrid structured-extraction pipeline.
+
+\paragraph{Promise-keeping rate.}
+During communication, agents make commitments of the form ``I will contribute $x$ to Project $j$.''
+We extract these commitments from the communication phase using a structured extraction model (producing per-round JSON of agent--project--amount triples), then compute the correlation between promised and actual contributions:
+\begin{equation}
+    \text{PK}_i = \text{corr}\left(\{x^{\text{promised}}_{ij}\}, \{x^{\text{actual}}_{ij}\}\right)
+\end{equation}
+High promise-keeping indicates strategic consistency; low promise-keeping indicates deceptive or unreliable behavior.
+
+\paragraph{Adaptation rate.}
+How much agents adjust contributions across rounds in response to new information:
+\begin{equation}
+    \text{Adapt}_i = \frac{1}{T-1} \sum_{t=2}^{T} \|\bm{x}^i_t - \bm{x}^i_{t-1}\|_1 / B_i
+\end{equation}
+This is purely computable from contribution vectors (no transcript analysis needed).
+High adaptation indicates responsiveness to the dynamic game; low adaptation indicates rigid play.
+
+\paragraph{Coalition formation.}
+%% [CHANGED: parameterized threshold relative to T]
+A coalition is operationally defined as a set of 2+ agents who repeatedly co-fund the same project(s) across $\lceil T/2 \rceil$ or more consecutive rounds.
+We detect coalitions from contribution vectors via clustering, then use transcript extraction to classify whether coalitions were \emph{explicitly negotiated} (discussed in communication) or \emph{emergent} (arose without explicit coordination).
+The threshold $\lceil T/2 \rceil$ ensures the definition scales with the number of rounds; for the default $T = 10$, this requires co-funding for 5+ rounds.
+
+\paragraph{Persuasion effectiveness.}
+We measure whether mentioning a project in communication predicts other agents increasing contributions to it.
+For each agent $i$ and project $j$ mentioned by $i$ at round $t$, we compute the change in other agents' contributions to $j$ from round $t$ to $t+1$:
+\begin{equation}
+    \text{Persuasion}_i = \mathbb{E}_{j, t}\left[\sum_{k \neq i} (x^k_{t+1,j} - x^k_{t,j}) \;\middle|\; \text{agent } i \text{ advocated for } j \text{ at round } t\right]
+\end{equation}
+This is a Granger-causality-style measure: does communication predict subsequent contribution shifts?
+
+\subsection{Scalable Extraction Pipeline}
+
+To compute the behavioral metrics above from thousands of game transcripts across 36 models, we use a three-stage pipeline:
+\begin{enumerate}
+    \item \textbf{Structured extraction:} A lightweight model (e.g., Haiku-class) processes each round's communication phase and produces a per-round JSON: \texttt{\{commitments: [\{agent, project, amount\}], advocacy: [\{agent, project, sentiment\}], threats: [...]\}}.
+    \item \textbf{Numerical analysis:} All metrics are computed from the structured data (contribution vectors + extracted JSONs). Promise-keeping, adaptation, coalition detection, and persuasion are all reducible to numerical comparisons once commitments and advocacy events are extracted.
+    \item \textbf{Validation:} A small random sample of transcripts is reviewed by an LLM judge with a detailed rubric to validate the extraction pipeline's accuracy.
+\end{enumerate}
+
+\subsection{Game-Theoretic Fairness Benchmarks}
+
+Unlike Games 1 and 2 (where agents negotiate and vote on joint proposals), Game 3 uses a decentralized contribution mechanism.
+The Nash equilibria of the extensive-form game in Games 1 and 2 are massively multiple and intractable.
+In contrast, the simultaneous-contribution structure of Game 3 admits well-defined Nash equilibria---but also motivates a richer set of cooperative benchmarks.
+
+\paragraph{Lindahl equilibrium.}
+\label{sec:lindahl}
+The Lindahl equilibrium is the cost-sharing arrangement where each agent pays for each funded project in proportion to their valuation---the ``fair'' split where nobody overpays or underpays relative to the benefit they receive.
+For each funded project $j \in S^*$:
+\begin{equation}
+    x^{\text{Lindahl}}_{ij} = c_j \cdot \frac{v^i_j}{\sum_{k=1}^{N} v^k_j}
+\end{equation}
+
+At the Lindahl equilibrium, the free-rider index $F_{ij} = 1$ for every agent on every project.
+The Lindahl equilibrium is unique (given the funded set $S^*$) and efficient (it funds the welfare-optimal set).
+
+We measure \emph{distance from Lindahl}:
+\begin{equation}
+    D_{\text{Lindahl}} = \left\|\bm{X}_{\text{actual}} - \bm{X}_{\text{Lindahl}}\right\|_F
+\end{equation}
+where $\|\cdot\|_F$ is the Frobenius norm (root sum of squared entry-wise differences across the full contribution matrix).
+Large $D_{\text{Lindahl}}$ indicates that cost-sharing deviates from proportional fairness, suggesting either free-riding or exploitation.
+
+\paragraph{Core of the cooperative game.}
+The \emph{core} is the set of cost-sharing arrangements where no coalition of agents could do better by breaking away and funding projects independently using only their own budgets.
+
+Formally, a cost-sharing $\bm{X}$ for funded set $S$ is in the core if and only if for every coalition $T \subseteq \mathcal{N}$:
+\begin{equation}
+    \sum_{i \in T} U_i(\bm{X}, S) \geq V(T)
+\end{equation}
+where $V(T)$ is the \emph{value of coalition $T$}---the maximum total utility agents in $T$ could achieve using only their own budgets:
+\begin{equation}
+    V(T) = \max_{S' \subseteq \mathcal{P}} \sum_{j \in S'} \left(\sum_{i \in T} v^i_j - c_j\right) \quad \text{s.t.} \quad \sum_{j \in S'} c_j \leq \sum_{i \in T} B_i
+\end{equation}
+
+Each $V(T)$ computation is a knapsack problem.
+For $M = 5$ projects, each is solved by enumerating $2^5 = 32$ subsets.
+With $N = 2$ agents, there are $2^N - 1 = 3$ non-empty coalitions ($\{1\}$, $\{2\}$, $\{1,2\}$) to check: a total of $3 \times 32 = 96$ evaluations.
+For $N = 5$, there are 31 coalitions, still under 1000 evaluations.
+
+The core itself is a \emph{polytope}---a convex region in the space of contribution matrices defined by the intersection of linear inequalities (one per coalition).
+Each coalition constraint $\sum_{i \in T} U_i \geq V(T)$ expands to a linear inequality in the $x_{ij}$ variables (since $U_i$ is linear in $x_{ij}$ for a fixed funded set $S$).
+
+We report:
+\begin{itemize}
+    \item Whether the actual cost-sharing lies inside or outside the core.
+    \item If outside, the minimum distance to the core boundary (computable via linear programming).
+    \item Whether the Lindahl equilibrium lies inside the core (it does when the funded set has positive surplus for all sub-coalitions).
+\end{itemize}
+
+An outcome outside the core means some coalition of agents was ``exploited''---they would have been better off breaking away.
+This is a strong indicator of unfair cost-sharing and is particularly interesting to track across Elo gaps: do stronger models push weaker ones into cost-sharing arrangements outside the core?
+
+\paragraph{Efficiency--fairness decomposition.}
+As in Games 1 and 2, we decompose the deviation from optimal:
+\begin{itemize}
+    \item \textbf{Efficiency loss}: $SW^* - SW_{\text{actual}}$ (wrong projects funded, or not enough projects funded).
+    \item \textbf{Fairness deviation}: $D_{\text{Lindahl}}$ among outcomes with the same funded set (surplus captured but costs split unevenly).
+\end{itemize}
+
+\section{Example Scenarios}
+
+\subsection{Pure Cooperation ($\alpha = 1, \sigma = 0.3$)}
+All agents have identical valuations. With scarce budgets, they must prioritize the highest-value projects and split costs evenly. The optimal strategy is trivially cooperative: fund projects in decreasing order of $\sum_i v^i_j - c_j$ until the budget is exhausted.
+
+\subsection{Pure Competition ($\alpha = 0, \sigma = 0.3$)}
+Each agent values entirely different projects. With scarce budgets, each agent wants the shared budget spent on ``their'' projects. This resembles a zero-sum fight over the budget, despite the co-funding structure.
+
+\subsection{Mixed Motives ($\alpha = 0.5, \sigma = 0.5$)}
+Agents partially overlap in preferences. Some projects are ``public goods'' valued by all; others are ``private goods'' valued by subsets. The negotiation challenge is to find the right mix: fund enough shared projects to maintain cooperation while accommodating individual priorities.
+
+\section{Contrast with Other Games}
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Feature} & \textbf{Item Allocation} & \textbf{Treaty Negotiation} & \textbf{Co-Funding} \\
+\midrule
+Goods type & Rivalrous & Continuous & Threshold/Public \\
+Competition source & Exclusivity & Preference distance & Budget scarcity \\
+Cooperation source & Orthogonal prefs & Compatible issues & Cost sharing \\
+Non-linearity & None (linear) & None (linear) & Threshold \\
+Coalition dynamics & Minimal & Minimal & Central \\
+Free-riding & N/A & N/A & Key challenge \\
+Parameters & 1 ($\cos$ sim) & 2 ($\rho, \theta$) & 2 ($\alpha, \sigma$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Implementation Caveats and Known Issues}
+
+\subsection{Preference Alignment ($\alpha$): Original Generation Was Approximate}
+\label{sec:alpha_approximate}
+
+\paragraph{The original problem.}
+An earlier version of this game generated valuation vectors via a Dirichlet mixing heuristic: $\bm{v}^i = \alpha_{\text{target}} \cdot \bm{s} + (1 - \alpha_{\text{target}}) \cdot \bm{r}^i$, where $\bm{s} \sim \text{Dir}(\mathbf{1}_M)$ and $\bm{r}^i \sim \text{Dir}(\mathbf{1}_M)$, followed by renormalization to sum to 100.
+The resulting cosine similarity $\cos(\bm{v}^1, \bm{v}^2)$ was \emph{not} equal to $\alpha_{\text{target}}$; it was a nonlinear function of $\alpha_{\text{target}}$, $\bm{s}$, and $\bm{r}^i$, with stochastic variance of $\pm 0.1$ or more for $M = 5$.
+
+\paragraph{Current fix.}
+Section 3.1 now uses SLSQP optimization to achieve exact target cosine similarities on the simplex.
+This is identical to the parameter generation used in Games 1 and 2.
+
+\subsection{Discount Factor ($\gamma$): Removed Due to Ambiguous Semantics}
+\label{sec:gamma_semantics}
+
+\paragraph{The original problem.}
+An earlier version applied a discount factor $\gamma^t$ to the round at which projects first crossed their funding threshold.
+With revisable pledges, a project can cross its funding threshold at round $t$, fall below at round $t+1$ when agents reallocate, and cross again at round $t+2$.
+This created ambiguities about whether the discount applied to the first crossing, last crossing, or some other rule, and allowed agents to game the mechanism.
+
+\paragraph{Current fix.}
+Section 5.3 now uses \textbf{final-state-only evaluation}: only the contribution vectors at round $T$ (or at early termination) determine the outcome.
+The discount factor is removed from Game 3 entirely.
+Urgency arises naturally from the multi-round signaling dynamics rather than from an explicit time-pressure mechanism.
+
+%% [ADDED: ported from game2's N>2 discussion]
+\subsection{Scaling to $N > 2$: SLSQP Feasibility}
+\label{sec:n_greater_2}
+
+For $N > 2$ agents with equi-alignment (all pairwise $\alpha_{ij}$ equal to $\alpha_{\text{target}}$), the SLSQP optimization must produce $N$ vectors on the simplex with mutual cosine similarity $\alpha_{\text{target}}$.
+This is always feasible for $\alpha_{\text{target}} \in [0,1]$ because non-negative vectors on the simplex have cosine similarity in $[0,1]$ by construction, and the uniform vector $\bm{v}^i = (100/M, \ldots, 100/M)$ for all $i$ achieves $\alpha = 1$.
+For $\alpha_{\text{target}}$ near 0 with large $N$, the optimization may require $M > N$ projects to provide enough degrees of freedom for near-orthogonal vectors.
+
+\end{document}

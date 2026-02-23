@@ -17,6 +17,7 @@ class GameType(Enum):
     """Supported game types."""
     ITEM_ALLOCATION = "item_allocation"
     DIPLOMATIC_TREATY = "diplomacy"
+    CO_FUNDING = "co_funding"
 
 
 @dataclass
@@ -60,6 +61,29 @@ class DiplomaticTreatyConfig(GameConfig):
                     f"{min_rho_z:.4f} = -1/(N-1) required for PSD "
                     f"equicorrelation matrix."
                 )
+
+
+@dataclass
+class CoFundingConfig(GameConfig):
+    """Configuration specific to Co-Funding (Participatory Budgeting) game."""
+    m_projects: int = 5
+    alpha: float = 0.5       # Preference alignment [0, 1]
+    sigma: float = 0.5       # Budget scarcity (0, 1]
+    c_min: float = 10.0      # Minimum project cost
+    c_max: float = 50.0      # Maximum project cost
+
+    def __post_init__(self):
+        """Validate parameter bounds."""
+        if not 0 <= self.alpha <= 1:
+            raise ValueError(f"alpha must be in [0, 1], got {self.alpha}")
+        if not 0 < self.sigma <= 1:
+            raise ValueError(f"sigma must be in (0, 1], got {self.sigma}")
+        if self.c_min <= 0:
+            raise ValueError(f"c_min must be positive, got {self.c_min}")
+        if self.c_max < self.c_min:
+            raise ValueError(f"c_max must be >= c_min, got c_max={self.c_max}, c_min={self.c_min}")
+        if self.m_projects < 1:
+            raise ValueError(f"m_projects must be >= 1, got {self.m_projects}")
 
 
 class GameEnvironment(ABC):
@@ -333,6 +357,15 @@ class GameEnvironment(ABC):
             Dictionary with preference information
         """
         pass
+
+    def get_protocol_type(self) -> str:
+        """
+        Return the negotiation protocol type for this game.
+
+        Returns:
+            "propose_and_vote" (default) or "talk_pledge_revise"
+        """
+        return "propose_and_vote"
 
     def get_reflection_prompt(
         self,
