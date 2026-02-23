@@ -67,7 +67,7 @@ class FakeAgent:
         }
 
 
-def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5):
+def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5, pledge_mode="individual"):
     """Helper to create a game and its state."""
     config = CoFundingConfig(
         n_agents=n_agents,
@@ -76,6 +76,7 @@ def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5)
         alpha=alpha,
         sigma=sigma,
         random_seed=seed,
+        pledge_mode=pledge_mode,
     )
     game = CoFundingGame(config)
     agents = [FakeAgent(f"Agent_{i+1}") for i in range(n_agents)]

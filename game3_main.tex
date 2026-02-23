@@ -205,8 +205,9 @@ NE--Pareto gap & Small (aligned interests) & Large (competing interests) \\
 
 \section{Negotiation Protocol: Talk--Pledge--Revise}
 
-Unlike Games 1 and 2, which use a propose-and-vote protocol where agents collectively select a joint plan, the co-funding game uses a \emph{decentralized contribution protocol} in which each agent submits \emph{individual} contribution vectors and the threshold logic mechanically determines the outcome.
-This design follows the standard \emph{provision point mechanism} (PPM) with money-back guarantee from the threshold public goods literature (Bagnoli \& Lipman, 1989), and preserves the coordination problem that makes co-funding strategically interesting.
+Unlike Games 1 and 2, which use a propose-and-vote protocol where agents collectively select a joint plan, the co-funding game uses a \emph{decentralized contribution protocol} in which each agent submits a \emph{joint funding plan}---a contribution dictionary specifying proposed allocations for all participants---and the effective contributions are each agent's self-assignment from their own plan.
+This design follows the \emph{provision point mechanism} (PPM) with money-back guarantee from the threshold public goods literature (Bagnoli \& Lipman, 1989), enriched by requiring agents to reason about the full contribution matrix.
+The joint plan format preserves the coordination problem that makes co-funding strategically interesting while enabling earlier convergence when agents agree on a common plan.
 
 The key design choice is \emph{revisable pledges}: agents may increase, decrease, or reallocate their contributions at each round.
 This creates richer strategic dynamics than a one-shot simultaneous game.
@@ -218,7 +219,7 @@ At each round $t = 1, \ldots, T$, play proceeds through the following stages:
 \begin{enumerate}
     \item \textbf{Communication (Talk):} Agents take turns sending natural language messages. Agents may discuss which projects to prioritize, propose coalitions, promise contributions, or make threats. Agents need not be honest about their preferences.
     \item \textbf{Private Thinking:} Each agent consolidates its strategy using a private scratchpad, taking into account the communication and (for $t > 1$) the observed contribution totals from the previous round.
-    \item \textbf{Contribution (Pledge):} Each agent $i$ submits a contribution vector $\bm{x}^i_t = (x^i_{t,1}, \ldots, x^i_{t,M})$ subject to $\sum_j x^i_{t,j} \leq B_i$.
+    \item \textbf{Contribution (Pledge):} Each agent $i$ submits a \emph{joint funding plan}: a contribution dictionary $\{\bm{x}^{i \to k}_t\}_{k=1}^{N}$ specifying proposed allocations for all participants $k$, subject to $\sum_j x^{i \to k}_{t,j} \leq B_k$ for each $k$. The effective contribution vector for agent $i$ is their self-assignment $\bm{x}^i_t = \bm{x}^{i \to i}_t$.
     \item \textbf{Feedback:} All agents observe the \emph{aggregate} running totals $\sum_i x^i_{t,j}$ for each project $j$, as well as which projects have crossed their funding threshold. Individual contributions are \emph{not} revealed---only the aggregates---preserving strategic uncertainty about who is contributing what.
     \item \textbf{Reflection:} Agents privately reflect on the current round before the next round begins.
 \end{enumerate}
@@ -245,8 +246,9 @@ This \textbf{final-state-only evaluation} avoids the ambiguities of discount-bas
 Urgency to coordinate early arises naturally from the multi-round structure: agents who commit early provide information that helps others coordinate, while agents who delay risk others reallocating away from their preferred projects.
 
 \subsection{Early Termination}
-%% [CHANGED: promoted from §7.3 design note to main protocol]
-If all agents submit identical contribution vectors for 2 consecutive rounds ($\bm{x}^i_t = \bm{x}^i_{t-1}$ for all $i$), the game terminates early and the current contributions determine the outcome.
+%% [CHANGED: joint plan agreement within a single round]
+The game terminates early when all agents' proposed joint funding plans agree within tolerance in a single round---that is, for all agents $i, j$ and all target participants $k$, the contribution that agent $i$'s plan assigns to $k$ matches what agent $j$'s plan assigns to $k$.
+This convergence criterion captures genuine consensus: agents have agreed on a common funding plan, and the current contributions determine the outcome.
 This preserves the dynamic signaling benefits of multiple rounds while avoiding unnecessary computation when agents have converged.
 
 \subsection{Why Not Propose-and-Vote?}

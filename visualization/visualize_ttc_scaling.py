@@ -19,6 +19,8 @@ What it creates:
     ├── plot3_phase_breakdown.png            # Reasoning by phase
     ├── plot4_instructed_vs_actual.png       # Prompted vs actual tokens
     ├── plot5_instructed_vs_payoff.png       # Prompted budget vs payoff
+    ├── plot7_ttc_by_competition.png         # TTC scaling by competition level
+    ├── plot8_competition_heatmap.png        # Token budget x competition heatmap
     └── data_summary.csv                     # Extracted data for analysis
 
 Examples:
@@ -1468,6 +1470,131 @@ def plot6_payoff_vs_reasoning_by_phase(df: pd.DataFrame, output_dir: Path):
         print(f"Saved: {output_path}")
 
 
+def plot7_ttc_by_competition(df: pd.DataFrame, output_dir: Path):
+    """Plot 7: TTC scaling curves across competition levels.
+
+    1x2 subplot:
+      Left:  Adversary utility vs token budget (log), one line per competition_level
+      Right: Social welfare vs token budget (log), same structure
+    """
+    # Need competition_level variation
+    if "competition_level" not in df.columns:
+        print("  Skipping plot7: no competition_level column")
+        return
+
+    comp_levels = sorted(df["competition_level"].dropna().unique())
+    if len(comp_levels) <= 1:
+        print("  Skipping plot7: only one competition level")
+        return
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    cmap = plt.cm.RdYlGn_r  # red = high competition, green = low
+    colors = {c: cmap(i / max(len(comp_levels) - 1, 1)) for i, c in enumerate(comp_levels)}
+
+    # Left panel: adversary utility vs token budget
+    ax = axes[0]
+    df_adv = df[df["is_prompted_reasoning"] == True].copy()
+    if not df_adv.empty:
+        for comp in comp_levels:
+            sub = df_adv[df_adv["competition_level"] == comp]
+            if sub.empty:
+                continue
+            grouped = sub.groupby("token_budget_prompted")["utility"].agg(["mean", "std"]).reset_index()
+            grouped = grouped.sort_values("token_budget_prompted")
+            ax.errorbar(
+                grouped["token_budget_prompted"], grouped["mean"],
+                yerr=grouped["std"], marker="o", capsize=3,
+                label=f"CI={comp:.2f}", color=colors[comp], linewidth=1.5,
+            )
+    ax.set_xscale("log")
+    ax.set_xlabel("Token Budget (log scale)")
+    ax.set_ylabel("Adversary Utility")
+    ax.set_title("Adversary Utility vs Token Budget\nby Competition Level")
+    ax.legend(fontsize=9, title="Competition")
+
+    # Right panel: social welfare vs token budget
+    ax = axes[1]
+    # Social welfare = sum of both agents per experiment
+    # Group by experiment_dir to get social welfare, then aggregate
+    sw = df.groupby(["experiment_dir", "token_budget_prompted", "competition_level"])["utility"].sum().reset_index()
+    sw.rename(columns={"utility": "social_welfare"}, inplace=True)
+    for comp in comp_levels:
+        sub = sw[sw["competition_level"] == comp]
+        if sub.empty:
+            continue
+        grouped = sub.groupby("token_budget_prompted")["social_welfare"].agg(["mean", "std"]).reset_index()
+        grouped = grouped.sort_values("token_budget_prompted")
+        ax.errorbar(
+            grouped["token_budget_prompted"], grouped["mean"],
+            yerr=grouped["std"], marker="o", capsize=3,
+            label=f"CI={comp:.2f}", color=colors[comp], linewidth=1.5,
+        )
+    ax.set_xscale("log")
+    ax.set_xlabel("Token Budget (log scale)")
+    ax.set_ylabel("Social Welfare")
+    ax.set_title("Social Welfare vs Token Budget\nby Competition Level")
+    ax.legend(fontsize=9, title="Competition")
+
+    plt.tight_layout()
+    output_path = output_dir / "plot7_ttc_by_competition.png"
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved: {output_path}")
+
+
+def plot8_competition_heatmap(df: pd.DataFrame, output_dir: Path):
+    """Plot 8: Heatmap of adversary utility across token budget x competition level.
+
+    X: token_budget bins (bucketed)
+    Y: competition_level
+    Color: mean adversary utility, annotated with values
+    """
+    if "competition_level" not in df.columns:
+        print("  Skipping plot8: no competition_level column")
+        return
+
+    df_adv = df[df["is_prompted_reasoning"] == True].copy()
+    if df_adv.empty:
+        print("  Skipping plot8: no adversary data")
+        return
+
+    comp_levels = sorted(df_adv["competition_level"].dropna().unique())
+    if len(comp_levels) <= 1:
+        print("  Skipping plot8: only one competition level")
+        return
+
+    pivot = df_adv.pivot_table(
+        values="utility",
+        index="competition_level",
+        columns="token_budget_prompted",
+        aggfunc="mean",
+    )
+
+    if pivot.empty:
+        print("  Skipping plot8: empty pivot")
+        return
+
+    fig, ax = plt.subplots(figsize=(12, 7))
+    sns.heatmap(
+        pivot,
+        annot=True,
+        fmt=".1f",
+        cmap="YlOrRd",
+        ax=ax,
+        linewidths=0.5,
+        cbar_kws={"label": "Mean Adversary Utility"},
+    )
+    ax.set_xlabel("Token Budget (Prompted)")
+    ax.set_ylabel("Competition Level")
+    ax.set_title("Adversary Utility: Token Budget × Competition Level")
+
+    plt.tight_layout()
+    output_path = output_dir / "plot8_competition_heatmap.png"
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"Saved: {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Visualize TTC scaling experiment results")
     parser.add_argument("--single", type=str, default=None,
@@ -1546,6 +1673,8 @@ def main():
     plot5_instructed_vs_payoff(df, output_dir)
     plot5b_instructed_vs_payoff_by_model(df, output_dir)
     plot6_payoff_vs_reasoning_by_phase(df, output_dir)
+    plot7_ttc_by_competition(df, output_dir)
+    plot8_competition_heatmap(df, output_dir)
 
     print("\nDone!")
     return 0

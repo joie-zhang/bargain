@@ -126,7 +126,8 @@ def create_game_environment(
             alpha=kwargs.get("alpha", 0.5),
             sigma=kwargs.get("sigma", 0.5),
             c_min=kwargs.get("c_min", 10.0),
-            c_max=kwargs.get("c_max", 50.0),
+            c_max=kwargs.get("c_max", 30.0),
+            pledge_mode=kwargs.get("pledge_mode", "joint"),
         )
         return CoFundingGame(config)
 

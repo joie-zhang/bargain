@@ -70,7 +70,8 @@ class CoFundingConfig(GameConfig):
     alpha: float = 0.5       # Preference alignment [0, 1]
     sigma: float = 0.5       # Budget scarcity (0, 1]
     c_min: float = 10.0      # Minimum project cost
-    c_max: float = 50.0      # Maximum project cost
+    c_max: float = 30.0      # Maximum project cost
+    pledge_mode: str = "joint"  # "joint" (agents propose full plans) or "individual" (legacy)
 
     def __post_init__(self):
         """Validate parameter bounds."""
@@ -84,6 +85,8 @@ class CoFundingConfig(GameConfig):
             raise ValueError(f"c_max must be >= c_min, got c_max={self.c_max}, c_min={self.c_min}")
         if self.m_projects < 1:
             raise ValueError(f"m_projects must be >= 1, got {self.m_projects}")
+        if self.pledge_mode not in ("joint", "individual"):
+            raise ValueError(f"pledge_mode must be 'joint' or 'individual', got '{self.pledge_mode}'")
 
 
 class GameEnvironment(ABC):

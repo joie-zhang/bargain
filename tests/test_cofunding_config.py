@@ -23,7 +23,7 @@ class TestCoFundingConfig:
         assert config.alpha == 0.5
         assert config.sigma == 0.5
         assert config.c_min == 10.0
-        assert config.c_max == 50.0
+        assert config.c_max == 30.0
 
     def test_valid_config_custom(self):
         """Custom valid config creates successfully."""

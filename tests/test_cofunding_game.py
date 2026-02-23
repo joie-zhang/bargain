@@ -13,6 +13,8 @@ Tests cover:
 - Seed reproducibility
 """
 
+import json
+
 import pytest
 import numpy as np
 from typing import List
@@ -83,14 +85,23 @@ class TestValuationGeneration:
         np.testing.assert_allclose(v1, v2, atol=1e-6)
 
     def test_3agent_valuations(self):
-        """3-agent valuation generation should work."""
+        """3-agent valuation generation should produce all-pairs cosine similarity matching alpha."""
         game = make_game(alpha=0.5, n_agents=3)
         agents = create_test_agents(3)
         state = game.create_game_state(agents)
+        vecs = []
         for aid in ["Agent_1", "Agent_2", "Agent_3"]:
             vals = state["agent_valuations"][aid]
             assert abs(sum(vals) - 100.0) < 0.01
             assert all(v >= -1e-9 for v in vals)
+            vecs.append(np.array(vals))
+        # Verify ALL pairwise cosine similarities match alpha
+        for i in range(3):
+            for j in range(i + 1, 3):
+                cos_sim = np.dot(vecs[i], vecs[j]) / (np.linalg.norm(vecs[i]) * np.linalg.norm(vecs[j]))
+                assert abs(cos_sim - 0.5) < 0.05, (
+                    f"Pair ({i},{j}): expected cos_sim=0.5, got {cos_sim:.4f}"
+                )
 
 
 class TestGameStateCreation:
@@ -134,7 +145,7 @@ class TestGameStateCreation:
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         for cost in state["project_costs"]:
-            assert 10.0 <= cost <= 50.0
+            assert 10.0 <= cost <= 30.0
 
     def test_m_projects_correct(self):
         """Number of projects should match config."""
@@ -316,11 +327,19 @@ class TestProtocolAndGameType:
 
 
 class TestEarlyTermination:
-    """Tests for check_early_termination."""
+    """Tests for check_early_termination (individual mode)."""
+
+    def _make_individual_game(self, m_projects=3):
+        config = CoFundingConfig(
+            n_agents=2, t_rounds=5, m_projects=m_projects,
+            alpha=0.5, sigma=0.5, random_seed=42,
+            pledge_mode="individual",
+        )
+        return CoFundingGame(config)
 
     def test_early_termination_identical_pledges(self):
         """Identical pledges for 2 rounds should trigger early termination."""
-        game = make_game(m_projects=3)
+        game = self._make_individual_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
 
@@ -333,7 +352,7 @@ class TestEarlyTermination:
 
     def test_no_early_termination_different_pledges(self):
         """Different pledges across rounds should NOT trigger termination."""
-        game = make_game(m_projects=3)
+        game = self._make_individual_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
 
@@ -344,7 +363,7 @@ class TestEarlyTermination:
 
     def test_no_early_termination_one_round(self):
         """Only 1 round of history should NOT trigger termination."""
-        game = make_game(m_projects=3)
+        game = self._make_individual_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
 
@@ -354,7 +373,7 @@ class TestEarlyTermination:
 
     def test_early_termination_within_tolerance(self):
         """Pledges within atol=0.01 should trigger termination."""
-        game = make_game(m_projects=3)
+        game = self._make_individual_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
 
@@ -533,3 +552,158 @@ class TestPrompts:
         assert "valuations" in summary
         assert "budget" in summary
         assert "projects" in summary
+
+
+class TestJointPledgeMode:
+    """Tests for joint pledge mode (Change 4)."""
+
+    def _make_joint_game(self, m_projects=3, pledge_mode="joint"):
+        from game_environments import CoFundingConfig
+        from game_environments.co_funding import CoFundingGame
+        config = CoFundingConfig(
+            n_agents=2, t_rounds=5, m_projects=m_projects,
+            alpha=0.5, sigma=0.5, random_seed=42,
+            pledge_mode=pledge_mode,
+        )
+        return CoFundingGame(config)
+
+    def test_game_state_has_pledge_mode(self):
+        """Game state should include pledge_mode."""
+        game = self._make_joint_game()
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        assert state["pledge_mode"] == "joint"
+
+    def test_parse_joint_proposal(self):
+        """Valid joint pledge should be parsed correctly."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        response = json.dumps({
+            "contributions": {
+                "Agent_1": [5.0, 3.0, 2.0],
+                "Agent_2": [4.0, 6.0, 1.0],
+            },
+            "reasoning": "test joint plan",
+        })
+        parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+
+        # Self-assignment should be Agent_1's row
+        assert parsed["contributions"] == [5.0, 3.0, 2.0]
+        assert parsed["proposed_by"] == "Agent_1"
+        assert "joint_plan" in parsed
+        assert parsed["joint_plan"]["Agent_1"] == [5.0, 3.0, 2.0]
+        assert parsed["joint_plan"]["Agent_2"] == [4.0, 6.0, 1.0]
+
+    def test_validate_joint_proposal_valid(self):
+        """Valid joint proposal should pass validation."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        budget = state["agent_budgets"]["Agent_1"]
+
+        proposal = {
+            "contributions": [budget * 0.2, budget * 0.3, 0.0],
+            "joint_plan": {
+                "Agent_1": [budget * 0.2, budget * 0.3, 0.0],
+                "Agent_2": [budget * 0.1, budget * 0.4, budget * 0.1],
+            },
+            "proposed_by": "Agent_1",
+        }
+        assert game.validate_proposal(proposal, state) is True
+
+    def test_validate_joint_proposal_over_budget(self):
+        """Joint plan with over-budget entry should fail."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        budget = state["agent_budgets"]["Agent_2"]
+
+        proposal = {
+            "contributions": [1.0, 1.0, 1.0],
+            "joint_plan": {
+                "Agent_1": [1.0, 1.0, 1.0],
+                "Agent_2": [budget, budget, budget],  # way over budget
+            },
+            "proposed_by": "Agent_1",
+        }
+        assert game.validate_proposal(proposal, state) is False
+
+    def test_early_termination_joint_agreement(self):
+        """Agents with identical joint plans should trigger early termination."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        agreed_plan = {
+            "Agent_1": [5.0, 3.0, 2.0],
+            "Agent_2": [4.0, 6.0, 1.0],
+        }
+        state["joint_plans"] = {
+            "Agent_1": agreed_plan,
+            "Agent_2": agreed_plan,
+        }
+        assert game.check_early_termination(state) is True
+
+    def test_early_termination_joint_disagreement(self):
+        """Agents with different joint plans should NOT trigger termination."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        state["joint_plans"] = {
+            "Agent_1": {
+                "Agent_1": [5.0, 3.0, 2.0],
+                "Agent_2": [4.0, 6.0, 1.0],
+            },
+            "Agent_2": {
+                "Agent_1": [3.0, 5.0, 2.0],  # differs from Agent_1's plan
+                "Agent_2": [4.0, 6.0, 1.0],
+            },
+        }
+        assert game.check_early_termination(state) is False
+
+    def test_proposal_prompt_joint_mode(self):
+        """Joint mode prompt should mention dictionary format."""
+        game = self._make_joint_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
+        assert "JOINT FUNDING PLAN" in prompt
+        assert "Agent_1" in prompt
+        assert "Agent_2" in prompt
+
+    def test_legacy_individual_mode(self):
+        """pledge_mode='individual' should preserve old behavior."""
+        game = self._make_joint_game(m_projects=3, pledge_mode="individual")
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        assert state["pledge_mode"] == "individual"
+
+        # Prompt should NOT mention joint plan
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
+        assert "JOINT FUNDING PLAN" not in prompt
+        assert "contributions" in prompt
+
+        # Parse individual-format response
+        response = '{"contributions": [5.0, 3.0, 2.0], "reasoning": "test"}'
+        parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+        assert parsed["contributions"] == [5.0, 3.0, 2.0]
+        assert "joint_plan" not in parsed
+
+        # Early termination uses 2-consecutive-round logic
+        pledges = {"Agent_1": [5.0, 3.0, 2.0], "Agent_2": [4.0, 6.0, 1.0]}
+        state["round_pledges"] = [pledges, pledges]
+        assert game.check_early_termination(state) is True
+
+    def test_invalid_pledge_mode_raises(self):
+        """Invalid pledge_mode should raise ValueError."""
+        from game_environments import CoFundingConfig
+        with pytest.raises(ValueError, match="pledge_mode"):
+            CoFundingConfig(
+                n_agents=2, t_rounds=5, m_projects=3,
+                pledge_mode="invalid",
+            )

@@ -194,7 +194,8 @@ class StrongModelsExperiment:
                 alpha=config.get("alpha", 0.5),
                 sigma=config.get("sigma", 0.5),
                 c_min=config.get("c_min", 10.0),
-                c_max=config.get("c_max", 50.0),
+                c_max=config.get("c_max", 30.0),
+                pledge_mode=config.get("pledge_mode", "joint"),
             )
         else:
             raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation', 'diplomacy', or 'co_funding'")
@@ -384,10 +385,10 @@ class StrongModelsExperiment:
                     else:
                         self.logger.info(f"Skipping individual reflection phase (disabled)")
 
-                    # Co-funding always runs all rounds (no early termination).
-                    # Agents observe and revise pledges every round regardless
-                    # of convergence — this is a defining characteristic of the
-                    # talk-pledge-revise protocol.
+                    # Check for early termination (joint plans agree or pledges converge)
+                    if game_environment.check_early_termination(preferences["game_state"]):
+                        self.logger.info(f"Early termination in round {round_num}")
+                        break
 
             # Post-round-loop processing
             if protocol == "talk_pledge_revise":

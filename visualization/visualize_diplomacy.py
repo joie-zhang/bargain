@@ -20,6 +20,9 @@ What it creates:
     ├── plot4b_rho_theta_per_agent.png      # Heatmap of per-agent utility across rho x theta
     ├── plot5_exploitation_by_condition.png  # Exploitation rates
     ├── plot6_ttc_scaling.png               # TTC scaling (if available)
+    ├── plot7_competition_index.png         # 1D collapsed competition index
+    ├── plot8_by_theta.png                  # SW vs rho, faceted by theta
+    ├── plot9_by_rho.png                    # SW vs theta, faceted by rho
     └── diplomacy_results.csv               # Full results table
 
 Dependencies:
@@ -76,8 +79,17 @@ MODEL_SHORT_NAMES = {
 }
 
 
+MARKER_POOL = ["o", "s", "D", "^", "v", "P", "X", "*", "h", "<", ">"]
+
+
 def short_name(model_id: str) -> str:
     return MODEL_SHORT_NAMES.get(model_id, model_id)
+
+
+def _markers_for(hue_levels):
+    """Return a list of markers matching the number of unique hue levels."""
+    n = len(hue_levels)
+    return MARKER_POOL[:n] if n <= len(MARKER_POOL) else ["o"] * n
 
 
 def collect_results(experiment_dir: str) -> pd.DataFrame:
@@ -233,6 +245,7 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    pair_markers = _markers_for(ms["model_pair"].unique())
 
     # Social welfare vs rho
     sns.pointplot(
@@ -242,10 +255,10 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         hue="model_pair",
         ax=axes[0],
         dodge=0.2,
-        markers=["o", "s", "D", "^", "v"],
+        markers=pair_markers,
         capsize=0.1,
     )
-    axes[0].set_xlabel(r"$\rho$ (Preference Correlation)")
+    axes[0].set_xlabel(r"$\rho$  ($\leftarrow$ Competitive | Cooperative $\rightarrow$)")
     axes[0].set_ylabel("Social Welfare")
     axes[0].set_title(r"Social Welfare vs $\rho$")
     axes[0].legend(fontsize=9)
@@ -258,10 +271,10 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         hue="model_pair",
         ax=axes[1],
         dodge=0.2,
-        markers=["o", "s", "D", "^", "v"],
+        markers=pair_markers,
         capsize=0.1,
     )
-    axes[1].set_xlabel(r"$\rho$ (Preference Correlation)")
+    axes[1].set_xlabel(r"$\rho$  ($\leftarrow$ Competitive | Cooperative $\rightarrow$)")
     axes[1].set_ylabel("Rounds to Consensus")
     axes[1].set_title(r"Negotiation Length vs $\rho$")
     axes[1].legend(fontsize=9)
@@ -269,7 +282,7 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
     # Exploitation rate vs rho
     exploit_by_rho = ms.groupby("rho")["exploitation"].mean()
     axes[2].bar(exploit_by_rho.index.astype(str), exploit_by_rho.values, alpha=0.8)
-    axes[2].set_xlabel(r"$\rho$ (Preference Correlation)")
+    axes[2].set_xlabel(r"$\rho$  ($\leftarrow$ Competitive | Cooperative $\rightarrow$)")
     axes[2].set_ylabel("Exploitation Rate")
     axes[2].set_title(r"Exploitation Rate vs $\rho$")
     axes[2].set_ylim(0, 1.05)
@@ -288,6 +301,7 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    pair_markers = _markers_for(ms["model_pair"].unique())
 
     # Social welfare vs theta
     sns.pointplot(
@@ -297,10 +311,10 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         hue="model_pair",
         ax=axes[0],
         dodge=0.2,
-        markers=["o", "s", "D", "^", "v"],
+        markers=pair_markers,
         capsize=0.1,
     )
-    axes[0].set_xlabel(r"$\theta$ (Interest Overlap)")
+    axes[0].set_xlabel(r"$\theta$  (amplifies conflict $\rightarrow$)")
     axes[0].set_ylabel("Social Welfare")
     axes[0].set_title(r"Social Welfare vs $\theta$")
     axes[0].legend(fontsize=9)
@@ -313,10 +327,10 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         hue="model_pair",
         ax=axes[1],
         dodge=0.2,
-        markers=["o", "s", "D", "^", "v"],
+        markers=pair_markers,
         capsize=0.1,
     )
-    axes[1].set_xlabel(r"$\theta$ (Interest Overlap)")
+    axes[1].set_xlabel(r"$\theta$  (amplifies conflict $\rightarrow$)")
     axes[1].set_ylabel("Rounds to Consensus")
     axes[1].set_title(r"Negotiation Length vs $\theta$")
     axes[1].legend(fontsize=9)
@@ -326,7 +340,7 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
     axes[2].bar(
         exploit_by_theta.index.astype(str), exploit_by_theta.values, alpha=0.8
     )
-    axes[2].set_xlabel(r"$\theta$ (Interest Overlap)")
+    axes[2].set_xlabel(r"$\theta$  (amplifies conflict $\rightarrow$)")
     axes[2].set_ylabel("Exploitation Rate")
     axes[2].set_title(r"Exploitation Rate vs $\theta$")
     axes[2].set_ylim(0, 1.05)
@@ -335,6 +349,27 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
     plt.savefig(os.path.join(out_dir, "plot3_theta_effect.png"))
     plt.close()
     print("  Saved plot3_theta_effect.png")
+
+
+def _annotate_diplomacy_heatmap(ax):
+    """Add competition/cooperation corner annotations to a rho x theta heatmap.
+
+    Heatmap layout (rho sorted ascending, so -1 at top, 1 at bottom):
+      - Top-right = high theta + low rho = most competitive
+      - Bottom-left = low theta + high rho = most cooperative
+    """
+    ax.text(
+        0.97, 0.97, "Comp.",
+        transform=ax.transAxes, fontsize=9, fontstyle="italic",
+        ha="right", va="top", color="white",
+        bbox=dict(boxstyle="round,pad=0.2", fc="black", alpha=0.5),
+    )
+    ax.text(
+        0.03, 0.03, "Coop.",
+        transform=ax.transAxes, fontsize=9, fontstyle="italic",
+        ha="left", va="bottom", color="black",
+        bbox=dict(boxstyle="round,pad=0.2", fc="white", alpha=0.5),
+    )
 
 
 def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
@@ -363,8 +398,9 @@ def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
         cbar_kws={"label": "Social Welfare"},
     )
     axes[0].set_title("All Model Pairs")
-    axes[0].set_xlabel(r"$\theta$")
-    axes[0].set_ylabel(r"$\rho$")
+    axes[0].set_xlabel(r"$\theta$ (Interest Overlap — amplifies conflict $\rightarrow$)")
+    axes[0].set_ylabel(r"$\rho$ (Pref. Correlation)  $\leftarrow$ Cooperative | Competitive $\rightarrow$")
+    _annotate_diplomacy_heatmap(axes[0])
 
     # Per-pair heatmaps
     for idx, pair in enumerate(sorted(pairs)):
@@ -381,8 +417,9 @@ def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
             cbar_kws={"label": "SW"},
         )
         axes[idx + 1].set_title(pair)
-        axes[idx + 1].set_xlabel(r"$\theta$")
-        axes[idx + 1].set_ylabel(r"$\rho$")
+        axes[idx + 1].set_xlabel(r"$\theta$ (amplifies conflict $\rightarrow$)")
+        axes[idx + 1].set_ylabel(r"$\rho$ ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+        _annotate_diplomacy_heatmap(axes[idx + 1])
 
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, "plot4_rho_theta_heatmap.png"))
@@ -445,8 +482,9 @@ def plot_rho_theta_heatmap_per_agent(df: pd.DataFrame, out_dir: str):
             cbar_kws={"label": "Utility"},
         )
         axes[row_idx, 0].set_title(f"All Pairs — {row_label}")
-        axes[row_idx, 0].set_xlabel(r"$\theta$")
-        axes[row_idx, 0].set_ylabel(r"$\rho$")
+        axes[row_idx, 0].set_xlabel(r"$\theta$ (amplifies conflict $\rightarrow$)")
+        axes[row_idx, 0].set_ylabel(r"$\rho$ ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+        _annotate_diplomacy_heatmap(axes[row_idx, 0])
 
         # Per-pair heatmaps
         for col_idx, pair in enumerate(pairs):
@@ -472,8 +510,9 @@ def plot_rho_theta_heatmap_per_agent(df: pd.DataFrame, out_dir: str):
                 cbar_kws={"label": "Utility"},
             )
             axes[row_idx, col_idx + 1].set_title(title)
-            axes[row_idx, col_idx + 1].set_xlabel(r"$\theta$")
-            axes[row_idx, col_idx + 1].set_ylabel(r"$\rho$")
+            axes[row_idx, col_idx + 1].set_xlabel(r"$\theta$ (amplifies conflict $\rightarrow$)")
+            axes[row_idx, col_idx + 1].set_ylabel(r"$\rho$ ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+            _annotate_diplomacy_heatmap(axes[row_idx, col_idx + 1])
 
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, "plot4b_rho_theta_per_agent.png"))
@@ -505,8 +544,9 @@ def plot_exploitation_by_condition(df: pd.DataFrame, out_dir: str):
         cbar_kws={"label": "Model2 - Model1 Utility"},
     )
     axes[0].set_title("Utility Advantage (Beta - Alpha)")
-    axes[0].set_xlabel(r"$\theta$")
-    axes[0].set_ylabel(r"$\rho$")
+    axes[0].set_xlabel(r"$\theta$ (amplifies conflict $\rightarrow$)")
+    axes[0].set_ylabel(r"$\rho$ ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    _annotate_diplomacy_heatmap(axes[0])
 
     # Model order effect
     order_stats = ms.groupby(["model_pair", "model_order"]).agg(
@@ -609,6 +649,179 @@ def plot_ttc_scaling(df: pd.DataFrame, out_dir: str):
     print("  Saved plot6_ttc_scaling.png")
 
 
+def plot_competition_index(df: pd.DataFrame, out_dir: str):
+    """Plot 7: 1D collapsed competition index view.
+
+    CI = theta * (1 - rho) / 2, in [0, 1].
+    """
+    ms = df[df["experiment_type"] == "model_scale"].copy()
+    if ms.empty:
+        print("  Skipping plot 7: no model-scale data")
+        return
+
+    ms["competition_index"] = ms["theta"] * (1 - ms["rho"]) / 2
+
+    # Remap to weak/strong utilities
+    ms["weak_util"] = ms.apply(
+        lambda r: r["alpha_util"] if r["model_order"] == "weak_first" else r["beta_util"],
+        axis=1,
+    )
+    ms["strong_util"] = ms.apply(
+        lambda r: r["beta_util"] if r["model_order"] == "weak_first" else r["alpha_util"],
+        axis=1,
+    )
+
+    # Bin CI for cleaner plotting
+    ms["ci_bin"] = ms["competition_index"].round(2)
+
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+
+    # Panel 1: Social welfare vs CI
+    if "model_pair" in ms.columns:
+        sns.pointplot(
+            data=ms, x="ci_bin", y="social_welfare", hue="model_pair",
+            ax=axes[0], dodge=0.15, capsize=0.1,
+            markers=_markers_for(ms["model_pair"].unique()),
+        )
+        axes[0].legend(fontsize=8, title="Model Pair")
+    else:
+        sns.pointplot(data=ms, x="ci_bin", y="social_welfare", ax=axes[0], capsize=0.1)
+    axes[0].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[0].set_ylabel("Social Welfare")
+    axes[0].set_title("Social Welfare vs Competition Index")
+    axes[0].tick_params(axis="x", rotation=45)
+
+    # Panel 2: Exploitation rate vs CI
+    exploit_by_ci = ms.groupby("ci_bin")["exploitation"].mean()
+    axes[1].bar(
+        [str(x) for x in exploit_by_ci.index],
+        exploit_by_ci.values,
+        alpha=0.8, color="coral",
+    )
+    axes[1].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[1].set_ylabel("Exploitation Rate")
+    axes[1].set_title("Exploitation Rate vs Competition Index")
+    axes[1].set_ylim(0, 1.05)
+    axes[1].tick_params(axis="x", rotation=45)
+
+    # Panel 3: Per-agent utility vs CI
+    melted = ms.melt(
+        id_vars=["ci_bin"],
+        value_vars=["weak_util", "strong_util"],
+        var_name="agent",
+        value_name="utility",
+    )
+    melted["agent"] = melted["agent"].map(
+        {"weak_util": "Weak Model", "strong_util": "Strong Model"}
+    )
+    sns.pointplot(
+        data=melted, x="ci_bin", y="utility", hue="agent",
+        ax=axes[2], dodge=0.15, capsize=0.1,
+    )
+    axes[2].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[2].set_ylabel("Utility")
+    axes[2].set_title("Per-Agent Utility vs Competition Index")
+    axes[2].legend(fontsize=10)
+    axes[2].tick_params(axis="x", rotation=45)
+
+    plt.suptitle(
+        r"Competition Index: CI = $\theta \cdot (1 - \rho) / 2$",
+        fontsize=16, fontweight="bold", y=1.02,
+    )
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, "plot7_competition_index.png"), bbox_inches="tight")
+    plt.close()
+    print("  Saved plot7_competition_index.png")
+
+
+def plot_disaggregated(df: pd.DataFrame, out_dir: str):
+    """Plots 8 & 9: Disaggregated views — social welfare faceted by one parameter."""
+    ms = df[df["experiment_type"] == "model_scale"].copy()
+    if ms.empty:
+        print("  Skipping plots 8-9: no model-scale data")
+        return
+
+    # --- Plot 8: SW vs rho, faceted by theta ---
+    theta_vals = sorted(ms["theta"].unique())
+    n_theta = len(theta_vals)
+    if n_theta > 0:
+        fig, axes = plt.subplots(1, n_theta, figsize=(6 * n_theta, 5), sharey=True)
+        if n_theta == 1:
+            axes = [axes]
+        for idx, theta_val in enumerate(theta_vals):
+            sub = ms[ms["theta"] == theta_val]
+            if "model_pair" in sub.columns and sub["model_pair"].nunique() > 1:
+                sns.pointplot(
+                    data=sub, x="rho", y="social_welfare", hue="model_pair",
+                    ax=axes[idx], dodge=0.15, capsize=0.1,
+                    markers=_markers_for(sub["model_pair"].unique()),
+                )
+                if idx == n_theta - 1:
+                    axes[idx].legend(fontsize=8)
+                else:
+                    axes[idx].get_legend().remove()
+            else:
+                sns.pointplot(
+                    data=sub, x="rho", y="social_welfare",
+                    ax=axes[idx], capsize=0.1,
+                )
+            axes[idx].set_title(rf"$\theta = {theta_val}$")
+            axes[idx].set_xlabel(r"$\rho$  ($\leftarrow$ Competitive | Cooperative $\rightarrow$)")
+            if idx == 0:
+                axes[idx].set_ylabel("Social Welfare")
+            else:
+                axes[idx].set_ylabel("")
+
+        plt.suptitle(
+            r"Social Welfare vs $\rho$, disaggregated by $\theta$",
+            fontsize=16, fontweight="bold", y=1.02,
+        )
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_dir, "plot8_by_theta.png"), bbox_inches="tight")
+        plt.close()
+        print("  Saved plot8_by_theta.png")
+
+    # --- Plot 9: SW vs theta, faceted by rho ---
+    rho_vals = sorted(ms["rho"].unique())
+    n_rho = len(rho_vals)
+    if n_rho > 0:
+        fig, axes = plt.subplots(1, n_rho, figsize=(6 * n_rho, 5), sharey=True)
+        if n_rho == 1:
+            axes = [axes]
+        for idx, rho_val in enumerate(rho_vals):
+            sub = ms[ms["rho"] == rho_val]
+            if "model_pair" in sub.columns and sub["model_pair"].nunique() > 1:
+                sns.pointplot(
+                    data=sub, x="theta", y="social_welfare", hue="model_pair",
+                    ax=axes[idx], dodge=0.15, capsize=0.1,
+                    markers=_markers_for(sub["model_pair"].unique()),
+                )
+                if idx == n_rho - 1:
+                    axes[idx].legend(fontsize=8)
+                else:
+                    axes[idx].get_legend().remove()
+            else:
+                sns.pointplot(
+                    data=sub, x="theta", y="social_welfare",
+                    ax=axes[idx], capsize=0.1,
+                )
+            axes[idx].set_title(rf"$\rho = {rho_val}$")
+            axes[idx].set_xlabel(r"$\theta$  (amplifies conflict $\rightarrow$)")
+            if idx == 0:
+                axes[idx].set_ylabel("Social Welfare")
+            else:
+                axes[idx].set_ylabel("")
+
+        plt.suptitle(
+            r"Social Welfare vs $\theta$, disaggregated by $\rho$",
+            fontsize=16, fontweight="bold", y=1.02,
+        )
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_dir, "plot9_by_rho.png"), bbox_inches="tight")
+        plt.close()
+        print("  Saved plot9_by_rho.png")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Visualize Game 2 (Diplomacy) experiment results"
@@ -653,6 +866,10 @@ def main():
     df.to_csv(csv_path, index=False)
     print(f"Saved results CSV: {csv_path}")
 
+    if df.empty:
+        print("\nNo results to plot. Check that experiments have completed.")
+        return
+
     # Generate plots
     print("\nGenerating plots...")
     plot_model_pair_utilities(df, out_dir)
@@ -662,6 +879,8 @@ def main():
     plot_rho_theta_heatmap_per_agent(df, out_dir)
     plot_exploitation_by_condition(df, out_dir)
     plot_ttc_scaling(df, out_dir)
+    plot_competition_index(df, out_dir)
+    plot_disaggregated(df, out_dir)
 
     # Print summary statistics
     print("\n" + "=" * 70)

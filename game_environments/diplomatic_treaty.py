@@ -229,58 +229,69 @@ class DiplomaticTreatyGame(GameEnvironment):
             weights[1] /= weights[1].sum()
             return weights
 
-        # For N>2 agents: generate w0, then optimize each subsequent agent
-        weights = np.zeros((n_agents, n_issues))
-        weights[0] = self._rng.dirichlet(np.full(n_issues, alpha))
-        w0 = weights[0]
-        w0_norm = np.linalg.norm(w0)
+        # For N>2 agents: joint optimization over all N vectors simultaneously
+        # Minimizes sum of squared errors across all N(N-1)/2 pairs
+        K = n_issues
+        dim = n_agents * K
 
-        for i in range(1, n_agents):
-            best_x = None
-            best_error = float('inf')
-            max_attempts = 20
-
-            def objective(w):
-                w_norm = np.linalg.norm(w)
-                if w_norm < 1e-12:
+        def objective_n(x):
+            vecs = x.reshape(n_agents, K)
+            total_err = 0.0
+            for i in range(n_agents):
+                ni = np.linalg.norm(vecs[i])
+                if ni < 1e-12:
                     return 1e10
-                cos_sim = np.dot(w0, w) / (w0_norm * w_norm)
-                return (cos_sim - theta) ** 2
+                for j in range(i + 1, n_agents):
+                    nj = np.linalg.norm(vecs[j])
+                    if nj < 1e-12:
+                        return 1e10
+                    cos_sim = np.dot(vecs[i], vecs[j]) / (ni * nj)
+                    total_err += (cos_sim - theta) ** 2
+            return total_err
 
-            constraints = [
-                {'type': 'eq', 'fun': lambda w: np.sum(w) - 1.0}
-            ]
-            bounds = [(0.0, 1.0)] * n_issues
+        constraints_n = [
+            {'type': 'eq', 'fun': lambda x, i=i: np.sum(x[i * K:(i + 1) * K]) - 1.0}
+            for i in range(n_agents)
+        ]
+        bounds_n = [(0.0, 1.0)] * dim
 
-            for attempt in range(max_attempts):
-                conc = self._rng.uniform(0.5, 3.0)
-                x0 = self._rng.dirichlet(np.full(n_issues, conc))
+        best_x = None
+        best_error = float('inf')
+        max_attempts = 30
 
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    result = minimize(
-                        objective, x0, method='SLSQP',
-                        bounds=bounds, constraints=constraints,
-                        options={'maxiter': 2000, 'ftol': 1e-14}
-                    )
+        for _ in range(max_attempts):
+            conc = self._rng.uniform(0.5, 3.0)
+            x0 = np.concatenate([
+                self._rng.dirichlet(np.full(K, conc))
+                for _ in range(n_agents)
+            ])
 
-                error = objective(result.x)
-                if error < best_error:
-                    best_error = error
-                    best_x = result.x.copy()
-                if best_error < 1e-10:
-                    break
-
-            if best_x is None or best_error > 0.0001:
-                raise RuntimeError(
-                    f"Failed to generate weights with cosine similarity "
-                    f"theta={theta} for agent {i} after "
-                    f"{max_attempts} attempts. Best error: {best_error:.6f}"
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                result = minimize(
+                    objective_n, x0, method='SLSQP',
+                    bounds=bounds_n, constraints=constraints_n,
+                    options={'maxiter': 3000, 'ftol': 1e-14}
                 )
 
-            w = np.maximum(best_x, 0.0)
-            w = w / w.sum()
-            weights[i] = w
+            error = objective_n(result.x)
+            if error < best_error:
+                best_error = error
+                best_x = result.x.copy()
+            if best_error < 1e-10:
+                break
+
+        if best_x is None or best_error > 0.001:
+            raise RuntimeError(
+                f"Failed to generate weights with all-pairs cosine similarity "
+                f"theta={theta} for {n_agents} agents after "
+                f"{max_attempts} attempts. Best error: {best_error:.6f}"
+            )
+
+        weights = best_x.reshape(n_agents, K)
+        for i in range(n_agents):
+            weights[i] = np.maximum(weights[i], 0.0)
+            weights[i] = weights[i] / weights[i].sum()
 
         return weights
 

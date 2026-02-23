@@ -722,6 +722,264 @@ def _render_setup_entry(entry: Dict, phase: str):
 
 
 # ---------------------------------------------------------------------------
+# RESULTS SUMMARY PANEL
+# ---------------------------------------------------------------------------
+
+def _parse_diplomacy_weights(interactions: List[Dict]) -> Dict[str, List[float]]:
+    """Extract importance weights from preference_assignment prompts in all_interactions.
+
+    The prompt contains a section like:
+        **YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):
+          Trade Policy: 0.049 (Low priority)
+          Military Access: 0.005 (Negligible)
+          ...
+    """
+    weights: Dict[str, List[float]] = {}
+    for entry in interactions:
+        if entry.get("phase") != "preference_assignment":
+            continue
+        agent = entry.get("agent_id", "")
+        prompt = entry.get("prompt", "")
+        # Find the weights section
+        start = prompt.find("IMPORTANCE WEIGHTS")
+        if start == -1:
+            continue
+        # Skip past the current header line to get to the data lines
+        newline_after = prompt.find("\n", start)
+        if newline_after == -1:
+            continue
+        rest = prompt[newline_after:]
+        # Take text until the next bold header (**STRATEGIC or similar)
+        next_header = rest.find("\n**")
+        if next_header > 0:
+            rest = rest[:next_header]
+        # Parse "IssueName: 0.049 (priority)" lines
+        parsed = re.findall(r":\s+([\d.]+)\s+\(", rest)
+        if parsed:
+            weights[agent] = [float(v) for v in parsed]
+    return weights
+
+
+def _parse_cofunding_budgets(interactions: List[Dict]) -> Dict[str, float]:
+    """Extract per-agent budgets from preference_assignment prompts."""
+    budgets: Dict[str, float] = {}
+    for entry in interactions:
+        if entry.get("phase") != "preference_assignment":
+            continue
+        agent = entry.get("agent_id", "")
+        prompt = entry.get("prompt", "")
+        m = re.search(r"\*\*YOUR BUDGET:\*\*\s+([\d.]+)", prompt)
+        if m:
+            budgets[agent] = float(m.group(1))
+    return budgets
+
+
+def render_results_summary(results: Dict, game_type: str, experiment_id: str,
+                           interactions: Optional[List[Dict]] = None):
+    """Render a graphical summary of agent preferences and final outcomes."""
+    if not PLOTLY_AVAILABLE:
+        return
+
+    config = results.get("config", {})
+    preferences = results.get("agent_preferences", {})
+    final_utils = results.get("final_utilities", {})
+    final_alloc = results.get("final_allocation", {})
+    perf = results.get("agent_performance", {})
+    item_names = get_item_names(config)
+    agents = sorted(preferences.keys())
+
+    if not agents or not item_names:
+        return
+
+    st.markdown("---")
+    st.subheader("Results Summary")
+
+    if game_type == "diplomacy":
+        _render_diplomacy_summary(
+            agents, item_names, preferences, final_utils, final_alloc,
+            perf, config, interactions or [], experiment_id,
+        )
+    elif game_type == "co_funding":
+        _render_cofunding_summary(
+            agents, item_names, preferences, final_utils, final_alloc,
+            perf, config, interactions or [], experiment_id,
+        )
+
+
+def _render_diplomacy_summary(agents, item_names, preferences, final_utils,
+                               final_alloc, perf, config, interactions, experiment_id):
+    """Side-by-side diplomacy results: positions, weights, and utilities."""
+    weights = _parse_diplomacy_weights(interactions)
+    gamma = config.get("gamma_discount", 0.9)
+    colors = [AGENT_COLORS.get(a, "#6b7280") for a in agents]
+
+    # --- Side-by-side: Ideal Positions ---
+    st.markdown("#### Ideal Positions per Issue")
+    cols = st.columns(len(agents))
+    for idx, agent in enumerate(agents):
+        with cols[idx]:
+            model = perf.get(agent, {}).get("model", "?")
+            positions = preferences.get(agent, [])
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=item_names[:len(positions)],
+                y=positions,
+                marker_color=colors[idx],
+                text=[f"{v:.3f}" for v in positions],
+                textposition="outside",
+            ))
+            fig.update_layout(
+                title=dict(text=f"{agent} ({model})", font=dict(size=14)),
+                yaxis=dict(range=[0, 1.1], title="Position"),
+                height=300,
+                margin=dict(t=40, b=30, l=40, r=20),
+            )
+            st.plotly_chart(fig, use_container_width=True,
+                            key=f"summ_pos_{agent}_{experiment_id}")
+
+    # --- Side-by-side: Importance Weights ---
+    if weights:
+        st.markdown("#### Importance Weights per Issue")
+        cols = st.columns(len(agents))
+        for idx, agent in enumerate(agents):
+            with cols[idx]:
+                w = weights.get(agent, [])
+                if not w:
+                    st.info("Weights not available")
+                    continue
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=item_names[:len(w)],
+                    y=w,
+                    marker_color=colors[idx],
+                    text=[f"{v:.3f}" for v in w],
+                    textposition="outside",
+                ))
+                max_w = max(w) if w else 1.0
+                fig.update_layout(
+                    title=dict(text=f"{agent}", font=dict(size=14)),
+                    yaxis=dict(range=[0, max_w * 1.3], title="Weight"),
+                    height=300,
+                    margin=dict(t=40, b=30, l=40, r=20),
+                )
+                st.plotly_chart(fig, use_container_width=True,
+                                key=f"summ_wt_{agent}_{experiment_id}")
+
+    # --- Final Utility Comparison ---
+    st.markdown("#### Final Outcome")
+    cols = st.columns(len(agents))
+    for idx, agent in enumerate(agents):
+        with cols[idx]:
+            util = final_utils.get(agent, 0)
+            model = perf.get(agent, {}).get("model", "?")
+            color = colors[idx]
+            # Show agreement vector values for diplomacy (shared agreement, not per-agent)
+            if isinstance(final_alloc, dict):
+                assigned = final_alloc.get(agent, [])
+                assigned_names = [item_names[i] if i < len(item_names) else f"Issue {i}"
+                                  for i in assigned] if isinstance(assigned, list) else []
+                assigned_str = ", ".join(assigned_names) if assigned_names else "None"
+            else:
+                # Diplomacy: final_alloc is the shared agreement vector
+                assigned_str = "Shared agreement"
+            st.markdown(
+                f'<div style="background: {color}11; border: 2px solid {color}; '
+                f'border-radius: 12px; padding: 16px; text-align: center;">'
+                f'<div style="font-size: 14px; color: {color}; font-weight: bold;">'
+                f'{agent}</div>'
+                f'<div style="font-size: 12px; color: #6b7280;">{model}</div>'
+                f'<div style="font-size: 28px; font-weight: bold; margin: 8px 0;">'
+                f'{util:.3f}</div>'
+                f'<div style="font-size: 11px; color: #6b7280;">Final Utility</div>'
+                f'<div style="margin-top: 8px; font-size: 12px;">'
+                f'Assigned: {assigned_str}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+
+def _render_cofunding_summary(agents, item_names, preferences, final_utils,
+                               final_alloc, perf, config, interactions, experiment_id):
+    """Side-by-side co-funding results: valuations, budgets, and utilities."""
+    item_costs = get_item_costs(config)
+    budgets = _parse_cofunding_budgets(interactions)
+    colors = [AGENT_COLORS.get(a, "#6b7280") for a in agents]
+
+    # --- Side-by-side: Project Valuations ---
+    st.markdown("#### Project Valuations per Agent")
+    cols = st.columns(len(agents))
+    for idx, agent in enumerate(agents):
+        with cols[idx]:
+            model = perf.get(agent, {}).get("model", "?")
+            vals = preferences.get(agent, [])
+            budget = budgets.get(agent, config.get("agent_budgets", {}).get(agent, 0))
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=item_names[:len(vals)],
+                y=vals,
+                marker_color=colors[idx],
+                text=[f"{v:.1f}" for v in vals],
+                textposition="outside",
+            ))
+            max_v = max(vals) if vals else 1.0
+            fig.update_layout(
+                title=dict(text=f"{agent} ({model}) — Budget: ${budget:.2f}",
+                           font=dict(size=13)),
+                yaxis=dict(range=[0, max_v * 1.3], title="Valuation"),
+                height=300,
+                margin=dict(t=40, b=30, l=40, r=20),
+            )
+            st.plotly_chart(fig, use_container_width=True,
+                            key=f"summ_val_{agent}_{experiment_id}")
+
+    # --- Project Costs vs Funded Status ---
+    funded_indices = final_alloc if isinstance(final_alloc, list) else []
+    st.markdown("#### Project Costs & Funding Status")
+    cost_colors = ["#10b981" if i in funded_indices else "#ef4444"
+                   for i in range(len(item_costs))]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=item_names[:len(item_costs)],
+        y=item_costs,
+        marker_color=cost_colors,
+        text=[f"${c:.0f}" + (" Funded" if i in funded_indices else " Not funded")
+              for i, c in enumerate(item_costs)],
+        textposition="outside",
+    ))
+    fig.update_layout(
+        yaxis=dict(title="Cost ($)"),
+        height=300,
+        margin=dict(t=20, b=30, l=40, r=20),
+    )
+    st.plotly_chart(fig, use_container_width=True,
+                    key=f"summ_costs_{experiment_id}")
+
+    # --- Final Utility Comparison ---
+    st.markdown("#### Final Outcome")
+    cols = st.columns(len(agents))
+    for idx, agent in enumerate(agents):
+        with cols[idx]:
+            util = final_utils.get(agent, 0)
+            model = perf.get(agent, {}).get("model", "?")
+            budget = budgets.get(agent, 0)
+            color = colors[idx]
+            st.markdown(
+                f'<div style="background: {color}11; border: 2px solid {color}; '
+                f'border-radius: 12px; padding: 16px; text-align: center;">'
+                f'<div style="font-size: 14px; color: {color}; font-weight: bold;">'
+                f'{agent}</div>'
+                f'<div style="font-size: 12px; color: #6b7280;">{model}</div>'
+                f'<div style="font-size: 28px; font-weight: bold; margin: 8px 0;">'
+                f'{util:.3f}</div>'
+                f'<div style="font-size: 11px; color: #6b7280;">Final Utility</div>'
+                f'<div style="margin-top: 8px; font-size: 12px;">'
+                f'Budget: ${budget:.2f}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+
+# ---------------------------------------------------------------------------
 # TAB RENDERERS
 # ---------------------------------------------------------------------------
 
@@ -881,6 +1139,9 @@ def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
                 else:
                     # Generic fallback
                     _render_generic_entry(entry, phase)
+
+    # Results summary at the bottom of the timeline
+    render_results_summary(results, game_type, experiment_id, interactions)
 
 
 def _render_diplomacy_phase(entry, phase, item_names, preferences):

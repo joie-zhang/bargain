@@ -132,11 +132,13 @@ class CoFundingGame(GameEnvironment):
                 "sigma": self.config.sigma,
             },
             "game_type": "co_funding",
+            "pledge_mode": self.config.pledge_mode,
             # Mutable tracking fields
             "round_pledges": [],
             "current_pledges": {},
             "aggregate_totals": [0.0] * m,
             "funded_projects": [],
+            "joint_plans": {},  # stores latest joint plans per agent (joint mode only)
         }
 
     def _generate_valuations(self, n_agents: int, m_projects: int) -> np.ndarray:
@@ -226,58 +228,71 @@ class CoFundingGame(GameEnvironment):
         return valuations
 
     def _generate_valuations_nagents(self, n_agents: int, M: int, alpha: float, dir_alpha: float) -> np.ndarray:
-        """Generate valuations for N>2 agents with target cosine similarity against reference."""
-        valuations = np.zeros((n_agents, M))
-        valuations[0] = self._rng.dirichlet(np.full(M, dir_alpha)) * 100.0
-        v0 = valuations[0]
-        v0_norm = np.linalg.norm(v0)
+        """Generate valuations for N>2 agents with all-pairs target cosine similarity.
 
-        for i in range(1, n_agents):
-            best_x = None
-            best_error = float('inf')
-            max_attempts = 20
+        Uses joint SLSQP optimization over all N vectors simultaneously,
+        minimizing the sum of squared errors across all N(N-1)/2 pairs.
+        """
+        dim = n_agents * M
 
-            def objective(v):
-                v_norm = np.linalg.norm(v)
-                if v_norm < 1e-12:
+        def objective(x):
+            vecs = x.reshape(n_agents, M)
+            total_err = 0.0
+            for i in range(n_agents):
+                ni = np.linalg.norm(vecs[i])
+                if ni < 1e-12:
                     return 1e10
-                cos_sim = np.dot(v0, v) / (v0_norm * v_norm)
-                return (cos_sim - alpha) ** 2
+                for j in range(i + 1, n_agents):
+                    nj = np.linalg.norm(vecs[j])
+                    if nj < 1e-12:
+                        return 1e10
+                    cos_sim = np.dot(vecs[i], vecs[j]) / (ni * nj)
+                    total_err += (cos_sim - alpha) ** 2
+            return total_err
 
-            constraints = [
-                {'type': 'eq', 'fun': lambda v: np.sum(v) - 100.0}
-            ]
-            bounds = [(0.0, 100.0)] * M
+        constraints = [
+            {'type': 'eq', 'fun': lambda x, i=i: np.sum(x[i * M:(i + 1) * M]) - 100.0}
+            for i in range(n_agents)
+        ]
+        bounds = [(0.0, 100.0)] * dim
 
-            for _ in range(max_attempts):
-                conc = self._rng.uniform(0.5, 3.0)
-                x0 = self._rng.dirichlet(np.full(M, conc)) * 100.0
+        best_x = None
+        best_error = float('inf')
+        max_attempts = 30
 
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    result = minimize(
-                        objective, x0, method='SLSQP',
-                        bounds=bounds, constraints=constraints,
-                        options={'maxiter': 2000, 'ftol': 1e-14}
-                    )
+        for _ in range(max_attempts):
+            conc = self._rng.uniform(0.5, 3.0)
+            x0 = np.concatenate([
+                self._rng.dirichlet(np.full(M, conc)) * 100.0
+                for _ in range(n_agents)
+            ])
 
-                error = objective(result.x)
-                if error < best_error:
-                    best_error = error
-                    best_x = result.x.copy()
-                if best_error < 1e-10:
-                    break
-
-            if best_x is None or best_error > 0.0001:
-                raise RuntimeError(
-                    f"Failed to generate valuations with cosine similarity "
-                    f"alpha={alpha} for agent {i} after "
-                    f"{max_attempts} attempts. Best error: {best_error:.6f}"
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                result = minimize(
+                    objective, x0, method='SLSQP',
+                    bounds=bounds, constraints=constraints,
+                    options={'maxiter': 3000, 'ftol': 1e-14}
                 )
 
-            v = np.maximum(best_x, 0.0)
-            v = v / v.sum() * 100.0
-            valuations[i] = v
+            error = objective(result.x)
+            if error < best_error:
+                best_error = error
+                best_x = result.x.copy()
+            if best_error < 1e-10:
+                break
+
+        if best_x is None or best_error > 0.001:
+            raise RuntimeError(
+                f"Failed to generate valuations with all-pairs cosine similarity "
+                f"alpha={alpha} for {n_agents} agents after "
+                f"{max_attempts} attempts. Best error: {best_error:.6f}"
+            )
+
+        valuations = best_x.reshape(n_agents, M)
+        for i in range(n_agents):
+            valuations[i] = np.maximum(valuations[i], 0.0)
+            valuations[i] = valuations[i] / valuations[i].sum() * 100.0
 
         return valuations
 
@@ -311,7 +326,9 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
-- Each round, you submit a CONTRIBUTION VECTOR specifying how much you pledge to each project
+- Each round, you submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants (including yourself)
+- Your plan proposes how EVERY participant should allocate their budget
+- The contributions actually used are each participant's self-assignment from their own plan
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
 
@@ -383,6 +400,7 @@ Please acknowledge that you understand these rules and are ready to participate!
         costs = game_state["project_costs"]
         aggregates = game_state["aggregate_totals"]
         funded = game_state["funded_projects"]
+        pledge_mode = game_state.get("pledge_mode", "joint")
 
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
@@ -398,16 +416,46 @@ Please acknowledge that you understand these rules and are ready to participate!
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
-        return f"""Please submit your contribution pledge for Round {round_num}/{self.config.t_rounds}.
+        # Build budget info for all agents (joint mode)
+        all_budgets = game_state["agent_budgets"]
 
-**YOUR BUDGET:** {budget:.2f}
+        if pledge_mode == "joint":
+            # Build example JSON with all agent IDs
+            agent_example_entries = []
+            for aid in sorted(all_budgets.keys()):
+                agent_example_entries.append(
+                    f'        "{aid}": [5.0, 10.0, 0.0, 8.0, 2.0]'
+                )
+            example_contributions = ",\n".join(agent_example_entries)
 
-**PROJECT STATUS:**
-{projects_text}
+            budget_lines = "\n".join(
+                f"  - {aid}: {b:.2f}" for aid, b in sorted(all_budgets.items())
+            )
 
-**Currently funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}{reasoning_instruction}
+            format_section = f"""**Instructions:**
+Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
+Your plan proposes how every participant (including yourself) should allocate their budget.
+The contributions actually used will be each participant's self-assignment from their own plan.
 
-**Instructions:**
+**Participant budgets:**
+{budget_lines}
+
+Respond with ONLY a JSON object in this exact format:
+{{
+    "contributions": {{
+{example_contributions}
+    }},
+    "reasoning": "Brief explanation of your joint funding plan"
+}}
+
+**Rules:**
+- "contributions" must be a dictionary with one entry per participant
+- Each entry must be an array of exactly {m} non-negative values (one per project)
+- Each participant's total contributions must not exceed their budget
+- Contributions to unfunded projects will be refunded"""
+        else:
+            # Legacy individual mode
+            format_section = f"""**Instructions:**
 Submit a contribution vector specifying how much you pledge to each project.
 
 Respond with ONLY a JSON object in this exact format:
@@ -422,6 +470,17 @@ Respond with ONLY a JSON object in this exact format:
 - The sum of all contributions must not exceed your budget ({budget:.2f})
 - Contributions to unfunded projects will be refunded"""
 
+        return f"""Please submit your contribution pledge for Round {round_num}/{self.config.t_rounds}.
+
+**YOUR BUDGET:** {budget:.2f}
+
+**PROJECT STATUS:**
+{projects_text}
+
+**Currently funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}{reasoning_instruction}
+
+{format_section}"""
+
     def parse_proposal(
         self,
         response: str,
@@ -429,8 +488,16 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         agents: List[str]
     ) -> Dict[str, Any]:
-        """Parse pledge response into contribution vector."""
+        """Parse pledge response into contribution vector.
+
+        In joint mode, the agent submits a dict of contributions for all agents.
+        We extract the full joint_plan and use the agent's self-assignment as
+        the effective contributions.
+
+        In individual mode (legacy), the agent submits a single contribution vector.
+        """
         m = game_state["m_projects"]
+        pledge_mode = game_state.get("pledge_mode", "joint")
 
         try:
             # Try direct JSON parse
@@ -443,25 +510,49 @@ Respond with ONLY a JSON object in this exact format:
                 else:
                     raise ValueError("No JSON found in response")
 
-            contributions = parsed.get("contributions", [])
+            raw_contributions = parsed.get("contributions", [])
 
-            if not isinstance(contributions, list):
-                raise ValueError("Contributions must be a list")
+            if pledge_mode == "joint" and isinstance(raw_contributions, dict):
+                # Joint mode: contributions is a dict {agent_id: [values...]}
+                joint_plan = {}
+                for aid, vals in raw_contributions.items():
+                    if not isinstance(vals, list):
+                        vals = [0.0] * m
+                    if len(vals) < m:
+                        vals = vals + [0.0] * (m - len(vals))
+                    elif len(vals) > m:
+                        vals = vals[:m]
+                    joint_plan[aid] = [max(0.0, float(v)) for v in vals]
 
-            # Pad or truncate
-            if len(contributions) < m:
-                contributions.extend([0.0] * (m - len(contributions)))
-            elif len(contributions) > m:
-                contributions = contributions[:m]
+                # Extract self-assignment
+                self_contributions = joint_plan.get(agent_id, [0.0] * m)
 
-            # Ensure numeric and non-negative
-            contributions = [max(0.0, float(v)) for v in contributions]
+                return {
+                    "contributions": self_contributions,
+                    "joint_plan": joint_plan,
+                    "reasoning": parsed.get("reasoning", ""),
+                    "proposed_by": agent_id,
+                }
+            else:
+                # Individual mode (or joint mode with list fallback)
+                contributions = raw_contributions
+                if not isinstance(contributions, list):
+                    raise ValueError("Contributions must be a list")
 
-            return {
-                "contributions": contributions,
-                "reasoning": parsed.get("reasoning", ""),
-                "proposed_by": agent_id,
-            }
+                # Pad or truncate
+                if len(contributions) < m:
+                    contributions.extend([0.0] * (m - len(contributions)))
+                elif len(contributions) > m:
+                    contributions = contributions[:m]
+
+                # Ensure numeric and non-negative
+                contributions = [max(0.0, float(v)) for v in contributions]
+
+                return {
+                    "contributions": contributions,
+                    "reasoning": parsed.get("reasoning", ""),
+                    "proposed_by": agent_id,
+                }
 
         except (json.JSONDecodeError, ValueError, KeyError, TypeError):
             # Fallback: zero contributions
@@ -476,12 +567,19 @@ Respond with ONLY a JSON object in this exact format:
         proposal: Dict[str, Any],
         game_state: Dict[str, Any]
     ) -> bool:
-        """Validate pledge: non-negative, within budget, correct length."""
+        """Validate pledge: non-negative, within budget, correct length.
+
+        In joint mode, also validates the joint_plan if present: each agent's
+        entry must have correct length, non-negative values, and total within
+        that agent's budget.
+        """
         contributions = proposal.get("contributions", [])
         agent_id = proposal.get("proposed_by", "")
         m = game_state["m_projects"]
         budget = game_state["agent_budgets"].get(agent_id, 0.0)
+        pledge_mode = game_state.get("pledge_mode", "joint")
 
+        # Validate the effective contributions (self-assignment)
         if len(contributions) != m:
             return False
 
@@ -494,6 +592,24 @@ Respond with ONLY a JSON object in this exact format:
 
         if sum(float(v) for v in contributions) > budget + 1e-6:
             return False
+
+        # In joint mode, validate the full joint_plan
+        if pledge_mode == "joint" and "joint_plan" in proposal:
+            joint_plan = proposal["joint_plan"]
+            all_budgets = game_state["agent_budgets"]
+
+            for aid, plan_contribs in joint_plan.items():
+                if len(plan_contribs) != m:
+                    return False
+                for v in plan_contribs:
+                    try:
+                        if float(v) < -1e-9:
+                            return False
+                    except (ValueError, TypeError):
+                        return False
+                aid_budget = all_budgets.get(aid, 0.0)
+                if sum(float(v) for v in plan_contribs) > aid_budget + 1e-6:
+                    return False
 
         return True
 
@@ -767,6 +883,13 @@ Consider what adjustments to your contributions might improve the outcome.
         # Store current pledges
         game_state["current_pledges"] = pledges
 
+        # Store joint plans (for early termination checking in joint mode)
+        joint_plans = {}
+        for aid, p in pledges.items():
+            if "joint_plan" in p:
+                joint_plans[aid] = p["joint_plan"]
+        game_state["joint_plans"] = joint_plans
+
         # Append to round history
         game_state["round_pledges"].append(
             {aid: p.get("contributions", [0.0] * m) for aid, p in pledges.items()}
@@ -822,36 +945,64 @@ Consider what adjustments to your contributions might improve the outcome.
 
     def check_early_termination(self, game_state: Dict[str, Any]) -> bool:
         """
-        Check if pledges have converged for 2 consecutive rounds.
+        Check if pledges have converged.
 
-        All agents must have submitted identical pledges (within tolerance)
-        for the last 2 rounds.
+        In joint mode: checks if all agents' proposed joint plans agree within
+        tolerance in the current round (cross-agent agreement). For all agents
+        i,j and all target agents k: joint_plan_i[k] ≈ joint_plan_j[k].
+
+        In individual mode: checks if all agents submitted identical pledges
+        (within tolerance) for 2 consecutive rounds.
 
         Args:
-            game_state: Game state with round_pledges history
+            game_state: Game state with round_pledges history and joint_plans
 
         Returns:
             True if early termination condition is met
         """
-        history = game_state["round_pledges"]
-        if len(history) < 2:
-            return False
+        pledge_mode = game_state.get("pledge_mode", "joint")
 
-        last = history[-1]
-        prev = history[-2]
-
-        # Check that the same agents submitted in both rounds
-        if set(last.keys()) != set(prev.keys()):
-            return False
-
-        # Check all agents' pledges are close
-        for aid in last:
-            v_last = np.array(last[aid])
-            v_prev = np.array(prev[aid])
-            if not np.allclose(v_last, v_prev, atol=0.01):
+        if pledge_mode == "joint":
+            # Joint mode: check if all agents' joint plans agree this round
+            joint_plans = game_state.get("joint_plans", {})
+            if len(joint_plans) < 2:
                 return False
 
-        return True
+            agent_ids = sorted(joint_plans.keys())
+            reference_plan = joint_plans[agent_ids[0]]
+
+            for aid in agent_ids[1:]:
+                other_plan = joint_plans[aid]
+                # Compare all target agent entries
+                all_targets = set(reference_plan.keys()) | set(other_plan.keys())
+                for target_aid in all_targets:
+                    ref_vec = reference_plan.get(target_aid)
+                    oth_vec = other_plan.get(target_aid)
+                    if ref_vec is None or oth_vec is None:
+                        return False
+                    if not np.allclose(ref_vec, oth_vec, atol=0.5):
+                        return False
+
+            return True
+        else:
+            # Individual mode: 2 consecutive identical rounds
+            history = game_state["round_pledges"]
+            if len(history) < 2:
+                return False
+
+            last = history[-1]
+            prev = history[-2]
+
+            if set(last.keys()) != set(prev.keys()):
+                return False
+
+            for aid in last:
+                v_last = np.array(last[aid])
+                v_prev = np.array(prev[aid])
+                if not np.allclose(v_last, v_prev, atol=0.01):
+                    return False
+
+            return True
 
     def get_feedback_prompt(
         self,

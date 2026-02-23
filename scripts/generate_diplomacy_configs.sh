@@ -75,10 +75,20 @@ while [[ $# -gt 0 ]]; do
             MODE="scaling"
             shift
             ;;
+        --conservative)
+            MODE="conservative"
+            shift
+            ;;
+        --ambitious)
+            MODE="ambitious"
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling]"
+            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious]"
             echo ""
             echo "Experiment modes:"
+            echo "  --conservative Model-scale sweep: 6 pairs, 3x3 rho/theta grid, 1 run (108 configs)"
+            echo "  --ambitious    Model-scale sweep: 9 pairs, 5x5 rho/theta grid, 3 runs (1350 configs)"
             echo "  --model-scale  Model capability experiments: multiple model pairs, sweep rho/theta, no TTC"
             echo "  --scaling      TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
             echo "  --small        Reduced version of full experiment (fewer models, fewer params)"
@@ -129,7 +139,36 @@ PROMPT_ONLY="true"
 # Use model_order=weak_first/strong_first to control speaking order
 # These run WITHOUT reasoning token budget — pure model capability comparison.
 
-if [[ "$MODE" == "derisk" ]]; then
+if [[ "$MODE" == "conservative" ]]; then
+    MODEL_PAIRS=(
+        "gpt-5-nano,gpt-5-nano"
+        "gpt-5-nano,gpt-3.5-turbo-0125"
+        "gpt-5-nano,gpt-4o"
+        "gpt-5-nano,o3-mini-high"
+        "gpt-5-nano,claude-haiku-4-5"
+        "gpt-5-nano,gpt-5.2-high"
+    )
+    MS_RHO_VALUES=(-1.0 0.0 1.0)
+    MS_THETA_VALUES=(0.0 0.5 1.0)
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=1
+elif [[ "$MODE" == "ambitious" ]]; then
+    MODEL_PAIRS=(
+        "gpt-5-nano,gpt-5-nano"
+        "gpt-5-nano,gpt-3.5-turbo-0125"
+        "gpt-5-nano,amazon-nova-micro"
+        "gpt-5-nano,gpt-4o"
+        "gpt-5-nano,o3-mini-high"
+        "gpt-5-nano,claude-haiku-4-5"
+        "gpt-5-nano,gpt-5.2-high"
+        "gpt-5-nano,claude-sonnet-4-5"
+        "gpt-5-nano,gemini-3-pro"
+    )
+    MS_RHO_VALUES=(-1.0 -0.5 0.0 0.5 1.0)
+    MS_THETA_VALUES=(0.0 0.25 0.5 0.75 1.0)
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=3
+elif [[ "$MODE" == "derisk" ]]; then
     MODEL_PAIRS=(
         "gpt-5-nano,claude-opus-4-5-thinking-32k"
     )
@@ -189,7 +228,13 @@ fi
 # Reasoning model vs baseline, sweep token budgets, fixed game params
 BASELINE_MODEL="gpt-5-nano"
 
-if [[ "$MODE" == "derisk" ]]; then
+if [[ "$MODE" == "conservative" || "$MODE" == "ambitious" ]]; then
+    TTC_REASONING_MODELS=()  # Conservative/ambitious: model-scale only, no TTC
+    TTC_TOKEN_BUDGETS=()
+    TTC_RHO_VALUES=()
+    TTC_THETA_VALUES=()
+    TTC_MODEL_ORDERS=()
+elif [[ "$MODE" == "derisk" ]]; then
     TTC_REASONING_MODELS=()  # Derisk only does model-scale
     TTC_TOKEN_BUDGETS=()
     TTC_RHO_VALUES=()
@@ -502,8 +547,25 @@ echo "Generating SLURM scripts..."
 
 CONFIG_DIR_ABSOLUTE="${EXPERIMENT_DIR}/configs"
 
+# Mode-dependent SLURM settings
+if [[ "$MODE" == "conservative" || "$MODE" == "ambitious" ]]; then
+    SLURM_PARTITION="cpu"
+    SLURM_TIME="06:00:00"
+else
+    SLURM_PARTITION=""
+    SLURM_TIME="04:00:00"
+fi
+
 # The SLURM script handles BOTH model-scale and TTC configs by checking experiment_type
 SLURM_SCRIPT="${SLURM_DIR}/run_diplomacy_experiments.sbatch"
+
+# Build partition line conditionally
+if [[ -n "$SLURM_PARTITION" ]]; then
+    PARTITION_LINE="#SBATCH --partition=${SLURM_PARTITION}"
+else
+    PARTITION_LINE=""
+fi
+
 cat > "${SLURM_SCRIPT}" << SLURM_EOF
 #!/bin/bash
 #SBATCH --job-name=diplo-exp
@@ -511,7 +573,8 @@ cat > "${SLURM_SCRIPT}" << SLURM_EOF
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
-#SBATCH --time=04:00:00
+#SBATCH --time=${SLURM_TIME}
+${PARTITION_LINE}
 #SBATCH --output=logs/cluster/diplo_%A_%a.out
 #SBATCH --error=logs/cluster/diplo_%A_%a.err
 

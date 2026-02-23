@@ -24,6 +24,9 @@ What it creates:
     ├── utility_vs_elo.png               # Agent utility vs adversary Elo
     ├── adaptation_rate_by_sigma.png      # Adaptation rate vs budget scarcity
     ├── num_funded_vs_sigma.png           # Projects funded vs sigma
+    ├── competition_index_metrics.png     # 1D competition index (CI) view
+    ├── disaggregated_by_alpha.png        # Metrics vs sigma, per alpha
+    ├── disaggregated_by_sigma.png        # Metrics vs alpha, per sigma
     └── summary_table.csv                 # Full metrics table
 
 Dependencies:
@@ -406,8 +409,8 @@ def plot_heatmap(
         linewidths=0.5,
         cbar_kws={"label": metric.replace("_", " ").title()},
     )
-    ax.set_xlabel("Alpha (Preference Alignment)", fontsize=12)
-    ax.set_ylabel("Sigma (Budget Scarcity)", fontsize=12)
+    ax.set_xlabel(r"$\alpha$ (Preference Alignment $\rightarrow$ More Cooperative)", fontsize=12)
+    ax.set_ylabel(r"$\sigma$ ($\leftarrow$ More Abundant | Scarcer $\rightarrow$)", fontsize=12)
     ax.set_title(title, fontsize=14)
     plt.tight_layout()
     plt.savefig(figures_dir / filename, dpi=150, bbox_inches="tight")
@@ -645,6 +648,200 @@ def plot_adaptation_by_sigma(df: pd.DataFrame, figures_dir: Path):
     print("  Saved adaptation_rate_by_sigma.png")
 
 
+def plot_competition_index_cofunding(df: pd.DataFrame, figures_dir: Path):
+    """1D collapsed competition index view for co-funding.
+
+    CI = (1 - alpha) * (1 - sigma), in [0, 1].
+    """
+    if "alpha" not in df.columns or "sigma" not in df.columns:
+        print("  Skipping competition_index_metrics.png: missing alpha/sigma")
+        return
+
+    df = df.copy()
+    df["competition_index"] = (1 - df["alpha"]) * (1 - df["sigma"])
+    df["ci_bin"] = df["competition_index"].round(2)
+
+    metrics_to_plot = [
+        ("utilitarian_efficiency", "Efficiency"),
+        ("utility_gap", "Utility Gap (Adv. - Base)"),
+        ("provision_rate", "Provision Rate"),
+        ("free_rider_avg_adversary", "Free-Rider Index (Adversary)"),
+    ]
+    available = [(col, label) for col, label in metrics_to_plot if col in df.columns]
+    if not available:
+        print("  Skipping competition_index_metrics.png: no metrics available")
+        return
+
+    n = len(available)
+    nrows = (n + 1) // 2
+    ncols = 2
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 6 * nrows))
+    axes = np.atleast_2d(axes)
+
+    has_tiers = "adversary_tier" in df.columns and df["adversary_tier"].nunique() > 1
+
+    for idx, (metric, label) in enumerate(available):
+        ax = axes[idx // 2, idx % 2]
+        valid = df.dropna(subset=[metric])
+        if valid.empty:
+            ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
+            ax.set_title(label)
+            continue
+
+        if has_tiers:
+            for tier, color in TIER_COLORS.items():
+                sub = valid[valid["adversary_tier"] == tier]
+                if not sub.empty:
+                    ax.scatter(
+                        sub["competition_index"], sub[metric],
+                        alpha=0.6, color=color, label=tier, s=40, edgecolors="white",
+                    )
+            ax.legend(fontsize=9, title="Tier")
+        else:
+            ax.scatter(
+                valid["competition_index"], valid[metric],
+                alpha=0.6, color="steelblue", s=40, edgecolors="white",
+            )
+
+        # Trend line
+        if len(valid) >= 3:
+            z = np.polyfit(valid["competition_index"], valid[metric], 1)
+            p = np.poly1d(z)
+            x_range = np.linspace(0, 1, 100)
+            ax.plot(x_range, p(x_range), "--", color="black", alpha=0.5, linewidth=1.5)
+
+        ax.set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+        ax.set_ylabel(label)
+        ax.set_title(f"{label} vs Competition Index")
+
+    # Hide unused axes
+    for idx in range(len(available), nrows * ncols):
+        axes[idx // 2, idx % 2].set_visible(False)
+
+    plt.suptitle(
+        r"Competition Index: CI = $(1 - \alpha)(1 - \sigma)$",
+        fontsize=14, fontweight="bold", y=1.01,
+    )
+    plt.tight_layout()
+    plt.savefig(figures_dir / "competition_index_metrics.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("  Saved competition_index_metrics.png")
+
+
+def plot_disaggregated_by_alpha(df: pd.DataFrame, figures_dir: Path):
+    """Disaggregated view: metrics vs sigma, separate lines per alpha."""
+    if "alpha" not in df.columns or "sigma" not in df.columns:
+        print("  Skipping disaggregated_by_alpha.png: missing columns")
+        return
+
+    metrics = [
+        ("utilitarian_efficiency", "Efficiency"),
+        ("utility_gap", "Utility Gap"),
+        ("provision_rate", "Provision Rate"),
+        ("free_rider_avg_adversary", "Free-Rider (Adversary)"),
+    ]
+    available = [(col, label) for col, label in metrics if col in df.columns]
+    if not available:
+        print("  Skipping disaggregated_by_alpha.png: no metrics")
+        return
+
+    n = len(available)
+    nrows = (n + 1) // 2
+    ncols = 2
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 6 * nrows))
+    axes = np.atleast_2d(axes)
+
+    alpha_vals = sorted(df["alpha"].dropna().unique())
+    cmap = plt.cm.coolwarm
+    colors = {a: cmap(i / max(len(alpha_vals) - 1, 1)) for i, a in enumerate(alpha_vals)}
+
+    for idx, (metric, label) in enumerate(available):
+        ax = axes[idx // 2, idx % 2]
+        for alpha_val in alpha_vals:
+            sub = df[df["alpha"] == alpha_val].dropna(subset=[metric])
+            if sub.empty:
+                continue
+            grouped = sub.groupby("sigma")[metric].agg(["mean", "std"]).reset_index()
+            ax.errorbar(
+                grouped["sigma"], grouped["mean"], yerr=grouped["std"],
+                marker="o", capsize=3, label=rf"$\alpha={alpha_val}$",
+                color=colors[alpha_val], linewidth=1.5,
+            )
+        ax.set_xlabel(r"$\sigma$ (Budget $\rightarrow$ More Abundant)")
+        ax.set_ylabel(label)
+        ax.set_title(f"{label} vs $\\sigma$")
+        ax.legend(fontsize=9)
+
+    for idx in range(len(available), nrows * ncols):
+        axes[idx // 2, idx % 2].set_visible(False)
+
+    plt.suptitle(
+        r"Metrics vs $\sigma$, disaggregated by $\alpha$",
+        fontsize=14, fontweight="bold", y=1.01,
+    )
+    plt.tight_layout()
+    plt.savefig(figures_dir / "disaggregated_by_alpha.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("  Saved disaggregated_by_alpha.png")
+
+
+def plot_disaggregated_by_sigma(df: pd.DataFrame, figures_dir: Path):
+    """Disaggregated view: metrics vs alpha, separate lines per sigma."""
+    if "alpha" not in df.columns or "sigma" not in df.columns:
+        print("  Skipping disaggregated_by_sigma.png: missing columns")
+        return
+
+    metrics = [
+        ("utilitarian_efficiency", "Efficiency"),
+        ("utility_gap", "Utility Gap"),
+        ("provision_rate", "Provision Rate"),
+        ("free_rider_avg_adversary", "Free-Rider (Adversary)"),
+    ]
+    available = [(col, label) for col, label in metrics if col in df.columns]
+    if not available:
+        print("  Skipping disaggregated_by_sigma.png: no metrics")
+        return
+
+    n = len(available)
+    nrows = (n + 1) // 2
+    ncols = 2
+    fig, axes = plt.subplots(nrows, ncols, figsize=(14, 6 * nrows))
+    axes = np.atleast_2d(axes)
+
+    sigma_vals = sorted(df["sigma"].dropna().unique())
+    cmap = plt.cm.viridis
+    colors = {s: cmap(i / max(len(sigma_vals) - 1, 1)) for i, s in enumerate(sigma_vals)}
+
+    for idx, (metric, label) in enumerate(available):
+        ax = axes[idx // 2, idx % 2]
+        for sigma_val in sigma_vals:
+            sub = df[df["sigma"] == sigma_val].dropna(subset=[metric])
+            if sub.empty:
+                continue
+            grouped = sub.groupby("alpha")[metric].agg(["mean", "std"]).reset_index()
+            ax.errorbar(
+                grouped["alpha"], grouped["mean"], yerr=grouped["std"],
+                marker="o", capsize=3, label=rf"$\sigma={sigma_val}$",
+                color=colors[sigma_val], linewidth=1.5,
+            )
+        ax.set_xlabel(r"$\alpha$ (Preference Alignment $\rightarrow$ More Cooperative)")
+        ax.set_ylabel(label)
+        ax.set_title(f"{label} vs $\\alpha$")
+        ax.legend(fontsize=9)
+
+    for idx in range(len(available), nrows * ncols):
+        axes[idx // 2, idx % 2].set_visible(False)
+
+    plt.suptitle(
+        r"Metrics vs $\alpha$, disaggregated by $\sigma$",
+        fontsize=14, fontweight="bold", y=1.01,
+    )
+    plt.tight_layout()
+    plt.savefig(figures_dir / "disaggregated_by_sigma.png", dpi=150, bbox_inches="tight")
+    plt.close()
+    print("  Saved disaggregated_by_sigma.png")
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -805,6 +1002,11 @@ def main():
 
     # Adaptation rate
     plot_adaptation_by_sigma(df, figures_dir)
+
+    # Competition index and disaggregated views
+    plot_competition_index_cofunding(df, figures_dir)
+    plot_disaggregated_by_alpha(df, figures_dir)
+    plot_disaggregated_by_sigma(df, figures_dir)
 
     print("\nDone! Figures saved to:", figures_dir)
 

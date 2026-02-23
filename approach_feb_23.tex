@@ -1,0 +1,349 @@
+In \Cref{sec:game_1_problem_setting}, \Cref{sec:game_2_problem_setting}, and \Cref{sec:game_3_problem_setting}, we outline the mathematical formalism for our three negotiation frameworks. In \Cref{sec:game_1_experimental_setup}, \Cref{sec:game_2_experimental_setup}, and \Cref{sec:game_3_experimental_setup}, we describe and explain the key design choices in our experimental setups.
+
+\section{Game 1: Item Allocation}
+
+\subsection{Problem Setting}
+\label{sec:game_1_problem_setting}
+
+Agents are instructed to participate in a negotiation game.
+The game consists of a set of $n$ \emph{agents} $\mathcal{N}$ presenting and voting on proposals for splitting a set of $m$ \emph{items} $\mathcal{M}$.
+Each agent $i$ receives a private \emph{valuation} $\bm{v}^{i} = ( v^{i}_{1} , \dots,  v^{i}_{m} )$, where $\sum_j v^{i}_{j} = 100$ and $v^{i}_{j} \geq 0$ for all $j$, which defines how much they value each item $j$.
+An \emph{allocation} $\bm{A} \in \{0,1\}^{n,m}$ is a binary matrix where $\bm{A}[i,j] = 1$ if and only if item $j$ is allocated to agent $i$.
+We assume that $\sum_i \bm{A}[i,j] = 1$ for each $1 \leq j \leq m$ (no item is allocated to more than one player) and $\sum_{i,j} \bm{A}[i,j] = m$ (all items are allocated).
+% Given an allocation matrix $\bm{A}$, agent $i$'s \emph{utility} is therefore given by $u^i(\bm{A}) \coloneqq \bm{A} \bm{v}^{i} \in [0,100]$.
+
+At each round $t$ of the negotiation game, each agent $i$ simultaneously proposes an allocation $\bm{A}^i_t$, after which all agents privately vote over all the allocations.
+If an allocation $\bm{A}$ receives unanimously approval at round $t$, that allocation is selected and each agent $i$ receives \emph{utility} $u^i(\bm{A}) \coloneqq \gamma^{t-1} \bm{A}[i] \cdot \bm{v}^{i}$, where $\gamma \in (0,1]$ is a discount factor encouraging the agents to find consensus in earlier rounds and $t=1$ denotes the first round (so round~1 gives undiscounted utility).
+Otherwise, the game continues to the next round.
+If no allocation is selected before round $T$, the game terminates and all agents receive utility 0.
+
+Given two valuation vectors $\bm{v}^i$ and $\bm{v}^j$, we measure the degree of competition between agents $i$ and $j$ as the \emph{cosine similarity} $\cos(\bm{v}^i,\bm{v}^j) = \frac{{\bm{v}^i} \cdot \bm{v}^j}{\norm{\bm{v}^i} \norm{\bm{v}^j}} \in [0,1]$.
+Intuitively, $\cos(\bm{v}^i,\bm{v}^j) = 1$ suggests the highest level of competition because the agents have the same preferences across all items, and yet each item can only be allocated to one agent -- thus, agent $i$'s gain is agent $j$'s loss.
+Similarly, when $\cos(\bm{v}^i,\bm{v}^j) = 0$, the agents' valuations are completely orthogonal, meaning it is possible to allocate all items and maximize both agents' utilities while doing so (the most cooperative outcome).
+
+\subsection{Experimental Setup}
+\label{sec:game_1_experimental_setup}
+
+In our implementation of the problem setting above, we set $n = 2$, $m = 5$, $T = 10$, and $\gamma = 0.9$.
+We randomly generate preference vectors across 11 different competition levels from 0 to 1, in increments of 0.1. We do two runs per competition level, one per model order, and average performance across both model orders. 
+Thus, we evaluate each pair of agents across 22 games in total.
+As a proxy for an agent's general capability levels, we consider both model size (in billions of parameters) for open-source models where this information is available, and also use their LMArena score \citep{chiang2024chatbotarenaopenplatform} dated January 16, 2026, which captures a broad range of general-purpose knowledge and reasoning abilities.
+
+We run our experiments by fixing a \emph{baseline} model and comparing it across a range of other \emph{adversary} models and competition levels.
+For our baseline, we chose gpt-5-nano, which has a mid-range Arena Elo score of 1338. Then, we chose 18 stronger adversaries and 17 weaker adversaries from a mix of open-source and closed-source model families, spanning a large range from +152 Elo (gemini-3-pro) down to -226 Elo (Llama-3.2-1B), totaling 36 models. 
+
+Given that our implementation of the negotiation games described in \Cref{sec:game_1_problem_setting} is applied to \emph{LLM agents} specifically, we augment the basic game with discussion and reflection periods throughout play.
+More concretely, play proceeds in the following stages:
+
+\begin{enumerate}
+    \item \textbf{Initialization:} Agents are given their valuations and instructions for how to play the game.
+    \item \textbf{Discussion:} Agents take turns discussing their respective preferences (or rather, the preferences they \emph{claim} to have, as agents need not be honest).
+    \item \textbf{Private Thinking:} Each agent consolidates their takeaways using a private scratchpad.
+    \item \textbf{Proposal:} Each agent proposes an allocation based on the discussion and their scratchpad.
+    \item \textbf{Private Voting:} Agents vote in private (so that voting order does not affect the results) on all the proposals. Agents are required to vote yes or no for each proposal.
+    \item \textbf{Evaluation:} Vote results are announced, and if at least one proposal had unanimous support, the agents terminate the negotiation. A proposal is randomly selected if more than one proposal receives unanimous support.
+    \item \textbf{Reflection:} The agents (privately) reflect on the current round before the next round begins. 
+\end{enumerate}
+
+\section{Game 2: Diplomatic Treaty Negotiation}
+
+\subsection{Problem Setting}
+\label{sec:game_2_problem_setting}
+
+Agents are instructed to participate in a multi-issue diplomatic treaty negotiation game.
+The game consists of a set of $n$ \emph{agents} $\mathcal{N}$ negotiating over a set of $K$ \emph{issues} $\mathcal{K}$.
+An \emph{agreement} is a vector $\bm{a} = (a_1, \dots, a_K)$ where each $a_k \in [0,1]$ represents the negotiated outcome on issue $k$.
+For example, if issue $k$ represents a trade tariff rate, then $a_k = 0.3$ corresponds to a 30\% tariff.
+
+Each agent $i$ receives two private preference components.
+The first is a \emph{position preference} vector $\bm{p}^{i} = (p^{i}_{1}, \dots, p^{i}_{K})$ where $p^{i}_{k} \in [0,1]$, which specifies agent $i$'s ideal outcome on each issue $k$.
+The second is an \emph{importance weight} vector $\bm{w}^{i} = (w^{i}_{1}, \dots, w^{i}_{K})$ where $w^{i}_{k} \geq 0$ and $\sum_{k} w^{i}_{k} = 1$, which specifies how much agent $i$ cares about each issue relative to the others.
+Given an agreement $\bm{a}$, agent $i$'s \emph{utility} is
+\begin{equation}
+    u^i(\bm{a}) \coloneqq \sum_{k=1}^{K} w^{i}_{k} \cdot (1 - |p^{i}_{k} - a_k|) \in [0,1].
+\end{equation}
+Intuitively, each issue contributes utility proportional to its importance weight, and the contribution is maximized when the agreement matches the agent's ideal position ($a_k = p^{i}_{k}$) and minimized when the agreement is as far from the ideal as possible ($|p^{i}_{k} - a_k| = 1$).
+
+Unlike Game 1, in which competition is controlled by a single parameter (the cosine similarity of valuations), the diplomatic treaty negotiation game exposes \emph{two} independent axes of competition.
+The first axis is \emph{preference correlation} $\rho \in [-1,1]$, which controls whether agents want similar ($\rho = 1$) or opposing ($\rho = -1$) outcomes on each issue.
+Position preferences are generated using a Gaussian copula that yields exact $\text{Uniform}(0,1)$ marginals with controlled Pearson correlation:
+\begin{enumerate}
+    \item Sample $\bm{z} \sim \mathcal{N}(\bm{0}, \Sigma_z)$ where $(\Sigma_z)_{ij} = \rho_z$ for $i \neq j$ and $(\Sigma_z)_{ii} = 1$.
+    \item Apply $p^i_k = \Phi(z^i_k)$ component-wise, where $\Phi$ is the standard normal CDF.
+\end{enumerate}
+The latent correlation $\rho_z$ is calibrated so that the Pearson correlation of the resulting positions equals $\rho_{\text{target}}$, via the closed-form relationship $\rho_z = 2\sin(\pi\,\rho_{\text{target}} / 6)$.
+For $n > 2$ agents with equicorrelation, positive semi-definiteness of $\Sigma_z$ requires $\rho_z \geq -1/(n-1)$, which restricts the feasible negative range (e.g., $\rho \geq -0.25$ for $n = 5$).
+
+The second axis is \emph{interest overlap} $\theta \in [0,1]$, which controls whether agents care about the same issues ($\theta = 1$) or have orthogonal priorities ($\theta = 0$).
+Formally, $\theta$ is the cosine similarity between importance weight vectors: $\theta_{ij} = \frac{\bm{w}^{i} \cdot \bm{w}^{j}}{\norm{\bm{w}^{i}} \norm{\bm{w}^{j}}}$.
+Weight vectors are generated with exact target overlap using SLSQP optimization: $\min_{\bm{w}^1, \bm{w}^2} (\cos(\bm{w}^1, \bm{w}^2) - \theta_{\text{target}})^2$ subject to $w^i_k \geq 0$ and $\sum_k w^i_k = 1$.
+This achieves exact target cosine similarities up to numerical tolerance, and is identical to the parameter generation used for preference alignment in Games 1 and 3.
+
+These two parameters are orthogonal: $\rho$ governs whether agents agree on \emph{what outcomes are desirable}, while $\theta$ governs whether agents compete for influence over the \emph{same issues}.
+Together, they parameterize a 2D cooperation--competition landscape.
+At one extreme, $(\rho, \theta) = (1, 0)$ yields pure cooperation: agents want the same outcomes and care about different issues, so a mutually beneficial agreement is easy to find.
+At the other extreme, $(\rho, \theta) = (\rho_{\min}, 1)$ yields pure competition: agents want opposing outcomes on the very same issues, leaving little room for integrative tradeoffs.
+Note that $\rho = -1$ is infeasible for $K > 2$: for uniformly distributed vectors on $[0,1]^K$, the minimum achievable Pearson correlation converges to approximately $-1/(K-1)$, giving $\rho_{\min} \approx -0.25$ for $K = 5$.
+The Gaussian copula correctly enforces this constraint: if the target $\rho$ requires a latent correlation that violates positive semi-definiteness, the generation fails loudly.
+Crucially, intermediate settings such as $(\rho < 0, \theta \approx 0)$ capture the classic \emph{logrolling} scenario in which agents have conflicting positions but different priorities, enabling each to concede on low-priority issues in exchange for favorable outcomes on high-priority ones.
+
+At each round $t$, each agent $i$ simultaneously proposes an agreement $\bm{a}^{i}_{t}$, after which all agents privately vote over all proposals.
+If a proposal $\bm{a}$ receives unanimous approval at round $t$, that agreement is selected and each agent $i$ receives utility $\gamma^{t-1} \cdot u^i(\bm{a})$, where $\gamma \in (0,1]$ is a discount factor encouraging early consensus (with $t=1$ denoting the first round).
+Otherwise, the game continues to the next round.
+If no agreement is reached before round $T$, the game terminates and all agents receive utility 0.
+
+\subsection{Experimental Setup}
+\label{sec:game_2_experimental_setup}
+
+In our implementation of the problem setting above, we set $n = 2$, $K = 5$, $T = 10$, and $\gamma = 0.9$.
+We generate preference instances across a grid of competition levels: for $\rho$, we use levels spanning the feasible range (approximately $[-0.25, 1]$ for $K = 5$; see above), and for $\theta$, we use 11 levels from $0$ to $1$ in increments of $0.1$.
+As in Game 1, we do two runs per configuration (one per model order) and average performance across both orders.
+% TODO: finalize number of configurations and runs
+
+The play protocol follows the same structure as Game 1 (\Cref{sec:game_1_experimental_setup}), with agents proceeding through initialization, discussion, private thinking, proposal, private voting, evaluation, and reflection stages at each round.
+The key difference is in the initialization stage: rather than receiving a single valuation vector over discrete items, each agent receives both a position preference vector and an importance weight vector over continuous issues, and is instructed to propose agreements as vectors of values in $[0,1]^K$.
+
+\section{Game 3: Participatory Budgeting}
+
+\subsection{Problem Setting}
+\label{sec:game_3_problem_setting}
+
+Agents are instructed to participate in a co-funding negotiation game.
+The game consists of a set of $n$ \emph{agents} $\mathcal{N}$ negotiating over which of $m$ \emph{projects} $\mathcal{P}$ to fund by pooling their individual budgets.
+Each project $j$ has a known \emph{cost} $c_j > 0$, and each agent $i$ has a private \emph{budget} $B_i > 0$ as well as a private \emph{valuation} $\bm{v}^{i} = (v^{i}_{1}, \dots, v^{i}_{m})$, where $\sum_j v^{i}_{j} = 100$ and $v^{i}_{j} \geq 0$ for all $j$, which defines how much agent $i$ values project $j$ being funded.
+
+An \emph{outcome} consists of a \emph{contribution matrix} $\bm{X} \in \mathbb{R}_{\geq 0}^{n \times m}$, where $x_{ij}$ is agent $i$'s monetary contribution to project $j$.
+Each agent must respect its budget constraint: $\sum_{j} x_{ij} \leq B_i$ for all $i$.
+A project $j$ is \emph{funded} if and only if it receives sufficient total contributions: $\sum_{i} x_{ij} \geq c_j$.
+The \emph{funded set} is $S(\bm{X}) \coloneqq \{j \in \mathcal{P} : \sum_{i} x_{ij} \geq c_j\}$.
+Contributions to unfunded projects are returned (i.e., agents pay only for projects that are successfully funded).
+Given a contribution matrix $\bm{X}$, agent $i$'s \emph{utility} is
+\begin{equation}
+    u^i(\bm{X}) \coloneqq \sum_{j \in S(\bm{X})} v^{i}_{j} - \sum_{j \in S(\bm{X})} x_{ij}.
+\end{equation}
+Intuitively, agents receive the full valuation for every funded project, minus only their share of that project's cost.
+
+Unlike Games 1 and 2, in which utility is a linear function of the outcome, the co-funding game introduces a \emph{threshold non-linearity}: each project provides zero value until its cost is met, at which point all agents receive their full valuation regardless of how much they individually contributed.
+This creates strategic dynamics absent from the other games: agents can form \emph{coalitions} to fund expensive projects that no individual could afford, but doing so introduces \emph{free-riding} incentives (benefiting from a project without paying one's share) and \emph{coordination failure} risks (a project valued by all agents goes unfunded because each waits for others to pay).
+
+The degree of competition is controlled by two independent parameters.
+The first is \emph{preference alignment} $\alpha \in [0,1]$, which controls whether agents value the same projects or different ones.
+For agents $i$ and $j$, alignment is measured as the cosine similarity of their valuation vectors:
+\begin{equation}
+    \alpha_{ij} = \frac{\bm{v}^{i} \cdot \bm{v}^{j}}{\norm{\bm{v}^{i}} \norm{\bm{v}^{j}}} \in [0,1].
+\end{equation}
+Since valuations are non-negative, $\alpha_{ij} \in [0,1]$ (not $[-1,1]$, unlike $\rho$ in Game 2).
+When $\alpha = 1$, agents have identical preferences and co-funding is maximally beneficial: every funded project benefits everyone.
+When $\alpha = 0$, agents value entirely disjoint projects and co-funding provides no advantage.
+Valuation vectors with target alignment $\alpha_{\text{target}}$ are generated using SLSQP optimization: $\min_{\bm{v}^1, \bm{v}^2} (\cos(\bm{v}^1, \bm{v}^2) - \alpha_{\text{target}})^2$ subject to $v^i_j \geq 0$ and $\sum_j v^i_j = 100$.
+This achieves exact target cosine similarities up to numerical tolerance, and is identical to the parameter generation used for interest overlap in Game 2.
+For $n > 2$ agents, the overall alignment is $\alpha = \frac{2}{n(n-1)} \sum_{i < j} \alpha_{ij}$.
+
+The second parameter is \emph{budget scarcity} $\sigma \in (0,1]$, defined as the ratio of total budget to total project cost:
+\begin{equation}
+    \sigma = \frac{\sum_{i} B_i}{\sum_{j} c_j}.
+\end{equation}
+When $\sigma = 1$, the agents can collectively afford all projects and competition is minimal.
+As $\sigma \to 0$, agents can collectively afford almost nothing and every dollar is contested.
+When per-agent budgets are equal ($B_i = B/n$) and $B_i < \max_j c_j$, no single agent can fund even the most expensive project alone, forcing agents into coalition dynamics.
+
+These two parameters are orthogonal: $\alpha$ controls the \emph{preference structure} (whether cooperation is desirable), while $\sigma$ controls the \emph{resource structure} (whether cooperation is necessary).
+At one extreme, $(\alpha, \sigma) = (1, 0.3)$ yields a pure cooperative prioritization problem: agents agree on everything but must jointly choose which projects to fund with scarce budgets.
+At the other extreme, $(\alpha, \sigma) = (0, 0.3)$ yields pure competition: agents want entirely different projects and fight over a limited shared budget.
+Intermediate settings such as $(\alpha \approx 0.5, \sigma \approx 0.5)$ create \emph{mixed-motive} scenarios in which some projects are ``public goods'' valued by all agents while others are ``private goods'' valued by subsets, and the negotiation challenge is to find the right mix.
+
+Unlike Games 1 and 2, the co-funding game does not use a propose-and-vote protocol.
+Instead, each agent submits a \emph{joint funding plan}---a contribution dictionary specifying proposed allocations for \emph{all} participants---and the effective contributions are each agent's self-assignment from their own plan.
+This design choice follows the \emph{provision point mechanism} (PPM) from the threshold public goods literature \citep{bagnoli1989provision}, but enriches it by requiring agents to reason about the full contribution matrix rather than only their own row.
+The joint plan format preserves the coordination problem that makes co-funding strategically interesting---agents' effective contributions are still determined by their own plans, creating genuine risks of free-riding and coordination failure---while also enabling earlier convergence when agents agree on a common plan.
+
+Contributions are \emph{revisable pledges}: at each round, agents may increase, decrease, or reallocate their contributions in response to observed totals and communication.
+This follows the dynamic crowdfunding paradigm studied by \citet{marx2000dynamic}, who showed that multiple contribution rounds with observable totals can achieve provision levels that are impossible in a one-shot simultaneous game---but only when the threshold non-linearity is present (exactly our setting).
+Early contributions serve as credible signals of intent, enabling coordination around emerging coalitions.
+
+At the end of round $T$, the final contribution vectors are locked in, threshold logic determines the funded set $S(\bm{X})$, and contributions to unfunded projects are refunded.
+All agents receive utility 0 if no projects are funded.
+
+\subsection{Experimental Setup}
+\label{sec:game_3_experimental_setup}
+
+In our implementation of the problem setting above, we set $n = 2$, $m = 5$, and $T = 10$ (no discount factor; see below).
+We generate preference instances across a grid of competition levels: for $\alpha$, we use 11 levels from $0$ to $1$ in increments of $0.1$, and for $\sigma$, we use 5 levels in $\{0.2, 0.4, 0.6, 0.8, 1.0\}$, yielding $11 \times 5 = 55$ competition configurations in total.
+Project costs are drawn uniformly at random from $[10, 30]$, and agent budgets are set to $B_i = \sigma \cdot \sum_j c_j / n$ so that budgets are equal across agents.
+As in Games 1 and 2, we do two runs per configuration (one per model order) and average performance across both orders.
+% TODO: finalize number of configurations and runs
+
+Unlike Games 1 and 2, which use a propose-and-vote protocol, Game 3 employs a \emph{Talk--Pledge--Revise} protocol in which agents submit individual contribution vectors rather than voting on joint allocation plans.
+This follows the provision point mechanism with money-back guarantee, the standard protocol in the threshold public goods literature \citep{bagnoli1989provision}.
+Concretely, play proceeds in the following stages:
+
+\begin{enumerate}
+    \item \textbf{Initialization:} Each agent receives its valuation vector, its budget, and the costs of all projects.
+    \item \textbf{Communication (Talk):} Agents take turns sending natural language messages. Agents may discuss which projects to prioritize, propose coalitions, promise contributions, or make threats---though as in the other games, agents need not be honest about their preferences.
+    \item \textbf{Private Thinking:} Each agent consolidates its strategy using a private scratchpad, taking into account the communication and (in rounds $t > 1$) the observed contribution totals from the previous round.
+    \item \textbf{Contribution (Pledge):} Each agent $i$ submits a \emph{joint funding plan}: a contribution dictionary $\{\bm{x}^{i \to k}_t\}_{k \in \mathcal{N}}$ specifying proposed allocations for \emph{all} participants $k$, subject to $\sum_j x^{i \to k}_{t,j} \leq B_k$ for each $k$. The effective contribution vector for agent $i$ is their self-assignment $\bm{x}^i_t = \bm{x}^{i \to i}_t$. These are \emph{revisable pledges}: agents may increase, decrease, or reallocate their contributions relative to previous rounds.
+    \item \textbf{Feedback:} All agents observe the running totals $\sum_i x^i_{t,j}$ for each project $j$, as well as which projects have crossed their funding threshold. Individual agent contributions are \emph{not} revealed, only the aggregates---preserving strategic uncertainty about who is contributing what.
+    \item \textbf{Reflection:} Agents privately reflect on the current round before the next round begins.
+\end{enumerate}
+
+After round $T$ (or upon early termination; see below), the final contribution vectors are locked in and the threshold logic determines the funded set.
+Only the final-round contributions determine the outcome; there is no per-round discount factor.
+This \emph{final-state-only evaluation} avoids the ambiguities that arise when applying discount-based urgency to revisable pledges: with revisable contributions, a project can cross its funding threshold at one round and fall below it at the next, making any ``first-crossing'' discount semantics ill-defined.
+Urgency to coordinate early arises naturally from the multi-round structure: agents who commit early provide information that helps others coordinate, while agents who delay risk others reallocating away from their preferred projects.
+
+The game terminates early when all agents' proposed joint funding plans agree within tolerance in a single round---that is, for all agents $i, j$ and all target participants $k$, the contribution that agent $i$'s plan assigns to $k$ matches what agent $j$'s plan assigns to $k$.
+This convergence criterion captures genuine consensus: agents have agreed on a common funding plan.
+Early termination preserves the dynamic signaling benefits of multiple rounds while avoiding unnecessary computation when agents have converged.
+
+The key differences from Games 1 and 2 are threefold.
+First, there is no voting phase: the outcome is determined mechanically by the threshold rule applied to individual contributions, rather than by collective approval of a joint plan.
+Second, subsequent rounds serve a fundamentally different purpose: rather than presenting counter-offers, agents \emph{revise pledges} in response to observed aggregate contribution levels and communication, enabling coordination through dynamic signaling \citep{marx2000dynamic}.
+Third, there is no timeout failure: agents always receive the utility determined by their final contribution vectors (which may be zero if no projects are funded), rather than receiving utility 0 from a failed vote.
+
+\subsection{Behavioral Metrics and Scalable Evaluation}
+\label{sec:game_3_behavioral_metrics}
+
+The Talk--Pledge--Revise protocol generates two parallel data streams per game: (1) the sequence of contribution vectors $\{\bm{x}^i_t\}_{i,t}$, which are fully structured numerical data, and (2) the natural language transcripts from the communication phases.
+We exploit this structure to define behavioral metrics that are computable at scale across thousands of games.
+
+\paragraph{Efficiency and individual metrics.}
+We measure \emph{utilitarian efficiency} $\eta = SW_{\text{actual}} / SW_{\text{optimal}}$, where $SW_{\text{optimal}}$ is the social welfare of the welfare-maximizing funded set (a knapsack problem).
+At the individual level, we compute each agent's utility $U_i$ and a \emph{free-rider index} $F_{ij} = (v^i_j / \sum_k v^k_j) / (x_{ij} / \sum_k x_{kj})$ for each funded project $j$ to which agent $i$ contributed ($x_{ij} > 0$), where $F_{ij} > 1$ indicates that agent $i$ extracts disproportionate value relative to their cost share.
+Agent--project pairs where $x_{ij} = 0$ are classified as \emph{pure free-riding} and tracked separately.
+We also define an \emph{exploitation index} $E_i = (U_i^{\text{actual}} - U_i^{\text{Lindahl}}) / |U_i^{\text{Lindahl}}|$ analogous to Game 2's exploitation index relative to the NBS: when $E_i > 0$, agent $i$ extracted more utility than the Lindahl-fair benchmark, enabling analysis of whether the Elo gap predicts asymmetric exploitation.
+We also report the \emph{coordination failure rate}: the fraction of positive-surplus projects (where $\sum_i v^i_j > c_j$) that go unfunded.
+
+\paragraph{Strategic behavior metrics.}
+These metrics are unique to the LLM evaluation setting and require linking communication content to numerical behavior:
+\begin{itemize}
+    \item \textbf{Promise-keeping rate}: The correlation between commitments made during communication (e.g., ``I will contribute 15 to Project 2'') and the actual contribution submitted in the subsequent pledge phase. This measures strategic consistency versus deception.
+    \item \textbf{Adaptation rate}: $\text{Adapt}_i = \frac{1}{T-1} \sum_{t=2}^{T} \|\bm{x}^i_t - \bm{x}^i_{t-1}\|_1 / B_i$, computable purely from contribution vectors without transcript analysis.
+    \item \textbf{Persuasion effectiveness}: Whether agent $i$ mentioning project $j$ in communication at round $t$ predicts an increase in other agents' contributions to $j$ at round $t+1$. This is a Granger-causality-style measure linking communication to subsequent behavior shifts.
+    \item \textbf{Coalition formation}: Operationally defined as 2+ agents who repeatedly co-fund the same project(s) across $\lceil T/2 \rceil$ or more consecutive rounds (5+ rounds for $T = 10$). Detectable from contribution vectors via clustering; transcripts reveal whether coalitions were explicitly negotiated or emergent.
+\end{itemize}
+
+\paragraph{Scalable extraction pipeline.}
+To compute behavioral metrics from thousands of game transcripts across 36 models, we use a three-stage pipeline.
+First, a lightweight model (Haiku-class) processes each round's communication phase and produces a per-round structured extraction: commitments (agent, project, amount), advocacy events (agent, project, sentiment), and threats.
+Second, all metrics are computed from the structured data (contribution vectors combined with extracted events); promise-keeping, adaptation, coalition detection, and persuasion are all reducible to numerical comparisons once communication events are extracted.
+Third, a random sample of transcripts is reviewed by an LLM judge operating under a detailed rubric to validate the extraction pipeline's accuracy.
+This approach scales linearly in cost with the number of games while remaining auditable through spot-checks on the extraction stage.
+
+\section{Cross-Game Design Notes}
+\label{sec:cross_game_notes}
+
+\subsection{Utility Normalization Across Games}
+\label{sec:normalization}
+
+A natural concern when comparing results across games and parameter settings is whether utility values are on comparable scales.
+We briefly document how each game handles this.
+
+In Game 1, the simplex constraint on valuations ($\sum_j v^i_j = 100$, $v^i_j \geq 0$) guarantees that the theoretical maximum utility is 100 for every agent in every configuration: an agent who receives all items achieves $u^i = 100$ regardless of the competition level $\alpha$.
+The theoretical minimum is 0 (timeout with no agreement).
+This fixed ceiling makes raw utility values directly comparable across competition levels.
+
+In Game 2, the normalization arises from two sources working together.
+The importance weights lie on the simplex ($\sum_k w^i_k = 1$, $w^i_k \geq 0$), and the per-issue value function satisfies $1 - |p^i_k - a_k| \in [0, 1]$.
+Together, these guarantee $U_i \in [0, 1]$ for all agents and all configurations: the maximum of 1 is achieved when the agreement matches every agent's ideal position ($a_k = p^i_k$ for all $k$), and the minimum of 0 is achieved at timeout.
+Crucially, the position vectors $\bm{p}^i$ are \emph{not} on a simplex (they lie in $[0,1]^K$ with no sum constraint), and this is correct: positions represent independent ideal outcomes on separate issues, and forcing a tradeoff between them would be semantically inappropriate.
+
+In Game 3, the simplex constraint on valuations ($\sum_j v^i_j = 100$) guarantees that the \emph{theoretical} maximum utility is 100 (all projects funded, agent pays nothing---i.e., pure free-riding).
+However, the \emph{achievable} maximum varies with budget scarcity $\sigma$: at low $\sigma$, agents can collectively fund only a subset of projects, so even with perfect cooperation, the best achievable utility for any agent is well below 100.
+This is by design: the variation in achievable utility across $\sigma$ levels \emph{is} the signal of interest---it captures the cost of scarcity.
+For cross-parameter comparisons, the utilitarian efficiency metric $\eta = SW_{\text{actual}} / SW_{\text{optimal}}$ normalizes by the achievable optimum (the knapsack solution for the given $\sigma$), making $\eta$ comparable across all $(\alpha, \sigma)$ settings.
+Raw utility values are comparable across $\alpha$ levels at fixed $\sigma$, but should not be compared across different $\sigma$ levels without normalization.
+
+\subsection{Computing the Globally Optimal Solution}
+\label{sec:optimal_computation}
+
+For all three games, the socially optimal outcome can be computed exactly and efficiently at our experimental scale ($n = 2$, $m = K = 5$).
+This is essential for computing the utilitarian efficiency metric $\eta = SW_{\text{actual}} / SW_{\text{optimal}}$.
+
+\paragraph{Game 1.}
+The utilitarian optimum assigns each item $j$ to the agent $i^* = \arg\max_i v^i_j$ who values it most.
+Since items are rivalrous but independent (allocating item $j$ to agent $i$ does not affect the value of allocating item $j'$ to any agent), greedy assignment is globally optimal.
+This runs in $O(nm)$---10 comparisons for $n=2$, $m=5$.
+
+\paragraph{Game 2.}
+The social welfare function decomposes per issue: $SW(\bm{a}) = \sum_k \sum_i w^i_k (1 - |p^i_k - a_k|)$.
+Since each issue $k$ contributes independently, the optimum sets each $a_k$ to the \emph{weighted median} of agent positions $\{p^i_k\}$ with weights $\{w^i_k\}$, which minimizes the weighted sum of absolute deviations.
+For $n = 2$, the optimal $a_k$ is simply the ideal position of whichever agent has higher weight on issue $k$.
+This runs in $O(Kn \log n)$.
+
+\paragraph{Game 3.}
+The socially optimal funded set $S^*$ maximizes $\sum_{j \in S} (\sum_i v^i_j - c_j)$ subject to $\sum_{j \in S} c_j \leq B$.
+This is a 0-1 knapsack problem with ``profit'' $\pi_j = \sum_i v^i_j - c_j$ and ``weight'' $c_j$ for each project $j$.
+While knapsack is NP-hard in general, for $m = 5$ projects we enumerate all $2^5 = 32$ subsets, check budget feasibility, and select the maximum-surplus set.
+For larger $m$, the standard pseudo-polynomial dynamic programming algorithm runs in $O(m \cdot B)$.
+Note that the knapsack gives the optimal \emph{funded set} but not the optimal cost-sharing: social welfare is independent of how costs are split (individual contributions cancel in the sum), so $SW^*$ depends only on $S^*$.
+
+\subsection{Solution Concept Benchmarks}
+\label{sec:solution_concepts}
+
+While the socially optimal solution measures the best possible \emph{total} outcome, it does not tell us what a ``fair'' outcome looks like, or how far the negotiated result deviates from game-theoretically principled predictions.
+We therefore define per-game fairness benchmarks from cooperative game theory and measure distance from these benchmarks as evaluation metrics.
+
+The need for cooperative solution concepts arises because the Nash equilibria of the extensive-form negotiation games (Games 1 and 2) are massively multiple---including degenerate equilibria where all agents reject all proposals (yielding utility 0).
+Computing or even characterizing the full NE set is intractable and uninformative.
+Cooperative solution concepts give unique, axiomatically justified predictions that serve as clean benchmarks.
+
+\paragraph{Games 1 and 2: Nash Bargaining Solution (NBS).}
+The NBS maximizes the product of agents' gains over the disagreement point (utility 0 from timeout):
+\begin{equation}
+    \bm{A}^{\text{NBS}} = \arg\max_{\bm{A}} \prod_{i=1}^{N} u^i(\bm{A})
+\end{equation}
+The NBS is unique, Pareto efficient, and captures the notion of a fair outcome under equal bargaining power.
+It balances efficiency (high total utility) with equity (neither agent receives too little).
+
+For Game 1 ($N=2$, $M=5$), the NBS is computed by enumerating all $2^M = 32$ allocations and selecting the one maximizing $u^1(\bm{A}) \cdot u^2(\bm{A})$.
+For Game 2 ($N=2$, $K=5$), the NBS maximizes $U_1(\bm{a}) \cdot U_2(\bm{a})$ over $\bm{a} \in [0,1]^K$; since the objective is smooth, this is solved via standard nonlinear optimization (e.g., L-BFGS-B).
+
+We measure \emph{distance from NBS}:
+\begin{equation}
+    D_{\text{NBS}} = \left\|\bm{u}_{\text{actual}} - \bm{u}_{\text{NBS}}\right\|_2
+\end{equation}
+and the \emph{exploitation index} for each agent $i$:
+\begin{equation}
+    E_i = \frac{u^i_{\text{actual}} - u^i_{\text{NBS}}}{u^i_{\text{NBS}}}
+\end{equation}
+When $E_i > 0$, agent $i$ extracted more than their fair share; when $E_i < 0$, they were exploited.
+This enables analysis of whether stronger models systematically exploit weaker negotiation partners: if the Elo gap between models predicts asymmetric $E_i$ values, that is evidence of strategic exploitation scaling with capability.
+
+\paragraph{Game 3: Lindahl equilibrium.}
+In the co-funding game, the NBS is less natural because agents submit \emph{individual} contribution vectors (no joint proposal to optimize over).
+Instead, the cooperative benchmark is the \emph{Lindahl equilibrium}, in which each agent pays for each funded project in proportion to their valuation:
+\begin{equation}
+    x^{\text{Lindahl}}_{ij} = c_j \cdot \frac{v^i_j}{\sum_k v^k_j} \quad \text{for each funded project } j \in S^*
+\end{equation}
+At the Lindahl equilibrium, the free-rider index $F_{ij} = 1$ for every agent on every project---nobody overpays or underpays relative to their benefit.
+
+We measure \emph{distance from Lindahl}:
+\begin{equation}
+    D_{\text{Lindahl}} = \left\|\bm{X}_{\text{actual}} - \bm{X}_{\text{Lindahl}}\right\|_F
+\end{equation}
+where $\|\cdot\|_F$ is the Frobenius norm (root sum of squared entry-wise differences).
+
+\paragraph{Game 3: Core of the cooperative game.}
+The \emph{core} is the set of cost-sharing arrangements where no coalition of agents can do better by breaking away and funding projects independently.
+Formally, a cost-sharing $\bm{X}$ for funded set $S$ is in the core if and only if for every coalition $T \subseteq \mathcal{N}$:
+\begin{equation}
+    \sum_{i \in T} U_i(\bm{X}, S) \geq V(T)
+\end{equation}
+where $V(T)$ is the value of coalition $T$---the maximum total utility agents in $T$ could achieve using only their own budgets:
+\begin{equation}
+    V(T) = \max_{S' \subseteq \mathcal{P}} \sum_{j \in S'} \left(\sum_{i \in T} v^i_j - c_j\right) \quad \text{s.t.} \quad \sum_{j \in S'} c_j \leq \sum_{i \in T} B_i
+\end{equation}
+Computing $V(T)$ is a knapsack problem; for $m=5$, each coalition's value is found by enumerating 32 subsets.
+With $n=2$ agents, there are $2^n - 1 = 3$ non-empty coalitions to check.
+With $n=5$, there are 31 coalitions, each requiring 32 subset evaluations (under 1000 checks total).
+
+The core itself is a polytope (a region defined by linear inequalities) in the space of contribution matrices.
+We report whether the actual cost-sharing lies inside or outside the core, and if outside, the minimum distance to the core boundary (computable via linear programming).
+
+\paragraph{Efficiency--fairness decomposition.}
+For all three games, the deviation from optimal can be decomposed into two orthogonal components:
+\begin{itemize}
+    \item \textbf{Efficiency loss}: $SW^* - SW_{\text{actual}}$. Surplus was destroyed (wrong items allocated, wrong projects funded, or no agreement reached). This measures the cost of coordination failure.
+    \item \textbf{Fairness deviation}: Distance from NBS (Games 1, 2) or Lindahl (Game 3), \emph{among outcomes with the same $SW_{\text{actual}}$}. Surplus was captured but distributed unevenly. This measures the degree of exploitation or unfairness.
+\end{itemize}
+This decomposition separates ``they left money on the table'' from ``they got the right total but one agent took more than their share,'' enabling sharper analysis of how model capability affects negotiation dynamics.
