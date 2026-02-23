@@ -58,11 +58,14 @@ class ExperimentUtils:
                 "cosine_similarities": preferences.get("cosine_similarities", {})
             }
         }
-        # For co-funding games, include budget info for metrics computation
+        # Save game-specific state for metrics computation
         game_state = preferences.get("game_state", {})
         if game_state.get("game_type") == "co_funding":
             enhanced["agent_budgets"] = game_state.get("agent_budgets", {})
             enhanced["total_budget"] = game_state.get("total_budget", 0.0)
+        elif game_state.get("game_type") == "diplomatic_treaty":
+            enhanced["agent_positions"] = game_state.get("agent_positions", {})
+            enhanced["agent_weights"] = game_state.get("agent_weights", {})
         return enhanced
     
     @staticmethod
