@@ -105,6 +105,44 @@ class PhaseHandler:
 
         return budget
 
+    def _parse_vote_response(self, content: str, agent_id: str, round_num: int) -> Dict:
+        """Parse a vote response from raw LLM output.
+
+        Extracts {"vote": "accept"/"reject", "reasoning": "..."} from
+        potentially messy LLM text that may contain markdown or extra text
+        surrounding the JSON.
+
+        Args:
+            content: Raw LLM response text
+            agent_id: ID of the voting agent
+            round_num: Current round number
+
+        Returns:
+            Dict with vote, reasoning, voter, and round fields
+        """
+        import re
+        try:
+            vote = json.loads(content)
+        except json.JSONDecodeError:
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                vote = json.loads(json_match.group())
+            else:
+                raise ValueError(f"No valid JSON in vote response from {agent_id}")
+
+        vote_val = vote.get("vote", "reject")
+        if isinstance(vote_val, dict):
+            vote_val = vote_val.get("decision", vote_val.get("vote", "reject"))
+        if vote_val not in ("accept", "reject"):
+            vote_val = "reject"
+
+        return {
+            "vote": vote_val,
+            "reasoning": vote.get("reasoning", ""),
+            "voter": agent_id,
+            "round": round_num,
+        }
+
     def _build_game_state(self, agents: List[BaseLLMAgent], items: List[Dict],
                           preferences: Dict, round_num: int, max_rounds: int,
                           agent_id: str, phase: str,
@@ -491,31 +529,49 @@ class PhaseHandler:
             else:
                 proposal_prompt = f"Please propose an allocation for round {round_num}."
 
-            # Get proposal from agent (agent handles the actual LLM call)
-            proposal = await agent.propose_allocation(context)
-            
+            # Get proposal from agent
+            if self.game_environment is not None:
+                # Use game-specific prompt (already generated above) and parsing
+                response = await agent.generate_response(context, proposal_prompt)
+                token_usage = self._extract_token_usage(response)
+                game_state = preferences["game_state"]
+                proposal = self.game_environment.parse_proposal(
+                    response.content, agent.agent_id, game_state,
+                    [a.agent_id for a in agents]
+                )
+                proposal["proposed_by"] = agent.agent_id
+                proposal["round"] = round_num
+                if token_usage:
+                    proposal["_token_usage"] = token_usage
+            else:
+                # Legacy item allocation path
+                proposal = await agent.propose_allocation(context)
+
             # Extract token usage if present (remove from proposal to avoid saving it in the content)
             token_usage = proposal.pop("_token_usage", None)
-            
+
             proposals.append(proposal)
-            
+
             proposal_str = json.dumps(proposal, default=str)
-            self.save_interaction(agent.agent_id, f"proposal_round_{round_num}", 
+            self.save_interaction(agent.agent_id, f"proposal_round_{round_num}",
                                 proposal_prompt, proposal_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
-            
+
+            # Build message content based on proposal format
+            content_key = "agreement" if "agreement" in proposal else "allocation"
+            proposal_content = proposal.get(content_key, {})
             message = {
                 "phase": "proposal",
                 "round": round_num,
                 "from": agent.agent_id,
-                "content": f"I propose this allocation: {proposal['allocation']} - {proposal.get('reasoning', 'No reasoning provided')}",
+                "content": f"I propose: {proposal_content} - {proposal.get('reasoning', 'No reasoning provided')}",
                 "proposal": proposal,
                 "timestamp": time.time(),
                 "agent_id": agent.agent_id
             }
             messages.append(message)
-            
+
             self.logger.info(f"📋 {agent.agent_id} FORMAL PROPOSAL:")
-            self.logger.info(f"   Allocation: {proposal['allocation']}")
+            self.logger.info(f"   {content_key.title()}: {proposal_content}")
             self.logger.info(f"   Reasoning: {proposal.get('reasoning', 'No reasoning provided')}")
         
         return {"messages": messages, "proposals": proposals}
@@ -547,41 +603,54 @@ class PhaseHandler:
         for i, proposal in enumerate(proposals, 1):
             proposal_num = i
             proposer = proposal.get('proposed_by', f'Agent_{i}')
-            allocation = proposal.get('allocation', {})
             reasoning = proposal.get('reasoning', 'No reasoning provided')
-            
+
             enumerated_proposal = {
                 "proposal_number": proposal_num,
                 "proposer": proposer,
-                "allocation": allocation,
                 "reasoning": reasoning,
                 "original_proposal": proposal
             }
+
+            # Carry through the native format key for backward compatibility
+            if "allocation" in proposal:
+                enumerated_proposal["allocation"] = proposal["allocation"]
+            if "agreement" in proposal:
+                enumerated_proposal["agreement"] = proposal["agreement"]
+
             enumerated_proposals.append(enumerated_proposal)
-            
-            proposal_display_lines.append(f"PROPOSAL #{proposal_num} (by {proposer}):")
-            proposal_display_lines.append(f"  Allocation:")
-            
-            for agent_id, item_indices in allocation.items():
-                if item_indices:
-                    item_names = []
-                    for idx in item_indices:
-                        # Convert idx to int if it's a string (can happen when parsing JSON)
-                        try:
-                            idx_int = int(idx)
-                            if 0 <= idx_int < len(items):
-                                item_names.append(f"{idx_int}:{items[idx_int]['name']}")
-                            else:
+
+            # Display: delegate to game_environment if available
+            if self.game_environment is not None:
+                game_state = preferences.get("game_state", {})
+                display_text = self.game_environment.format_proposal_display(proposal, game_state)
+                proposal_display_lines.append(f"PROPOSAL #{proposal_num}:")
+                proposal_display_lines.append(display_text)
+                proposal_display_lines.append("")
+            else:
+                # Legacy item allocation display
+                allocation = proposal.get('allocation', {})
+                proposal_display_lines.append(f"PROPOSAL #{proposal_num} (by {proposer}):")
+                proposal_display_lines.append(f"  Allocation:")
+
+                for agent_id, item_indices in allocation.items():
+                    if item_indices:
+                        item_names = []
+                        for idx in item_indices:
+                            try:
+                                idx_int = int(idx)
+                                if 0 <= idx_int < len(items):
+                                    item_names.append(f"{idx_int}:{items[idx_int]['name']}")
+                                else:
+                                    item_names.append(f"{idx}:unknown")
+                            except (ValueError, TypeError):
                                 item_names.append(f"{idx}:unknown")
-                        except (ValueError, TypeError):
-                            # If conversion fails, just use the original value
-                            item_names.append(f"{idx}:unknown")
-                    proposal_display_lines.append(f"    → {agent_id}: {', '.join(item_names)}")
-                else:
-                    proposal_display_lines.append(f"    → {agent_id}: (no items)")
-            
-            proposal_display_lines.append(f"  Reasoning: {reasoning}")
-            proposal_display_lines.append("")
+                        proposal_display_lines.append(f"    → {agent_id}: {', '.join(item_names)}")
+                    else:
+                        proposal_display_lines.append(f"    → {agent_id}: (no items)")
+
+                proposal_display_lines.append(f"  Reasoning: {reasoning}")
+                proposal_display_lines.append("")
         
         proposal_summary = "\n".join(proposal_display_lines)
         
@@ -653,16 +722,22 @@ class PhaseHandler:
 
             try:
                 for enum_proposal in enumerated_proposals:
-                    proposal_for_voting = {
-                        "allocation": enum_proposal["allocation"],
-                        "proposed_by": enum_proposal["proposer"],
-                        "reasoning": enum_proposal.get("reasoning", ""),
-                        "round": round_num
-                    }
-
-                    # Generate voting prompt (for logging)
+                    # Build proposal_for_voting in the correct format for the game
                     if self.game_environment is not None:
-                        # Get the original game_state if stored in preferences
+                        # Pass through original proposal with its native format
+                        proposal_for_voting = enum_proposal.get("original_proposal", {}).copy()
+                        proposal_for_voting["proposed_by"] = enum_proposal["proposer"]
+                        proposal_for_voting["round"] = round_num
+                    else:
+                        proposal_for_voting = {
+                            "allocation": enum_proposal["allocation"],
+                            "proposed_by": enum_proposal["proposer"],
+                            "reasoning": enum_proposal.get("reasoning", ""),
+                            "round": round_num
+                        }
+
+                    # Generate voting prompt
+                    if self.game_environment is not None:
                         if "game_state" in preferences:
                             game_state = preferences["game_state"]
                         else:
@@ -694,15 +769,30 @@ Respond with ONLY a JSON object in this exact format:
     "reasoning": "Brief explanation of your vote"
 }}
 Vote must be either "accept" or "reject"."""
-                    
-                    vote_result = await agent.vote_on_proposal(
-                        voting_context,
-                        proposal_for_voting
-                    )
-                    
-                    # Extract token usage if present (remove from vote_result to avoid saving it in the content)
-                    token_usage = vote_result.pop("_token_usage", None)
-                    
+
+                    # Collect vote using game-environment-aware path or legacy
+                    if self.game_environment is not None:
+                        # Use game-specific voting prompt directly with generate_response
+                        response = await agent.generate_response(voting_context, voting_prompt)
+                        token_usage = self._extract_token_usage(response)
+                        try:
+                            vote_result = self._parse_vote_response(response.content, agent.agent_id, round_num)
+                        except (ValueError, json.JSONDecodeError) as e:
+                            self.logger.warning(f"Failed to parse vote from {agent.agent_id}: {e}")
+                            vote_result = {
+                                "vote": "reject",
+                                "reasoning": "Failed to parse vote response",
+                                "voter": agent.agent_id,
+                                "round": round_num,
+                            }
+                    else:
+                        vote_result = await agent.vote_on_proposal(
+                            voting_context,
+                            proposal_for_voting
+                        )
+                        # Extract token usage if present
+                        token_usage = vote_result.pop("_token_usage", None)
+
                     vote_entry = {
                         "voter_id": agent.agent_id,
                         "proposal_number": enum_proposal["proposal_number"],
@@ -712,10 +802,12 @@ Vote must be either "accept" or "reject"."""
                         "timestamp": time.time()
                     }
                     agent_votes.append(vote_entry)
-                    
+
                     self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
-                    
+
                     # Create enhanced vote response with full context
+                    # Use native proposal key (agreement or allocation)
+                    proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
                     enhanced_vote_response = {
                         "voter": agent.agent_id,
                         "proposal_number": enum_proposal["proposal_number"],
@@ -723,20 +815,20 @@ Vote must be either "accept" or "reject"."""
                         "vote_decision": vote_result.get("vote", "reject"),
                         "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
                         "proposal_details": {
-                            "allocation": enum_proposal["allocation"],
+                            proposal_detail_key: enum_proposal.get(proposal_detail_key, {}),
                             "original_reasoning": enum_proposal.get("reasoning", "")
                         },
                         "round": round_num,
                         "timestamp": time.time()
                     }
-                    
+
                     # Save the voting interaction with enhanced context
                     vote_response_str = json.dumps(enhanced_vote_response, default=str)
                     self.save_interaction(
-                        agent.agent_id, 
-                        f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}", 
-                        voting_prompt, 
-                        vote_response_str, 
+                        agent.agent_id,
+                        f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
+                        voting_prompt,
+                        vote_response_str,
                         round_num,
                         token_usage,
                         model_name=agent.get_model_info()["model_name"]
@@ -826,21 +918,31 @@ Vote must be either "accept" or "reject"."""
                 # Find the winning proposal to calculate utilities
                 for enum_prop in enumerated_proposals:
                     if enum_prop["proposal_number"] == prop_num:
-                        # Save the allocation
-                        allocation = enum_prop["allocation"]
-                        final_allocation = allocation.copy()
-
-                        # Calculate utilities and save preferences
-                        for agent in agents:
-                            agent_items = allocation.get(agent.agent_id, [])
-                            agent_prefs = preferences["agent_preferences"][agent.agent_id]
-                            # Ensure we don't access preferences out of bounds
-                            utility = sum(agent_prefs[i]
-                                        for i in agent_items 
-                                        if i < len(items) and i < len(agent_prefs))
-                            final_utilities[agent.agent_id] = utility
-                            # Save the preference vector for this agent
-                            agent_preferences[agent.agent_id] = agent_prefs
+                        if self.game_environment is not None:
+                            # Game-environment-aware utility calculation
+                            game_state = preferences["game_state"]
+                            winning_proposal = enum_prop.get("original_proposal", enum_prop)
+                            for agent in agents:
+                                final_utilities[agent.agent_id] = self.game_environment.calculate_utility(
+                                    agent.agent_id, winning_proposal, game_state, round_num
+                                )
+                                agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
+                            # Store in native format (agreement vector or allocation dict)
+                            final_allocation = winning_proposal.get(
+                                "agreement", winning_proposal.get("allocation", {})
+                            )
+                        else:
+                            # Legacy item allocation utility calculation
+                            allocation = enum_prop["allocation"]
+                            final_allocation = allocation.copy()
+                            for agent in agents:
+                                agent_items = allocation.get(agent.agent_id, [])
+                                agent_prefs = preferences["agent_preferences"][agent.agent_id]
+                                utility = sum(agent_prefs[i]
+                                            for i in agent_items
+                                            if i < len(items) and i < len(agent_prefs))
+                                final_utilities[agent.agent_id] = utility
+                                agent_preferences[agent.agent_id] = agent_prefs
                         break
                 break
         
