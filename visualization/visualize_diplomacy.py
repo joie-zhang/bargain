@@ -76,6 +76,29 @@ MODEL_SHORT_NAMES = {
     "grok-4": "Grok-4",
     "deepseek-r1": "DeepSeek-R1",
     "QwQ-32B": "QwQ-32B",
+    "gpt-3.5-turbo-0125": "GPT-3.5",
+    "gpt-4o": "GPT-4o",
+    "amazon-nova-micro": "Nova Micro",
+    "claude-haiku-4-5": "Haiku 4.5",
+    "claude-sonnet-4-5": "Sonnet 4.5",
+    "gemini-3-pro": "Gemini 3 Pro",
+}
+
+# Elo ratings (Chatbot Arena, approx. Jan 2026)
+MODEL_ELO = {
+    "gemini-3-pro": 1490,
+    "claude-opus-4-5-thinking-32k": 1470,
+    "claude-sonnet-4-5": 1450,
+    "gpt-5.2-high": 1436,
+    "grok-4": 1409,
+    "claude-haiku-4-5": 1403,
+    "deepseek-r1": 1397,
+    "o3-mini-high": 1364,
+    "gpt-4o": 1346,
+    "gpt-5-nano": 1338,
+    "QwQ-32B": 1316,
+    "amazon-nova-micro": 1220,
+    "gpt-3.5-turbo-0125": 1105,
 }
 
 
@@ -160,6 +183,12 @@ def collect_results(experiment_dir: str) -> pd.DataFrame:
             m2 = config.get("model2", model_beta)
             row["model_pair"] = f"{short_name(m1)} vs {short_name(m2)}"
 
+        # Adversary model info (model2 is always the adversary)
+        adversary_raw = config.get("model2", model_beta)
+        row["adversary_model"] = adversary_raw
+        row["adversary_short"] = short_name(adversary_raw)
+        row["adversary_elo"] = MODEL_ELO.get(adversary_raw, 0)
+
         rows.append(row)
 
     if missing > 0:
@@ -170,29 +199,57 @@ def collect_results(experiment_dir: str) -> pd.DataFrame:
     return df
 
 
+def _elo_sorted_pairs(df: pd.DataFrame) -> list:
+    """Return model_pair values sorted by adversary Elo (ascending)."""
+    pair_elo = (
+        df.groupby("model_pair")["adversary_elo"]
+        .first()
+        .sort_values()
+    )
+    return list(pair_elo.index)
+
+
+def _pair_tick_label(pair: str, df: pd.DataFrame) -> str:
+    """Build an x-tick label like 'GPT-5-nano vs O3-mini\n(Elo 1364)'."""
+    row = df[df["model_pair"] == pair].iloc[0]
+    elo = int(row["adversary_elo"]) if row["adversary_elo"] else "?"
+    return f"{pair}\n(Elo {elo})"
+
+
 def plot_model_pair_utilities(df: pd.DataFrame, out_dir: str):
-    """Plot 1: Utility comparison by model pair."""
+    """Plot 1: Utility comparison by model pair, ordered by adversary Elo."""
     ms = df[df["experiment_type"] == "model_scale"].copy()
     if ms.empty:
         print("  Skipping plot 1: no model-scale data")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+    # Remap to weak/strong utilities (position-independent)
+    ms["weak_util"] = ms.apply(
+        lambda r: r["alpha_util"] if r["model_order"] == "weak_first" else r["beta_util"],
+        axis=1,
+    )
+    ms["strong_util"] = ms.apply(
+        lambda r: r["beta_util"] if r["model_order"] == "weak_first" else r["alpha_util"],
+        axis=1,
+    )
 
-    # Plot utilities per model pair
-    pairs = ms["model_pair"].unique()
+    fig, axes = plt.subplots(1, 2, figsize=(18, 7))
 
-    # Bar chart: mean alpha vs beta utility
+    # Order pairs by adversary Elo
+    pairs_ordered = _elo_sorted_pairs(ms)
+
+    # Bar chart: mean weak vs strong utility
     pair_stats = []
-    for pair in pairs:
+    for pair in pairs_ordered:
         pdata = ms[ms["model_pair"] == pair]
         pair_stats.append(
             {
                 "pair": pair,
-                "Model 1 (Alpha)": pdata["alpha_util"].mean(),
-                "Model 2 (Beta)": pdata["beta_util"].mean(),
-                "alpha_std": pdata["alpha_util"].std(),
-                "beta_std": pdata["beta_util"].std(),
+                "tick": _pair_tick_label(pair, ms),
+                "Baseline (GPT-5-nano)": pdata["weak_util"].mean(),
+                "Adversary": pdata["strong_util"].mean(),
+                "weak_std": pdata["weak_util"].std(),
+                "strong_std": pdata["strong_util"].std(),
             }
         )
     stats_df = pd.DataFrame(pair_stats)
@@ -201,38 +258,44 @@ def plot_model_pair_utilities(df: pd.DataFrame, out_dir: str):
     width = 0.35
     axes[0].bar(
         x - width / 2,
-        stats_df["Model 1 (Alpha)"],
+        stats_df["Baseline (GPT-5-nano)"],
         width,
-        yerr=stats_df["alpha_std"],
-        label="Model 1 (Alpha)",
+        yerr=stats_df["weak_std"],
+        label="Baseline (GPT-5-nano)",
         alpha=0.8,
         capsize=4,
+        color="#3498db",
     )
     axes[0].bar(
         x + width / 2,
-        stats_df["Model 2 (Beta)"],
+        stats_df["Adversary"],
         width,
-        yerr=stats_df["beta_std"],
-        label="Model 2 (Beta)",
+        yerr=stats_df["strong_std"],
+        label="Adversary",
         alpha=0.8,
         capsize=4,
+        color="#e74c3c",
     )
     axes[0].set_xticks(x)
-    axes[0].set_xticklabels(stats_df["pair"], rotation=15, ha="right")
+    axes[0].set_xticklabels(stats_df["tick"], rotation=30, ha="right", fontsize=10)
     axes[0].set_ylabel("Mean Utility")
-    axes[0].set_title("Mean Utility by Model Pair")
+    axes[0].set_title("Mean Utility by Model Pair (ordered by Adversary Elo)")
+    axes[0].set_xlabel(r"Adversary Model  (Elo $\rightarrow$)")
     axes[0].legend()
 
-    # Box plot of social welfare
-    order = sorted(pairs)
-    sns.boxplot(data=ms, x="model_pair", y="social_welfare", order=order, ax=axes[1])
-    axes[1].set_xlabel("Model Pair")
+    # Box plot of social welfare, ordered by adversary Elo
+    sns.boxplot(
+        data=ms, x="model_pair", y="social_welfare",
+        order=pairs_ordered, ax=axes[1],
+    )
+    tick_labels = [_pair_tick_label(p, ms) for p in pairs_ordered]
+    axes[1].set_xticklabels(tick_labels, rotation=30, ha="right", fontsize=10)
+    axes[1].set_xlabel(r"Adversary Model  (Elo $\rightarrow$)")
     axes[1].set_ylabel("Social Welfare (sum of utilities)")
-    axes[1].set_title("Social Welfare Distribution")
-    axes[1].tick_params(axis="x", rotation=15)
+    axes[1].set_title("Social Welfare Distribution (ordered by Adversary Elo)")
 
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "plot1_model_pair_utilities.png"))
+    plt.savefig(os.path.join(out_dir, "plot1_model_pair_utilities.png"), bbox_inches="tight")
     plt.close()
     print("  Saved plot1_model_pair_utilities.png")
 
@@ -245,7 +308,8 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    pair_markers = _markers_for(ms["model_pair"].unique())
+    pairs_ordered = _elo_sorted_pairs(ms)
+    pair_markers = _markers_for(pairs_ordered)
 
     # Social welfare vs rho
     sns.pointplot(
@@ -253,6 +317,7 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         x="rho",
         y="social_welfare",
         hue="model_pair",
+        hue_order=pairs_ordered,
         ax=axes[0],
         dodge=0.2,
         markers=pair_markers,
@@ -269,6 +334,7 @@ def plot_rho_effect(df: pd.DataFrame, out_dir: str):
         x="rho",
         y="final_round",
         hue="model_pair",
+        hue_order=pairs_ordered,
         ax=axes[1],
         dodge=0.2,
         markers=pair_markers,
@@ -301,7 +367,8 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         return
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-    pair_markers = _markers_for(ms["model_pair"].unique())
+    pairs_ordered = _elo_sorted_pairs(ms)
+    pair_markers = _markers_for(pairs_ordered)
 
     # Social welfare vs theta
     sns.pointplot(
@@ -309,6 +376,7 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         x="theta",
         y="social_welfare",
         hue="model_pair",
+        hue_order=pairs_ordered,
         ax=axes[0],
         dodge=0.2,
         markers=pair_markers,
@@ -325,6 +393,7 @@ def plot_theta_effect(df: pd.DataFrame, out_dir: str):
         x="theta",
         y="final_round",
         hue="model_pair",
+        hue_order=pairs_ordered,
         ax=axes[1],
         dodge=0.2,
         markers=pair_markers,
@@ -379,8 +448,8 @@ def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
         print("  Skipping plot 4: no model-scale data")
         return
 
-    pairs = ms["model_pair"].unique()
-    n_pairs = len(pairs)
+    pairs_ordered = _elo_sorted_pairs(ms)
+    n_pairs = len(pairs_ordered)
     fig, axes = plt.subplots(1, n_pairs + 1, figsize=(6 * (n_pairs + 1), 5))
     if n_pairs + 1 == 1:
         axes = [axes]
@@ -402,8 +471,8 @@ def plot_rho_theta_heatmap(df: pd.DataFrame, out_dir: str):
     axes[0].set_ylabel(r"$\rho$ (Pref. Correlation)  $\leftarrow$ Cooperative | Competitive $\rightarrow$")
     _annotate_diplomacy_heatmap(axes[0])
 
-    # Per-pair heatmaps
-    for idx, pair in enumerate(sorted(pairs)):
+    # Per-pair heatmaps (ordered by adversary Elo)
+    for idx, pair in enumerate(pairs_ordered):
         pdata = ms[ms["model_pair"] == pair]
         pivot = pdata.pivot_table(
             values="social_welfare", index="rho", columns="theta", aggfunc="mean"
@@ -455,8 +524,8 @@ def plot_rho_theta_heatmap_per_agent(df: pd.DataFrame, out_dir: str):
         axis=1,
     )
 
-    pairs = sorted(ms["model_pair"].unique())
-    n_pairs = len(pairs)
+    pairs_ordered = _elo_sorted_pairs(ms)
+    n_pairs = len(pairs_ordered)
     n_cols = n_pairs + 1  # "All" + each pair
 
     fig, axes = plt.subplots(2, n_cols, figsize=(6 * n_cols, 10))
@@ -486,8 +555,8 @@ def plot_rho_theta_heatmap_per_agent(df: pd.DataFrame, out_dir: str):
         axes[row_idx, 0].set_ylabel(r"$\rho$ ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
         _annotate_diplomacy_heatmap(axes[row_idx, 0])
 
-        # Per-pair heatmaps
-        for col_idx, pair in enumerate(pairs):
+        # Per-pair heatmaps (ordered by adversary Elo)
+        for col_idx, pair in enumerate(pairs_ordered):
             pdata = ms[ms["model_pair"] == pair]
 
             # For strong model label, extract the strong model name from the pair
@@ -677,11 +746,13 @@ def plot_competition_index(df: pd.DataFrame, out_dir: str):
     fig, axes = plt.subplots(1, 3, figsize=(20, 6))
 
     # Panel 1: Social welfare vs CI
+    pairs_ordered = _elo_sorted_pairs(ms)
     if "model_pair" in ms.columns:
         sns.pointplot(
             data=ms, x="ci_bin", y="social_welfare", hue="model_pair",
+            hue_order=pairs_ordered,
             ax=axes[0], dodge=0.15, capsize=0.1,
-            markers=_markers_for(ms["model_pair"].unique()),
+            markers=_markers_for(pairs_ordered),
         )
         axes[0].legend(fontsize=8, title="Model Pair")
     else:
@@ -741,6 +812,8 @@ def plot_disaggregated(df: pd.DataFrame, out_dir: str):
         print("  Skipping plots 8-9: no model-scale data")
         return
 
+    pairs_ordered = _elo_sorted_pairs(ms)
+
     # --- Plot 8: SW vs rho, faceted by theta ---
     theta_vals = sorted(ms["theta"].unique())
     n_theta = len(theta_vals)
@@ -750,11 +823,13 @@ def plot_disaggregated(df: pd.DataFrame, out_dir: str):
             axes = [axes]
         for idx, theta_val in enumerate(theta_vals):
             sub = ms[ms["theta"] == theta_val]
+            sub_pairs = [p for p in pairs_ordered if p in sub["model_pair"].values]
             if "model_pair" in sub.columns and sub["model_pair"].nunique() > 1:
                 sns.pointplot(
                     data=sub, x="rho", y="social_welfare", hue="model_pair",
+                    hue_order=sub_pairs,
                     ax=axes[idx], dodge=0.15, capsize=0.1,
-                    markers=_markers_for(sub["model_pair"].unique()),
+                    markers=_markers_for(sub_pairs),
                 )
                 if idx == n_theta - 1:
                     axes[idx].legend(fontsize=8)
@@ -790,11 +865,13 @@ def plot_disaggregated(df: pd.DataFrame, out_dir: str):
             axes = [axes]
         for idx, rho_val in enumerate(rho_vals):
             sub = ms[ms["rho"] == rho_val]
+            sub_pairs = [p for p in pairs_ordered if p in sub["model_pair"].values]
             if "model_pair" in sub.columns and sub["model_pair"].nunique() > 1:
                 sns.pointplot(
                     data=sub, x="theta", y="social_welfare", hue="model_pair",
+                    hue_order=sub_pairs,
                     ax=axes[idx], dodge=0.15, capsize=0.1,
-                    markers=_markers_for(sub["model_pair"].unique()),
+                    markers=_markers_for(sub_pairs),
                 )
                 if idx == n_rho - 1:
                     axes[idx].legend(fontsize=8)
