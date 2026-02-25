@@ -1,0 +1,329 @@
+\documentclass[aspectratio=169]{beamer}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tikz}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+
+% Custom colors
+\definecolor{highlight}{RGB}{220,50,47}
+\definecolor{good}{RGB}{38,139,78}
+\definecolor{neutral}{RGB}{42,100,180}
+
+\title{Diplomatic Treaty Negotiation:\\Ambitious Model-Scale Sweep}
+\subtitle{9 Model Pairs $\times$ 25 Parameter Conditions $\times$ 3 Runs}
+\author{Joie Zhang}
+\date{February 24, 2026}
+
+\begin{document}
+
+\frame{\titlepage}
+
+%% ============================================================
+%% SLIDE: Experiment Design
+%% ============================================================
+\begin{frame}{Experiment Design}
+\textbf{Fixed baseline}: GPT-5-nano (Elo 1338)
+
+\vspace{0.3cm}
+\textbf{8 adversary models} spanning Elo 1105--1490:
+
+\begin{center}
+\small
+\begin{tabular}{llrl}
+\toprule
+Model & Provider & Elo & Category \\
+\midrule
+GPT-3.5-Turbo & OpenAI & 1105 & Weak \\
+GPT-5-nano (self-play) & OpenAI & 1338 & Baseline \\
+GPT-4o & OpenAI & 1346 & Medium \\
+O3-mini-high & OpenAI & 1364 & Medium \\
+Claude Haiku 4.5 & Anthropic & 1403 & Medium \\
+GPT-5.2-high & OpenAI & 1436 & Strong \\
+Claude Sonnet 4.5 & Anthropic & 1450 & Strong \\
+Gemini 3 Pro & Google & 1490 & Strong \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.2cm}
+\textbf{Parameters}: $\rho \in \{-1, -0.5, 0, 0.5, 1\}$, $\theta \in \{0, 0.25, 0.5, 0.75, 1\}$ \\
+\textbf{Total}: 1,350 configs $\rightarrow$ \textbf{1,057 successful} (293 failures from API issues)
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Headline Results
+%% ============================================================
+\begin{frame}{Headline Results}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Overall (n=1,057):}
+\begin{itemize}
+    \item \textcolor{good}{89\% consensus rate}
+    \item Mean social welfare: 1.178 / 2.0
+    \item Mean rounds: 4.5 / 10
+    \item \textcolor{highlight}{91\% exploitation rate}
+\end{itemize}
+
+\vspace{0.5cm}
+\textbf{Key insight}: Unlike co-funding, diplomacy shows \textcolor{neutral}{\textbf{no exploitation gap}} between strong and weak models.
+\end{column}
+\begin{column}{0.5\textwidth}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot1_model_pair_utilities.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Model Pair Breakdown
+%% ============================================================
+\begin{frame}{Model Pair Performance}
+\begin{center}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+Adversary (Elo) & n & Consensus & SW & Rounds & Util Gap \\
+\midrule
+GPT-3.5 (1105) & 150 & 62\% & 0.705 & 7.2 & $-$0.017 \\
+GPT-5-nano (1338) & 150 & 97\% & 1.363 & 3.6 & $-$0.016 \\
+GPT-4o (1346) & 150 & 89\% & 1.199 & 4.3 & $-$0.003 \\
+O3-mini (1364) & 150 & 93\% & 1.225 & 3.9 & $+$0.004 \\
+\rowcolor{green!10}
+Haiku 4.5 (1403) & 7 & 100\% & 1.799 & 1.4 & $-$0.041 \\
+GPT-5.2 (1436) & 150 & 100\% & 1.406 & 2.5 & $-$0.006 \\
+Sonnet 4.5 (1450) & 150 & 91\% & 1.124 & 4.7 & $-$0.001 \\
+Gemini 3 Pro (1490) & 150 & 91\% & 1.203 & 4.8 & $-$0.014 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.3cm}
+\textbf{Utility Gap} = strong model utility $-$ weak model utility.
+
+All gaps are $< 0.05$ $\Rightarrow$ \textbf{no systematic exploitation in diplomacy}.
+
+\textcolor{highlight}{GPT-3.5 is the outlier}: low consensus, low SW, dragging both players down.
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Rho Effect
+%% ============================================================
+\begin{frame}{$\rho$ (Preference Correlation) --- The Dominant Driver}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot2_rho_effect.png}
+\end{center}
+\vspace{-0.3cm}
+\begin{itemize}
+    \item $\rho$ drives a \textbf{3$\times$ range} in social welfare (0.617 $\rightarrow$ 1.788)
+    \item Consensus: 78\% at $\rho{=}{-}1$ $\rightarrow$ 99\% at $\rho{=}1$
+    \item Rounds: 8.0 at $\rho{=}{-}1$ $\rightarrow$ 1.5 at $\rho{=}1$
+    \item \textbf{All model pairs follow the same monotonic trend}
+\end{itemize}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Theta Effect
+%% ============================================================
+\begin{frame}{$\theta$ (Interest Overlap) --- Surprisingly Flat}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot3_theta_effect.png}
+\end{center}
+\vspace{-0.3cm}
+\begin{itemize}
+    \item $\theta$ has \textbf{almost no effect} on social welfare (range: 1.16--1.20)
+    \item Rounds and consensus are also essentially flat across $\theta$
+    \item Exploitation rate is constant ($\sim$90\%) regardless of $\theta$
+    \item \textbf{Implication}: Models respond to preference correlation, not overlap structure
+\end{itemize}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Rho-Theta Heatmaps
+%% ============================================================
+\begin{frame}{$\rho \times \theta$ Heatmaps: Social Welfare by Model Pair}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot4_rho_theta_heatmap.png}
+\end{center}
+\vspace{-0.2cm}
+\small
+Row-dominant gradient ($\rho$) confirms it drives outcomes. \\
+Column variation ($\theta$) is negligible within each row.
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Per-Agent Heatmaps
+%% ============================================================
+\begin{frame}{Per-Agent Utility: Weak Model vs Strong Model}
+\begin{center}
+\includegraphics[width=0.95\textwidth]{../visualization/figures/diplomacy/plot4b_rho_theta_per_agent.png}
+\end{center}
+\vspace{-0.2cm}
+\small
+Top row: Weak model (GPT-5-nano as Alpha). Bottom row: Strong model (adversary as Alpha). \\
+\textbf{Both agents' utilities track together} --- no exploitation pattern visible.
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Competition Index
+%% ============================================================
+\begin{frame}{Competition Index: $\text{CI} = \theta \cdot (1 - \rho) / 2$}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot7_competition_index.png}
+\end{center}
+\vspace{-0.3cm}
+\begin{itemize}
+    \item \textbf{Clean monotonic decline} in SW as competition rises (1.46 $\rightarrow$ 0.58)
+    \item Exploitation rate rises from 85\% to 100\% at max competition
+    \item Per-agent utility: \textbf{both agents decline together} --- gap stays $<$0.05
+\end{itemize}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Exploitation and Speaking Order
+%% ============================================================
+\begin{frame}{Exploitation Gap \& Speaking Order}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot5_exploitation_by_condition.png}
+\end{center}
+\vspace{-0.3cm}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{Exploitation gap} (left heatmap):
+\begin{itemize}
+    \item Range: $-0.05$ to $+0.03$
+    \item \textbf{Negligible and symmetric}
+    \item No $(\rho, \theta)$ region favors either agent
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{Speaking order} (right bar chart):
+\begin{itemize}
+    \item strong\_first $\approx$ weak\_first
+    \item \textbf{No first-mover advantage}
+    \item Exception: Haiku 4.5 (n=7, small sample)
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Disaggregated Views
+%% ============================================================
+\begin{frame}{Social Welfare Disaggregated by $\theta$ and $\rho$}
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot8_by_theta.png}
+\end{center}
+
+\begin{center}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot9_by_rho.png}
+\end{center}
+\vspace{-0.3cm}
+\small
+Top: SW vs $\rho$, faceted by $\theta$ --- same upward trend regardless of $\theta$. \\
+Bottom: SW vs $\theta$, faceted by $\rho$ --- flat within each $\rho$ level.
+\end{frame}
+
+%% ============================================================
+%% SLIDE: GPT-3.5 Outlier
+%% ============================================================
+\begin{frame}{GPT-3.5-Turbo: The Weak Model Outlier}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+GPT-3.5-Turbo (Elo 1105) is \textbf{dramatically worse} than all other models:
+
+\vspace{0.3cm}
+\begin{tabular}{lrr}
+\toprule
+Metric & GPT-3.5 & All Others \\
+\midrule
+Consensus & 62\% & 94\% \\
+Social Welfare & 0.705 & 1.263 \\
+Rounds & 7.2 & 3.8 \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.3cm}
+\textbf{Key observations}:
+\begin{itemize}
+    \item Poor instruction-following $\rightarrow$ can't parse proposals
+    \item Hurts \textbf{both} players (GPT-5-nano also gets low utility)
+    \item This is a \textbf{capability floor}, not exploitation
+    \item Suggests Elo $\sim$1200 is the minimum for meaningful negotiation
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\includegraphics[width=\textwidth]{../visualization/figures/diplomacy/plot2_rho_effect.png}
+\small
+GPT-3.5 (pink) consistently sits below all other model pairs across $\rho$.
+\end{column}
+\end{columns}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Key Findings
+%% ============================================================
+\begin{frame}{Key Findings}
+
+\begin{enumerate}
+    \item \textcolor{neutral}{\textbf{$\rho$ dominates}}: Preference correlation is the primary driver of outcomes (3$\times$ SW range). $\theta$ has negligible effect.
+
+    \vspace{0.3cm}
+    \item \textcolor{good}{\textbf{No exploitation gap}}: Unlike co-funding, stronger models do NOT extract more value. Utility gaps are $<$0.05 across all conditions.
+
+    \vspace{0.3cm}
+    \item \textcolor{highlight}{\textbf{Capability floor matters}}: GPT-3.5 (Elo 1105) breaks negotiation for \textbf{both} parties. Below Elo $\sim$1200, models can't follow the protocol.
+
+    \vspace{0.3cm}
+    \item \textbf{No order effects}: Speaking first provides no advantage. Strong and weak agents get symmetric outcomes.
+
+    \vspace{0.3cm}
+    \item \textbf{High consensus rate}: 89\% overall, rising to 99\% at $\rho{=}1$. Diplomacy's propose-and-vote protocol is robust.
+\end{enumerate}
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Comparison with Co-Funding
+%% ============================================================
+\begin{frame}{Diplomacy vs Co-Funding: Contrasting Exploitation Patterns}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Property & Diplomacy & Co-Funding \\
+\midrule
+Protocol & Propose-and-vote & Talk-pledge-revise \\
+Exploitation gap & \textcolor{good}{$<$ 0.05 (none)} & \textcolor{highlight}{Significant (free-riding)} \\
+Dominant parameter & $\rho$ (correlation) & $\alpha$ (alignment) \\
+Secondary parameter & $\theta$ (no effect) & $\sigma$ (scarcity) \\
+Consensus rate & 89\% & N/A (no voting) \\
+Coordination failure & Low & 77.5\% \\
+Speaking order effect & None & N/A \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{0.3cm}
+\textbf{Hypothesis}: The propose-and-vote protocol \textbf{protects} the weak agent ---
+both parties must agree, so exploitation is structurally prevented.
+
+In co-funding, each agent independently pledges funds, creating an opening for free-riding that propose-and-vote eliminates.
+\end{frame}
+
+%% ============================================================
+%% SLIDE: Next Steps
+%% ============================================================
+\begin{frame}{Next Steps}
+\begin{itemize}
+    \item \textbf{Re-run 293 failed experiments} (amazon-nova-micro code bug fixed; claude-haiku-4-5 API overload was transient)
+    \item \textbf{Re-run 692 failed co-funding experiments} once OpenAI API key is restored
+    \item Generate combined cross-game analysis with full data
+    \item Formal statistical tests: regression of SW on $\rho$, $\theta$, Elo, and interactions
+    \item Investigate \textbf{why} diplomacy prevents exploitation while co-funding doesn't
+\end{itemize}
+\end{frame}
+
+\end{document}
