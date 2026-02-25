@@ -437,10 +437,10 @@ def main() -> None:
         df_raw=df_raw,
     )
 
-    print(f"Input CSV: {input_csv}")
-    print(f"Output directory: {output_dir}")
+    print(f"Input CSV: {args.input_csv}")
+    print(f"Output directory: {args.output_dir}")
     print(f"Generated {len(generated_plots)} plot files.")
-    print(f"Report: {report_path}")
+    print(f"Report: {args.output_dir}/{args.report_name}")
 
 
 if __name__ == "__main__":
