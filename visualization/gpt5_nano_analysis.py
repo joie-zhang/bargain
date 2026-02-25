@@ -125,6 +125,15 @@ SCALING_EXPERIMENTS = [
     "scaling_experiment_20260121_070359",
 ]
 
+# Line-plot analysis options
+# Keep only models with enough raw runs to reduce noise from sparse model coverage.
+MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS = 10
+
+# EWM is more stable than a fixed-width moving average when Elo coverage is uneven.
+LINE_PLOT_SMOOTHING_METHOD = "ewm"  # {"ewm", "moving_average"}
+LINE_PLOT_SMOOTHING_ALPHA = 0.35
+LINE_PLOT_SMOOTHING_WINDOW = 3
+
 
 # ## Data Loading and Filtering
 
@@ -599,7 +608,7 @@ print(f"\nCorrelation between adversary Elo and Baseline model payoff: {corr:.3f
 # In[ ]:
 
 
-# Plot 4: Heatmap of utility by adversary model and competition level
+# Plot 4A: Heatmap of utility by adversary model and competition level
 fig, ax = plt.subplots(figsize=(12, 10))
 
 # Pivot table for heatmap (averaged across start positions)
@@ -627,6 +636,237 @@ ax.set_title('Baseline Model Payoff Heatmap\n(Models sorted by Elo, high to low)
 plt.tight_layout()
 plt.savefig(FIGURES_DIR / 'gpt5_nano_utility_heatmap.png', dpi=150, bbox_inches='tight')
 plt.show()
+
+
+# Plot 4B: Payoff vs adversary Elo, one line per competition level
+line_df = df_avg[df_avg['adversary_elo'] > 0].copy()
+line_df = line_df.sort_values(['competition_level', 'adversary_elo'])
+
+# Optional filtering: remove very low-coverage models.
+raw_model_run_counts = df['adversary_model'].value_counts()
+eligible_models = raw_model_run_counts[raw_model_run_counts >= MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS].index
+line_df_filtered = line_df[line_df['adversary_model'].isin(eligible_models)].copy()
+
+filtered_out_models = sorted(set(line_df['adversary_model']) - set(line_df_filtered['adversary_model']))
+if filtered_out_models:
+    print(
+        f"\nLine-plot filtering: removed {len(filtered_out_models)} low-coverage models "
+        f"(< {MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS} raw runs):"
+    )
+    for model_name in filtered_out_models:
+        print(f"  - {model_name}: {raw_model_run_counts.get(model_name, 0)} runs")
+
+COMP_BUCKET_LABELS = {
+    0.0: "gamma=0.0",
+    0.2: "gamma=0.1-0.3 avg",
+    0.5: "gamma=0.4-0.6 avg",
+    0.8: "gamma=0.7-0.9 avg",
+    1.0: "gamma=1.0",
+}
+
+
+def bucket_competition_level(comp_level: float) -> float:
+    """Map raw competition levels to compressed buckets."""
+    comp_level = round(float(comp_level), 1)
+    if np.isclose(comp_level, 0.0) or np.isclose(comp_level, 1.0):
+        return comp_level
+    if 0.1 <= comp_level <= 0.3:
+        return 0.2
+    if 0.4 <= comp_level <= 0.6:
+        return 0.5
+    if 0.7 <= comp_level <= 0.9:
+        return 0.8
+    return comp_level
+
+
+def compress_competition_levels(plot_df: pd.DataFrame) -> pd.DataFrame:
+    """Average requested competition buckets while keeping gamma=0 and 1 intact."""
+    if plot_df.empty:
+        return plot_df.copy()
+
+    compressed = plot_df.copy()
+    compressed['competition_level'] = compressed['competition_level'].apply(bucket_competition_level)
+
+    group_cols = ['adversary_model', 'competition_level']
+    mean_cols = {
+        'baseline_utility',
+        'adversary_utility',
+        'total_utility',
+        'utility_share',
+        'payoff_diff',
+        'consensus_reached',
+        'final_round',
+    }
+
+    agg_map = {}
+    for col in compressed.columns:
+        if col in group_cols:
+            continue
+        if col in mean_cols:
+            agg_map[col] = 'mean'
+        elif col == 'n_orders_averaged':
+            agg_map[col] = 'sum'
+        else:
+            agg_map[col] = 'first'
+
+    compressed = compressed.groupby(group_cols, as_index=False).agg(agg_map)
+    return compressed.sort_values(['competition_level', 'adversary_elo'])
+
+
+def smooth_series(values: np.ndarray, method: str = LINE_PLOT_SMOOTHING_METHOD) -> np.ndarray:
+    """Apply a lightweight smoother to each competition-level line."""
+    series = pd.Series(values, dtype='float64')
+    if method == 'moving_average':
+        return series.rolling(window=LINE_PLOT_SMOOTHING_WINDOW, min_periods=1).mean().to_numpy()
+    if method == 'ewm':
+        return series.ewm(alpha=LINE_PLOT_SMOOTHING_ALPHA, adjust=False).mean().to_numpy()
+    raise ValueError(f"Unknown smoothing method: {method}")
+
+
+def comp_label(comp_level: float, compressed: bool) -> str:
+    if compressed:
+        return COMP_BUCKET_LABELS.get(round(float(comp_level), 1), f"gamma={comp_level:.1f}")
+    return f"gamma={comp_level:.1f}"
+
+
+def plot_payoff_lines_by_comp(
+    value_col: str,
+    ylabel: str,
+    title: str,
+    output_name: str,
+    plot_df: pd.DataFrame,
+    compress_levels: bool = False,
+    apply_smoothing: bool = False,
+) -> None:
+    line_plot_df = plot_df.copy()
+    if compress_levels:
+        line_plot_df = compress_competition_levels(line_plot_df)
+
+    if line_plot_df.empty:
+        print(f"Skipping {output_name}: no rows to plot after filtering.")
+        return
+
+    comp_levels = sorted(line_plot_df['competition_level'].dropna().unique())
+    comp_colors = plt.cm.viridis(np.linspace(0, 1, len(comp_levels)))
+
+    fig, ax = plt.subplots(figsize=(12, 8))
+
+    for color, comp_level in zip(comp_colors, comp_levels):
+        comp_df = line_plot_df[line_plot_df['competition_level'] == comp_level].sort_values('adversary_elo')
+        if comp_df.empty:
+            continue
+
+        x_vals = comp_df['adversary_elo'].to_numpy()
+        y_raw = comp_df[value_col].to_numpy()
+
+        if apply_smoothing:
+            y_vals = smooth_series(y_raw)
+            ax.plot(
+                x_vals,
+                y_raw,
+                color=color,
+                linewidth=1.0,
+                alpha=0.22,
+            )
+        else:
+            y_vals = y_raw
+
+        ax.plot(
+            x_vals,
+            y_vals,
+            color=color,
+            linewidth=1.8,
+            marker='o',
+            markersize=3.5,
+            alpha=0.95,
+            label=comp_label(comp_level, compressed=compress_levels),
+        )
+
+    ax.axhline(y=50, color='gray', linestyle='--', alpha=0.5, linewidth=1.1, label='Equal split (50)')
+    ax.set_xlabel('Adversary Elo', fontsize=12)
+    ax.set_ylabel(ylabel, fontsize=12)
+    ax.set_title(title, fontsize=14)
+    ax.set_xlim(line_plot_df['adversary_elo'].min() - 5, line_plot_df['adversary_elo'].max() + 5)
+    ax.legend(
+        title='Competition',
+        fontsize=8.5,
+        title_fontsize=9.5,
+        ncol=2,
+        loc='best',
+        frameon=True,
+    )
+
+    plt.tight_layout()
+    plt.savefig(FIGURES_DIR / output_name, dpi=150, bbox_inches='tight')
+    plt.show()
+
+
+# Keep original two plots for side-by-side comparison.
+plot_payoff_lines_by_comp(
+    value_col='baseline_utility',
+    ylabel='Baseline Model Payoff',
+    title='Baseline Model Payoff vs Adversary Elo\n(One line per competition level)',
+    output_name='gpt5_nano_baseline_payoff_vs_elo_lines_by_comp.png',
+    plot_df=line_df,
+)
+
+plot_payoff_lines_by_comp(
+    value_col='adversary_utility',
+    ylabel='Adversary Model Payoff',
+    title='Adversary Model Payoff vs Adversary Elo\n(One line per competition level)',
+    output_name='gpt5_nano_adversary_payoff_vs_elo_lines_by_comp.png',
+    plot_df=line_df,
+)
+
+# Requested variants on filtered data:
+# 1) compressed only, 2) smoothed only, 3) compressed + smoothed
+plot_variants = [
+    {
+        'suffix': 'compressed',
+        'compress_levels': True,
+        'apply_smoothing': False,
+        'subtitle': f'Compressed competition buckets, models with >= {MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS} runs',
+    },
+    {
+        'suffix': f'smoothed_{LINE_PLOT_SMOOTHING_METHOD}',
+        'compress_levels': False,
+        'apply_smoothing': True,
+        'subtitle': (
+            f'{LINE_PLOT_SMOOTHING_METHOD.upper()} smoothing '
+            f'(alpha={LINE_PLOT_SMOOTHING_ALPHA}), models with >= {MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS} runs'
+        ),
+    },
+    {
+        'suffix': f'compressed_smoothed_{LINE_PLOT_SMOOTHING_METHOD}',
+        'compress_levels': True,
+        'apply_smoothing': True,
+        'subtitle': (
+            f'Compressed buckets + {LINE_PLOT_SMOOTHING_METHOD.upper()} smoothing '
+            f'(alpha={LINE_PLOT_SMOOTHING_ALPHA}), models with >= {MIN_RAW_RUNS_PER_MODEL_FOR_LINE_PLOTS} runs'
+        ),
+    },
+]
+
+for variant in plot_variants:
+    plot_payoff_lines_by_comp(
+        value_col='baseline_utility',
+        ylabel='Baseline Model Payoff',
+        title=f"Baseline Model Payoff vs Adversary Elo\n({variant['subtitle']})",
+        output_name=f"gpt5_nano_baseline_payoff_vs_elo_lines_by_comp_{variant['suffix']}.png",
+        plot_df=line_df_filtered,
+        compress_levels=variant['compress_levels'],
+        apply_smoothing=variant['apply_smoothing'],
+    )
+
+    plot_payoff_lines_by_comp(
+        value_col='adversary_utility',
+        ylabel='Adversary Model Payoff',
+        title=f"Adversary Model Payoff vs Adversary Elo\n({variant['subtitle']})",
+        output_name=f"gpt5_nano_adversary_payoff_vs_elo_lines_by_comp_{variant['suffix']}.png",
+        plot_df=line_df_filtered,
+        compress_levels=variant['compress_levels'],
+        apply_smoothing=variant['apply_smoothing'],
+    )
 
 
 # In[ ]:
@@ -2694,4 +2934,3 @@ print("  - fig_f7_nash_welfare_by_reasoning.png")
 
 print("\nFigure F8: Comprehensive Nash Welfare Summary (4-panel)")
 print("  - fig_f8_nash_welfare_summary.png")
-
