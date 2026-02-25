@@ -423,6 +423,7 @@ Your reflection:"""
         """Get information about the model. Required by BaseLLMAgent."""
         return {
             "model_id": self.model_id,
+            "model_name": self.model_id,
             "provider": "openrouter",
             "temperature": self.llm_config.temperature,
             "max_tokens": self.llm_config.max_tokens
