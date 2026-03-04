@@ -153,11 +153,16 @@ python3 visualization/visualize_cofunding.py \
   - 6 model pairs (amazon-nova-micro, claude-haiku-4-5, claude-sonnet-4-5, gemini-3-pro, gpt-5.2-high, gpt-5-nano)
   - Running cleanly, scaling up.
 
-### Current Completion (Mar 3, 13:25 EST)
+### Current Completion (Mar 3, 23:39 EST)
 | Game | Completed | Missing |
 |---|---|---|
-| Diplomacy | 1247/1350 | 103 (all claude-haiku-4-5) |
+| Diplomacy | 1290/1350 | 60 (all claude-haiku-4-5) |
 | Cofunding | 658/1350 | 692 (6 model pairs) |
+
+### Bug Fix: `num_runs` redundancy in cofunding
+- **Issue**: Each cofunding config had `num_runs=3` causing 3 identical iterations per SLURM task
+- Configs already have separate run_1/run_2/run_3 with unique seeds, so `num_runs=3` was redundant
+- Fixed sbatch script to force `--num-runs 1`, reducing per-task time from ~15h to ~5h
 
 ## Timeline
 
@@ -169,3 +174,6 @@ python3 visualization/visualize_cofunding.py \
 - **Feb 24**: Code fix applied for OpenRouter `model_name` bug
 - **Mar 3 07:00**: Resubmission #1 — diplomacy partially completed, cofunding cancelled (API contention)
 - **Mar 3 13:08**: Resubmission #2 — all remaining failures resubmitted with 24h time limit and %20 concurrency throttle
+- **Mar 3 18:25**: Fixed cofunding `num_runs` redundancy (3→1), cancelled and resubmitted cofunding job 5314832
+- **Mar 3 ~22:36**: Cofunding job 5314832 cancelled by user (200 tasks, 0 completed)
+- **Mar 3 23:32**: Cofunding resubmitted as job 5325457 with %50 throttle

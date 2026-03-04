@@ -56,10 +56,22 @@ class PhaseHandler:
         token_usage = None
         if agent_response.metadata and agent_response.metadata.get("usage"):
             usage = agent_response.metadata["usage"]
+            input_tokens = usage.get("prompt_tokens")
+            if input_tokens is None:
+                input_tokens = usage.get("input_tokens")
+
+            output_tokens = usage.get("completion_tokens")
+            if output_tokens is None:
+                output_tokens = usage.get("output_tokens")
+
+            total_tokens = usage.get("total_tokens")
+            if total_tokens is None and input_tokens is not None and output_tokens is not None:
+                total_tokens = input_tokens + output_tokens
+
             token_usage = {
-                "input_tokens": usage.get("prompt_tokens"),
-                "output_tokens": usage.get("completion_tokens"),
-                "total_tokens": usage.get("total_tokens")
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens
             }
             # Extract reasoning tokens if available
             if agent_response.metadata.get("reasoning_tokens"):
@@ -330,7 +342,7 @@ class PhaseHandler:
     
     async def run_discussion_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                   preferences: Dict, round_num: int, max_rounds: int,
-                                  discussion_turns: int = 3) -> Dict:
+                                  discussion_turns: int = 2) -> Dict:
         """Phase 2: Public Discussion Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
@@ -342,7 +354,7 @@ class PhaseHandler:
             preferences: Dictionary containing agent preferences
             round_num: Current round number
             max_rounds: Maximum number of rounds
-            discussion_turns: Number of times agents go around the circle discussing (default: 3)
+            discussion_turns: Number of times agents go around the circle discussing (default: 2)
         """
         messages = []
 

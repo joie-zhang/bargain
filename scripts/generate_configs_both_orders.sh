@@ -128,7 +128,7 @@ NUM_ITEMS=5
 MAX_ROUNDS=10
 # NUM_RUNS=6  # Number of runs per configuration
 NUM_RUNS=2  # Number of runs per configuration
-DISCUSSION_TURNS=3  # Number of discussion exchanges per round
+DISCUSSION_TURNS=2  # Number of discussion exchanges per round
 
 # Seeds for each scenario (used for both weak_first and strong_first orderings)
 # With balanced ordering, runs 1-3 (weak_first) and runs 4-6 (strong_first) use the same seeds

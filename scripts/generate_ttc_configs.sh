@@ -175,7 +175,7 @@ NUM_RUNS=1
 NUM_ITEMS=5
 MAX_ROUNDS=10
 GAMMA_DISCOUNT=0.9
-DISCUSSION_TURNS=3
+DISCUSSION_TURNS=2
 
 # Phases to apply reasoning budget instruction
 if [[ "$MODE" == "claude_prompt" ]]; then

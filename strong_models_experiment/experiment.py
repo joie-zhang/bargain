@@ -307,7 +307,7 @@ class StrongModelsExperiment:
                 if not config.get("disable_discussion", False):
                     discussion_result = await self.phase_handler.run_discussion_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
-                        discussion_turns=config.get("discussion_turns", 3)
+                        discussion_turns=config.get("discussion_turns", 2)
                     )
                     conversation_logs.extend(discussion_result.get("messages", []))
                 else:
@@ -563,6 +563,7 @@ class StrongModelsExperiment:
 
         self.current_batch_id = batch_id
         experiments = []
+        failed_runs = 0
 
         # Reset token tracking for this batch
         self._reset_batch_token_tracking()
@@ -605,8 +606,24 @@ class StrongModelsExperiment:
                 )
                 
             except Exception as e:
+                failed_runs += 1
                 self.logger.error(f"Error in run {i+1}: {e}")
                 continue
+
+        if not experiments:
+            error_msg = (
+                f"Batch {batch_id or '[custom-output]'} produced 0 successful runs "
+                f"out of {num_runs}; aborting instead of reporting success."
+            )
+            self.logger.error(error_msg)
+            raise RuntimeError(error_msg)
+
+        if failed_runs:
+            self.logger.warning(
+                "Batch completed with partial failures: %s/%s run(s) failed",
+                failed_runs,
+                num_runs,
+            )
         
         # Calculate aggregate statistics
         consensus_rate = sum(1 for exp in experiments if exp.consensus_reached) / len(experiments) if experiments else 0

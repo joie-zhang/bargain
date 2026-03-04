@@ -126,7 +126,7 @@ echo ""
 # =============================================================================
 M_PROJECTS=5
 MAX_ROUNDS=10
-DISCUSSION_TURNS=3
+DISCUSSION_TURNS=2
 MAX_TOKENS_PER_PHASE=10500
 BASE_SEED=42
 NUM_RUNS=1
@@ -178,13 +178,20 @@ PROMPT_ONLY="true"
 # Mode-Specific Parameter Definitions
 # =============================================================================
 
-# Requested Mar 2026 run set
-BASELINE_MODEL="gpt-5-nano"
+# Requested Mar 2026 mixed-provider run set
+# API models:
+#   - claude-opus-4-6 (Anthropic API)
+#   - claude-haiku-4-5 (Anthropic API)
+#   - gpt-5.2-chat-latest-20260210 (OpenAI API)
+# Local cluster models:
+#   - qwen3-32b (4x A100 80GB)
+#   - llama-3.1-8b-instruct (2x A100 80GB)
+BASELINE_MODEL="gpt-5.2-chat-latest-20260210"
 ADVERSARY_MODELS=(
     "claude-opus-4-6"
-    "gemini-3-flash"
-    "gpt-5.2-chat-latest-20260210"
-    "qwen3-235b-a22b-instruct-2507"
+    "claude-haiku-4-5"
+    "qwen3-32b"
+    "llama-3.1-8b-instruct"
 )
 PRIMARY_MODEL_PAIRS=(
     "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
@@ -569,36 +576,22 @@ echo "Generating SLURM scripts..."
 CONFIG_DIR_ABSOLUTE="${EXPERIMENT_DIR}/configs"
 
 # Mode-dependent SLURM settings
+SLURM_TIME="12:00:00"
 if [[ "$MODE" == "conservative" || "$MODE" == "ambitious" ]]; then
-    SLURM_PARTITION="cpu"
-    SLURM_TIME="12:00:00"
+    API_SLURM_PARTITION="cpu"
 else
-    SLURM_PARTITION=""
-    SLURM_TIME="12:00:00"
+    API_SLURM_PARTITION=""
 fi
 
-# The SLURM script handles BOTH model-scale and TTC configs by checking experiment_type
-SLURM_SCRIPT="${SLURM_DIR}/run_cofunding_experiments.sbatch"
-
-# Build partition line conditionally
-if [[ -n "$SLURM_PARTITION" ]]; then
-    PARTITION_LINE="#SBATCH --partition=${SLURM_PARTITION}"
+if [[ -n "$API_SLURM_PARTITION" ]]; then
+    API_PARTITION_LINE="#SBATCH --partition=${API_SLURM_PARTITION}"
 else
-    PARTITION_LINE=""
+    API_PARTITION_LINE=""
 fi
 
-cat > "${SLURM_SCRIPT}" << SLURM_EOF
+WORKER_SCRIPT="${SLURM_DIR}/run_cofunding_worker.sh"
+cat > "${WORKER_SCRIPT}" << SLURM_WORKER_EOF
 #!/bin/bash
-#SBATCH --job-name=cofund-exp
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
-#SBATCH --time=${SLURM_TIME}
-${PARTITION_LINE}
-#SBATCH --output=logs/cluster/cofund_%A_%a.out
-#SBATCH --error=logs/cluster/cofund_%A_%a.err
-
 set -e
 
 BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
@@ -749,22 +742,103 @@ else
 fi
 
 rm -f "\$TMP_RUN_LOG"
-SLURM_EOF
+SLURM_WORKER_EOF
+chmod +x "${WORKER_SCRIPT}"
+echo "Created worker script: ${WORKER_SCRIPT}"
 
-echo "Created SLURM script: ${SLURM_SCRIPT}"
+create_sbatch_wrapper() {
+    local script_path="$1"
+    local job_name="$2"
+    local cpus="$3"
+    local mem="$4"
+    local partition_line="$5"
+    local gres_lines="$6"
+    local output_pattern="$7"
+    local error_pattern="$8"
+
+    cat > "${script_path}" << SLURM_WRAPPER_EOF
+#!/bin/bash
+#SBATCH --job-name=${job_name}
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=${cpus}
+#SBATCH --mem=${mem}
+#SBATCH --time=${SLURM_TIME}
+${partition_line}
+${gres_lines}
+#SBATCH --output=${output_pattern}
+#SBATCH --error=${error_pattern}
+
+set -e
+bash "${WORKER_SCRIPT}" "\$@"
+SLURM_WRAPPER_EOF
+
+    chmod +x "${script_path}"
+}
+
+API_SLURM_SCRIPT="${SLURM_DIR}/run_cofunding_api_experiments.sbatch"
+GPU2_SLURM_SCRIPT="${SLURM_DIR}/run_cofunding_gpu_2x80gb.sbatch"
+GPU4_SLURM_SCRIPT="${SLURM_DIR}/run_cofunding_gpu_4x80gb.sbatch"
+
+GPU2_GRES_LINES=$'#SBATCH --constraint=gpu80\n#SBATCH --gres=gpu:a100:2'
+GPU4_GRES_LINES=$'#SBATCH --constraint=gpu80\n#SBATCH --gres=gpu:a100:4'
+
+create_sbatch_wrapper \
+    "${API_SLURM_SCRIPT}" \
+    "cofund-api" \
+    "4" \
+    "8G" \
+    "${API_PARTITION_LINE}" \
+    "" \
+    "logs/cluster/cofund_api_%A_%a.out" \
+    "logs/cluster/cofund_api_%A_%a.err"
+
+create_sbatch_wrapper \
+    "${GPU2_SLURM_SCRIPT}" \
+    "cofund-gpu2" \
+    "8" \
+    "64G" \
+    "" \
+    "${GPU2_GRES_LINES}" \
+    "logs/cluster/cofund_gpu2_%A_%a.out" \
+    "logs/cluster/cofund_gpu2_%A_%a.err"
+
+create_sbatch_wrapper \
+    "${GPU4_SLURM_SCRIPT}" \
+    "cofund-gpu4" \
+    "16" \
+    "128G" \
+    "" \
+    "${GPU4_GRES_LINES}" \
+    "logs/cluster/cofund_gpu4_%A_%a.out" \
+    "logs/cluster/cofund_gpu4_%A_%a.err"
+
+# Backward-compatible alias
+cp "${API_SLURM_SCRIPT}" "${SLURM_DIR}/run_cofunding_experiments.sbatch"
+
+echo "Created SLURM script: ${API_SLURM_SCRIPT}"
+echo "Created SLURM script: ${GPU2_SLURM_SCRIPT}"
+echo "Created SLURM script: ${GPU4_SLURM_SCRIPT}"
+echo "Created SLURM alias : ${SLURM_DIR}/run_cofunding_experiments.sbatch"
 
 # Create submission script
 SUBMIT_SCRIPT="${SLURM_DIR}/submit_all.sh"
 cat > "${SUBMIT_SCRIPT}" << 'SUBMIT_EOF'
 #!/bin/bash
-# Submit co-funding experiment jobs
-# Usage: ./submit_all.sh [--test] [--max-concurrent <num>]
+# Submit co-funding experiment jobs with API/GPU routing
+# Usage: ./submit_all.sh [api|gpu|gpu2|gpu4|all] [--test] [--max-concurrent <num>]
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd "${SCRIPT_DIR}/../../../../.." && pwd)"
 cd "${BASE_DIR}"
+
+JOB_MODE="all"
+if [[ $# -gt 0 && "$1" != --* ]]; then
+    JOB_MODE="$1"
+    shift
+fi
 
 MAX_CONCURRENT=""
 TEST_MODE=false
@@ -789,29 +863,122 @@ done
 mkdir -p logs/cluster
 
 CONFIG_DIR="${SCRIPT_DIR}/.."
-TOTAL_CONFIGS=$(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null | wc -l)
+mapfile -t CONFIG_FILES < <(ls "${CONFIG_DIR}"/config_*.json 2>/dev/null || true)
+TOTAL_CONFIGS=${#CONFIG_FILES[@]}
 
-if [ "$TOTAL_CONFIGS" -eq 0 ]; then
+if [[ "$TOTAL_CONFIGS" -eq 0 ]]; then
     echo "Error: No config files found"
     exit 1
 fi
 
-echo "Total configurations: ${TOTAL_CONFIGS}"
+API_SCRIPT="${SCRIPT_DIR}/run_cofunding_api_experiments.sbatch"
+GPU2_SCRIPT="${SCRIPT_DIR}/run_cofunding_gpu_2x80gb.sbatch"
+GPU4_SCRIPT="${SCRIPT_DIR}/run_cofunding_gpu_4x80gb.sbatch"
+
+API_IDS=()
+GPU2_IDS=()
+GPU4_IDS=()
+
+for config_file in "${CONFIG_FILES[@]}"; do
+    config_id="$(basename "$config_file")"
+    config_id="${config_id#config_}"
+    config_id="${config_id%.json}"
+    config_id=$((10#$config_id))
+
+    if [[ "$TEST_MODE" == "true" && "$config_id" -ne 0 ]]; then
+        continue
+    fi
+
+    required_gpus=$(python3 - "$config_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+
+models = cfg.get("models", [])
+gpu_map = {
+    "qwen3-32b": 4,
+    "llama-3.1-8b-instruct": 2,
+}
+
+required = sum(gpu_map.get(m, 0) for m in models)
+print(required)
+PY
+)
+
+    case "$required_gpus" in
+        0)
+            API_IDS+=("$config_id")
+            ;;
+        1|2)
+            GPU2_IDS+=("$config_id")
+            ;;
+        3|4)
+            GPU4_IDS+=("$config_id")
+            ;;
+        *)
+            echo "ERROR: Config ${config_id} requires ${required_gpus} GPUs; unsupported by generated sbatch files."
+            echo "Update submit routing or add another GPU sbatch template before submitting."
+            exit 1
+            ;;
+    esac
+done
 
 if [[ "$TEST_MODE" == "true" ]]; then
-    ARRAY_SPEC="0"
-    echo "Test mode: submitting only config 0"
-else
-    ARRAY_SPEC="0-$((TOTAL_CONFIGS - 1))"
+    echo "Test mode: only config 0 will be submitted (if present)."
 fi
 
-if [[ -n "$MAX_CONCURRENT" ]]; then
-    ARRAY_SPEC="${ARRAY_SPEC}%${MAX_CONCURRENT}"
-    echo "Max concurrent jobs: ${MAX_CONCURRENT}"
-fi
+echo "Total configurations: ${TOTAL_CONFIGS}"
+echo "  API configs : ${#API_IDS[@]}"
+echo "  GPU(2x80GB): ${#GPU2_IDS[@]}"
+echo "  GPU(4x80GB): ${#GPU4_IDS[@]}"
 
-echo "Submitting array: ${ARRAY_SPEC}"
-sbatch --array="${ARRAY_SPEC}" "${SCRIPT_DIR}/run_cofunding_experiments.sbatch"
+submit_group() {
+    local label="$1"
+    local sbatch_script="$2"
+    shift 2
+    local ids=("$@")
+
+    if [[ "${#ids[@]}" -eq 0 ]]; then
+        echo "Skipping ${label}: no matching configs"
+        return 0
+    fi
+
+    local array_spec
+    array_spec=$(IFS=','; echo "${ids[*]}")
+    if [[ -n "$MAX_CONCURRENT" ]]; then
+        array_spec="${array_spec}%${MAX_CONCURRENT}"
+    fi
+
+    echo "Submitting ${label}: ${array_spec}"
+    sbatch --array="${array_spec}" "${sbatch_script}"
+}
+
+case "$JOB_MODE" in
+    api)
+        submit_group "API" "$API_SCRIPT" "${API_IDS[@]}"
+        ;;
+    gpu)
+        submit_group "GPU 2x80GB" "$GPU2_SCRIPT" "${GPU2_IDS[@]}"
+        submit_group "GPU 4x80GB" "$GPU4_SCRIPT" "${GPU4_IDS[@]}"
+        ;;
+    gpu2)
+        submit_group "GPU 2x80GB" "$GPU2_SCRIPT" "${GPU2_IDS[@]}"
+        ;;
+    gpu4)
+        submit_group "GPU 4x80GB" "$GPU4_SCRIPT" "${GPU4_IDS[@]}"
+        ;;
+    all)
+        submit_group "API" "$API_SCRIPT" "${API_IDS[@]}"
+        submit_group "GPU 2x80GB" "$GPU2_SCRIPT" "${GPU2_IDS[@]}"
+        submit_group "GPU 4x80GB" "$GPU4_SCRIPT" "${GPU4_IDS[@]}"
+        ;;
+    *)
+        echo "Usage: $0 [api|gpu|gpu2|gpu4|all] [--test] [--max-concurrent <num>]"
+        exit 1
+        ;;
+esac
 
 echo ""
 echo "Jobs submitted. Monitor with: squeue -u $USER"
@@ -975,9 +1142,11 @@ echo "  1. Derisk (run 1 config locally):"
 echo "     ${LOCAL_RUN_SCRIPT} 0"
 echo ""
 echo "  2. Submit to SLURM:"
-echo "     ${SUBMIT_SCRIPT}                      # All jobs"
-echo "     ${SUBMIT_SCRIPT} --test               # Only config 0"
-echo "     ${SUBMIT_SCRIPT} --max-concurrent 10  # Limit concurrency"
+echo "     ${SUBMIT_SCRIPT} all                  # All jobs (API + GPU)"
+echo "     ${SUBMIT_SCRIPT} api                  # API-only jobs"
+echo "     ${SUBMIT_SCRIPT} gpu                  # GPU jobs (2x + 4x A100 80GB)"
+echo "     ${SUBMIT_SCRIPT} all --test           # Only config 0"
+echo "     ${SUBMIT_SCRIPT} all --max-concurrent 10  # Limit concurrency per submitted group"
 echo ""
 echo "  3. Submit co-funding first, then diplomacy:"
 echo "     ./scripts/submit_cofunding_then_diplomacy.sh"
@@ -985,7 +1154,7 @@ echo ""
 echo "  4. Or run directly (no config generator):"
 echo "     python3 run_strong_models_experiment.py \\"
 echo "       --game-type co_funding \\"
-echo "       --models gpt-5-nano claude-opus-4-6 \\"
+echo "       --models gpt-5.2-chat-latest-20260210 claude-opus-4-6 \\"
 echo "       --m-projects 5 --alpha 0.5 --sigma 0.5 \\"
 echo "       --max-rounds 10 --batch --num-runs 1 --random-seed 42"
 echo ""

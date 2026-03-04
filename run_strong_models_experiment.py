@@ -292,8 +292,8 @@ async def main():
     parser.add_argument(
         "--discussion-turns",
         type=int,
-        default=3,
-        help="Number of times agents go around discussing per round (default: 3)"
+        default=2,
+        help="Number of times agents go around discussing per round (default: 2)"
     )
 
     parser.add_argument(
@@ -565,6 +565,9 @@ async def main():
                 job_id=args.job_id,
                 override_run_number=args.run_number
             )
+
+            if batch_results.num_runs == 0:
+                raise RuntimeError("Batch finished with zero successful runs")
             
             print(f"\n📈 Batch Results Summary:")
             print(f"  Batch ID: {batch_results.batch_id}")

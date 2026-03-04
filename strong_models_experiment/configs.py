@@ -402,6 +402,17 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "qwen3-32b": {
+        "name": "Qwen3 32B",
+        "model_id": "Qwen3-32B",
+        "provider": "Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen3-32B",
+        "description": "Requested Mar 2026 run set, Open-source, Local (4x80GB GPU target)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "deepseek-r1-0528": {
         "name": "DeepSeek R1 0528",
         "model_id": "deepseek/deepseek-r1-0528",
