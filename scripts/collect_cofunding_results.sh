@@ -63,6 +63,7 @@ config_dir = results_dir / "configs"
 all_results = []
 successful = 0
 failed = 0
+in_progress = 0
 not_started = 0
 
 # Process each configuration
@@ -153,8 +154,8 @@ for config_file in config_files:
     else:
         # Check if output directory exists at all
         if output_dir.exists():
-            row["status"] = "INCOMPLETE"
-            failed += 1
+            row["status"] = "IN_PROGRESS"
+            in_progress += 1
         else:
             row["status"] = "NOT_STARTED"
             not_started += 1
@@ -169,6 +170,7 @@ summary = {
     "total": total,
     "successful": successful,
     "failed": failed,
+    "in_progress": in_progress,
     "not_started": not_started,
     "success_rate": success_rate,
     "by_alpha": defaultdict(lambda: {"total": 0, "successful": 0}),
@@ -244,6 +246,7 @@ with open(csv_file, "w", newline="") as f:
 print(f"Collected {total} experiment results:")
 print(f"  Successful: {successful}")
 print(f"  Failed:     {failed}")
+print(f"  In progress: {in_progress}")
 print(f"  Not started: {not_started}")
 print(f"  Success rate: {success_rate*100:.1f}%")
 print()

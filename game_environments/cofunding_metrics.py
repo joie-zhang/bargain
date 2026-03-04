@@ -8,7 +8,7 @@ Computes solution-quality and behavioral metrics specific to the co-funding
 
   - Social welfare, utilitarian efficiency
   - Optimal funded set (knapsack)
-  - Provision rate, coordination failure rate
+  - Provision rate, coordination failure (count / weighted / gap)
   - Lindahl equilibrium and distance
   - Free-rider index
   - Exploitation index
@@ -242,6 +242,81 @@ def coordination_failure_rate(
             not_funded += 1
 
     return not_funded / len(surplus_positive)
+
+
+def coordination_failure_weighted(
+    valuations: Dict[str, List[float]],
+    costs: List[float],
+    contributions: Dict[str, List[float]],
+) -> float:
+    """
+    Surplus-weighted coordination failure.
+
+    Rather than counting projects equally, this metric weights each missed
+    project by its positive surplus mass:
+      surplus_j = max(sum_i v_ij - c_j, 0)
+
+    Returns:
+        sum(missed surplus_j) / sum(all positive surplus_j), in [0, 1]
+        0.0 if no project has positive surplus.
+    """
+    agents = list(valuations.keys())
+    M = len(costs)
+
+    total_positive_surplus = 0.0
+    missed_positive_surplus = 0.0
+
+    for j in range(M):
+        total_val = sum(valuations[a][j] for a in agents)
+        surplus = total_val - costs[j]
+        if surplus <= 1e-9:
+            continue
+
+        total_positive_surplus += surplus
+        total_contrib = sum(contributions[a][j] for a in agents)
+        if total_contrib < costs[j] - 1e-6:
+            missed_positive_surplus += surplus
+
+    if total_positive_surplus <= 1e-12:
+        return 0.0
+
+    return max(0.0, min(1.0, missed_positive_surplus / total_positive_surplus))
+
+
+def coordination_funding_gap_ratio(
+    valuations: Dict[str, List[float]],
+    costs: List[float],
+    contributions: Dict[str, List[float]],
+) -> float:
+    """
+    Funding-gap-based coordination shortfall.
+
+    For each surplus-positive project, measure the unmet funding fraction:
+      gap_j = max(c_j - sum_i x_ij, 0)
+
+    Returns:
+        sum(gap_j) / sum(c_j over surplus-positive projects), in [0, 1]
+        0.0 if no project has positive surplus.
+    """
+    agents = list(valuations.keys())
+    M = len(costs)
+
+    total_relevant_cost = 0.0
+    total_gap = 0.0
+
+    for j in range(M):
+        total_val = sum(valuations[a][j] for a in agents)
+        if total_val <= costs[j] + 1e-9:
+            continue
+
+        total_relevant_cost += costs[j]
+        total_contrib = sum(contributions[a][j] for a in agents)
+        total_gap += max(costs[j] - total_contrib, 0.0)
+
+    if total_relevant_cost <= 1e-12:
+        return 0.0
+
+    return max(0.0, min(1.0, total_gap / total_relevant_cost))
 
 
 def lindahl_equilibrium(

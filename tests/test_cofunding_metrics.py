@@ -25,6 +25,8 @@ from game_environments.cofunding_metrics import (
     utilitarian_efficiency,
     provision_rate,
     coordination_failure_rate,
+    coordination_failure_weighted,
+    coordination_funding_gap_ratio,
     lindahl_equilibrium,
     lindahl_distance,
     free_rider_index,
@@ -181,6 +183,30 @@ class TestCoordinationFailure:
         contributions = {"A": [0.0, 0.0], "B": [0.0, 0.0]}
         cfr = coordination_failure_rate(valuations, costs, contributions)
         assert cfr == 0.0
+
+
+class TestCoordinationFailureWeighted:
+    """Tests for surplus-weighted/gap-based coordination metrics."""
+
+    def test_weighted_penalizes_high_surplus_misses_more(self):
+        valuations = {"A": [80.0, 10.0], "B": [40.0, 30.0]}
+        costs = [20.0, 20.0]
+        # Project 0 funded, project 1 missed
+        contributions = {"A": [10.0, 0.0], "B": [10.0, 10.0]}
+
+        # Surpluses: p0=100, p1=20 -> missed-weighted = 20/(100+20)=1/6
+        weighted = coordination_failure_weighted(valuations, costs, contributions)
+        assert abs(weighted - (1.0 / 6.0)) < 0.01
+
+    def test_gap_ratio_reflects_distance_to_threshold(self):
+        valuations = {"A": [40.0, 40.0], "B": [40.0, 40.0]}
+        costs = [20.0, 20.0]
+        # Project 0 funded exactly; project 1 has a gap of 8
+        contributions = {"A": [10.0, 6.0], "B": [10.0, 6.0]}
+
+        gap_ratio = coordination_funding_gap_ratio(valuations, costs, contributions)
+        # Total relevant cost=40, total gap=8 => 0.2
+        assert abs(gap_ratio - 0.2) < 0.01
 
 
 class TestLindahlEquilibrium:

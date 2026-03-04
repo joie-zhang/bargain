@@ -17,12 +17,14 @@ What it creates:
     visualization/figures/cofunding/
     ├── efficiency_heatmap.png            # Utilitarian efficiency vs alpha x sigma
     ├── provision_rate_heatmap.png        # Provision rate vs alpha x sigma
-    ├── coordination_failure_heatmap.png  # Coordination failure vs alpha x sigma
+    ├── coordination_failure_heatmap.png  # Surplus-weighted coordination failure
+    ├── coordination_failure_count_heatmap.png  # Count-based coordination failure
+    ├── coordination_gap_ratio_heatmap.png  # Funding-gap coordination shortfall
     ├── free_rider_by_model.png           # Free-rider index by adversary model
     ├── lindahl_distance_by_model.png     # Distance from Lindahl equilibrium
     ├── exploitation_index.png            # Exploitation index by model
     ├── utility_vs_elo.png               # Agent utility vs adversary Elo
-    ├── adaptation_rate_by_sigma.png      # Adaptation rate vs budget scarcity
+    ├── adaptation_rate_by_sigma.png      # Adaptation rate vs budget abundance
     ├── num_funded_vs_sigma.png           # Projects funded vs sigma
     ├── competition_index_metrics.png     # 1D competition index (CI) view
     ├── disaggregated_by_alpha.png        # Metrics vs sigma, per alpha
@@ -53,6 +55,8 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from game_environments.cofunding_metrics import (
+    coordination_failure_weighted,
+    coordination_funding_gap_ratio,
     coordination_failure_rate,
     exploitation_index_cofunding,
     free_rider_index,
@@ -246,10 +250,10 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
     total_budget = config.get("total_budget", 0.0)
     agent_budgets = config.get("agent_budgets", {})
     if not agent_budgets:
-        # Estimate from sigma and costs
+        # Estimate from sigma and costs (game uses ratio = 0.5 + 0.5*sigma)
         total_cost = sum(costs)
         s = sigma if sigma else 0.5
-        total_budget = s * total_cost
+        total_budget = (0.5 + 0.5 * s) * total_cost
         per_agent = total_budget / len(agents)
         agent_budgets = {a: per_agent for a in agents}
 
@@ -316,9 +320,20 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
 
     # Coordination failure: computable whenever we have contributions, even if no projects funded
     if contributions and preferences and costs:
-        metrics["coordination_failure"] = coordination_failure_rate(
+        # Keep legacy count-based metric for comparability.
+        metrics["coordination_failure_count"] = coordination_failure_rate(
             preferences, costs, contributions
         )
+        # Use weighted failure as the primary headline metric.
+        metrics["coordination_failure_weighted"] = coordination_failure_weighted(
+            preferences, costs, contributions
+        )
+        # Gap ratio measures distance-to-threshold rather than binary funded/not-funded.
+        metrics["coordination_gap_ratio"] = coordination_funding_gap_ratio(
+            preferences, costs, contributions
+        )
+        # Backward-compatible alias used by existing plotting code.
+        metrics["coordination_failure"] = metrics["coordination_failure_weighted"]
 
     # Lindahl equilibrium (requires funded projects)
     if preferences and costs and funded_set:
@@ -410,7 +425,7 @@ def plot_heatmap(
         cbar_kws={"label": metric.replace("_", " ").title()},
     )
     ax.set_xlabel(r"$\alpha$ (Preference Alignment $\rightarrow$ More Cooperative)", fontsize=12)
-    ax.set_ylabel(r"$\sigma$ ($\leftarrow$ More Abundant | Scarcer $\rightarrow$)", fontsize=12)
+    ax.set_ylabel(r"$\sigma$ (Budget Abundance Scale)", fontsize=12)
     ax.set_title(title, fontsize=14)
     plt.tight_layout()
     plt.savefig(figures_dir / filename, dpi=150, bbox_inches="tight")
@@ -526,7 +541,7 @@ def plot_utility_vs_elo(df: pd.DataFrame, figures_dir: Path):
 
 
 def plot_num_funded_vs_sigma(df: pd.DataFrame, figures_dir: Path):
-    """Line plot of average projects funded vs sigma (budget scarcity)."""
+    """Line plot of average projects funded vs sigma (budget abundance scale)."""
     if "sigma" not in df.columns or "num_funded" not in df.columns:
         print("  Skipping num_funded_vs_sigma.png: missing columns")
         return
@@ -545,9 +560,9 @@ def plot_num_funded_vs_sigma(df: pd.DataFrame, figures_dir: Path):
         linewidth=2,
         markersize=8,
     )
-    ax.set_xlabel("Sigma (Budget/Cost Ratio)", fontsize=12)
+    ax.set_xlabel("Sigma (Budget Abundance Scale)", fontsize=12)
     ax.set_ylabel("Average Projects Funded", fontsize=12)
-    ax.set_title("Projects Funded vs Budget Scarcity", fontsize=14)
+    ax.set_title("Projects Funded vs Budget Abundance", fontsize=14)
 
     # Add reference line for m_projects
     m_projects = df["m_projects"].mode().iloc[0] if "m_projects" in df.columns else 5
@@ -638,7 +653,7 @@ def plot_adaptation_by_sigma(df: pd.DataFrame, figures_dir: Path):
         ax.errorbar(grouped["sigma"], grouped["mean"], yerr=grouped["std"],
                      marker="o", capsize=4, label=label)
 
-    ax.set_xlabel("Sigma (Budget/Cost Ratio)", fontsize=12)
+    ax.set_xlabel("Sigma (Budget Abundance Scale)", fontsize=12)
     ax.set_ylabel("Adaptation Rate", fontsize=12)
     ax.set_title("Strategy Adaptation Rate vs Budget Scarcity", fontsize=14)
     ax.legend()
@@ -909,8 +924,12 @@ def main():
         print(f"Avg efficiency:       {df['utilitarian_efficiency'].mean():.3f}")
     if "provision_rate" in df.columns:
         print(f"Avg provision rate:   {df['provision_rate'].mean():.3f}")
-    if "coordination_failure" in df.columns:
-        print(f"Avg coord. failure:   {df['coordination_failure'].mean():.3f}")
+    if "coordination_failure_weighted" in df.columns:
+        print(f"Avg coord. failure (weighted): {df['coordination_failure_weighted'].mean():.3f}")
+    if "coordination_failure_count" in df.columns:
+        print(f"Avg coord. failure (count):    {df['coordination_failure_count'].mean():.3f}")
+    if "coordination_gap_ratio" in df.columns:
+        print(f"Avg coordination gap ratio:    {df['coordination_gap_ratio'].mean():.3f}")
     print(f"Avg baseline utility: {df['baseline_utility'].mean():.1f}")
     print(f"Avg adversary utility:{df['adversary_utility'].mean():.1f}")
     print(f"Avg utility gap:      {df['utility_gap'].mean():.1f}")
@@ -954,8 +973,24 @@ def main():
     if "coordination_failure" in df.columns:
         plot_heatmap(
             df, "coordination_failure",
-            "Coordination Failure Rate",
+            "Coordination Failure (Surplus-Weighted)",
             "coordination_failure_heatmap.png", figures_dir,
+            vmin=0, vmax=1, cmap="YlOrRd",
+        )
+
+    if "coordination_failure_count" in df.columns:
+        plot_heatmap(
+            df, "coordination_failure_count",
+            "Coordination Failure (Count-Based)",
+            "coordination_failure_count_heatmap.png", figures_dir,
+            vmin=0, vmax=1, cmap="YlOrRd",
+        )
+
+    if "coordination_gap_ratio" in df.columns:
+        plot_heatmap(
+            df, "coordination_gap_ratio",
+            "Coordination Funding Gap Ratio",
+            "coordination_gap_ratio_heatmap.png", figures_dir,
             vmin=0, vmax=1, cmap="YlOrRd",
         )
 
