@@ -14,6 +14,7 @@ from .configs import STRONG_MODELS_CONFIG
 from .agents import StrongModelAgentFactory
 from .phases import PhaseHandler
 from .analysis import ExperimentAnalyzer
+from .analysis.qualitative_metrics import compute_qualitative_metrics_v1
 from .utils import ExperimentUtils, FileManager
 
 # Import game environment factory
@@ -274,6 +275,8 @@ class StrongModelsExperiment:
         final_allocation = {}
         agent_preferences_data = {}
         strategic_behaviors = {}
+        qualitative_metrics_v1 = {}
+        qualitative_events = []
         conversation_logs = []
         cofunding_commit_reached = False
         
@@ -448,6 +451,11 @@ class StrongModelsExperiment:
             raise
         
         # Analyze results
+        if game_type == "co_funding":
+            qualitative_metrics_v1, qualitative_events = compute_qualitative_metrics_v1(
+                conversation_logs, preferences.get("game_state", {})
+            )
+
         exploitation_detected = self.analyzer.detect_exploitation(conversation_logs)
         strategic_behaviors = self.analyzer.analyze_strategic_behaviors(conversation_logs)
         agent_performance = self.analyzer.analyze_agent_performance(agents, final_utilities)
@@ -481,6 +489,8 @@ class StrongModelsExperiment:
             final_allocation=final_allocation,
             agent_preferences=agent_preferences_data,
             strategic_behaviors=strategic_behaviors,
+            qualitative_metrics_v1=qualitative_metrics_v1,
+            qualitative_events=qualitative_events,
             conversation_logs=conversation_logs,
             agent_performance=agent_performance,
             exploitation_detected=exploitation_detected

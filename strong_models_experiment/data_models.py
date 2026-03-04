@@ -16,6 +16,8 @@ class ExperimentResults:
     final_allocation: Optional[Dict[str, List[int]]] = field(default_factory=dict)
     agent_preferences: Optional[Dict[str, List[float]]] = field(default_factory=dict)
     strategic_behaviors: Dict[str, Any] = field(default_factory=dict)
+    qualitative_metrics_v1: Dict[str, Any] = field(default_factory=dict)
+    qualitative_events: List[Dict[str, Any]] = field(default_factory=list)
     conversation_logs: List[Dict[str, Any]] = field(default_factory=list)
     agent_performance: Dict[str, Any] = field(default_factory=dict)
     exploitation_detected: bool = False
@@ -32,6 +34,8 @@ class ExperimentResults:
             "final_allocation": self.final_allocation,
             "agent_preferences": self.agent_preferences,
             "strategic_behaviors": self.strategic_behaviors,
+            "qualitative_metrics_v1": self.qualitative_metrics_v1,
+            "qualitative_events": self.qualitative_events,
             "conversation_logs": self.conversation_logs,
             "agent_performance": self.agent_performance,
             "exploitation_detected": self.exploitation_detected
