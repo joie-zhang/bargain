@@ -16,8 +16,40 @@ log = logging.getLogger(__name__)
 
 POLL_DIR = Path("/home/jz4391/openrouter_proxy")
 PROCESSED_DIR = POLL_DIR / "processed"
-POLL_INTERVAL = 1.0
-MAX_CONCURRENT_REQUESTS = int(os.getenv("OPENROUTER_PROXY_MAX_CONCURRENCY", "16"))
+
+
+def _int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        log.warning(f"Invalid {name}={raw!r}; using default={default}")
+        return default
+
+
+def _float_env(name: str, default: float) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        log.warning(f"Invalid {name}={raw!r}; using default={default}")
+        return default
+
+
+# Lower poll interval improves queue pickup latency under high load.
+POLL_INTERVAL = max(0.01, _float_env("OPENROUTER_PROXY_POLL_INTERVAL", 0.1))
+
+# High-throughput defaults; allow explicit override.
+# OPENROUTER_PROXY_MAX_CONCURRENCY=0 means "unbounded".
+DEFAULT_MAX_CONCURRENCY = max(64, min(512, (os.cpu_count() or 8) * 16))
+MAX_CONCURRENT_REQUESTS = _int_env("OPENROUTER_PROXY_MAX_CONCURRENCY", DEFAULT_MAX_CONCURRENCY)
+
+# aiohttp connector limit: 0 means unlimited connections.
+HTTP_MAX_CONNECTIONS = max(0, _int_env("OPENROUTER_PROXY_HTTP_MAX_CONNECTIONS", 0))
 
 def extract_content_from_response(data: dict, model_id: str = None) -> str:
     """
@@ -99,63 +131,64 @@ def extract_content_from_response(data: dict, model_id: str = None) -> str:
     return content
 
 
-async def prompt_openrouter(url, headers, payload, timeout) -> tuple:
+async def prompt_openrouter(
+    session: aiohttp.ClientSession,
+    url: str,
+    headers: dict,
+    payload: dict,
+    timeout: float,
+) -> tuple:
     """Make OpenRouter request and return (content, usage) tuple."""
     model_id = payload.get("model", "unknown")
-    connector = aiohttp.TCPConnector(force_close=True)
-    async with aiohttp.ClientSession(
-        connector=connector,
-        json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
-    ) as session:
-        response = await session.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=timeout)
-        )
+    response = await session.post(
+        url,
+        headers=headers,
+        json=payload,
+        timeout=aiohttp.ClientTimeout(total=timeout)
+    )
 
-        # Check HTTP status
-        if response.status != 200:
-            error_text = await response.text()
-            # Provide more helpful error messages for authentication issues
-            if response.status == 401:
-                try:
-                    error_data = await response.json()
-                    error_msg = error_data.get("error", {}).get("message", error_text)
-                    raise Exception(
-                        f"HTTP 401: {error_msg}\n"
-                        f"This usually means the OpenRouter API key is invalid, expired, or the account is suspended.\n"
-                        f"Please verify your API key at https://openrouter.ai/keys"
-                    )
-                except:
-                    pass
-            raise Exception(f"HTTP {response.status}: {error_text[:500]}")
+    # Check HTTP status
+    if response.status != 200:
+        error_text = await response.text()
+        # Provide more helpful error messages for authentication issues
+        if response.status == 401:
+            try:
+                error_data = await response.json()
+                error_msg = error_data.get("error", {}).get("message", error_text)
+                raise Exception(
+                    f"HTTP 401: {error_msg}\n"
+                    f"This usually means the OpenRouter API key is invalid, expired, or the account is suspended.\n"
+                    f"Please verify your API key at https://openrouter.ai/keys"
+                )
+            except Exception:
+                pass
+        raise Exception(f"HTTP {response.status}: {error_text[:500]}")
 
-        data = await response.json(encoding='utf-8')
+    data = await response.json(encoding='utf-8')
 
-        # Debug logging
-        log.info(f"Model: {model_id}")
-        log.debug(f"Request payload: {json.dumps(payload)[:200]}")
-        log.debug(f"Response: {json.dumps(data)[:500]}")
+    # Debug logging
+    log.info(f"Model: {model_id}")
+    log.debug(f"Request payload: {json.dumps(payload)[:200]}")
+    log.debug(f"Response: {json.dumps(data)[:500]}")
 
-        content = extract_content_from_response(data, model_id)
-        usage = data.get("usage", {})
-        return content, usage
+    content = extract_content_from_response(data, model_id)
+    usage = data.get("usage", {})
+    return content, usage
 
-async def process_request(request_json_fpath) -> tuple:
+async def process_request(session: aiohttp.ClientSession, request_json_fpath) -> tuple:
     """Process request file and return (content, usage) tuple."""
     with open(request_json_fpath, 'r') as f:
         request_json = json.load(f)
     url, headers, payload, timeout = request_json['url'], request_json['headers'], request_json['payload'], request_json['timeout']
-    return await prompt_openrouter(url, headers, payload, timeout)
+    return await prompt_openrouter(session, url, headers, payload, timeout)
 
-async def handle_request(request_path: Path):
+async def handle_request(session: aiohttp.ClientSession, request_path: Path):
     suffix = request_path.stem.removeprefix("request_")
     response_path = POLL_DIR / f"response_{suffix}.json"
     log.info(f"Processing {request_path.name}")
 
     try:
-        content, usage = await process_request(str(request_path))
+        content, usage = await process_request(session, str(request_path))
         response = {
             "result": content,
             "error": None,
@@ -179,18 +212,25 @@ async def handle_request(request_path: Path):
         shutil.move(request_path, PROCESSED_DIR / request_path.name)
 
 
-async def _run_and_cleanup(task_map: dict, request_path: Path):
+async def _run_and_cleanup(
+    task_map: dict,
+    session: aiohttp.ClientSession,
+    request_path: Path,
+):
     """Run one request task and always release it from the active map."""
     try:
-        await handle_request(request_path)
+        await handle_request(session, request_path)
     finally:
         task_map.pop(request_path, None)
 
 async def main():
     PROCESSED_DIR.mkdir(exist_ok=True)
+    max_concurrency_label = (
+        "unbounded" if MAX_CONCURRENT_REQUESTS <= 0 else str(MAX_CONCURRENT_REQUESTS)
+    )
     log.info(
         f"Polling {POLL_DIR} every {POLL_INTERVAL}s "
-        f"(max_concurrency={MAX_CONCURRENT_REQUESTS})"
+        f"(max_concurrency={max_concurrency_label}, http_conn_limit={HTTP_MAX_CONNECTIONS})"
     )
 
     active_tasks = {}
@@ -201,34 +241,41 @@ async def main():
             # File was moved/deleted concurrently.
             return float("inf")
 
-    while True:
-        # Sort by mtime so oldest requests get launched first.
-        request_paths = sorted(
-            POLL_DIR.glob("request_*.json"),
-            key=_safe_mtime
-        )
+    connector = aiohttp.TCPConnector(force_close=False, limit=HTTP_MAX_CONNECTIONS)
+    async with aiohttp.ClientSession(
+        connector=connector,
+        json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
+    ) as session:
+        while True:
+            # Sort by mtime so oldest requests get launched first.
+            request_paths = sorted(
+                POLL_DIR.glob("request_*.json"),
+                key=_safe_mtime
+            )
 
-        for request_path in request_paths:
-            if not request_path.exists():
-                continue
-            if request_path in active_tasks:
-                continue
-            if len(active_tasks) >= MAX_CONCURRENT_REQUESTS:
-                break
-            task = asyncio.create_task(_run_and_cleanup(active_tasks, request_path))
-            active_tasks[request_path] = task
+            for request_path in request_paths:
+                if not request_path.exists():
+                    continue
+                if request_path in active_tasks:
+                    continue
+                if MAX_CONCURRENT_REQUESTS > 0 and len(active_tasks) >= MAX_CONCURRENT_REQUESTS:
+                    break
+                task = asyncio.create_task(
+                    _run_and_cleanup(active_tasks, session, request_path)
+                )
+                active_tasks[request_path] = task
 
-        # Reap completed tasks so exceptions surface in logs.
-        done = [p for p, t in active_tasks.items() if t.done()]
-        for p in done:
-            t = active_tasks.pop(p, None)
-            if t is not None:
-                try:
-                    await t
-                except Exception as exc:
-                    log.error(f"Unhandled task error for {p.name}: {exc}")
+            # Reap completed tasks so exceptions surface in logs.
+            done = [p for p, t in active_tasks.items() if t.done()]
+            for p in done:
+                t = active_tasks.pop(p, None)
+                if t is not None:
+                    try:
+                        await t
+                    except Exception as exc:
+                        log.error(f"Unhandled task error for {p.name}: {exc}")
 
-        await asyncio.sleep(POLL_INTERVAL)
+            await asyncio.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":
     asyncio.run(main())

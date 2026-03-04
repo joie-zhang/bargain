@@ -190,10 +190,10 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5-nano": {
         "name": "GPT-5 Nano",
-        "model_id": "openai/gpt-5-nano",
-        "provider": "OpenRouter",
-        "api_type": "openrouter",
-        "description": "Strong tier, Closed-source, Reasoning (via OpenRouter)",
+        "model_id": "gpt-5-nano",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Strong tier, Closed-source, Reasoning (direct OpenAI API)",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -374,10 +374,10 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5.2-chat-latest-20260210": {
         "name": "GPT-5.2 Chat Latest (2026-02-10)",
-        "model_id": "openai/gpt-5.2-chat",
-        "provider": "OpenRouter",
-        "api_type": "openrouter",
-        "description": "Requested Mar 2026 run set, Closed-source (via OpenRouter GPT-5.2 chat)",
+        "model_id": "gpt-5.2-chat-latest",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Requested Mar 2026 run set, Closed-source (direct OpenAI API)",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"

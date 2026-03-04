@@ -558,7 +558,10 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
+# OpenRouter routing: direct calls now supported from compute nodes via proxy/default module.
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-direct}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo ""
 
 # Get config file for this array task
@@ -652,36 +655,12 @@ if run_with_logging "\$CMD" "\$TMP_RUN_LOG"; then
     echo "Experiment completed successfully at: \$(date)"
     echo "============================================================"
 else
-    if [[ "\$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "\$TMP_RUN_LOG"; then
-        FALLBACK_MODELS=\$(echo "\$MODELS" | sed 's/\\bclaude-opus-4-6\\b/claude-opus-4-6-openrouter/g')
-        CMD_FALLBACK="\${CMD/--models \$MODELS/--models \$FALLBACK_MODELS}"
-        echo ""
-        echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
-        echo "Fallback models: \$FALLBACK_MODELS"
-        echo "Running: \$CMD_FALLBACK"
-        echo ""
-
-        if run_with_logging "\$CMD_FALLBACK" "\$TMP_RUN_LOG"; then
-            echo ""
-            echo "============================================================"
-            echo "Fallback experiment completed successfully at: \$(date)"
-            echo "============================================================"
-        else
-            echo ""
-            echo "============================================================"
-            echo "Fallback experiment failed at: \$(date)"
-            echo "============================================================"
-            rm -f "\$TMP_RUN_LOG"
-            exit 1
-        fi
-    else
-        echo ""
-        echo "============================================================"
-        echo "Experiment failed at: \$(date)"
-        echo "============================================================"
-        rm -f "\$TMP_RUN_LOG"
-        exit 1
-    fi
+    echo ""
+    echo "============================================================"
+    echo "Experiment failed at: \$(date)"
+    echo "============================================================"
+    rm -f "\$TMP_RUN_LOG"
+    exit 1
 fi
 
 rm -f "\$TMP_RUN_LOG"
@@ -790,6 +769,8 @@ echo ""
 
 # Source virtual environment
 source "${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-direct}"
+echo "OpenRouter transport: $OPENROUTER_TRANSPORT"
 
 # Extract common config values
 EXPERIMENT_TYPE=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['experiment_type'])")
@@ -865,21 +846,6 @@ if run_with_logging_local "$CMD" "$TMP_RUN_LOG"; then
 fi
 
 STATUS=1
-if [[ "$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "$TMP_RUN_LOG"; then
-    FALLBACK_MODELS=$(echo "$MODELS" | sed 's/\bclaude-opus-4-6\b/claude-opus-4-6-openrouter/g')
-    CMD_FALLBACK="${CMD/--models $MODELS/--models $FALLBACK_MODELS}"
-    echo ""
-    echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
-    echo "Fallback models: $FALLBACK_MODELS"
-    echo "Running: $CMD_FALLBACK"
-    echo ""
-    if run_with_logging_local "$CMD_FALLBACK" "$TMP_RUN_LOG"; then
-        STATUS=0
-    else
-        STATUS=$?
-    fi
-fi
-
 rm -f "$TMP_RUN_LOG"
 exit $STATUS
 LOCAL_EOF

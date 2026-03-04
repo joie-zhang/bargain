@@ -9,6 +9,7 @@ import json
 import asyncio
 import aiohttp
 import time
+import uuid
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
@@ -50,6 +51,10 @@ class OpenRouterConfig:
     timeout: float = 300.0
     max_retries: int = 3
     retry_delay: float = 1.0
+    transport: str = "direct"  # direct | proxy | auto
+    proxy_poll_dir: str = "/home/jz4391/openrouter_proxy"
+    proxy_poll_interval: float = 0.1
+    proxy_timeout: float = 6000.0
 
 
 class OpenRouterAgent(BaseLLMAgent):
@@ -89,7 +94,43 @@ class OpenRouterAgent(BaseLLMAgent):
                 f"This might indicate an invalid key format."
             )
         
-        self.openrouter_config = OpenRouterConfig(api_key=api_key.strip())
+        transport = os.getenv("OPENROUTER_TRANSPORT", "direct").strip().lower()
+        if transport not in {"direct", "proxy", "auto"}:
+            self.logger.warning(
+                "Invalid OPENROUTER_TRANSPORT=%r; defaulting to 'direct'",
+                transport,
+            )
+            transport = "direct"
+
+        proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy")
+
+        poll_env = os.getenv("OPENROUTER_PROXY_CLIENT_POLL_INTERVAL", "0.1")
+        try:
+            proxy_poll_interval = max(0.01, float(poll_env))
+        except ValueError:
+            self.logger.warning(
+                "Invalid OPENROUTER_PROXY_CLIENT_POLL_INTERVAL=%r; using 0.1",
+                poll_env,
+            )
+            proxy_poll_interval = 0.1
+
+        timeout_env = os.getenv("OPENROUTER_PROXY_CLIENT_TIMEOUT", "6000")
+        try:
+            proxy_timeout = max(1.0, float(timeout_env))
+        except ValueError:
+            self.logger.warning(
+                "Invalid OPENROUTER_PROXY_CLIENT_TIMEOUT=%r; using 6000",
+                timeout_env,
+            )
+            proxy_timeout = 6000.0
+
+        self.openrouter_config = OpenRouterConfig(
+            api_key=api_key.strip(),
+            transport=transport,
+            proxy_poll_dir=proxy_poll_dir,
+            proxy_poll_interval=proxy_poll_interval,
+            proxy_timeout=proxy_timeout,
+        )
         self.session: Optional[aiohttp.ClientSession] = None
         
         # Initialize message history (required by BaseLLMAgent)
@@ -117,26 +158,92 @@ class OpenRouterAgent(BaseLLMAgent):
     async def _ensure_session(self):
         """Ensure aiohttp session exists."""
         if self.session is None:
-            connector = aiohttp.TCPConnector(force_close=True)
+            connector = aiohttp.TCPConnector(force_close=False)
             self.session = aiohttp.ClientSession(
                 connector=connector,
                 json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
             )
     
+    def _extract_content_from_openrouter_response(self, data: Dict[str, Any]) -> str:
+        """Extract message content from OpenRouter response payload."""
+        if "error" in data:
+            error_msg = data.get("error", {})
+            if isinstance(error_msg, dict):
+                raise Exception(f"API Error: {error_msg.get('message', error_msg)}")
+            raise Exception(f"API Error: {error_msg}")
 
-    async def send_request(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple:
-        """
-        Write request file, poll for response, return (result, error, usage).
-        Raises TimeoutError if no response within 10 minutes.
-        """
-        POLL_DIR = Path("/home/jz4391/openrouter_proxy")
-        PROCESSED_DIR = POLL_DIR / "processed"
-        POLL_INTERVAL = 0.5
-        CLIENT_TIMEOUT = 6000  # 10 minutes
+        choices = data.get("choices") or []
+        if not choices:
+            raise Exception(f"No choices in response: {json.dumps(data)[:500]}")
 
-        timestamp = f"{time.time():.6f}".replace('.', '-')
-        request_path = POLL_DIR / f"request_{timestamp}.json"
-        response_path = POLL_DIR / f"response_{timestamp}.json"
+        message = choices[0].get("message", {})
+        content = message.get("content")
+
+        if (content is None or content == "") and isinstance(message.get("reasoning_content"), str):
+            reasoning = message.get("reasoning_content", "").strip()
+            if reasoning:
+                content = reasoning
+
+        if content is None or content == "":
+            reasoning_details = message.get("reasoning_details")
+            if isinstance(reasoning_details, list):
+                summary_parts = []
+                for entry in reasoning_details:
+                    if not isinstance(entry, dict):
+                        continue
+                    summary = entry.get("summary")
+                    if isinstance(summary, str) and summary.strip():
+                        summary_parts.append(summary.strip())
+                        continue
+                    if isinstance(summary, list):
+                        for chunk in summary:
+                            if not isinstance(chunk, dict):
+                                continue
+                            text = chunk.get("text")
+                            if isinstance(text, str) and text.strip():
+                                summary_parts.append(text.strip())
+                if summary_parts:
+                    content = "\n".join(summary_parts)
+
+        if not isinstance(content, str) or not content.strip():
+            finish_reason = choices[0].get("finish_reason")
+            raise Exception(
+                f"OpenRouter returned empty content (finish_reason={finish_reason})"
+            )
+
+        return content
+
+    async def _send_request_direct(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple:
+        """Query OpenRouter directly over HTTPS."""
+        await self._ensure_session()
+        assert self.session is not None
+
+        async with self.session.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=timeout),
+        ) as response:
+            if response.status != 200:
+                error_text = await response.text()
+                raise Exception(f"HTTP {response.status}: {error_text[:500]}")
+
+            data = await response.json(encoding="utf-8")
+            result = self._extract_content_from_openrouter_response(data)
+            usage = data.get("usage", {}) or {}
+            return result, None, usage
+
+    async def _send_request_via_proxy(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple:
+        """Route request through the shared file-based proxy queue."""
+        poll_dir = Path(self.openrouter_config.proxy_poll_dir)
+        processed_dir = poll_dir / "processed"
+        poll_interval = self.openrouter_config.proxy_poll_interval
+        client_timeout = self.openrouter_config.proxy_timeout
+
+        # Use nanoseconds + uuid to avoid filename collisions across many workers.
+        timestamp = f"{time.time_ns()}_{uuid.uuid4().hex}"
+        request_path = poll_dir / f"request_{timestamp}.json"
+        response_path = poll_dir / f"response_{timestamp}.json"
 
         request_data = {
             "url": url,
@@ -144,34 +251,33 @@ class OpenRouterAgent(BaseLLMAgent):
             "payload": payload,
             "timeout": timeout,
         }
-        with open(request_path, 'w') as f:
+        with open(request_path, "w") as f:
             json.dump(request_data, f)
-        print(f"[client] Wrote {request_path.name}")
+        self.logger.debug(f"[client] Wrote {request_path.name}")
 
         start = time.time()
         while not response_path.exists():
-            if time.time() - start > CLIENT_TIMEOUT:
-                # Clean up orphaned request if still there
+            if time.time() - start > client_timeout:
                 if request_path.exists():
                     request_path.unlink()
-                raise TimeoutError(f"No response after {CLIENT_TIMEOUT}s for {timestamp}")
-            await asyncio.sleep(POLL_INTERVAL)
+                raise TimeoutError(f"No response after {client_timeout}s for {timestamp}")
+            await asyncio.sleep(poll_interval)
 
-        with open(response_path, 'r') as f:
+        with open(response_path, "r") as f:
             response_data = json.load(f)
 
         result, error = response_data["result"], response_data["error"]
         usage = response_data.get("usage", {}) or {}
-        print(f"[client] Got response for {timestamp}: {'error' if error else 'success'}")
+        self.logger.debug(
+            f"[client] Got response for {timestamp}: {'error' if error else 'success'}"
+        )
 
-        shutil.move(response_path, PROCESSED_DIR / response_path.name)
-
+        processed_dir.mkdir(exist_ok=True)
+        shutil.move(response_path, processed_dir / response_path.name)
         return result, error, usage
-    
+
     async def _make_request(self, messages: List[Dict[str, str]]) -> tuple:
         """Make a request to OpenRouter API. Returns (content, usage)."""
-        await self._ensure_session()
-
         headers = {
             "Authorization": f"Bearer {self.openrouter_config.api_key}",
             "Content-Type": "application/json",
@@ -179,15 +285,12 @@ class OpenRouterAgent(BaseLLMAgent):
             "X-Title": self.openrouter_config.site_name or ""
         }
 
-        # Prepare request payload
         payload = {
             "model": self.model_id,
             "messages": messages,
             "temperature": self.llm_config.temperature,
-            "max_tokens": min(self.llm_config.max_tokens, 4000),  # Cap at 4000 for safety
+            "max_tokens": min(self.llm_config.max_tokens, 4000),
         }
-
-        # Add any custom parameters
         if self.llm_config.custom_parameters:
             payload.update(self.llm_config.custom_parameters)
 
@@ -195,8 +298,30 @@ class OpenRouterAgent(BaseLLMAgent):
 
         for attempt in range(self.openrouter_config.max_retries):
             try:
+                if self.openrouter_config.transport == "proxy":
+                    result, error, usage = await self._send_request_via_proxy(
+                        url, headers, payload, self.openrouter_config.timeout
+                    )
+                elif self.openrouter_config.transport == "direct":
+                    result, error, usage = await self._send_request_direct(
+                        url, headers, payload, self.openrouter_config.timeout
+                    )
+                else:
+                    try:
+                        result, error, usage = await self._send_request_direct(
+                            url, headers, payload, self.openrouter_config.timeout
+                        )
+                    except Exception as direct_exc:
+                        self.logger.warning(
+                            "Direct OpenRouter request failed in auto mode (%s); "
+                            "falling back to proxy queue at %s",
+                            direct_exc,
+                            self.openrouter_config.proxy_poll_dir,
+                        )
+                        result, error, usage = await self._send_request_via_proxy(
+                            url, headers, payload, self.openrouter_config.timeout
+                        )
 
-                result, error, usage = await self.send_request(url, headers, payload, self.openrouter_config.timeout)
                 if error:
                     raise Exception(error)
                 if result is None:
@@ -204,35 +329,10 @@ class OpenRouterAgent(BaseLLMAgent):
                 if not result or len(result.strip()) == 0:
                     raise Exception("OpenRouter API returned empty response content")
                 return result, usage
-                # async with self.session.post(
-                #     url,
-                #     headers=headers,
-                #     json=payload,
-                #     timeout=aiohttp.ClientTimeout(total=self.openrouter_config.timeout)
-                # ) as response:
-                #     if response.status == 200:
-                #         # Ensure proper UTF-8 decoding
-                #         data = await response.json(encoding='utf-8')
-                #         content = data["choices"][0]["message"]["content"]
-                #         # Ensure content is properly encoded
-                #         if isinstance(content, bytes):
-                #             content = content.decode('utf-8')
-                #         return content
-                #     else:
-                #         error_text = await response.text()
-                #         self.logger.error(f"OpenRouter API error: {response.status} - {error_text}")
-                        
-                #         if response.status == 429:  # Rate limit
-                #             await asyncio.sleep(self.openrouter_config.retry_delay * (attempt + 1))
-                #             continue
-                #         elif response.status >= 500:  # Server error
-                #             await asyncio.sleep(self.openrouter_config.retry_delay)
-                #             continue
-                #         else:
-                #             raise Exception(f"OpenRouter API error: {response.status} - {error_text}")
-                            
             except asyncio.TimeoutError:
-                self.logger.warning(f"Request timeout (attempt {attempt + 1}/{self.openrouter_config.max_retries})")
+                self.logger.warning(
+                    f"Request timeout (attempt {attempt + 1}/{self.openrouter_config.max_retries})"
+                )
                 if attempt < self.openrouter_config.max_retries - 1:
                     await asyncio.sleep(self.openrouter_config.retry_delay)
                 else:
