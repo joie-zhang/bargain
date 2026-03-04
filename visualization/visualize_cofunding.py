@@ -55,6 +55,7 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from game_environments.cofunding_metrics import (
+    adaptation_rate,
     coordination_failure_weighted,
     coordination_funding_gap_ratio,
     coordination_failure_rate,
@@ -172,6 +173,33 @@ def _extract_final_pledges(result: Dict) -> Optional[Dict[str, List[float]]]:
     return final_pledges if final_pledges else None
 
 
+def _extract_pledge_history(result: Dict) -> List[Dict[str, List[float]]]:
+    """Extract round-by-round pledge history from conversation logs."""
+    logs = result.get("conversation_logs", [])
+    if not logs:
+        return []
+
+    pledges_by_round: Dict[int, Dict[str, List[float]]] = defaultdict(dict)
+    for log in logs:
+        if log.get("phase") != "pledge_submission":
+            continue
+        pledge = log.get("pledge", {})
+        contributions = pledge.get("contributions")
+        if not isinstance(contributions, list):
+            continue
+        round_num = int(log.get("round", 0))
+        if round_num <= 0:
+            continue
+        agent = log.get("from", pledge.get("proposed_by", ""))
+        if not agent:
+            continue
+        pledges_by_round[round_num][agent] = [float(x) for x in contributions]
+
+    if not pledges_by_round:
+        return []
+    return [pledges_by_round[r] for r in sorted(pledges_by_round.keys())]
+
+
 def _parse_config_from_path(path: Path) -> Dict:
     """Extract alpha, sigma, model_order from directory structure."""
     parts = path.parts
@@ -263,6 +291,7 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         len(v) == m_projects for v in contributions.values()
     ):
         contributions = None
+    pledge_history = _extract_pledge_history(result)
 
     metrics = {
         "alpha": alpha,
@@ -279,6 +308,24 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         "total_utility": sum(utilities.values()),
         "utility_gap": utilities.get(adversary_agent, 0) - utilities.get(baseline_agent, 0),
     }
+
+    # Round-to-round adaptation from full pledge history
+    if pledge_history and agent_budgets:
+        adaptation = adaptation_rate(pledge_history, agent_budgets)
+        metrics["adaptation_baseline"] = adaptation.get(baseline_agent, float("nan"))
+        metrics["adaptation_adversary"] = adaptation.get(adversary_agent, float("nan"))
+
+    # Optional structured qualitative metrics (when available in newer runs)
+    qual = result.get("qualitative_metrics_v1", {})
+    if isinstance(qual, dict) and qual:
+        promise = qual.get("promise_keeping", {})
+        persuasion = qual.get("persuasion_effectiveness", {})
+        coalition = qual.get("coalition_formation", {})
+        metrics["promise_keep_rate"] = promise.get("overall_keep_rate", float("nan"))
+        metrics["promise_mean_abs_error"] = promise.get("mean_abs_error", float("nan"))
+        metrics["persuasion_other_agent_delta"] = persuasion.get("overall_other_agent_delta", float("nan"))
+        metrics["coalition_persistent_fraction"] = coalition.get("persistent_project_fraction", float("nan"))
+        metrics["coalition_active_round_fraction"] = coalition.get("coalition_active_round_fraction", float("nan"))
 
     # Optimal funded set
     if preferences and costs and total_budget > 0:
@@ -655,7 +702,7 @@ def plot_adaptation_by_sigma(df: pd.DataFrame, figures_dir: Path):
 
     ax.set_xlabel("Sigma (Budget Abundance Scale)", fontsize=12)
     ax.set_ylabel("Adaptation Rate", fontsize=12)
-    ax.set_title("Strategy Adaptation Rate vs Budget Scarcity", fontsize=14)
+    ax.set_title("Strategy Adaptation Rate vs Budget Abundance", fontsize=14)
     ax.legend()
     plt.tight_layout()
     plt.savefig(figures_dir / "adaptation_rate_by_sigma.png", dpi=150, bbox_inches="tight")

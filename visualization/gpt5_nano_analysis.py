@@ -295,7 +295,18 @@ def extract_experiment_features(exp: Dict) -> Dict:
     - Adversary model: The adversary model GPT-5-nano is paired against
     """
     utilities = exp.get('final_utilities', {})
-    strategic = exp.get('strategic_behaviors', {})
+    qualitative = exp.get('qualitative_metrics_v1', {}) or {}
+    promise = qualitative.get('promise_keeping', {}) if isinstance(qualitative, dict) else {}
+    persuasion = qualitative.get('persuasion_effectiveness', {}) if isinstance(qualitative, dict) else {}
+    coalition = qualitative.get('coalition_formation', {}) if isinstance(qualitative, dict) else {}
+    adaptation = qualitative.get('adaptation_rate', {}) if isinstance(qualitative, dict) else {}
+
+    adaptation_values = []
+    if isinstance(adaptation, dict):
+        adaptation_values = [
+            float(v) for v in adaptation.values() if isinstance(v, (int, float))
+        ]
+    adaptation_mean = (sum(adaptation_values) / len(adaptation_values)) if adaptation_values else np.nan
 
     # Determine which agent is the baseline (GPT-5-nano) based on model_order
     model_order = exp.get('model_order', 'weak_first')
@@ -332,10 +343,12 @@ def extract_experiment_features(exp: Dict) -> Dict:
         'total_utility': baseline_utility + adversary_utility,
         'utility_share': baseline_utility / (baseline_utility + adversary_utility) if (baseline_utility + adversary_utility) > 0 else 0.5,
         'payoff_diff': adversary_utility - baseline_utility,  # Adversary payoff - Baseline payoff
-        'manipulation_attempts': strategic.get('manipulation_attempts', 0),
-        'anger_expressions': strategic.get('anger_expressions', 0),
-        'gaslighting_attempts': strategic.get('gaslighting_attempts', 0),
-        'cooperation_signals': strategic.get('cooperation_signals', 0),
+        'promise_keep_rate': promise.get('overall_keep_rate', np.nan) if isinstance(promise, dict) else np.nan,
+        'promise_mean_abs_error': promise.get('mean_abs_error', np.nan) if isinstance(promise, dict) else np.nan,
+        'persuasion_other_agent_delta': persuasion.get('overall_other_agent_delta', np.nan) if isinstance(persuasion, dict) else np.nan,
+        'coalition_persistent_fraction': coalition.get('persistent_project_fraction', np.nan) if isinstance(coalition, dict) else np.nan,
+        'coalition_active_round_fraction': coalition.get('coalition_active_round_fraction', np.nan) if isinstance(coalition, dict) else np.nan,
+        'adaptation_rate_mean': adaptation_mean,
         'scaling_experiment': exp.get('scaling_experiment', ''),
         'run_number': exp.get('run_number', 0),
     }
@@ -428,9 +441,10 @@ agg_by_model = df.groupby('adversary_model').agg({
     'utility_share': ['mean', 'std'],
     'consensus_reached': 'mean',
     'final_round': 'mean',
-    'manipulation_attempts': 'mean',
-    'gaslighting_attempts': 'mean',
-    'cooperation_signals': 'mean',
+    'promise_keep_rate': 'mean',
+    'persuasion_other_agent_delta': 'mean',
+    'coalition_persistent_fraction': 'mean',
+    'adaptation_rate_mean': 'mean',
 }).round(2)
 
 # Flatten column names
@@ -949,15 +963,34 @@ plt.show()
 # In[ ]:
 
 
-# Plot 7: Strategic behavior comparison
+# Plot 7: Structured qualitative metrics comparison
 fig, axes = plt.subplots(2, 2, figsize=(14, 12))
 
-behaviors = ['manipulation_attempts', 'gaslighting_attempts', 'anger_expressions', 'cooperation_signals']
-titles = ['Manipulation Attempts', 'Gaslighting Attempts', 'Anger Expressions', 'Cooperation Signals']
+behaviors = [
+    'promise_keep_rate',
+    'persuasion_other_agent_delta',
+    'coalition_persistent_fraction',
+    'adaptation_rate_mean',
+]
+titles = [
+    'Promise Keep Rate',
+    'Persuasion Effectiveness (Other-Agent Delta)',
+    'Coalition Persistent Fraction',
+    'Adaptation Rate (Mean)',
+]
 
 for ax, behavior, title in zip(axes.flat, behaviors, titles):
+    if behavior not in df.columns:
+        ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+        ax.set_title(title)
+        continue
+
     # Mean by adversary model
-    model_means = df.groupby('adversary_model')[behavior].mean().sort_values(ascending=False)
+    model_means = df.groupby('adversary_model')[behavior].mean().dropna().sort_values(ascending=False)
+    if model_means.empty:
+        ax.text(0.5, 0.5, 'No data', ha='center', va='center', transform=ax.transAxes)
+        ax.set_title(title)
+        continue
     colors = [TIER_COLORS.get(MODEL_INFO.get(m, {}).get('tier', 'Unknown'), '#95a5a6') for m in model_means.index]
     
     bars = ax.barh(range(len(model_means)), model_means.values, color=colors, edgecolor='black')
@@ -971,9 +1004,9 @@ for ax, behavior, title in zip(axes.flat, behaviors, titles):
 legend_elements = [Patch(facecolor=TIER_COLORS[t], label=f'{t} Tier') for t in TIER_ORDER]
 fig.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(0.99, 0.99))
 
-plt.suptitle('Strategic Behaviors by Adversary Model', fontsize=14, y=1.02)
+plt.suptitle('Structured Qualitative Metrics by Adversary Model', fontsize=14, y=1.02)
 plt.tight_layout()
-plt.savefig(FIGURES_DIR / 'gpt5_nano_strategic_behaviors.png', dpi=150, bbox_inches='tight')
+plt.savefig(FIGURES_DIR / 'gpt5_nano_qualitative_metrics.png', dpi=150, bbox_inches='tight')
 plt.show()
 
 
