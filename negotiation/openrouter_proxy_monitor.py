@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import shutil
+import os
 from pathlib import Path
 
 import aiohttp
@@ -16,6 +17,7 @@ log = logging.getLogger(__name__)
 POLL_DIR = Path("/home/jz4391/openrouter_proxy")
 PROCESSED_DIR = POLL_DIR / "processed"
 POLL_INTERVAL = 1.0
+MAX_CONCURRENT_REQUESTS = int(os.getenv("OPENROUTER_PROXY_MAX_CONCURRENCY", "16"))
 
 def extract_content_from_response(data: dict, model_id: str = None) -> str:
     """
@@ -49,6 +51,33 @@ def extract_content_from_response(data: dict, model_id: str = None) -> str:
         if reasoning:
             log.warning(f"Model returned reasoning_content instead of content")
             content = reasoning
+
+    # OpenAI reasoning models via OpenRouter can return content=None with
+    # reasoning_details summaries. Use these summaries as best-effort fallback.
+    if content is None or content == "":
+        reasoning_details = message.get("reasoning_details")
+        if isinstance(reasoning_details, list):
+            summary_parts = []
+            for entry in reasoning_details:
+                if not isinstance(entry, dict):
+                    continue
+                summary = entry.get("summary")
+                if isinstance(summary, str) and summary.strip():
+                    summary_parts.append(summary.strip())
+                    continue
+                if isinstance(summary, list):
+                    for chunk in summary:
+                        if not isinstance(chunk, dict):
+                            continue
+                        text = chunk.get("text")
+                        if isinstance(text, str) and text.strip():
+                            summary_parts.append(text.strip())
+            if summary_parts:
+                log.warning(
+                    f"Model returned no content; using reasoning_details fallback "
+                    f"(parts={len(summary_parts)})"
+                )
+                content = "\n".join(summary_parts)
 
     # Some models return content as empty string with finish_reason
     if content is None:
@@ -145,15 +174,60 @@ async def handle_request(request_path: Path):
     with open(response_path, 'w') as f:
         json.dump(response, f)
 
-    shutil.move(request_path, PROCESSED_DIR / request_path.name)
+    # Request may already be moved/removed by another worker/process.
+    if request_path.exists():
+        shutil.move(request_path, PROCESSED_DIR / request_path.name)
+
+
+async def _run_and_cleanup(task_map: dict, request_path: Path):
+    """Run one request task and always release it from the active map."""
+    try:
+        await handle_request(request_path)
+    finally:
+        task_map.pop(request_path, None)
 
 async def main():
     PROCESSED_DIR.mkdir(exist_ok=True)
-    log.info(f"Polling {POLL_DIR} every {POLL_INTERVAL}s")
+    log.info(
+        f"Polling {POLL_DIR} every {POLL_INTERVAL}s "
+        f"(max_concurrency={MAX_CONCURRENT_REQUESTS})"
+    )
+
+    active_tasks = {}
+    def _safe_mtime(path: Path) -> float:
+        try:
+            return path.stat().st_mtime
+        except FileNotFoundError:
+            # File was moved/deleted concurrently.
+            return float("inf")
 
     while True:
-        for request_path in POLL_DIR.glob("request_*.json"):
-            await handle_request(request_path)
+        # Sort by mtime so oldest requests get launched first.
+        request_paths = sorted(
+            POLL_DIR.glob("request_*.json"),
+            key=_safe_mtime
+        )
+
+        for request_path in request_paths:
+            if not request_path.exists():
+                continue
+            if request_path in active_tasks:
+                continue
+            if len(active_tasks) >= MAX_CONCURRENT_REQUESTS:
+                break
+            task = asyncio.create_task(_run_and_cleanup(active_tasks, request_path))
+            active_tasks[request_path] = task
+
+        # Reap completed tasks so exceptions surface in logs.
+        done = [p for p, t in active_tasks.items() if t.done()]
+        for p in done:
+            t = active_tasks.pop(p, None)
+            if t is not None:
+                try:
+                    await t
+                except Exception as exc:
+                    log.error(f"Unhandled task error for {p.name}: {exc}")
+
         await asyncio.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":
