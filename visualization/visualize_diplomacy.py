@@ -757,7 +757,7 @@ def plot_competition_index(df: pd.DataFrame, out_dir: str):
         axes[0].legend(fontsize=8, title="Model Pair")
     else:
         sns.pointplot(data=ms, x="ci_bin", y="social_welfare", ax=axes[0], capsize=0.1)
-    axes[0].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[0].set_xlabel("Competition Index")
     axes[0].set_ylabel("Social Welfare")
     axes[0].set_title("Social Welfare vs Competition Index")
     axes[0].tick_params(axis="x", rotation=45)
@@ -769,7 +769,7 @@ def plot_competition_index(df: pd.DataFrame, out_dir: str):
         exploit_by_ci.values,
         alpha=0.8, color="coral",
     )
-    axes[1].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[1].set_xlabel("Competition Index")
     axes[1].set_ylabel("Exploitation Rate")
     axes[1].set_title("Exploitation Rate vs Competition Index")
     axes[1].set_ylim(0, 1.05)
@@ -789,7 +789,7 @@ def plot_competition_index(df: pd.DataFrame, out_dir: str):
         data=melted, x="ci_bin", y="utility", hue="agent",
         ax=axes[2], dodge=0.15, capsize=0.1,
     )
-    axes[2].set_xlabel(r"Competition Index  ($\leftarrow$ Coop. | Comp. $\rightarrow$)")
+    axes[2].set_xlabel("Competition Index")
     axes[2].set_ylabel("Utility")
     axes[2].set_title("Per-Agent Utility vs Competition Index")
     axes[2].legend(fontsize=10)
