@@ -236,7 +236,11 @@ class TestStep8Implementation:
         
         # Verify strategic behavior detection parameters
         strategic = analysis_config["strategic_behavior_detection"]
-        strategic_metrics = ["detect_manipulation", "detect_anger_expressions", "detect_gaslighting"]
+        strategic_metrics = [
+            "detect_promise_keeping",
+            "detect_persuasion_effectiveness",
+            "detect_coalition_formation",
+        ]
         for metric in strategic_metrics:
             assert metric in strategic, f"Missing strategic metric: {metric}"
         
