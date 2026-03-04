@@ -18,6 +18,10 @@ from strong_models_experiment.analysis.qualitative_metrics import (
     compute_qualitative_metrics_v1,
     extract_pledge_history_from_logs,
 )
+from strong_models_experiment.analysis.qualitative_schema import (
+    validate_qualitative_event,
+    validate_qualitative_metrics_v1,
+)
 
 
 def _is_cofunding_result(data: Dict[str, Any]) -> bool:
@@ -49,6 +53,17 @@ def process_file(path: Path, include_events: bool, dry_run: bool) -> tuple[bool,
     }
 
     metrics, events = compute_qualitative_metrics_v1(logs, game_state)
+    metrics_errors = validate_qualitative_metrics_v1(metrics)
+    event_errors = []
+    for idx, event in enumerate(events):
+        for err in validate_qualitative_event(event):
+            event_errors.append(f"event[{idx}]: {err}")
+    if metrics_errors or event_errors:
+        print(f"[WARN] Validation failed for {path}")
+        for err in metrics_errors + event_errors[:10]:
+            print(f"  - {err}")
+        # Skip writing malformed outputs
+        return True, False
 
     before = data.get("qualitative_metrics_v1")
     data["qualitative_metrics_v1"] = metrics

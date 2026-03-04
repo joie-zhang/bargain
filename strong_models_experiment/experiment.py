@@ -15,6 +15,10 @@ from .agents import StrongModelAgentFactory
 from .phases import PhaseHandler
 from .analysis import ExperimentAnalyzer
 from .analysis.qualitative_metrics import compute_qualitative_metrics_v1
+from .analysis.qualitative_schema import (
+    validate_qualitative_event,
+    validate_qualitative_metrics_v1,
+)
 from .utils import ExperimentUtils, FileManager
 
 # Import game environment factory
@@ -455,6 +459,21 @@ class StrongModelsExperiment:
             qualitative_metrics_v1, qualitative_events = compute_qualitative_metrics_v1(
                 conversation_logs, preferences.get("game_state", {})
             )
+            metrics_errors = validate_qualitative_metrics_v1(qualitative_metrics_v1)
+            event_errors = []
+            for idx, event in enumerate(qualitative_events):
+                event_errors.extend(
+                    [f"event[{idx}]: {err}" for err in validate_qualitative_event(event)]
+                )
+            if metrics_errors or event_errors:
+                self.logger.warning(
+                    "Qualitative metrics validation errors detected. "
+                    "Dropping malformed qualitative outputs for this run."
+                )
+                for err in (metrics_errors + event_errors)[:10]:
+                    self.logger.warning(f"  - {err}")
+                qualitative_metrics_v1 = {}
+                qualitative_events = []
 
         exploitation_detected = self.analyzer.detect_exploitation(conversation_logs)
         strategic_behaviors = self.analyzer.analyze_strategic_behaviors(conversation_logs)

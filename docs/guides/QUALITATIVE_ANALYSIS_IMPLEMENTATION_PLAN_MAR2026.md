@@ -174,3 +174,25 @@ Then regenerate figures:
 python visualization/visualize_cofunding.py \
   --results-dir experiments/results/cofunding_latest
 ```
+
+## Judge Harness Commands
+
+Build stratified judge packets:
+
+```bash
+python scripts/qualitative_judge_harness.py build-packets \
+  --results-dir experiments/results/cofunding_latest \
+  --output analysis/qualitative_judge_packets.jsonl \
+  --per-stratum 3
+```
+
+Aggregate judge responses:
+
+```bash
+python scripts/qualitative_judge_harness.py score \
+  --responses analysis/qualitative_judge_responses.jsonl \
+  --output analysis/qualitative_judge_report.json
+```
+
+Judge rubric and response schema:
+- `docs/guides/QUALITATIVE_JUDGE_RUBRIC_V1.md`
