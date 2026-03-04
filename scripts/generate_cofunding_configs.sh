@@ -8,7 +8,7 @@
 #
 #   1. Model-scale experiments (--model-scale):
 #      - Different model pairings at various capability levels
-#      - Sweep over alpha (preference alignment) and sigma (budget scarcity)
+#      - Sweep over alpha (preference alignment) and sigma (budget abundance scale)
 #      - NO reasoning token budget manipulation
 #      - Focus: How does model capability affect public goods provision?
 #
@@ -40,9 +40,10 @@
 #   - alpha: Preference alignment [0, 1]
 #     - alpha ~ 0: orthogonal valuations (agents value different projects)
 #     - alpha ~ 1: identical valuations (agents value same projects)
-#   - sigma: Budget scarcity (0, 1]
-#     - sigma ~ 0.2: very scarce (total budget = 20% of total cost)
-#     - sigma ~ 1.0: abundant (total budget = 100% of total cost)
+#   - sigma: Budget abundance scale (0, 1]
+#     - total budget ratio = 0.5 + 0.5*sigma
+#     - sigma ~ 0.2: budget ~60% of total cost
+#     - sigma ~ 1.0: budget = 100% of total cost
 #   - m_projects: Number of projects to co-fund (default: 5)
 #
 # Dependencies:
@@ -87,13 +88,19 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious]"
             echo ""
             echo "Experiment modes:"
-            echo "  --conservative Model-scale sweep: 6 pairs, 3x3 alpha/sigma grid, 1 run (108 configs)"
-            echo "  --ambitious    Model-scale sweep: 9 pairs, 5x5 alpha/sigma grid, 3 runs (1350 configs)"
+            echo "  --conservative Model-scale sweep: 4 pairs, 3x3 alpha/sigma grid, 1 run (72 configs)"
+            echo "  --ambitious    Model-scale sweep: 4 pairs, 5x5 alpha/sigma grid, 3 runs (600 configs)"
             echo "  --model-scale  Model capability experiments: multiple model pairs, sweep alpha/sigma, no TTC"
             echo "  --scaling      TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
             echo "  --small        Reduced version of full experiment (fewer models, fewer params)"
             echo "  --derisk       Minimal smoke test (1 config)"
             echo "  (default)      Full experiment: both model-scale AND TTC scaling"
+            echo ""
+            echo "Environment:"
+            echo "  COFUNDING_DISCUSSION_TRANSPARENCY=aggregate|own|full (default: own)"
+            echo "  COFUNDING_ENABLE_COMMIT_VOTE=true|false (default: true)"
+            echo "  COFUNDING_ENABLE_TIME_DISCOUNT=true|false (default: true)"
+            echo "  COFUNDING_TIME_DISCOUNT=0.0..1.0 (default: 0.9)"
             exit 0
             ;;
         *)
@@ -125,6 +132,43 @@ BASE_SEED=42
 NUM_RUNS=1
 C_MIN=10.0
 C_MAX=30.0
+COFUNDING_DISCUSSION_TRANSPARENCY="${COFUNDING_DISCUSSION_TRANSPARENCY:-own}"
+COFUNDING_ENABLE_COMMIT_VOTE="${COFUNDING_ENABLE_COMMIT_VOTE:-true}"
+COFUNDING_ENABLE_TIME_DISCOUNT="${COFUNDING_ENABLE_TIME_DISCOUNT:-true}"
+COFUNDING_TIME_DISCOUNT="${COFUNDING_TIME_DISCOUNT:-0.9}"
+
+case "${COFUNDING_DISCUSSION_TRANSPARENCY}" in
+    aggregate|own|full) ;;
+    *)
+        echo "ERROR: COFUNDING_DISCUSSION_TRANSPARENCY must be one of: aggregate, own, full"
+        echo "Got: ${COFUNDING_DISCUSSION_TRANSPARENCY}"
+        exit 1
+        ;;
+esac
+
+case "${COFUNDING_ENABLE_COMMIT_VOTE}" in
+    true|false) ;;
+    *)
+        echo "ERROR: COFUNDING_ENABLE_COMMIT_VOTE must be true or false"
+        echo "Got: ${COFUNDING_ENABLE_COMMIT_VOTE}"
+        exit 1
+        ;;
+esac
+
+case "${COFUNDING_ENABLE_TIME_DISCOUNT}" in
+    true|false) ;;
+    *)
+        echo "ERROR: COFUNDING_ENABLE_TIME_DISCOUNT must be true or false"
+        echo "Got: ${COFUNDING_ENABLE_TIME_DISCOUNT}"
+        exit 1
+        ;;
+esac
+
+python3 - << EOF
+gamma = float("${COFUNDING_TIME_DISCOUNT}")
+if not (0.0 <= gamma <= 1.0):
+    raise SystemExit(f"ERROR: COFUNDING_TIME_DISCOUNT must be in [0,1], got {gamma}")
+EOF
 
 # Reasoning phases (only used for TTC-scaling configs)
 REASONING_PHASES_JSON='["thinking", "reflection", "discussion", "proposal", "voting"]'
@@ -134,86 +178,58 @@ PROMPT_ONLY="true"
 # Mode-Specific Parameter Definitions
 # =============================================================================
 
+# Requested Mar 2026 run set
+BASELINE_MODEL="gpt-5-nano"
+ADVERSARY_MODELS=(
+    "claude-opus-4-6"
+    "gemini-3-flash"
+    "gpt-5.2-chat-latest-20260210"
+    "qwen3-235b-a22b-instruct-2507"
+)
+PRIMARY_MODEL_PAIRS=(
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[1]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[2]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[3]}"
+)
+
 # --- MODEL-SCALE EXPERIMENTS ---
 # Model pairs: "model1,model2" where model1 is the weak/baseline model
 # Use model_order=weak_first/strong_first to control speaking order
 # These run WITHOUT reasoning token budget -- pure model capability comparison.
 
 if [[ "$MODE" == "conservative" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,gpt-5-nano"
-        "gpt-5-nano,gpt-3.5-turbo-0125"
-        "gpt-5-nano,gpt-4o"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,claude-haiku-4-5"
-        "gpt-5-nano,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_ALPHA_VALUES=(0.0 0.5 1.0)
     MS_SIGMA_VALUES=(0.2 0.6 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
     NUM_RUNS=1
 elif [[ "$MODE" == "ambitious" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,gpt-5-nano"
-        "gpt-5-nano,gpt-3.5-turbo-0125"
-        "gpt-5-nano,amazon-nova-micro"
-        "gpt-5-nano,gpt-4o"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,claude-haiku-4-5"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,claude-sonnet-4-5"
-        "gpt-5-nano,gemini-3-pro"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_ALPHA_VALUES=(0.0 0.25 0.5 0.75 1.0)
     MS_SIGMA_VALUES=(0.2 0.4 0.6 0.8 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
     NUM_RUNS=3
 elif [[ "$MODE" == "derisk" ]]; then
     MODEL_PAIRS=(
-        "gpt-5-nano,gpt-5-nano"
+        "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
     )
     MS_ALPHA_VALUES=(1.0)
     MS_SIGMA_VALUES=(1.0)
     MS_MODEL_ORDERS=("weak_first")
     MAX_ROUNDS=2
 elif [[ "$MODE" == "small" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_ALPHA_VALUES=(0.0 0.5 1.0)
     MS_SIGMA_VALUES=(0.3 0.5 0.8)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "model_scale" ]]; then
-    MODEL_PAIRS=(
-        # Strong reasoning vs weak baseline
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,grok-4"
-        "gpt-5-nano,deepseek-r1"
-        # Strong vs strong
-        "claude-opus-4-5-thinking-32k,gpt-5.2-high"
-        "claude-opus-4-5-thinking-32k,o3-mini-high"
-        "o3-mini-high,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_ALPHA_VALUES=(0.0 0.2 0.4 0.6 0.8 1.0)
     MS_SIGMA_VALUES=(0.2 0.4 0.6 0.8 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "full" ]]; then
-    MODEL_PAIRS=(
-        # Strong reasoning vs weak baseline
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,grok-4"
-        "gpt-5-nano,deepseek-r1"
-        # Strong vs strong
-        "claude-opus-4-5-thinking-32k,gpt-5.2-high"
-        "claude-opus-4-5-thinking-32k,o3-mini-high"
-        "o3-mini-high,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_ALPHA_VALUES=(0.0 0.2 0.4 0.6 0.8 1.0)
     MS_SIGMA_VALUES=(0.2 0.4 0.6 0.8 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
@@ -227,8 +243,6 @@ fi
 
 # --- TTC SCALING EXPERIMENTS ---
 # Reasoning model vs baseline, sweep token budgets, fixed game params
-BASELINE_MODEL="gpt-5-nano"
-
 if [[ "$MODE" == "conservative" || "$MODE" == "ambitious" ]]; then
     TTC_REASONING_MODELS=()  # Conservative/ambitious: model-scale only, no TTC
     TTC_TOKEN_BUDGETS=()
@@ -242,29 +256,19 @@ elif [[ "$MODE" == "derisk" ]]; then
     TTC_SIGMA_VALUES=()
     TTC_MODEL_ORDERS=()
 elif [[ "$MODE" == "small" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 1000 5000)
     TTC_ALPHA_VALUES=(0.5)
     TTC_SIGMA_VALUES=(0.5)
     TTC_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "scaling" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-        "o3-mini-high"
-        "gpt-5.2-high"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 500 1000 5000 10000)
     TTC_ALPHA_VALUES=(0.5)
     TTC_SIGMA_VALUES=(0.5)
     TTC_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "full" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-        "o3-mini-high"
-        "gpt-5.2-high"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 500 1000 3000 5000 10000 20000 30000)
     TTC_ALPHA_VALUES=(0.5)
     TTC_SIGMA_VALUES=(0.5)
@@ -365,6 +369,10 @@ for model_pair in "${MODEL_PAIRS[@]}"; do
     "sigma": ${sigma},
     "c_min": ${C_MIN},
     "c_max": ${C_MAX},
+    "cofunding_discussion_transparency": "${COFUNDING_DISCUSSION_TRANSPARENCY}",
+    "cofunding_enable_commit_vote": ${COFUNDING_ENABLE_COMMIT_VOTE},
+    "cofunding_enable_time_discount": ${COFUNDING_ENABLE_TIME_DISCOUNT},
+    "cofunding_time_discount": ${COFUNDING_TIME_DISCOUNT},
     "max_rounds": ${MAX_ROUNDS},
     "discussion_turns": ${DISCUSSION_TURNS},
     "random_seed": ${SEED},
@@ -428,6 +436,10 @@ for reasoning_model in "${TTC_REASONING_MODELS[@]}"; do
     "sigma": ${sigma},
     "c_min": ${C_MIN},
     "c_max": ${C_MAX},
+    "cofunding_discussion_transparency": "${COFUNDING_DISCUSSION_TRANSPARENCY}",
+    "cofunding_enable_commit_vote": ${COFUNDING_ENABLE_COMMIT_VOTE},
+    "cofunding_enable_time_discount": ${COFUNDING_ENABLE_TIME_DISCOUNT},
+    "cofunding_time_discount": ${COFUNDING_TIME_DISCOUNT},
     "max_rounds": ${MAX_ROUNDS},
     "discussion_turns": ${DISCUSSION_TURNS},
     "random_seed": ${SEED},
@@ -495,6 +507,10 @@ Game configuration:
   Projects per game: ${M_PROJECTS}
   Max rounds: ${MAX_ROUNDS}
   Discussion turns: ${DISCUSSION_TURNS}
+  Discussion transparency: ${COFUNDING_DISCUSSION_TRANSPARENCY}
+  Commit vote enabled: ${COFUNDING_ENABLE_COMMIT_VOTE}
+  Time discount enabled: ${COFUNDING_ENABLE_TIME_DISCOUNT}
+  Time discount gamma: ${COFUNDING_TIME_DISCOUNT}
   Max tokens per phase: ${MAX_TOKENS_PER_PHASE}
   Runs per configuration: ${NUM_RUNS}
   Project cost range: [${C_MIN}, ${C_MAX}]
@@ -504,9 +520,10 @@ Key Game 3 parameters:
     - alpha ~ 0: orthogonal valuations (agents value different projects)
     - alpha ~ 0.5: moderate alignment
     - alpha ~ 1: identical valuations (agents value same projects)
-  sigma: Budget scarcity (0, 1]
-    - sigma ~ 0.2: very scarce (budget = 20% of total cost)
-    - sigma ~ 0.5: moderate scarcity
+  sigma: Budget abundance scale (0, 1]
+    - total budget ratio = 0.5 + 0.5*sigma
+    - sigma ~ 0.2: budget ~60% of total cost
+    - sigma ~ 0.5: budget ~75% of total cost
     - sigma ~ 1.0: abundant (budget = 100% of total cost)
 EOF
 echo "Created summary: ${SUMMARY_FILE}"
@@ -634,6 +651,10 @@ MAX_TOKENS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))[
 MAX_ROUNDS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['max_rounds'])")
 NUM_RUNS=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['num_runs'])")
 RUN_NUMBER=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}'))['run_number'])")
+DISCUSSION_TRANSPARENCY=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}')).get('cofunding_discussion_transparency', 'own'))")
+ENABLE_COMMIT_VOTE=\$(python3 -c "import json; print(str(json.load(open('\${CONFIG_FILE}')).get('cofunding_enable_commit_vote', True)).lower())")
+ENABLE_TIME_DISCOUNT=\$(python3 -c "import json; print(str(json.load(open('\${CONFIG_FILE}')).get('cofunding_enable_time_discount', True)).lower())")
+TIME_DISCOUNT=\$(python3 -c "import json; print(json.load(open('\${CONFIG_FILE}')).get('cofunding_time_discount', 0.9))")
 
 # Get models list (works for both experiment types)
 MODELS=\$(python3 -c "import json; print(' '.join(json.load(open('\${CONFIG_FILE}'))['models']))")
@@ -647,6 +668,9 @@ echo "Projects: \$M_PROJECTS"
 echo "Max rounds: \$MAX_ROUNDS"
 echo "Num runs: \$NUM_RUNS | Run number: \$RUN_NUMBER"
 echo "Random seed: \$SEED"
+echo "Discussion transparency: \$DISCUSSION_TRANSPARENCY"
+echo "Commit vote enabled: \$ENABLE_COMMIT_VOTE"
+echo "Time discount enabled: \$ENABLE_TIME_DISCOUNT (gamma=\$TIME_DISCOUNT)"
 echo "Output dir: \$OUTPUT_DIR"
 
 # Build the command
@@ -660,10 +684,18 @@ CMD="\$CMD --c-min \$C_MIN --c-max \$C_MAX"
 CMD="\$CMD --max-rounds \$MAX_ROUNDS"
 CMD="\$CMD --random-seed \$SEED"
 CMD="\$CMD --discussion-turns \$DISCUSSION_TURNS"
+CMD="\$CMD --cofunding-discussion-transparency \$DISCUSSION_TRANSPARENCY"
 CMD="\$CMD --model-order \$MODEL_ORDER"
 CMD="\$CMD --max-tokens-per-phase \$MAX_TOKENS"
 CMD="\$CMD --output-dir \$OUTPUT_DIR"
 CMD="\$CMD --job-id \$SLURM_ARRAY_TASK_ID"
+CMD="\$CMD --cofunding-time-discount \$TIME_DISCOUNT"
+if [[ "\$ENABLE_COMMIT_VOTE" != "true" ]]; then
+    CMD="\$CMD --cofunding-disable-commit-vote"
+fi
+if [[ "\$ENABLE_TIME_DISCOUNT" != "true" ]]; then
+    CMD="\$CMD --cofunding-disable-time-discount"
+fi
 
 # Add TTC-specific flags only for ttc_scaling experiments
 if [[ "\$EXPERIMENT_TYPE" == "ttc_scaling" ]]; then
@@ -687,18 +719,57 @@ echo ""
 echo "Running: \$CMD"
 echo ""
 
-if eval \$CMD; then
+run_with_logging() {
+    local cmd="\$1"
+    local log_file="\$2"
+    set +e
+    eval "\$cmd" 2>&1 | tee "\$log_file"
+    local status=\${PIPESTATUS[0]}
+    set -e
+    return \$status
+}
+
+TMP_RUN_LOG=\$(mktemp)
+
+if run_with_logging "\$CMD" "\$TMP_RUN_LOG"; then
     echo ""
     echo "============================================================"
     echo "Experiment completed successfully at: \$(date)"
     echo "============================================================"
 else
-    echo ""
-    echo "============================================================"
-    echo "Experiment failed at: \$(date)"
-    echo "============================================================"
-    exit 1
+    if [[ "\$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "\$TMP_RUN_LOG"; then
+        FALLBACK_MODELS=\$(echo "\$MODELS" | sed 's/\\bclaude-opus-4-6\\b/claude-opus-4-6-openrouter/g')
+        CMD_FALLBACK="\${CMD/--models \$MODELS/--models \$FALLBACK_MODELS}"
+        echo ""
+        echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
+        echo "Fallback models: \$FALLBACK_MODELS"
+        echo "Running: \$CMD_FALLBACK"
+        echo ""
+
+        if run_with_logging "\$CMD_FALLBACK" "\$TMP_RUN_LOG"; then
+            echo ""
+            echo "============================================================"
+            echo "Fallback experiment completed successfully at: \$(date)"
+            echo "============================================================"
+        else
+            echo ""
+            echo "============================================================"
+            echo "Fallback experiment failed at: \$(date)"
+            echo "============================================================"
+            rm -f "\$TMP_RUN_LOG"
+            exit 1
+        fi
+    else
+        echo ""
+        echo "============================================================"
+        echo "Experiment failed at: \$(date)"
+        echo "============================================================"
+        rm -f "\$TMP_RUN_LOG"
+        exit 1
+    fi
 fi
+
+rm -f "\$TMP_RUN_LOG"
 SLURM_EOF
 
 echo "Created SLURM script: ${SLURM_SCRIPT}"
@@ -820,6 +891,10 @@ MAX_TOKENS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['m
 MAX_ROUNDS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['max_rounds'])")
 NUM_RUNS=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['num_runs'])")
 RUN_NUMBER=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['run_number'])")
+DISCUSSION_TRANSPARENCY=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}')).get('cofunding_discussion_transparency', 'own'))")
+ENABLE_COMMIT_VOTE=$(python3 -c "import json; print(str(json.load(open('${CONFIG_FILE}')).get('cofunding_enable_commit_vote', True)).lower())")
+ENABLE_TIME_DISCOUNT=$(python3 -c "import json; print(str(json.load(open('${CONFIG_FILE}')).get('cofunding_enable_time_discount', True)).lower())")
+TIME_DISCOUNT=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}')).get('cofunding_time_discount', 0.9))")
 MODELS=$(python3 -c "import json; print(' '.join(json.load(open('${CONFIG_FILE}'))['models']))")
 
 echo "Experiment type: $EXPERIMENT_TYPE"
@@ -827,6 +902,9 @@ echo "Model order: $MODEL_ORDER"
 echo "Models: $MODELS"
 echo "Alpha: $ALPHA | Sigma: $SIGMA | Projects: $M_PROJECTS | Max rounds: $MAX_ROUNDS"
 echo "Num runs: $NUM_RUNS | Run number: $RUN_NUMBER"
+echo "Discussion transparency: $DISCUSSION_TRANSPARENCY"
+echo "Commit vote enabled: $ENABLE_COMMIT_VOTE"
+echo "Time discount enabled: $ENABLE_TIME_DISCOUNT (gamma=$TIME_DISCOUNT)"
 echo ""
 
 # Build command
@@ -840,10 +918,18 @@ CMD="$CMD --c-min $C_MIN --c-max $C_MAX"
 CMD="$CMD --max-rounds $MAX_ROUNDS"
 CMD="$CMD --random-seed $SEED"
 CMD="$CMD --discussion-turns $DISCUSSION_TURNS"
+CMD="$CMD --cofunding-discussion-transparency $DISCUSSION_TRANSPARENCY"
 CMD="$CMD --model-order $MODEL_ORDER"
 CMD="$CMD --max-tokens-per-phase $MAX_TOKENS"
 CMD="$CMD --output-dir $OUTPUT_DIR"
 CMD="$CMD --job-id $CONFIG_ID"
+CMD="$CMD --cofunding-time-discount $TIME_DISCOUNT"
+if [[ "$ENABLE_COMMIT_VOTE" != "true" ]]; then
+    CMD="$CMD --cofunding-disable-commit-vote"
+fi
+if [[ "$ENABLE_TIME_DISCOUNT" != "true" ]]; then
+    CMD="$CMD --cofunding-disable-time-discount"
+fi
 
 # Add TTC-specific flags only for ttc_scaling experiments
 if [[ "$EXPERIMENT_TYPE" == "ttc_scaling" ]]; then
@@ -866,7 +952,42 @@ fi
 
 echo "Running: $CMD"
 echo ""
-eval $CMD
+
+run_with_logging_local() {
+    local cmd="$1"
+    local log_file="$2"
+    set +e
+    eval "$cmd" 2>&1 | tee "$log_file"
+    local status=${PIPESTATUS[0]}
+    set -e
+    return $status
+}
+
+TMP_RUN_LOG=$(mktemp)
+
+if run_with_logging_local "$CMD" "$TMP_RUN_LOG"; then
+    rm -f "$TMP_RUN_LOG"
+    exit 0
+fi
+
+STATUS=1
+if [[ "$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "$TMP_RUN_LOG"; then
+    FALLBACK_MODELS=$(echo "$MODELS" | sed 's/\bclaude-opus-4-6\b/claude-opus-4-6-openrouter/g')
+    CMD_FALLBACK="${CMD/--models $MODELS/--models $FALLBACK_MODELS}"
+    echo ""
+    echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
+    echo "Fallback models: $FALLBACK_MODELS"
+    echo "Running: $CMD_FALLBACK"
+    echo ""
+    if run_with_logging_local "$CMD_FALLBACK" "$TMP_RUN_LOG"; then
+        STATUS=0
+    else
+        STATUS=$?
+    fi
+fi
+
+rm -f "$TMP_RUN_LOG"
+exit $STATUS
 LOCAL_EOF
 chmod +x "${LOCAL_RUN_SCRIPT}"
 
@@ -892,10 +1013,13 @@ echo "     ${SUBMIT_SCRIPT}                      # All jobs"
 echo "     ${SUBMIT_SCRIPT} --test               # Only config 0"
 echo "     ${SUBMIT_SCRIPT} --max-concurrent 10  # Limit concurrency"
 echo ""
-echo "  3. Or run directly (no config generator):"
+echo "  3. Submit co-funding first, then diplomacy:"
+echo "     ./scripts/submit_cofunding_then_diplomacy.sh"
+echo ""
+echo "  4. Or run directly (no config generator):"
 echo "     python3 run_strong_models_experiment.py \\"
 echo "       --game-type co_funding \\"
-echo "       --models gpt-5-nano claude-opus-4-5-thinking-32k \\"
+echo "       --models gpt-5-nano claude-opus-4-6 \\"
 echo "       --m-projects 5 --alpha 0.5 --sigma 0.5 \\"
 echo "       --max-rounds 10 --batch --num-runs 1 --random-seed 42"
 echo ""

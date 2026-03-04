@@ -87,8 +87,8 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious]"
             echo ""
             echo "Experiment modes:"
-            echo "  --conservative Model-scale sweep: 6 pairs, 3x3 rho/theta grid, 1 run (108 configs)"
-            echo "  --ambitious    Model-scale sweep: 9 pairs, 5x5 rho/theta grid, 3 runs (1350 configs)"
+            echo "  --conservative Model-scale sweep: 4 pairs, 3x3 rho/theta grid, 1 run (72 configs)"
+            echo "  --ambitious    Model-scale sweep: 4 pairs, 5x5 rho/theta grid, 3 runs (600 configs)"
             echo "  --model-scale  Model capability experiments: multiple model pairs, sweep rho/theta, no TTC"
             echo "  --scaling      TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
             echo "  --small        Reduced version of full experiment (fewer models, fewer params)"
@@ -134,85 +134,57 @@ PROMPT_ONLY="true"
 # Mode-Specific Parameter Definitions
 # =============================================================================
 
+# Requested Mar 2026 run set
+BASELINE_MODEL="gpt-5-nano"
+ADVERSARY_MODELS=(
+    "claude-opus-4-6"
+    "gemini-3-flash"
+    "gpt-5.2-chat-latest-20260210"
+    "qwen3-235b-a22b-instruct-2507"
+)
+PRIMARY_MODEL_PAIRS=(
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[1]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[2]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[3]}"
+)
+
 # --- MODEL-SCALE EXPERIMENTS ---
 # Model pairs: "model1,model2" where model1 is listed first (Agent_Alpha)
 # Use model_order=weak_first/strong_first to control speaking order
 # These run WITHOUT reasoning token budget — pure model capability comparison.
 
 if [[ "$MODE" == "conservative" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,gpt-5-nano"
-        "gpt-5-nano,gpt-3.5-turbo-0125"
-        "gpt-5-nano,gpt-4o"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,claude-haiku-4-5"
-        "gpt-5-nano,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_RHO_VALUES=(-1.0 0.0 1.0)
     MS_THETA_VALUES=(0.0 0.5 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
     NUM_RUNS=1
 elif [[ "$MODE" == "ambitious" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,gpt-5-nano"
-        "gpt-5-nano,gpt-3.5-turbo-0125"
-        "gpt-5-nano,amazon-nova-micro"
-        "gpt-5-nano,gpt-4o"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,claude-haiku-4-5"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,claude-sonnet-4-5"
-        "gpt-5-nano,gemini-3-pro"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_RHO_VALUES=(-1.0 -0.5 0.0 0.5 1.0)
     MS_THETA_VALUES=(0.0 0.25 0.5 0.75 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
     NUM_RUNS=3
 elif [[ "$MODE" == "derisk" ]]; then
     MODEL_PAIRS=(
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
+        "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
     )
     MS_RHO_VALUES=(0.0)
     MS_THETA_VALUES=(0.5)
     MS_MODEL_ORDERS=("weak_first")
 elif [[ "$MODE" == "small" ]]; then
-    MODEL_PAIRS=(
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_RHO_VALUES=(-0.5 0.0 0.5)
     MS_THETA_VALUES=(0.2 0.5 0.8)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "model_scale" ]]; then
-    MODEL_PAIRS=(
-        # Strong reasoning vs weak baseline
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,grok-4"
-        "gpt-5-nano,deepseek-r1"
-        # Strong vs strong
-        "claude-opus-4-5-thinking-32k,gpt-5.2-high"
-        "claude-opus-4-5-thinking-32k,o3-mini-high"
-        "o3-mini-high,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_RHO_VALUES=(-0.8 -0.5 -0.2 0.0 0.2 0.5 0.8)
     MS_THETA_VALUES=(0.1 0.3 0.5 0.7 0.9)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "full" ]]; then
-    MODEL_PAIRS=(
-        # Strong reasoning vs weak baseline
-        "gpt-5-nano,claude-opus-4-5-thinking-32k"
-        "gpt-5-nano,o3-mini-high"
-        "gpt-5-nano,gpt-5.2-high"
-        "gpt-5-nano,grok-4"
-        "gpt-5-nano,deepseek-r1"
-        # Strong vs strong
-        "claude-opus-4-5-thinking-32k,gpt-5.2-high"
-        "claude-opus-4-5-thinking-32k,o3-mini-high"
-        "o3-mini-high,gpt-5.2-high"
-    )
+    MODEL_PAIRS=("${PRIMARY_MODEL_PAIRS[@]}")
     MS_RHO_VALUES=(-0.8 -0.5 -0.2 0.0 0.2 0.5 0.8)
     MS_THETA_VALUES=(0.1 0.3 0.5 0.7 0.9)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
@@ -226,8 +198,6 @@ fi
 
 # --- TTC SCALING EXPERIMENTS ---
 # Reasoning model vs baseline, sweep token budgets, fixed game params
-BASELINE_MODEL="gpt-5-nano"
-
 if [[ "$MODE" == "conservative" || "$MODE" == "ambitious" ]]; then
     TTC_REASONING_MODELS=()  # Conservative/ambitious: model-scale only, no TTC
     TTC_TOKEN_BUDGETS=()
@@ -241,29 +211,19 @@ elif [[ "$MODE" == "derisk" ]]; then
     TTC_THETA_VALUES=()
     TTC_MODEL_ORDERS=()
 elif [[ "$MODE" == "small" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 1000 5000)
     TTC_RHO_VALUES=(0.0)
     TTC_THETA_VALUES=(0.5)
     TTC_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "scaling" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-        "o3-mini-high"
-        "gpt-5.2-high"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 500 1000 5000 10000)
     TTC_RHO_VALUES=(0.0)
     TTC_THETA_VALUES=(0.5)
     TTC_MODEL_ORDERS=("weak_first" "strong_first")
 elif [[ "$MODE" == "full" ]]; then
-    TTC_REASONING_MODELS=(
-        "claude-opus-4-5-thinking-32k"
-        "o3-mini-high"
-        "gpt-5.2-high"
-    )
+    TTC_REASONING_MODELS=("${ADVERSARY_MODELS[@]}")
     TTC_TOKEN_BUDGETS=(100 500 1000 3000 5000 10000 20000 30000)
     TTC_RHO_VALUES=(0.0)
     TTC_THETA_VALUES=(0.5)
@@ -674,18 +634,57 @@ echo ""
 echo "Running: \$CMD"
 echo ""
 
-if eval \$CMD; then
+run_with_logging() {
+    local cmd="\$1"
+    local log_file="\$2"
+    set +e
+    eval "\$cmd" 2>&1 | tee "\$log_file"
+    local status=\${PIPESTATUS[0]}
+    set -e
+    return \$status
+}
+
+TMP_RUN_LOG=\$(mktemp)
+
+if run_with_logging "\$CMD" "\$TMP_RUN_LOG"; then
     echo ""
     echo "============================================================"
     echo "Experiment completed successfully at: \$(date)"
     echo "============================================================"
 else
-    echo ""
-    echo "============================================================"
-    echo "Experiment failed at: \$(date)"
-    echo "============================================================"
-    exit 1
+    if [[ "\$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "\$TMP_RUN_LOG"; then
+        FALLBACK_MODELS=\$(echo "\$MODELS" | sed 's/\\bclaude-opus-4-6\\b/claude-opus-4-6-openrouter/g')
+        CMD_FALLBACK="\${CMD/--models \$MODELS/--models \$FALLBACK_MODELS}"
+        echo ""
+        echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
+        echo "Fallback models: \$FALLBACK_MODELS"
+        echo "Running: \$CMD_FALLBACK"
+        echo ""
+
+        if run_with_logging "\$CMD_FALLBACK" "\$TMP_RUN_LOG"; then
+            echo ""
+            echo "============================================================"
+            echo "Fallback experiment completed successfully at: \$(date)"
+            echo "============================================================"
+        else
+            echo ""
+            echo "============================================================"
+            echo "Fallback experiment failed at: \$(date)"
+            echo "============================================================"
+            rm -f "\$TMP_RUN_LOG"
+            exit 1
+        fi
+    else
+        echo ""
+        echo "============================================================"
+        echo "Experiment failed at: \$(date)"
+        echo "============================================================"
+        rm -f "\$TMP_RUN_LOG"
+        exit 1
+    fi
 fi
+
+rm -f "\$TMP_RUN_LOG"
 SLURM_EOF
 
 echo "Created SLURM script: ${SLURM_SCRIPT}"
@@ -847,7 +846,42 @@ fi
 
 echo "Running: $CMD"
 echo ""
-eval $CMD
+
+run_with_logging_local() {
+    local cmd="$1"
+    local log_file="$2"
+    set +e
+    eval "$cmd" 2>&1 | tee "$log_file"
+    local status=${PIPESTATUS[0]}
+    set -e
+    return $status
+}
+
+TMP_RUN_LOG=$(mktemp)
+
+if run_with_logging_local "$CMD" "$TMP_RUN_LOG"; then
+    rm -f "$TMP_RUN_LOG"
+    exit 0
+fi
+
+STATUS=1
+if [[ "$MODELS" == *"claude-opus-4-6"* ]] && grep -Eiq "quota|insufficient|credit|billing|payment" "$TMP_RUN_LOG"; then
+    FALLBACK_MODELS=$(echo "$MODELS" | sed 's/\bclaude-opus-4-6\b/claude-opus-4-6-openrouter/g')
+    CMD_FALLBACK="${CMD/--models $MODELS/--models $FALLBACK_MODELS}"
+    echo ""
+    echo "Anthropic quota/credit issue detected. Retrying with OpenRouter fallback..."
+    echo "Fallback models: $FALLBACK_MODELS"
+    echo "Running: $CMD_FALLBACK"
+    echo ""
+    if run_with_logging_local "$CMD_FALLBACK" "$TMP_RUN_LOG"; then
+        STATUS=0
+    else
+        STATUS=$?
+    fi
+fi
+
+rm -f "$TMP_RUN_LOG"
+exit $STATUS
 LOCAL_EOF
 chmod +x "${LOCAL_RUN_SCRIPT}"
 
@@ -873,10 +907,13 @@ echo "     ${SUBMIT_SCRIPT}                      # All jobs"
 echo "     ${SUBMIT_SCRIPT} --test               # Only config 0"
 echo "     ${SUBMIT_SCRIPT} --max-concurrent 10  # Limit concurrency"
 echo ""
-echo "  3. Or run directly (no config generator):"
+echo "  3. Submit co-funding first, then diplomacy:"
+echo "     ./scripts/submit_cofunding_then_diplomacy.sh"
+echo ""
+echo "  4. Or run directly (no config generator):"
 echo "     python3 run_strong_models_experiment.py \\"
 echo "       --game-type diplomacy \\"
-echo "       --models gpt-5-nano claude-opus-4-5-thinking-32k \\"
+echo "       --models gpt-5-nano claude-opus-4-6 \\"
 echo "       --n-issues 5 --rho 0.0 --theta 0.5 \\"
 echo "       --max-rounds 10 --batch --num-runs 1 --random-seed 42"
 echo ""

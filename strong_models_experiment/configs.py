@@ -190,10 +190,10 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5-nano": {
         "name": "GPT-5 Nano",
-        "model_id": "gpt-5-nano-2025-08-07",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "Strong tier, Closed-source, Reasoning",
+        "model_id": "openai/gpt-5-nano",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Strong tier, Closed-source, Reasoning (via OpenRouter)",
         "temperature": 1.0,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -280,10 +280,30 @@ STRONG_MODELS_CONFIG = {
     },
     "gemini-3-flash": {
         "name": "Gemini 3 Flash",
-        "model_id": "gemini-3-flash-preview",  # Use preview model name for v1beta API
-        "provider": "Google",
-        "api_type": "google",
-        "description": "Rank 3, Elo: 1472, Closed-source",
+        "model_id": "google/gemini-3-flash-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Rank 3, Elo: 1472, Closed-source (via OpenRouter preview endpoint)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-opus-4-6": {
+        "name": "Claude Opus 4.6",
+        "model_id": "claude-opus-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Requested Mar 2026 run set, Closed-source (primary: Anthropic API)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-opus-4-6-openrouter": {
+        "name": "Claude Opus 4.6 (OpenRouter fallback)",
+        "model_id": "anthropic/claude-opus-4.6",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Fallback for Anthropic quota/credit failures",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -352,12 +372,32 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "gpt-5.2-chat-latest-20260210": {
+        "name": "GPT-5.2 Chat Latest (2026-02-10)",
+        "model_id": "openai/gpt-5.2-chat",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Requested Mar 2026 run set, Closed-source (via OpenRouter GPT-5.2 chat)",
+        "temperature": 1.0,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "qwen3-max": {
         "name": "Qwen3 Max",
         "model_id": "qwen/qwen3-max",
         "provider": "OpenRouter",
         "api_type": "openrouter",
         "description": "Rank 10, Elo: 1434, Open-source",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "qwen3-235b-a22b-instruct-2507": {
+        "name": "Qwen3 235B A22B Instruct 2507",
+        "model_id": "qwen/qwen3-235b-a22b-2507",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Requested Mar 2026 run set, Open-source",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -454,6 +494,16 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
+    },
+    "deepseek-v3.2": {
+        "name": "DeepSeek V3.2",
+        "model_id": "deepseek/deepseek-v3.2",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Requested Mar 2026 run set, Open-source",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
     },
     "gpt-4o": {
         "name": "GPT-4o",

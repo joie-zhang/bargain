@@ -11,9 +11,8 @@
 
 ## Prerequisites
 
-- [ ] **OpenAI API key must be re-enabled** (project was archived ~00:17 Feb 24)
-  - Error: `openai.AuthenticationError: 401 - The project you are requesting has been archived and is no longer accessible`
-  - Affects all pairs since gpt-5-nano (baseline) uses OpenAI
+- [x] **OpenAI API key re-enabled** (confirmed working Mar 3)
+  - Was archived ~00:17 Feb 24, restored by Mar 3
 - [x] **Code fix applied**: `negotiation/openrouter_client.py:425` — added `"model_name": self.model_id` to `OpenRouterAgent.get_model_info()`
 
 ## Root Causes
@@ -141,6 +140,25 @@ python3 visualization/visualize_cofunding.py \
 | Diplomacy | `experiments/results/diplomacy_20260223_032204/configs/` | `configs/slurm/run_diplomacy_experiments.sbatch` |
 | Co-Funding | `experiments/results/cofunding_20260223_032239/configs/` | `configs/slurm/run_cofunding_experiments.sbatch` |
 
+## Re-Run Status (Updated Mar 3, 2026)
+
+### Resubmission #1 (Mar 3, ~07:00 EST)
+- Diplomacy Job 5289855: 282 tasks → 189 completed, ~93 timed out (6h limit too short for claude-haiku-4-5 with API contention)
+- Cofunding Jobs 5289856/5289857/5289862: Cancelled due to API contention (350+ concurrent jobs → 5-10 min per API call)
+
+### Resubmission #2 (Mar 3, 13:08 EST) — CURRENT
+- **Diplomacy Job 5302273**: 104 tasks, `--time=24:00:00`, `%20` throttle
+  - All claude-haiku-4-5. Running cleanly, no API errors.
+- **Cofunding Job 5302284**: 692 tasks, `--time=24:00:00`, `%20` throttle
+  - 6 model pairs (amazon-nova-micro, claude-haiku-4-5, claude-sonnet-4-5, gemini-3-pro, gpt-5.2-high, gpt-5-nano)
+  - Running cleanly, scaling up.
+
+### Current Completion (Mar 3, 13:25 EST)
+| Game | Completed | Missing |
+|---|---|---|
+| Diplomacy | 1247/1350 | 103 (all claude-haiku-4-5) |
+| Cofunding | 658/1350 | 692 (6 model pairs) |
+
 ## Timeline
 
 - **Feb 23 03:22**: Ambitious configs generated (1350 per game)
@@ -149,3 +167,5 @@ python3 visualization/visualize_cofunding.py \
 - **Feb 24 00:17**: OpenAI API key disabled — remaining cofunding jobs start failing
 - **Feb 24 ~01:30**: All cofunding jobs finished (658 success, 692 fail)
 - **Feb 24**: Code fix applied for OpenRouter `model_name` bug
+- **Mar 3 07:00**: Resubmission #1 — diplomacy partially completed, cofunding cancelled (API contention)
+- **Mar 3 13:08**: Resubmission #2 — all remaining failures resubmitted with 24h time limit and %20 concurrency throttle
