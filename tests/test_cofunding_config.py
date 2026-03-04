@@ -24,6 +24,10 @@ class TestCoFundingConfig:
         assert config.sigma == 0.5
         assert config.c_min == 10.0
         assert config.c_max == 30.0
+        assert config.discussion_transparency == "own"
+        assert config.enable_commit_vote is True
+        assert config.enable_time_discount is True
+        assert config.gamma_discount == 0.9
 
     def test_valid_config_custom(self):
         """Custom valid config creates successfully."""
@@ -99,6 +103,30 @@ class TestCoFundingConfig:
         """m_projects < 1 raises ValueError."""
         with pytest.raises(ValueError, match="m_projects must be >= 1"):
             CoFundingConfig(n_agents=2, t_rounds=5, m_projects=0)
+
+    def test_invalid_discussion_transparency(self):
+        """Invalid discussion transparency mode should raise ValueError."""
+        with pytest.raises(ValueError, match="discussion_transparency must be"):
+            CoFundingConfig(
+                n_agents=2,
+                t_rounds=5,
+                discussion_transparency="invalid_mode"
+            )
+
+    def test_invalid_commit_vote_type(self):
+        """Commit vote toggle must be bool."""
+        with pytest.raises(ValueError, match="enable_commit_vote must be bool"):
+            CoFundingConfig(n_agents=2, t_rounds=5, enable_commit_vote="yes")
+
+    def test_invalid_time_discount_toggle_type(self):
+        """Time discount toggle must be bool."""
+        with pytest.raises(ValueError, match="enable_time_discount must be bool"):
+            CoFundingConfig(n_agents=2, t_rounds=5, enable_time_discount="yes")
+
+    def test_invalid_gamma_discount(self):
+        """gamma_discount must be in [0,1]."""
+        with pytest.raises(ValueError, match="gamma_discount must be in"):
+            CoFundingConfig(n_agents=2, t_rounds=5, gamma_discount=1.2)
 
 
 class TestGetProtocolType:

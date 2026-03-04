@@ -8,20 +8,21 @@ where agents submit individual contribution vectors to co-fund threshold public
 goods (projects). Projects are funded only when aggregate contributions meet
 or exceed the project cost.
 
-Protocol: Talk-Pledge-Revise (no voting phase)
+Protocol: Talk-Pledge-Revise (with optional post-pledge commit vote)
   1. Discussion - agents discuss strategy publicly
   2. Thinking - private strategic analysis
   3. Pledge Submission - each agent submits a contribution vector
   4. Feedback - agents see aggregate totals (not individual contributions)
-  5. Reflection - agents reflect on the round outcome
-  6. Repeat until convergence or max rounds
+  5. Commit Vote (optional) - unanimous yay/nay on current pledge profile
+  6. Reflection - agents reflect on the round outcome
+  7. Repeat until convergence or max rounds
 
 Key differences from Games 1/2:
-  - No voting phase -- pledges replace proposals, no accept/reject
+  - No proposal voting phase -- pledges replace proposals
   - Decentralized contributions -- each agent submits their own vector
   - Threshold non-linearity -- projects funded only when sum >= cost
   - Only aggregate totals visible (individual contributions private)
-  - Final-state-only evaluation (no discount factor)
+  - Final-state utility with optional time discounting
   - Early termination when all pledges converge for 2 consecutive rounds
 
 Dependencies:
@@ -57,7 +58,8 @@ class CoFundingGame(GameEnvironment):
 
     Two control parameters:
     - alpha: Preference alignment [0, 1] (cosine similarity of valuations)
-    - sigma: Budget scarcity (0, 1] (total budget / total project cost)
+    - sigma: Budget abundance scale (0, 1]
+      total budget ratio = 0.5 + 0.5 * sigma (from 50% to 100% of total cost)
     """
 
     PROJECT_NAMES = [
@@ -96,8 +98,11 @@ class CoFundingGame(GameEnvironment):
         ).tolist()
         total_cost = sum(project_costs)
 
-        # Generate budgets: B = sigma * C, B_i = B / N
-        total_budget = self.config.sigma * total_cost
+        # Generate budgets proportional to project scale while preventing
+        # pathological under-provision at very low sigma.
+        # sigma interpolates from "can fund ~half the total cost" to "can fund all."
+        budget_ratio = 0.5 + 0.5 * self.config.sigma
+        total_budget = budget_ratio * total_cost
         per_agent_budget = total_budget / n
 
         # Generate valuation vectors with target cosine similarity alpha
@@ -130,6 +135,11 @@ class CoFundingGame(GameEnvironment):
             "parameters": {
                 "alpha": self.config.alpha,
                 "sigma": self.config.sigma,
+                "budget_ratio": round(budget_ratio, 4),
+                "discussion_transparency": self.config.discussion_transparency,
+                "enable_commit_vote": self.config.enable_commit_vote,
+                "enable_time_discount": self.config.enable_time_discount,
+                "gamma_discount": self.config.gamma_discount,
             },
             "game_type": "co_funding",
             "pledge_mode": self.config.pledge_mode,
@@ -342,8 +352,11 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - Contributions to unfunded projects cost you nothing (refunded)
 
 **IMPORTANT RULES:**
-- No discount factor -- only the final round's outcome matters
-- The game ends early if all participants submit identical pledges for 2 consecutive rounds
+- Time discounting: {"enabled" if self.config.enable_time_discount else "disabled"}
+- Discount factor (if enabled): gamma = {self.config.gamma_discount}
+- Post-pledge commit vote: {"enabled" if self.config.enable_commit_vote else "disabled"}
+- {"The game may end early if participants reach unanimous commit vote (yay) on current pledges" if self.config.enable_commit_vote else "Commit vote early-stop is disabled for this run"}
+- The game also ends early if all participants submit identical pledges for 2 consecutive rounds (legacy convergence)
 - Your goal: maximize your utility by strategically choosing contributions
 
 Please acknowledge that you understand these rules and are ready to participate!"""
@@ -625,18 +638,22 @@ Respond with ONLY a JSON object in this exact format:
 
         U_i = sum_{j in S} v_ij - sum_{j in S} x_ij
 
-        where S is the funded set. No discount factor (final-state-only).
-        The round_num parameter is ignored for this game.
+        where S is the funded set. If time discounting is enabled:
+
+        discounted_U_i = U_i * gamma^(round_num - 1)
         """
         valuations = game_state["agent_valuations"][agent_id]
         funded = game_state.get("funded_projects", [])
         contributions = proposal.get("contributions", [0.0] * game_state["m_projects"])
 
-        utility = 0.0
+        raw_utility = 0.0
         for j in funded:
-            utility += valuations[j] - contributions[j]
+            raw_utility += valuations[j] - contributions[j]
 
-        return utility
+        if self.config.enable_time_discount:
+            discount_factor = self.config.gamma_discount ** max(0, round_num - 1)
+            return raw_utility * discount_factor
+        return raw_utility
 
     def get_discussion_prompt(
         self,
@@ -652,16 +669,89 @@ Respond with ONLY a JSON object in this exact format:
         aggregates = game_state["aggregate_totals"]
         funded = game_state["funded_projects"]
         costs = game_state["project_costs"]
+        all_budgets = game_state.get("agent_budgets", {})
+        current_pledges = game_state.get("current_pledges", {})
+        transparency_mode = getattr(self.config, "discussion_transparency", "own")
+        m = len(projects)
+
+        # Previous-round attribution from this agent's perspective.
+        own_prev = current_pledges.get(agent_id, {}).get("contributions", [0.0] * m)
+        if len(own_prev) != m:
+            own_prev = [0.0] * m
+        others_prev = [max(0.0, aggregates[j] - own_prev[j]) for j in range(m)]
 
         # Project status
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            if j in funded:
-                status_lines.append(f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f})")
+            if transparency_mode == "aggregate":
+                if j in funded:
+                    status_lines.append(f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f})")
+                else:
+                    gap = cost - agg
+                    status_lines.append(
+                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f})"
+                    )
             else:
-                gap = cost - agg
-                status_lines.append(f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f})")
+                min_you_to_keep = max(0.0, cost - others_prev[j])
+                if j in funded:
+                    line = (
+                        f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f}); "
+                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}, "
+                        f"min_you_to_keep_if_others_same={min_you_to_keep:.2f}"
+                    )
+                else:
+                    gap = cost - agg
+                    line = (
+                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f}); "
+                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}, "
+                        f"min_you_to_fund_if_others_same={min_you_to_keep:.2f}"
+                    )
+                status_lines.append(line)
         status_text = "\n".join(status_lines)
+
+        extra_transparency_block = ""
+        if transparency_mode != "aggregate":
+            attribution_section = ""
+            if transparency_mode == "full":
+                attribution_lines = ["**PREVIOUS ROUND PROJECT ATTRIBUTION (who funded what):**"]
+                if not current_pledges:
+                    attribution_lines.append("- No prior pledges yet (round 1).")
+                else:
+                    for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
+                        per_agent = []
+                        for aid in sorted(all_budgets.keys()):
+                            contribs = current_pledges.get(aid, {}).get("contributions", [0.0] * m)
+                            if len(contribs) != m:
+                                contribs = [0.0] * m
+                            per_agent.append(f"{aid}={contribs[j]:.2f}")
+                        funded_tag = "FUNDED" if j in funded else "UNFUNDED"
+                        attribution_lines.append(
+                            f"- {proj['name']}: {', '.join(per_agent)} | "
+                            f"aggregate={agg:.2f}/{cost:.2f} ({funded_tag})"
+                        )
+                attribution_section = "\n\n" + "\n".join(attribution_lines)
+
+            budget_lines = []
+            for aid in sorted(all_budgets.keys()):
+                prev = current_pledges.get(aid, {}).get("contributions", [0.0] * m)
+                if len(prev) != m:
+                    prev = [0.0] * m
+                spent_prev = sum(float(x) for x in prev)
+                remaining_prev = max(0.0, all_budgets[aid] - spent_prev)
+                label = " (you)" if aid == agent_id else ""
+                budget_lines.append(
+                    f"  {aid}{label}: budget={all_budgets[aid]:.2f}, "
+                    f"last_round_pledged={spent_prev:.2f}, last_round_unallocated={remaining_prev:.2f}"
+                )
+            budget_section = "\n".join(budget_lines)
+            extra_transparency_block = f"""
+
+**IMPORTANT: funded status above reflects LAST ROUND only.**
+If any participant revises downward this round, previously funded projects can become unfunded.
+Reaffirm or revise your plan explicitly for projects you want to remain funded.
+
+**LAST ROUND BUDGET USAGE (before this round's revision):**
+{budget_section}{attribution_section}"""
 
         if round_num == 1:
             context = """**DISCUSSION OBJECTIVES:**
@@ -695,6 +785,7 @@ Share your updated strategy for this round."""
 {status_text}
 
 **Funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+{extra_transparency_block}
 
 {context}{reasoning_instruction}"""
 
@@ -711,6 +802,52 @@ Share your updated strategy for this round."""
         # The orchestrator never calls it for co-funding games.
         _msg = "Co-funding uses Talk-Pledge-Revise, not voting"
         raise RuntimeError(_msg)
+
+    def get_commit_vote_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any],
+        round_num: int,
+        max_rounds: int,
+    ) -> str:
+        """Generate post-pledge commit vote prompt (yay/nay)."""
+        projects = game_state["projects"]
+        costs = game_state["project_costs"]
+        aggregates = game_state["aggregate_totals"]
+        funded = set(game_state.get("funded_projects", []))
+        current_pledges = game_state.get("current_pledges", {})
+
+        profile_lines = []
+        for aid in sorted(current_pledges.keys()):
+            contribs = current_pledges.get(aid, {}).get("contributions", [0.0] * len(projects))
+            profile_lines.append(f"- {aid}: {[round(float(x), 2) for x in contribs]}")
+        profile_text = "\n".join(profile_lines) if profile_lines else "- No pledges available"
+
+        status_lines = []
+        for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
+            status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status_lines.append(
+                f"  {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
+            )
+
+        return f"""POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}
+
+You are voting on whether to LOCK IN the current pledge profile immediately.
+
+**Current pledge profile:**
+{profile_text}
+
+**Current aggregate project status:**
+{chr(10).join(status_lines)}
+
+Vote **yay** if you are willing to finalize this exact profile now.
+Vote **nay** if you want another revision round.
+
+Respond with ONLY JSON:
+{{
+    "commit_vote": "yay",
+    "reasoning": "brief explanation"
+}}"""
 
     def get_thinking_prompt(
         self,
@@ -837,7 +974,12 @@ Remember: This analysis is completely private."""
         # Compute current utility
         own_pledge = game_state.get("current_pledges", {}).get(agent_id, {})
         own_contribs = own_pledge.get("contributions", [0.0] * len(projects))
-        utility = sum(valuations[j] - own_contribs[j] for j in funded) if funded else 0.0
+        raw_utility = sum(valuations[j] - own_contribs[j] for j in funded) if funded else 0.0
+        if self.config.enable_time_discount:
+            discount_factor = self.config.gamma_discount ** max(0, round_num - 1)
+        else:
+            discount_factor = 1.0
+        utility = raw_utility * discount_factor
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
@@ -855,6 +997,8 @@ Remember: This analysis is completely private."""
 
 **Funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
 **Your estimated utility:** {utility:.2f}
+**Raw utility (before discount):** {raw_utility:.2f}
+**Discount factor this round:** {discount_factor:.4f}
 
 Consider what adjustments to your contributions might improve the outcome.
 - Are there projects close to being funded that deserve more support?
@@ -911,12 +1055,18 @@ Consider what adjustments to your contributions might improve the outcome.
                 funded.append(j)
         game_state["funded_projects"] = funded
 
-    def compute_final_outcome(self, game_state: Dict[str, Any]) -> Dict[str, Any]:
+    def compute_final_outcome(
+        self,
+        game_state: Dict[str, Any],
+        final_round: Optional[int] = None
+    ) -> Dict[str, Any]:
         """
         Compute final utilities from the last round's pledges.
 
         Args:
             game_state: Game state with current_pledges and funded_projects
+            final_round: Round in which outcome is finalized. If None, inferred
+                from pledge history length.
 
         Returns:
             Dict with utilities, funded_projects, contributions
@@ -924,17 +1074,28 @@ Consider what adjustments to your contributions might improve the outcome.
         funded = game_state["funded_projects"]
         valuations = game_state["agent_valuations"]
         pledges = game_state["current_pledges"]
+        resolved_round = final_round if final_round is not None else max(1, len(game_state.get("round_pledges", [])))
+        discount_factor = (
+            self.config.gamma_discount ** max(0, resolved_round - 1)
+            if self.config.enable_time_discount
+            else 1.0
+        )
 
         utilities = {}
+        raw_utilities = {}
         for aid in valuations:
             contribs = pledges.get(aid, {}).get("contributions", [0.0] * game_state["m_projects"])
-            utility = 0.0
+            raw_utility = 0.0
             for j in funded:
-                utility += valuations[aid][j] - contribs[j]
-            utilities[aid] = utility
+                raw_utility += valuations[aid][j] - contribs[j]
+            raw_utilities[aid] = raw_utility
+            utilities[aid] = raw_utility * discount_factor
 
         return {
             "utilities": utilities,
+            "raw_utilities": raw_utilities,
+            "discount_factor": discount_factor,
+            "final_round": resolved_round,
             "funded_projects": funded,
             "contributions": {
                 aid: pledges.get(aid, {}).get("contributions", [])

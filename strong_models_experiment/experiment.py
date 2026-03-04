@@ -188,7 +188,7 @@ class StrongModelsExperiment:
                 game_type="co_funding",
                 n_agents=config["n_agents"],
                 t_rounds=config["t_rounds"],
-                gamma_discount=config.get("gamma_discount", 1.0),
+                gamma_discount=config.get("cofunding_time_discount", config.get("gamma_discount", 0.9)),
                 random_seed=config.get("random_seed"),
                 m_projects=config.get("m_projects", 5),
                 alpha=config.get("alpha", 0.5),
@@ -196,6 +196,12 @@ class StrongModelsExperiment:
                 c_min=config.get("c_min", 10.0),
                 c_max=config.get("c_max", 30.0),
                 pledge_mode=config.get("pledge_mode", "joint"),
+                discussion_transparency=config.get(
+                    "cofunding_discussion_transparency",
+                    config.get("discussion_transparency", "own")
+                ),
+                enable_commit_vote=config.get("cofunding_enable_commit_vote", True),
+                enable_time_discount=config.get("cofunding_enable_time_discount", True),
             )
         else:
             raise ValueError(f"Unknown game_type: {game_type}. Must be 'item_allocation', 'diplomacy', or 'co_funding'")
@@ -269,6 +275,7 @@ class StrongModelsExperiment:
         agent_preferences_data = {}
         strategic_behaviors = {}
         conversation_logs = []
+        cofunding_commit_reached = False
         
         # Run the 14-phase negotiation
         try:
@@ -376,6 +383,21 @@ class StrongModelsExperiment:
                     )
                     conversation_logs.extend(feedback_result.get("messages", []))
 
+                    # Optional post-pledge commit vote (yay/nay on current pledge profile)
+                    if config.get("cofunding_enable_commit_vote", True):
+                        commit_result = await self.phase_handler.run_cofunding_commit_vote_phase(
+                            agents, items, preferences, round_num, config["t_rounds"]
+                        )
+                        conversation_logs.extend(commit_result.get("messages", []))
+
+                        if commit_result.get("unanimous_yay", False):
+                            self.logger.info(
+                                f"Unanimous co-funding commit reached in round {round_num}; ending early."
+                            )
+                            cofunding_commit_reached = True
+                            final_round = round_num
+                            break
+
                     # Individual Reflection (optional)
                     if not config.get("disable_reflection", False):
                         reflection_result = await self.phase_handler.run_individual_reflection_phase(
@@ -388,16 +410,21 @@ class StrongModelsExperiment:
                     # Check for early termination (joint plans agree or pledges converge)
                     if game_environment.check_early_termination(preferences["game_state"]):
                         self.logger.info(f"Early termination in round {round_num}")
+                        final_round = round_num
                         break
 
             # Post-round-loop processing
             if protocol == "talk_pledge_revise":
                 # Compute final outcome from last pledges
-                final_outcome = game_environment.compute_final_outcome(preferences["game_state"])
+                resolved_final_round = final_round if final_round > 0 else round_num
+                final_outcome = game_environment.compute_final_outcome(
+                    preferences["game_state"],
+                    final_round=resolved_final_round
+                )
                 final_utilities = final_outcome["utilities"]
                 final_allocation = final_outcome["funded_projects"]
-                consensus_reached = len(final_outcome["funded_projects"]) > 0
-                final_round = round_num
+                consensus_reached = cofunding_commit_reached or len(final_outcome["funded_projects"]) > 0
+                final_round = resolved_final_round
                 agent_preferences_data = {
                     aid: preferences["agent_preferences"][aid]
                     for aid in preferences["agent_preferences"]

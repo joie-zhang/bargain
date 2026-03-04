@@ -33,13 +33,28 @@ def create_test_agents(n: int = 2) -> List[FakeAgent]:
     return [FakeAgent(f"Agent_{i+1}") for i in range(n)]
 
 
-def make_game(seed=42, alpha=0.5, sigma=0.5, m_projects=5, n_agents=2, t_rounds=5):
+def make_game(
+    seed=42,
+    alpha=0.5,
+    sigma=0.5,
+    m_projects=5,
+    n_agents=2,
+    t_rounds=5,
+    discussion_transparency="own",
+    enable_commit_vote=True,
+    enable_time_discount=True,
+    gamma_discount=0.9,
+):
     config = CoFundingConfig(
         n_agents=n_agents,
         t_rounds=t_rounds,
         m_projects=m_projects,
         alpha=alpha,
         sigma=sigma,
+        discussion_transparency=discussion_transparency,
+        enable_commit_vote=enable_commit_vote,
+        enable_time_discount=enable_time_discount,
+        gamma_discount=gamma_discount,
         random_seed=seed,
     )
     return CoFundingGame(config)
@@ -122,12 +137,12 @@ class TestGameStateCreation:
         for key in required_keys:
             assert key in state, f"Missing key: {key}"
 
-    def test_budget_equals_sigma_times_cost(self):
-        """Total budget should equal sigma * total_cost."""
+    def test_budget_scales_between_half_and_full_cost(self):
+        """Total budget should equal (0.5 + 0.5*sigma) * total_cost."""
         game = make_game(sigma=0.6)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        expected_budget = 0.6 * state["total_cost"]
+        expected_budget = (0.5 + 0.5 * 0.6) * state["total_cost"]
         assert abs(state["total_budget"] - expected_budget) < 0.1
 
     def test_per_agent_budget_equal(self):
@@ -207,9 +222,22 @@ class TestUtilityCalculation:
         # U = (50 - 15) + (20 - 8) = 35 + 12 = 47
         assert abs(utility - 47.0) < 0.01
 
-    def test_no_discount_factor(self):
-        """Utility should NOT change with round number (no discounting)."""
+    def test_discount_factor_applied_by_default(self):
+        """Utility should decrease over rounds when time discounting is enabled."""
         game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["funded_projects"] = [0]
+
+        proposal = {"contributions": [5.0, 0.0, 0.0], "proposed_by": "Agent_1"}
+        u1 = game.calculate_utility("Agent_1", proposal, state, 1)
+        u5 = game.calculate_utility("Agent_1", proposal, state, 5)
+        u10 = game.calculate_utility("Agent_1", proposal, state, 10)
+        assert u1 > u5 > u10
+
+    def test_time_discount_can_be_disabled(self):
+        """Utility should be round-invariant when time discounting is disabled."""
+        game = make_game(m_projects=3, enable_time_discount=False)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         state["funded_projects"] = [0]
@@ -511,6 +539,35 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
         assert "DISCUSSION" in prompt
+        assert "LAST ROUND BUDGET USAGE" in prompt
+
+    def test_discussion_prompt_aggregate_mode(self):
+        game = make_game(discussion_transparency="aggregate")
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
+        assert "LAST ROUND BUDGET USAGE" not in prompt
+
+    def test_discussion_prompt_with_own_transparency(self):
+        config = CoFundingConfig(
+            n_agents=2,
+            t_rounds=5,
+            m_projects=3,
+            discussion_transparency="own",
+            random_seed=42,
+        )
+        game = CoFundingGame(config)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        pledges = {
+            "Agent_1": {"contributions": [5.0, 3.0, 2.0]},
+            "Agent_2": {"contributions": [4.0, 6.0, 1.0]},
+        }
+        game.update_game_state_with_pledges(state, pledges)
+        prompt = game.get_discussion_prompt("Agent_1", state, 2, 5, [])
+        assert "LAST ROUND BUDGET USAGE" in prompt
+        assert "your_prev=" in prompt
+        assert "min_you_to_" in prompt
 
     def test_thinking_prompt(self):
         game = make_game()
@@ -526,6 +583,14 @@ class TestPrompts:
         state["funded_projects"] = []
         prompt = game.get_reflection_prompt("Agent_1", state, 1, 5, {})
         assert "Reflect" in prompt
+
+    def test_commit_vote_prompt(self):
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        prompt = game.get_commit_vote_prompt("Agent_1", state, 1, 5)
+        assert "POST-PLEDGE COMMIT VOTE" in prompt
+        assert "commit_vote" in prompt
 
     def test_feedback_prompt(self):
         game = make_game()

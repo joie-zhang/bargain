@@ -29,7 +29,7 @@ class PhaseHandler:
                  reasoning_config: Optional[Dict[str, Any]] = None):
         self.logger = logging.getLogger(__name__)
         self.prompt_gen = PromptGenerator()
-        self.save_interaction = save_interaction_callback or (lambda *args: None)
+        self.save_interaction = save_interaction_callback or (lambda *args, **kwargs: None)
 
         # Optional GameEnvironment for game-specific behavior
         self.game_environment = game_environment
@@ -139,6 +139,57 @@ class PhaseHandler:
         return {
             "vote": vote_val,
             "reasoning": vote.get("reasoning", ""),
+            "voter": agent_id,
+            "round": round_num,
+        }
+
+    def _parse_commit_vote_response(self, content: str, agent_id: str, round_num: int) -> Dict:
+        """Parse co-funding commit vote (yay/nay) from raw LLM output."""
+        import re
+        try:
+            vote = json.loads(content)
+        except json.JSONDecodeError:
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                vote = json.loads(json_match.group())
+            else:
+                # Last-resort keyword parse
+                lowered = content.lower()
+                if "yay" in lowered:
+                    return {
+                        "commit_vote": "yay",
+                        "reasoning": "Parsed from plain-text response",
+                        "voter": agent_id,
+                        "round": round_num,
+                    }
+                return {
+                    "commit_vote": "nay",
+                    "reasoning": "No valid JSON in commit vote response",
+                    "voter": agent_id,
+                    "round": round_num,
+                }
+
+        raw_vote = (
+            vote.get("commit_vote")
+            or vote.get("vote")
+            or vote.get("decision")
+            or vote.get("commit")
+            or "nay"
+        )
+        if isinstance(raw_vote, dict):
+            raw_vote = raw_vote.get("commit_vote", raw_vote.get("vote", raw_vote.get("decision", "nay")))
+
+        normalized = str(raw_vote).strip().lower()
+        if normalized in ("yay", "yes", "accept", "approved", "approve", "commit", "true"):
+            commit_vote = "yay"
+        elif normalized in ("nay", "no", "reject", "decline", "false"):
+            commit_vote = "nay"
+        else:
+            commit_vote = "nay"
+
+        return {
+            "commit_vote": commit_vote,
+            "reasoning": vote.get("reasoning", vote.get("rationale", "")),
             "voter": agent_id,
             "round": round_num,
         }
@@ -1274,5 +1325,164 @@ Consider what adjustments might lead to consensus in future rounds."""
         return {
             "aggregate_totals": aggregates,
             "funded_projects": funded,
+            "messages": messages,
+        }
+
+    async def run_cofunding_commit_vote_phase(
+        self,
+        agents: List[BaseLLMAgent],
+        items: List[Dict],
+        preferences: Dict,
+        round_num: int,
+        max_rounds: int,
+    ) -> Dict:
+        """Post-pledge commit vote for co-funding.
+
+        Each agent votes yay/nay on whether to lock in the current pledge profile.
+        If all agents vote yay, the orchestrator can terminate early.
+        """
+        messages = []
+        commit_votes = []
+
+        self.logger.info(f"=== CO-FUNDING COMMIT VOTE PHASE - Round {round_num} ===")
+
+        game_state = preferences["game_state"]
+        projects = game_state.get("projects", [])
+        costs = game_state.get("project_costs", [])
+        aggregates = game_state.get("aggregate_totals", [])
+        funded = game_state.get("funded_projects", [])
+        current_pledges = game_state.get("current_pledges", {})
+
+        if self.token_config["voting"] is not None:
+            for agent in agents:
+                agent.update_max_tokens(self.token_config["voting"])
+        elif self.token_config["default"] is not None:
+            for agent in agents:
+                agent.update_max_tokens(self.token_config["default"])
+
+        # Shared fallback prompt if the game environment does not provide one.
+        fallback_lines = [
+            f"POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}",
+            "",
+            "Current pledge profile (this round):",
+        ]
+        for aid in sorted(current_pledges.keys()):
+            contribs = current_pledges.get(aid, {}).get("contributions", [])
+            fallback_lines.append(f"- {aid}: {[round(float(x), 2) for x in contribs]}")
+        fallback_lines.append("")
+        fallback_lines.append("Aggregate project status:")
+        for j, proj in enumerate(projects):
+            cost = costs[j] if j < len(costs) else 0.0
+            agg = aggregates[j] if j < len(aggregates) else 0.0
+            status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            fallback_lines.append(
+                f"- {proj.get('name', f'Project_{j+1}')}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
+            )
+        fallback_lines.extend(
+            [
+                "",
+                "Vote YAY if you are willing to lock in this exact profile now.",
+                "Vote NAY if you prefer another revision round.",
+                "",
+                "Respond with ONLY JSON:",
+                "{",
+                '  "commit_vote": "yay",',
+                '  "reasoning": "brief explanation"',
+                "}",
+            ]
+        )
+        fallback_prompt = "\n".join(fallback_lines)
+
+        for agent in agents:
+            if (
+                self.game_environment is not None
+                and hasattr(self.game_environment, "get_commit_vote_prompt")
+            ):
+                commit_prompt = self.game_environment.get_commit_vote_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state,
+                    round_num=round_num,
+                    max_rounds=max_rounds,
+                )
+            else:
+                commit_prompt = fallback_prompt
+
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=[a.agent_id for a in agents],
+                agent_id=agent.agent_id,
+                preferences=preferences["agent_preferences"][agent.agent_id],
+                turn_type="voting",
+            )
+
+            try:
+                agent_response = await agent.generate_response(context, commit_prompt)
+                response_content = agent_response.content
+                token_usage = self._extract_token_usage(agent_response)
+                parsed_vote = self._parse_commit_vote_response(
+                    response_content, agent.agent_id, round_num
+                )
+            except Exception as e:
+                self.logger.error(f"Error collecting commit vote from {agent.agent_id}: {e}")
+                response_content = json.dumps({"commit_vote": "nay", "reasoning": f"error: {e}"})
+                token_usage = None
+                parsed_vote = {
+                    "commit_vote": "nay",
+                    "reasoning": f"fallback due to error: {e}",
+                    "voter": agent.agent_id,
+                    "round": round_num,
+                }
+
+            commit_votes.append(parsed_vote)
+
+            self.logger.info(
+                f"  Commit vote from {agent.agent_id}: "
+                f"{parsed_vote.get('commit_vote', 'nay')}"
+            )
+
+            self.save_interaction(
+                agent.agent_id,
+                f"commit_vote_round_{round_num}",
+                commit_prompt,
+                response_content,
+                round_num,
+                token_usage,
+                model_name=agent.get_model_info()["model_name"],
+            )
+
+            messages.append(
+                {
+                    "phase": "cofunding_commit_vote",
+                    "round": round_num,
+                    "from": agent.agent_id,
+                    "content": response_content,
+                    "parsed_vote": parsed_vote,
+                    "timestamp": time.time(),
+                }
+            )
+
+        yay_count = sum(1 for v in commit_votes if v.get("commit_vote") == "yay")
+        unanimous_yay = yay_count == len(agents) and len(agents) > 0
+
+        summary_message = {
+            "phase": "cofunding_commit_vote_summary",
+            "round": round_num,
+            "from": "system",
+            "content": (
+                f"Commit vote summary: {yay_count} yay / {len(agents) - yay_count} nay. "
+                f"{'UNANIMOUS_YAY' if unanimous_yay else 'NO_UNANIMOUS_COMMIT'}"
+            ),
+            "unanimous_yay": unanimous_yay,
+            "timestamp": time.time(),
+        }
+        messages.append(summary_message)
+
+        return {
+            "commit_votes": commit_votes,
+            "yay_count": yay_count,
+            "nay_count": len(agents) - yay_count,
+            "unanimous_yay": unanimous_yay,
             "messages": messages,
         }

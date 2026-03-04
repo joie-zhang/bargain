@@ -68,10 +68,13 @@ class CoFundingConfig(GameConfig):
     """Configuration specific to Co-Funding (Participatory Budgeting) game."""
     m_projects: int = 5
     alpha: float = 0.5       # Preference alignment [0, 1]
-    sigma: float = 0.5       # Budget scarcity (0, 1]
+    sigma: float = 0.5       # Budget abundance scale (0, 1]
     c_min: float = 10.0      # Minimum project cost
     c_max: float = 30.0      # Maximum project cost
     pledge_mode: str = "joint"  # "joint" (agents propose full plans) or "individual" (legacy)
+    discussion_transparency: str = "own"  # "aggregate", "own", or "full"
+    enable_commit_vote: bool = True
+    enable_time_discount: bool = True
 
     def __post_init__(self):
         """Validate parameter bounds."""
@@ -87,6 +90,19 @@ class CoFundingConfig(GameConfig):
             raise ValueError(f"m_projects must be >= 1, got {self.m_projects}")
         if self.pledge_mode not in ("joint", "individual"):
             raise ValueError(f"pledge_mode must be 'joint' or 'individual', got '{self.pledge_mode}'")
+        if self.discussion_transparency not in ("aggregate", "own", "full"):
+            raise ValueError(
+                "discussion_transparency must be 'aggregate', 'own', or 'full', "
+                f"got '{self.discussion_transparency}'"
+            )
+        if not isinstance(self.enable_commit_vote, bool):
+            raise ValueError(f"enable_commit_vote must be bool, got {type(self.enable_commit_vote).__name__}")
+        if not isinstance(self.enable_time_discount, bool):
+            raise ValueError(f"enable_time_discount must be bool, got {type(self.enable_time_discount).__name__}")
+        if not 0 <= self.gamma_discount <= 1:
+            raise ValueError(
+                f"gamma_discount must be in [0, 1], got {self.gamma_discount}"
+            )
 
 
 class GameEnvironment(ABC):

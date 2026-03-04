@@ -137,7 +137,7 @@ async def main():
         "--sigma",
         type=float,
         default=0.5,
-        help="Budget scarcity (0,1]: ratio of total budget to total cost (co_funding only, default: 0.5)"
+        help="Budget abundance scale (0,1]: total budget ratio = 0.5 + 0.5*sigma (co_funding only, default: 0.5)"
     )
 
     parser.add_argument(
@@ -159,6 +159,49 @@ async def main():
         type=float,
         default=50.0,
         help="Maximum project cost (co_funding only, default: 50.0)"
+    )
+
+    parser.add_argument(
+        "--cofunding-discussion-transparency",
+        type=str,
+        choices=["aggregate", "own", "full"],
+        default="own",
+        help=(
+            "Discussion prompt transparency for co-funding: "
+            "own (default; your attribution + others aggregate), "
+            "aggregate (legacy), "
+            "or full (per-agent attribution)."
+        ),
+    )
+
+    parser.add_argument(
+        "--cofunding-disable-commit-vote",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable post-pledge unanimous commit vote (yay/nay) in co-funding. "
+            "Enabled by default."
+        ),
+    )
+
+    parser.add_argument(
+        "--cofunding-time-discount",
+        type=float,
+        default=0.9,
+        help=(
+            "Co-funding time discount gamma in [0,1]. "
+            "Applied when time discounting is enabled (default: 0.9)."
+        ),
+    )
+
+    parser.add_argument(
+        "--cofunding-disable-time-discount",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable co-funding time discounting. "
+            "By default, discounted utility is used for co-funding."
+        ),
     )
 
     parser.add_argument(
@@ -338,8 +381,15 @@ async def main():
     elif args.game_type == "co_funding":
         print(f"Projects: {args.m_projects}")
         print(f"Alpha (preference alignment): {args.alpha}")
-        print(f"Sigma (budget scarcity): {args.sigma}")
+        print(f"Sigma (budget abundance scale): {args.sigma}")
         print(f"Cost range: [{args.c_min}, {args.c_max}]")
+        print(f"Discussion transparency: {args.cofunding_discussion_transparency}")
+        print(f"Commit vote enabled: {not args.cofunding_disable_commit_vote}")
+        print(
+            f"Time discounting: "
+            f"{'enabled' if not args.cofunding_disable_time_discount else 'disabled'}"
+            f" (gamma={args.cofunding_time_discount})"
+        )
 
     print(f"Discount Factor: {args.gamma_discount}")
     if args.random_seed:
@@ -430,6 +480,10 @@ async def main():
         "sigma": args.sigma,
         "c_min": args.c_min,
         "c_max": args.c_max,
+        "cofunding_discussion_transparency": args.cofunding_discussion_transparency,
+        "cofunding_enable_commit_vote": not args.cofunding_disable_commit_vote,
+        "cofunding_enable_time_discount": not args.cofunding_disable_time_discount,
+        "cofunding_time_discount": args.cofunding_time_discount,
     }
     
     # Only add token limits if they're specified

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from game_environments import CoFundingConfig
 from game_environments.co_funding import CoFundingGame
+from strong_models_experiment.phases.phase_handlers import PhaseHandler
 
 
 # ---- Fake agent for testing ----
@@ -192,6 +193,74 @@ class TestEarlyTerminationIntegration:
         game.update_game_state_with_pledges(state, pledges_r1)
         game.update_game_state_with_pledges(state, pledges_r2)
         assert not game.check_early_termination(state)
+
+
+class TestCommitVotePhase:
+    """Tests for post-pledge unanimous commit vote."""
+
+    def test_unanimous_yay_commit_vote(self):
+        game, _, state = make_game_and_state(m_projects=3)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+
+        pledges = {
+            "Agent_1": {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+            "Agent_2": {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
+        }
+        game.update_game_state_with_pledges(state, pledges)
+
+        agents = [
+            FakeAgent("Agent_1", ['{"commit_vote": "yay", "reasoning": "works"}']),
+            FakeAgent("Agent_2", ['{"commit_vote": "yay", "reasoning": "agree"}']),
+        ]
+        handler = PhaseHandler(game_environment=game)
+
+        result = asyncio.run(
+            handler.run_cofunding_commit_vote_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=2,
+                max_rounds=5,
+            )
+        )
+        assert result["unanimous_yay"] is True
+        assert result["yay_count"] == 2
+
+    def test_nay_blocks_unanimous_commit(self):
+        game, _, state = make_game_and_state(m_projects=3)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+
+        pledges = {
+            "Agent_1": {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+            "Agent_2": {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
+        }
+        game.update_game_state_with_pledges(state, pledges)
+
+        agents = [
+            FakeAgent("Agent_1", ['{"commit_vote": "yay", "reasoning": "works"}']),
+            FakeAgent("Agent_2", ['{"commit_vote": "nay", "reasoning": "revise"}']),
+        ]
+        handler = PhaseHandler(game_environment=game)
+
+        result = asyncio.run(
+            handler.run_cofunding_commit_vote_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=2,
+                max_rounds=5,
+            )
+        )
+        assert result["unanimous_yay"] is False
+        assert result["yay_count"] == 1
 
 
 class TestFullRoundLoop:
