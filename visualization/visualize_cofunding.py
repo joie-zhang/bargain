@@ -25,6 +25,12 @@ What it creates:
     ├── exploitation_index.png            # Exploitation index by model
     ├── utility_vs_elo.png               # Agent utility vs adversary Elo
     ├── adaptation_rate_by_sigma.png      # Adaptation rate vs budget abundance
+    ├── promise_keep_rate_heatmap.png     # Promise-keeping vs alpha x sigma
+    ├── persuasion_effectiveness_heatmap.png  # Persuasion deltas vs alpha x sigma
+    ├── coalition_persistence_heatmap.png  # Coalition persistence vs alpha x sigma
+    ├── promise_keep_rate_by_model.png    # Promise-keeping by adversary model
+    ├── persuasion_effectiveness_by_model.png # Persuasion by adversary model
+    ├── coalition_persistence_by_model.png # Coalition persistence by model
     ├── num_funded_vs_sigma.png           # Projects funded vs sigma
     ├── competition_index_metrics.png     # 1D competition index (CI) view
     ├── disaggregated_by_alpha.png        # Metrics vs sigma, per alpha
@@ -977,6 +983,12 @@ def main():
         print(f"Avg coord. failure (count):    {df['coordination_failure_count'].mean():.3f}")
     if "coordination_gap_ratio" in df.columns:
         print(f"Avg coordination gap ratio:    {df['coordination_gap_ratio'].mean():.3f}")
+    if "promise_keep_rate" in df.columns:
+        print(f"Avg promise keep rate:         {df['promise_keep_rate'].mean():.3f}")
+    if "persuasion_other_agent_delta" in df.columns:
+        print(f"Avg persuasion delta:          {df['persuasion_other_agent_delta'].mean():.3f}")
+    if "coalition_persistent_fraction" in df.columns:
+        print(f"Avg coalition persistence:     {df['coalition_persistent_fraction'].mean():.3f}")
     print(f"Avg baseline utility: {df['baseline_utility'].mean():.1f}")
     print(f"Avg adversary utility:{df['adversary_utility'].mean():.1f}")
     print(f"Avg utility gap:      {df['utility_gap'].mean():.1f}")
@@ -1073,6 +1085,32 @@ def main():
                 "lindahl_distance_by_model.png", figures_dir,
             )
 
+        if "promise_keep_rate" in df.columns:
+            plot_metric_by_model(
+                df, "promise_keep_rate",
+                "Promise-Keeping Rate by Adversary Model",
+                "Promise Keep Rate",
+                "promise_keep_rate_by_model.png", figures_dir,
+                ylim=(0, 1),
+            )
+
+        if "persuasion_other_agent_delta" in df.columns:
+            plot_metric_by_model(
+                df, "persuasion_other_agent_delta",
+                "Persuasion Effectiveness by Adversary Model",
+                "Mean Other-Agent Delta After Advocacy",
+                "persuasion_effectiveness_by_model.png", figures_dir,
+            )
+
+        if "coalition_persistent_fraction" in df.columns:
+            plot_metric_by_model(
+                df, "coalition_persistent_fraction",
+                "Coalition Persistence by Adversary Model",
+                "Persistent Coalition Project Fraction",
+                "coalition_persistence_by_model.png", figures_dir,
+                ylim=(0, 1),
+            )
+
     # Scatter: utility vs Elo
     plot_utility_vs_elo(df, figures_dir)
 
@@ -1084,6 +1122,34 @@ def main():
 
     # Adaptation rate
     plot_adaptation_by_sigma(df, figures_dir)
+
+    # Structured qualitative heatmaps (if available)
+    if "promise_keep_rate" in df.columns:
+        plot_heatmap(
+            df, "promise_keep_rate",
+            "Promise-Keeping Rate",
+            "promise_keep_rate_heatmap.png", figures_dir,
+            vmin=0, vmax=1, cmap="YlGn", fmt=".2f",
+        )
+
+    if "persuasion_other_agent_delta" in df.columns:
+        pers_min = float(df["persuasion_other_agent_delta"].min())
+        pers_max = float(df["persuasion_other_agent_delta"].max())
+        bound = max(abs(pers_min), abs(pers_max), 1e-6)
+        plot_heatmap(
+            df, "persuasion_other_agent_delta",
+            "Persuasion Effectiveness (Other-Agent Delta)",
+            "persuasion_effectiveness_heatmap.png", figures_dir,
+            vmin=-bound, vmax=bound, cmap="RdBu_r", fmt=".2f",
+        )
+
+    if "coalition_persistent_fraction" in df.columns:
+        plot_heatmap(
+            df, "coalition_persistent_fraction",
+            "Coalition Persistence Fraction",
+            "coalition_persistence_heatmap.png", figures_dir,
+            vmin=0, vmax=1, cmap="YlGnBu", fmt=".2f",
+        )
 
     # Competition index and disaggregated views
     plot_competition_index_cofunding(df, figures_dir)
