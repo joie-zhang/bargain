@@ -413,6 +413,16 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "qwen3-32b-openrouter": {
+        "name": "Qwen3 32B (OpenRouter)",
+        "model_id": "qwen/qwen3-32b",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Requested Mar 2026 run set, Open-source (OpenRouter API)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "deepseek-r1-0528": {
         "name": "DeepSeek R1 0528",
         "model_id": "deepseek/deepseek-r1-0528",
@@ -641,6 +651,16 @@ STRONG_MODELS_CONFIG = {
         "api_type": "princeton_cluster",
         "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct",
         "description": "Rank 31, Elo: 1212, Open-source, Non-reasoning",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.1-8b-instruct-openrouter": {
+        "name": "Llama 3.1 8B Instruct (OpenRouter)",
+        "model_id": "meta-llama/llama-3.1-8b-instruct",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Rank 31 equivalent, Open-source, Non-reasoning (OpenRouter API)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
