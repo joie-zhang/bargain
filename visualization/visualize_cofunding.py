@@ -493,6 +493,7 @@ def plot_metric_by_model(
     ylabel: str,
     filename: str,
     figures_dir: Path,
+    ylim: Tuple[float, float] = None,
 ):
     """Bar chart of a metric grouped by adversary model, colored by tier."""
     if "adversary_model" not in df.columns or metric not in df.columns:
@@ -532,6 +533,8 @@ def plot_metric_by_model(
     ax.set_xticklabels(grouped["adversary_model"], rotation=45, ha="right", fontsize=9)
     ax.set_ylabel(ylabel, fontsize=12)
     ax.set_title(title, fontsize=14)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
 
     # Legend for tiers
     from matplotlib.patches import Patch
