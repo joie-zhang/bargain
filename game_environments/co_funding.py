@@ -661,7 +661,7 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate discussion prompt for co-funding."""
@@ -753,14 +753,30 @@ Reaffirm or revise your plan explicitly for projects you want to remain funded.
 **LAST ROUND BUDGET USAGE (before this round's revision):**
 {budget_section}{attribution_section}"""
 
-        if round_num == 1:
+        # Inject prior turns so each speaker sees what has been said this round
+        history_section = ""
+        if discussion_history:
+            history_section = "\n**DISCUSSION SO FAR THIS ROUND:**\n"
+            for msg in discussion_history:
+                history_section += f"{msg}\n\n"
+            history_section += "---\n"
+
+        if round_num == 1 and not discussion_history:
             context = """**DISCUSSION OBJECTIVES:**
 - Signal which projects you believe are most valuable to fund
 - Understand other participants' priorities
 - Coordinate to avoid spreading contributions too thin
 - Identify projects with enough collective support to be funded
 
-Share your initial thoughts on which projects to prioritize."""
+You are the first to speak. Share your initial thoughts on which projects to prioritize."""
+        elif discussion_history:
+            context = """**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- React to other participants' stated priorities
+- Coordinate on which projects to focus collective contributions
+- Signal your own funding intentions
+
+Keep the discussion focused on reaching a funded consensus."""
         else:
             urgency = ""
             if round_num >= max_rounds - 1:
@@ -786,7 +802,7 @@ Share your updated strategy for this round."""
 
 **Funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
 {extra_transparency_block}
-
+{history_section}
 {context}{reasoning_instruction}"""
 
     def get_voting_prompt(
@@ -855,7 +871,7 @@ Respond with ONLY JSON:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate private thinking prompt for co-funding."""
@@ -874,6 +890,14 @@ Respond with ONLY JSON:
             for i in priority_indices
         ]
 
+        # Include what was said in the discussion this round
+        discussion_section = ""
+        if discussion_history:
+            discussion_section = "\n**DISCUSSION THIS ROUND:**\n"
+            for msg in discussion_history:
+                discussion_section += f"{msg}\n\n"
+            discussion_section += "---\n"
+
         urgency = ""
         if round_num >= max_rounds - 1:
             urgency = "\n**CRITICAL**: Final rounds -- decide on your strategy now!"
@@ -887,7 +911,7 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 
         return f"""PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
 {urgency}
-
+{discussion_section}
 **YOUR SITUATION:**
 - Budget: {budget:.2f}
 - Your current contributions: {[round(c, 2) for c in own_contribs]}
@@ -899,7 +923,7 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 **STRATEGIC ANALYSIS:**
 1. Which projects are viable to fund given current aggregates?
 2. Where can you shift contributions for maximum impact?
-3. Are other participants likely to increase/decrease their pledges?
+3. Based on the discussion above, what are other participants likely to do?
 4. Should you free-ride on projects others are funding?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**

@@ -484,7 +484,10 @@ class PhaseHandler:
                     game_state=game_state,
                     round_num=round_num,
                     max_rounds=max_rounds,
-                    discussion_history=[msg.get("content", "") for msg in discussion_messages] if discussion_messages else [],
+                    discussion_history=[
+                        f"**{msg.get('from', 'Agent')}**: {msg.get('content', '')}"
+                        for msg in discussion_messages
+                    ] if discussion_messages else [],
                     reasoning_token_budget=reasoning_budget
                 )
             else:

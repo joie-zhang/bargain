@@ -35,18 +35,35 @@ class DiplomaticTreatyGame(GameEnvironment):
     - θ (theta): Interest overlap [0, 1]
     """
 
-    # Thematic issue names for diplomatic negotiations
+    # Each issue is framed as a policy proposition.
+    # An agent's position on an issue is a score in [0, 1]:
+    #   0.0 = fully OPPOSED to the proposition
+    #   1.0 = fully SUPPORTIVE of the proposition
     ISSUE_NAMES = [
-        "Trade Policy",
-        "Military Access",
-        "Environmental Standards",
-        "Resource Sharing",
-        "Border Security",
-        "Technology Transfer",
-        "Financial Cooperation",
-        "Cultural Exchange",
-        "Immigration Policy",
-        "Maritime Rights"
+        "Bilateral tariff elimination",
+        "Forward military basing rights",
+        "Binding emissions targets",
+        "Joint offshore resource development",
+        "Visa-free short-stay mobility",
+        "Dual-use technology co-development",
+        "Bilateral currency trade settlement",
+        "Mutual professional credential recognition",
+        "Priority work authorization for degree-holders",
+        "International arbitration for maritime disputes",
+    ]
+
+    # Full proposition text shown in the game-rules prompt, one per issue.
+    ISSUE_PROPOSITIONS = [
+        "Eliminate all bilateral tariffs on manufactured goods over a 10-year schedule.",
+        "Grant the other party rights to station up to 5,000 troops at designated facilities on domestic territory.",
+        "Adopt legally binding national emission-reduction targets, enforceable through automatic bilateral trade penalties.",
+        "Jointly develop all disputed offshore energy reserves under a permanent 50/50 revenue-sharing arrangement.",
+        "Allow citizens of both parties visa-free entry for short stays of up to 90 days.",
+        "Co-develop and openly license dual-use technologies under a shared IP framework, without third-party licensing restrictions.",
+        "Invoice and settle all bilateral trade in a basket of both parties' currencies rather than a third-party reserve currency.",
+        "Automatically recognize professional qualifications (medicine, engineering, law) certified in either jurisdiction.",
+        "Grant priority work-permit processing to citizens of either party who hold a recognized university degree.",
+        "Submit all maritime boundary and exclusive economic zone disputes to binding arbitration by an international tribunal.",
     ]
 
     def __init__(self, config: DiplomaticTreatyConfig):
@@ -298,9 +315,17 @@ class DiplomaticTreatyGame(GameEnvironment):
     def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
         """Generate diplomatic negotiation rules explanation."""
         issues = game_state["issues"]
-        params = game_state["parameters"]
 
-        issues_text = "\n".join([f"  - {issue}" for issue in issues])
+        # Build issues list with proposition text
+        issue_lines = []
+        for i, issue in enumerate(issues):
+            proposition = (
+                self.ISSUE_PROPOSITIONS[i]
+                if i < len(self.ISSUE_PROPOSITIONS)
+                else "(see preference assignment)"
+            )
+            issue_lines.append(f"  {i+1}. **{issue}**\n     Proposition: \"{proposition}\"")
+        issues_text = "\n".join(issue_lines)
 
         # Create clearer phrasing for 2-agent negotiations
         if self.config.n_agents == 2:
@@ -310,38 +335,40 @@ class DiplomaticTreatyGame(GameEnvironment):
 
         return f"""Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} key policy issues.
+You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy propositions.
 
-**ISSUES BEING NEGOTIATED:**
+**PROPOSITIONS UNDER NEGOTIATION:**
+Each issue is a concrete policy proposition. Your position—and any agreed resolution—is a score in [0.0, 1.0]:
+  - **0.0** = fully OPPOSED to the proposition (reject it entirely)
+  - **1.0** = fully SUPPORTIVE of the proposition (adopt it entirely)
+  - **0.5** = neutral / split-the-difference compromise
+
 {issues_text}
 
 **GAME STRUCTURE:**
 - There are {self.config.n_agents} parties negotiating (including you)
 - The negotiation will last up to {self.config.t_rounds} rounds
-- Each issue can be resolved anywhere in the range [0.0, 1.0]
-  - 0.0 = One extreme position
-  - 1.0 = Opposite extreme position
-  - 0.5 = Neutral/compromise position
+- An agreement vector resolves every proposition simultaneously
 
 **YOUR PREFERENCES:**
-- You have an IDEAL POSITION on each issue (what outcome you prefer)
-- You have IMPORTANCE WEIGHTS (how much you care about each issue)
-- Your preferences are PRIVATE - other parties don't know them
+- You have a SECRET IDEAL POSITION on each proposition (your preferred score)
+- You have IMPORTANCE WEIGHTS (how much you care about each proposition)
+- Your preferences are PRIVATE — the other party does not know them
 
 **AGREEMENT FORMAT:**
-- An agreement is a vector of values, one per issue
+- An agreement is a vector of {len(issues)} values, one per proposition
 - Example: [0.3, 0.7, 0.5, ...]
-- Each value represents where that issue is resolved on the [0,1] spectrum
+- Each value is the agreed score on that proposition's [0, 1] support scale
 
 **UTILITY CALCULATION:**
-- Your utility = weighted sum of how close each issue is to your ideal
+- Your utility = weighted sum of how close each resolved score is to your ideal
 - Formula: Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 1.0 (all issues at your exact ideal positions)
+- Maximum utility = 1.0 (every proposition resolved at your exact ideal score)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
-- A proposal needs UNANIMOUS acceptance from all parties
-- Rewards discounted by {self.config.gamma_discount} per round
+- A proposal needs UNANIMOUS acceptance from all parties to take effect
+- Utility is discounted by {self.config.gamma_discount} per round — early agreement is better
 
 Please acknowledge that you understand these rules and are ready to negotiate!"""
 
@@ -536,7 +563,7 @@ Respond with ONLY a JSON object in this exact format:
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate diplomatic discussion prompt."""
@@ -545,14 +572,30 @@ Respond with ONLY a JSON object in this exact format:
         if len(issues) > 5:
             issues_text += f", and {len(issues) - 5} more"
 
-        if round_num == 1:
+        # Inject prior turns so each speaker sees what has been said this round
+        history_section = ""
+        if discussion_history:
+            history_section = "\n**DISCUSSION SO FAR THIS ROUND:**\n"
+            for msg in discussion_history:
+                history_section += f"{msg}\n\n"
+            history_section += "---\n"
+
+        if round_num == 1 and not discussion_history:
             context = """**DISCUSSION OBJECTIVES:**
 - Signal your priorities (without revealing exact preferences)
 - Understand other parties' key concerns
 - Identify potential areas for compromise
 - Explore issue linkages and package deals
 
-Share your diplomatic position and initial thoughts on reaching an agreement."""
+You are the first to speak. Share your diplomatic position and initial thoughts on reaching an agreement."""
+        elif discussion_history:
+            context = """**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to specific points raised
+- Share or refine your own position
+- Propose potential trade-offs or areas of agreement
+
+Keep the conversation flowing naturally."""
         else:
             urgency = ""
             if round_num >= max_rounds - 1:
@@ -574,7 +617,7 @@ Share your updated diplomatic position."""
         return f"""🗣️ DIPLOMATIC DISCUSSION - Round {round_num}/{max_rounds}
 
 Issues under negotiation: {issues_text}
-
+{history_section}
 {context}{reasoning_instruction}"""
 
     def get_voting_prompt(
@@ -609,15 +652,22 @@ Issues under negotiation: {issues_text}
 **REASONING:** {proposal.get('reasoning', 'No reasoning provided')}
 **PROPOSED BY:** {proposal.get('proposed_by', 'Unknown')}
 
+**REMINDER — HOW YOUR UTILITY IS CALCULATED:**
+- Your utility = weighted sum of how close each resolved score is to your ideal position
+- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k|))
+- A score of 0.0 means fully opposed; 1.0 means fully supportive
+- Maximum utility = 1.0 (every proposition at your exact ideal score)
+- Utility is discounted by a factor each round — delaying costs you
+
 Please vote on this proposal. Consider:
-- How close is this agreement to your ideal positions?
-- Could you get a better deal by continuing negotiation?
-- The cost of delay (utility discounting){reasoning_instruction}
+- How close is each resolved score to your ideal position on each proposition?
+- Could you realistically negotiate a better agreement before the final round?
+- The cost of delay: each additional round reduces your eventual payoff{reasoning_instruction}
 
 Respond with ONLY a JSON object:
 {{
     "vote": "accept",
-    "reasoning": "Brief explanation of your vote"
+    "reasoning": "Explanation of your vote, referencing specific propositions and how they compare to your ideal positions"
 }}
 
 Vote must be either "accept" or "reject"."""
@@ -628,7 +678,7 @@ Vote must be either "accept" or "reject"."""
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate diplomatic thinking prompt."""
@@ -643,6 +693,14 @@ Vote must be either "accept" or "reject"."""
             for i in priority_indices
         ]
 
+        # Include what was said in the discussion this round
+        discussion_section = ""
+        if discussion_history:
+            discussion_section = "\n**DISCUSSION THIS ROUND:**\n"
+            for msg in discussion_history:
+                discussion_section += f"{msg}\n\n"
+            discussion_section += "---\n"
+
         urgency = ""
         if round_num >= max_rounds - 1:
             urgency = "\n⚠️ **CRITICAL**: Final rounds - agreement urgency is high!"
@@ -656,12 +714,12 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 
         return f"""🧠 PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
 {urgency}
-
+{discussion_section}
 **YOUR TOP PRIORITIES:**
 {chr(10).join(['- ' + p for p in top_priorities])}
 
 **STRATEGIC ANALYSIS TASKS:**
-1. What have you learned about other parties' priorities?
+1. What have you learned about other parties' priorities from the discussion above?
 2. Where might they be willing to compromise?
 3. What agreement would maximize your utility while being acceptable to all?
 4. Which issues could you concede on to gain elsewhere?{reasoning_instruction}
@@ -715,14 +773,14 @@ Remember: This analysis is completely private."""
 
     @staticmethod
     def _describe_position(value: float) -> str:
-        """Convert numeric position to descriptive text."""
+        """Convert numeric position to descriptive support/opposition text."""
         if value < 0.2:
-            return "strongly low"
+            return "strongly opposed"
         elif value < 0.4:
-            return "moderately low"
+            return "moderately opposed"
         elif value < 0.6:
             return "neutral"
         elif value < 0.8:
-            return "moderately high"
+            return "moderately supportive"
         else:
-            return "strongly high"
+            return "strongly supportive"
