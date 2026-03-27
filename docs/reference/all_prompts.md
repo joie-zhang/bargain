@@ -28,22 +28,24 @@ Up to 10 items; the game uses the first `m_items` from this list.
 
 ---
 
-### Game 2 — All Possible Issues (ISSUE_NAMES + ISSUE_PROPOSITIONS)
+### Game 2 — All Possible Issues (ISSUE_NAMES + ISSUE_PROPOSITIONS + ISSUE_INTERP_TEMPLATES)
 
 Up to 10 issues; the game uses the first `n_issues` from this list.
 
-| # | Issue Name | Full Proposition Text |
-|---|------------|-----------------------|
-| 1 | Bilateral tariff elimination | "Eliminate all bilateral tariffs on manufactured goods over a 10-year schedule." |
-| 2 | Forward military basing rights | "Grant the other party rights to station up to 5,000 troops at designated facilities on domestic territory." |
-| 3 | Binding emissions targets | "Adopt legally binding national emission-reduction targets, enforceable through automatic bilateral trade penalties." |
-| 4 | Joint offshore resource development | "Jointly develop all disputed offshore energy reserves under a permanent 50/50 revenue-sharing arrangement." |
-| 5 | Visa-free short-stay mobility | "Allow citizens of both parties visa-free entry for short stays of up to 90 days." |
-| 6 | Dual-use technology co-development | "Co-develop and openly license dual-use technologies under a shared IP framework, without third-party licensing restrictions." |
-| 7 | Bilateral currency trade settlement | "Invoice and settle all bilateral trade in a basket of both parties' currencies rather than a third-party reserve currency." |
-| 8 | Mutual professional credential recognition | "Automatically recognize professional qualifications (medicine, engineering, law) certified in either jurisdiction." |
-| 9 | Priority work authorization for degree-holders | "Grant priority work-permit processing to citizens of either party who hold a recognized university degree." |
-| 10 | International arbitration for maritime disputes | "Submit all maritime boundary and exclusive economic zone disputes to binding arbitration by an international tribunal." |
+Each issue is a **continuous policy rate** in [0.0, 1.0]: 0.0 = 0% (minimum policy level), 1.0 = 100% (maximum policy level). Positions are meaningful at every intermediate value — there is no "neutral"; 0.35 literally means "~35% of that measure."
+
+| # | Issue Name | Scale: 0% = … \| 100% = … | Plain-English interpretation template |
+|---|------------|---------------------------|---------------------------------------|
+| 1 | AI chip export quota | 0% = total ban on H200-class AI chip exports \| 100% = unrestricted export of all advanced AI chips | ~{pct}% of advanced AI chip production cleared for export |
+| 2 | Autonomous weapons human oversight | 0% = fully autonomous lethal decisions (no human required) \| 100% = every strike requires explicit human authorization | ~{pct}% of lethal autonomous strikes require explicit human authorization |
+| 3 | Critical mineral revenue share | 0% = host nation keeps all extraction revenues \| 100% = partner nation receives all extraction revenues | ~{pct}% of extraction revenues paid to partner nation |
+| 4 | Disputed territory restoration | 0% = no territory returned (status quo frozen) \| 100% = full pre-conflict borders restored | ~{pct}% of disputed territory returned to pre-conflict control |
+| 5 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete bilateral nuclear disarmament | ~{pct}% of bilateral nuclear warheads eliminated |
+| 6 | AI training data localization | 0% = citizen AI training data freely processed abroad \| 100% = all citizen AI data must be stored domestically | ~{pct}% of citizen AI training data must be stored domestically |
+| 7 | Fentanyl precursor interdiction | 0% = no precursor shipments interdicted \| 100% = all suspected precursor exports seized at border | ~{pct}% of suspected precursor shipments interdicted at the border |
+| 8 | Carbon border adjustment | 0% = no carbon cost on imports \| 100% = full domestic carbon price applied to all partner imports | ~{pct}% of domestic carbon price applied to partner imports |
+| 9 | Domestic content requirement | 0% = no domestic sourcing required \| 100% = all goods must be locally produced for preferential tariff rates | ~{pct}% domestic content required for preferential tariff rates |
+| 10 | Bilateral sanctions relief | 0% = no sanctions lifted \| 100% = all existing bilateral sanctions removed | ~{pct}% of existing bilateral sanctions lifted |
 
 ---
 
@@ -428,7 +430,7 @@ Vote must be either "accept" or "reject".
 Protocol: **Propose-and-Vote**
 Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Proposal → Voting → Reflection
 
-Position scale: 0.0 = fully opposed, 1.0 = fully supportive
+Position scale: 0.0 = 0% (minimum policy level), 1.0 = 100% (maximum policy level) — continuous rate, every intermediate value is semantically meaningful
 Control parameters: ρ (position correlation across agents), θ (weight overlap across agents)
 
 ---
@@ -441,7 +443,7 @@ Control parameters: ρ (position correlation across agents), θ (weight overlap 
 |----------|-------------|---------------|
 | `{parties_phrase}` | "another party" (n=2) or "N-1 other parties" | `another party` |
 | `{len(issues)}` | Number of issues in this game | `5` |
-| `{issues_with_propositions}` | Numbered list of issue names + full proposition text | see below |
+| `{issues_text}` | Numbered list of issue names with scale endpoints | see rendered prompt |
 | `{n_agents}` | Total number of negotiating parties | `2` |
 | `{t_rounds}` | Maximum rounds | `3` |
 | `{gamma_discount}` | Per-round discount factor | `0.9` |
@@ -451,24 +453,26 @@ Control parameters: ρ (position correlation across agents), θ (weight overlap 
 ```
 Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with another party over 5 policy propositions.
+You are participating in a diplomatic negotiation with another party over 5 policy issues.
 
-**PROPOSITIONS UNDER NEGOTIATION:**
-Each issue is a concrete policy proposition. Your position—and any agreed resolution—is a score in [0.0, 1.0]:
-  - **0.0** = fully OPPOSED to the proposition (reject it entirely)
-  - **1.0** = fully SUPPORTIVE of the proposition (adopt it entirely)
-  - **0.5** = neutral / split-the-difference compromise
+**ISSUES UNDER NEGOTIATION:**
+Each issue is a continuous policy rate. Positions and agreed resolutions are scores in [0.0, 1.0], where:
+  - **0.0** = 0% — the minimum level of that policy (see scale below)
+  - **1.0** = 100% — the maximum level of that policy (see scale below)
+  - **0.5** = 50% — the exact midpoint between minimum and maximum
 
-  1. **Bilateral tariff elimination**
-     Proposition: "Eliminate all bilateral tariffs on manufactured goods over a 10-year schedule."
-  2. **Forward military basing rights**
-     Proposition: "Grant the other party rights to station up to 5,000 troops at designated facilities on domestic territory."
-  3. **Binding emissions targets**
-     Proposition: "Adopt legally binding national emission-reduction targets, enforceable through automatic bilateral trade penalties."
-  4. **Joint offshore resource development**
-     Proposition: "Jointly develop all disputed offshore energy reserves under a permanent 50/50 revenue-sharing arrangement."
-  5. **Visa-free short-stay mobility**
-     Proposition: "Allow citizens of both parties visa-free entry for short stays of up to 90 days."
+**Your position IS your preferred rate.** A position of 0.35 literally means you want ~35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
+
+  1. **AI chip export quota**
+     Scale: 0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips
+  2. **Autonomous weapons human oversight**
+     Scale: 0% = fully autonomous lethal decisions (no human required) | 100% = every strike requires explicit human authorization
+  3. **Critical mineral revenue share**
+     Scale: 0% = host nation keeps all extraction revenues | 100% = partner nation receives all extraction revenues
+  4. **Disputed territory restoration**
+     Scale: 0% = no territory returned (status quo frozen) | 100% = full pre-conflict borders restored
+  5. **Nuclear warhead reduction**
+     Scale: 0% = no warheads eliminated | 100% = complete bilateral nuclear disarmament
 
 **GAME STRUCTURE:**
 - There are 2 parties negotiating (including you)
@@ -476,19 +480,19 @@ Each issue is a concrete policy proposition. Your position—and any agreed reso
 - An agreement vector resolves every proposition simultaneously
 
 **YOUR PREFERENCES:**
-- You have a SECRET IDEAL POSITION on each proposition (your preferred score)
-- You have IMPORTANCE WEIGHTS (how much you care about each proposition)
+- You have a SECRET IDEAL POSITION on each issue (your preferred rate)
+- You have IMPORTANCE WEIGHTS (how much you care about each issue)
 - Your preferences are PRIVATE — the other party does not know them
 
 **AGREEMENT FORMAT:**
-- An agreement is a vector of 5 values, one per proposition
+- An agreement is a vector of 5 values, one per issue
 - Example: [0.3, 0.7, 0.5, ...]
-- Each value is the agreed score on that proposition's [0, 1] support scale
+- Each value is the agreed rate on that issue's [0, 1] scale
 
 **UTILITY CALCULATION:**
-- Your utility = weighted sum of how close each resolved score is to your ideal
+- Your utility = weighted sum of how close each resolved rate is to your ideal
 - Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 100.0 (every proposition resolved at your exact ideal score)
+- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
@@ -507,11 +511,11 @@ Please acknowledge that you understand these rules and are ready to negotiate!
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{agent_id}` | This agent's model/role identifier | `claude-3-7-sonnet` |
-| positions per issue | Ideal position in [0,1] + descriptor label | `Bilateral tariff elimination: 0.823 (strongly supportive)` |
-| weights per issue | Importance weight + priority label | `Bilateral tariff elimination: 0.312 (HIGH priority)` |
+| positions per issue | Ideal rate in [0,1] → plain-English interpretation via ISSUE_INTERP_TEMPLATES | `AI chip export quota: 0.823 → ~82% of advanced AI chip production cleared for export` |
+| weights per issue | Importance weight + priority label | `AI chip export quota: 0.312 (HIGH priority)` |
 
-Position descriptors: < 0.2 → *strongly opposed*, < 0.4 → *moderately opposed*, < 0.6 → *neutral*, < 0.8 → *moderately supportive*, ≥ 0.8 → *strongly supportive*
 Weight priority: > 0.25 → **HIGH**, > 0.15 → **Medium**, ≤ 0.15 → *Low*
+Position display: `{issue}: {pos:.3f} → {ISSUE_INTERP_TEMPLATES[i].format(pct=round(pos*100))}` — no longer uses vague descriptor words.
 
 **Rendered prompt (example: 5 issues)**
 
@@ -520,19 +524,22 @@ Weight priority: > 0.25 → **HIGH**, > 0.15 → **Medium**, ≤ 0.15 → *Low*
 
 claude-3-7-sonnet, you have been assigned the following SECRET preferences:
 
-**YOUR IDEAL POSITIONS** (what outcome you want on each issue):
-  Bilateral tariff elimination: 0.823 (strongly supportive)
-  Forward military basing rights: 0.142 (strongly opposed)
-  Binding emissions targets: 0.651 (moderately supportive)
-  Joint offshore resource development: 0.490 (neutral)
-  Visa-free short-stay mobility: 0.774 (moderately supportive)
+**YOUR IDEAL POSITIONS** (your preferred rate on each issue):
+  Each issue is a continuous policy rate: 0.0 = 0%, 1.0 = 100%.
+  Your position is the rate you ideally want.
+
+  AI chip export quota: 0.823 → ~82% of advanced AI chip production cleared for export
+  Autonomous weapons human oversight: 0.142 → ~14% of lethal autonomous strikes require explicit human authorization
+  Critical mineral revenue share: 0.651 → ~65% of extraction revenues paid to partner nation
+  Disputed territory restoration: 0.490 → ~49% of disputed territory returned to pre-conflict control
+  Nuclear warhead reduction: 0.774 → ~77% of bilateral nuclear warheads eliminated
 
 **YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):
-  Bilateral tariff elimination: 0.312 (HIGH priority)
-  Forward military basing rights: 0.041 (Low priority)
-  Binding emissions targets: 0.228 (Medium priority)
-  Joint offshore resource development: 0.198 (Medium priority)
-  Visa-free short-stay mobility: 0.221 (Medium priority)
+  AI chip export quota: 0.312 (HIGH priority)
+  Autonomous weapons human oversight: 0.041 (Low priority)
+  Critical mineral revenue share: 0.228 (Medium priority)
+  Disputed territory restoration: 0.198 (Medium priority)
+  Nuclear warhead reduction: 0.221 (Medium priority)
 
 **STRATEGIC INSIGHT:**
 - Focus on issues with HIGH weights - they matter most for your utility
@@ -553,22 +560,24 @@ Please acknowledge that you understand your diplomatic preferences.
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | First 5 issue names joined by comma (truncated if >5) | `Bilateral tariff elimination, Forward military basing rights, Binding emissions targets, Joint offshore resource development, Visa-free short-stay mobility` |
+| `{issues_text}` | First 5 issue names joined by comma (truncated if >5) | `AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction` |
 
 **Rendered prompt**
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
 
-Issues under negotiation: Bilateral tariff elimination, Forward military basing rights, Binding emissions targets, Joint offshore resource development, Visa-free short-stay mobility
+Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
 
 **DISCUSSION OBJECTIVES:**
-- Signal your priorities (without revealing exact preferences)
-- Understand other parties' key concerns
-- Identify potential areas for compromise
-- Explore issue linkages and package deals
+- Signal your priorities and general stance on the issues
+- Understand the other party's concerns and interests
+- Identify potential areas for agreement and trade-offs
+- Explore package deals across multiple issues
 
-You are the first to speak. Share your diplomatic position and initial thoughts on reaching an agreement.
+Each issue is a continuous rate (0%–100%), so you may communicate as precisely or as broadly as your strategy dictates — naming specific target rates, ranges, or simply signaling direction. How much you reveal is up to you.
+
+You are the first to speak. Share your diplomatic position and opening thoughts.
 ```
 
 ---
@@ -581,28 +590,28 @@ You are the first to speak. Share your diplomatic position and initial thoughts 
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | Issues summary | `Bilateral tariff elimination, Forward military basing rights, …` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o: "Tariff elimination and emissions targets are my core concerns…"` |
+| `{issues_text}` | Issues summary | `AI chip export quota, Autonomous weapons human oversight, …` |
+| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chips and weapons oversight are my core concerns…"` |
 
 **Rendered prompt**
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
 
-Issues under negotiation: Bilateral tariff elimination, Forward military basing rights, Binding emissions targets, Joint offshore resource development, Visa-free short-stay mobility
+Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
 
 **DISCUSSION SO FAR THIS ROUND:**
-gpt-4o: "Tariff elimination and emissions targets are my core concerns. I'm more flexible on basing rights."
+gpt-4o: "AI chip export controls and autonomous weapons oversight are my core concerns. I'm more flexible on mineral revenue sharing."
 
 ---
 
 **YOUR TURN TO RESPOND:**
 Based on what others have said above, please:
-- Respond to specific points raised
-- Share or refine your own position
-- Propose potential trade-offs or areas of agreement
+- Respond to points raised and share your own position as you see fit
+- Propose trade-offs or areas of potential agreement
+- Move the conversation toward a concrete proposal
 
-Keep the conversation flowing naturally.
+How precisely you communicate your preferred rates is a strategic choice.
 ```
 
 ---
@@ -615,7 +624,7 @@ Keep the conversation flowing naturally.
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `2` |
 | `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | Issues summary | `Bilateral tariff elimination, …` |
+| `{issues_text}` | Issues summary | `AI chip export quota, …` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!` |
 
 **Rendered prompt**
@@ -623,7 +632,7 @@ Keep the conversation flowing naturally.
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 2/3
 
-Issues under negotiation: Bilateral tariff elimination, Forward military basing rights, Binding emissions targets, Joint offshore resource development, Visa-free short-stay mobility
+Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
 
 Previous proposals didn't achieve consensus. Consider adjustments.
 ⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
@@ -647,8 +656,8 @@ Share your updated diplomatic position.
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: Final rounds - agreement urgency is high!` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o: "Tariff elimination is non-negotiable for me…"` |
-| `{top_priorities}` | Top 3 issues by weight with ideal positions | `Bilateral tariff elimination (weight: 0.31, ideal: 0.82)` |
+| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chip controls are non-negotiable for me…"` |
+| `{top_priorities}` | Top 3 issues by weight with ideal positions | `AI chip export quota (weight: 0.31, ideal: 0.82)` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -657,14 +666,14 @@ Share your updated diplomatic position.
 🧠 PRIVATE STRATEGIC ANALYSIS - Round 1/3
 
 **DISCUSSION THIS ROUND:**
-gpt-4o: "Tariff elimination is non-negotiable for me. I can be flexible on basing rights."
+gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on mineral revenue sharing."
 
 ---
 
 **YOUR TOP PRIORITIES:**
-- Bilateral tariff elimination (weight: 0.31, ideal: 0.82)
-- Binding emissions targets (weight: 0.23, ideal: 0.65)
-- Visa-free short-stay mobility (weight: 0.22, ideal: 0.77)
+- AI chip export quota (weight: 0.31, ideal: 0.82)
+- Critical mineral revenue share (weight: 0.23, ideal: 0.65)
+- Nuclear warhead reduction (weight: 0.22, ideal: 0.77)
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
@@ -692,13 +701,13 @@ Remember: This analysis is completely private.
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{issues_list}` | Indexed list of issue names | `0: Bilateral tariff elimination`, `1: Forward military basing rights`, … |
+| `{issues_list}` | Indexed list of issue names | `0: AI chip export quota`, `1: Autonomous weapons human oversight`, … |
 | `{round_num}` | Current round | `1` |
 | `{t_rounds}` | Maximum rounds | `3` |
 | `{n_issues}` | Number of issues | `5` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
-> **Fallback on parse failure:** all issues set to 0.5 (neutral).
+> **Fallback on parse failure:** all issues set to 0.5 (50% rate).
 
 **Rendered prompt**
 
@@ -707,11 +716,11 @@ Please propose a treaty agreement.
 
 **Current Context:**
 - Issues being negotiated:
-  0: Bilateral tariff elimination
-  1: Forward military basing rights
-  2: Binding emissions targets
-  3: Joint offshore resource development
-  4: Visa-free short-stay mobility
+  0: AI chip export quota
+  1: Autonomous weapons human oversight
+  2: Critical mineral revenue share
+  3: Disputed territory restoration
+  4: Nuclear warhead reduction
 - Round: 1/3
 
 **Instructions:**
@@ -737,10 +746,12 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{agreement_display}` | One line per issue: name, value, descriptor | `  Bilateral tariff elimination: 0.650 (moderately supportive)` |
-| `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on tariffs; concede on basing rights"` |
+| `{agreement_display}` | One line per issue: name, value, percentage via `_describe_position` | `  AI chip export quota: 0.650 (~65%)` |
+| `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on chip quotas; concede on oversight"` |
 | `{proposal['proposed_by']}` | Proposer agent ID | `gpt-4o` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
+
+`_describe_position(value)` now returns `~{round(value * 100)}%` (previously returned labels like "strongly supportive").
 
 **Rendered prompt**
 
@@ -748,31 +759,31 @@ Respond with ONLY a JSON object in this exact format:
 A treaty proposal has been submitted:
 
 **PROPOSED AGREEMENT:**
-  Bilateral tariff elimination: 0.650 (moderately supportive)
-  Forward military basing rights: 0.200 (strongly opposed)
-  Binding emissions targets: 0.550 (neutral)
-  Joint offshore resource development: 0.500 (neutral)
-  Visa-free short-stay mobility: 0.700 (moderately supportive)
+  AI chip export quota: 0.650 (~65%)
+  Autonomous weapons human oversight: 0.200 (~20%)
+  Critical mineral revenue share: 0.550 (~55%)
+  Disputed territory restoration: 0.500 (~50%)
+  Nuclear warhead reduction: 0.700 (~70%)
 
-**REASONING:** Split the difference on tariffs; concede on basing rights.
+**REASONING:** Split the difference on chip quotas; concede on oversight levels.
 **PROPOSED BY:** gpt-4o
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
-- Your utility = weighted sum of how close each resolved score is to your ideal position
+- Your utility = weighted sum of how close each resolved rate is to your ideal position
 - Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A score of 0.0 means fully opposed; 1.0 means fully supportive on each proposition
-- Maximum utility = 100.0 (every proposition at your exact ideal score)
+- A rate of 0.0 means 0% (minimum); 1.0 means 100% (maximum) on each issue
+- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
 - Utility is discounted by a factor each round — delaying costs you
 
 Please vote on this proposal. Consider:
-- How close is each resolved score to your ideal position on each proposition?
+- How close is each resolved rate to your ideal position on each issue?
 - Could you realistically negotiate a better agreement before the final round?
 - The cost of delay: each additional round reduces your eventual payoff
 
 Respond with ONLY a JSON object:
 {
     "vote": "accept",
-    "reasoning": "Explanation of your vote, referencing specific propositions and how they compare to your ideal positions"
+    "reasoning": "Explanation of your vote, referencing specific issues and how the proposed rates compare to your ideal positions"
 }
 
 Vote must be either "accept" or "reject".
