@@ -338,6 +338,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - Each participant has a PRIVATE BUDGET they can allocate across projects
 - Each round, you submit your own contribution vector — how much YOU pledge to each project
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
+- **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
 - Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
 
 **WHAT YOU CAN SEE:**
@@ -347,6 +348,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 **YOUR UTILITY:**
 - Utility = (sum of your valuations for funded projects) - (your contributions to funded projects)
 - You gain value from funded projects but pay for your contributions to them
+- **IMPORTANT**: If your contribution to a funded project exceeds your valuation, your net utility from that project is NEGATIVE
 - Contributions to unfunded projects cost you nothing (refunded)
 
 **IMPORTANT RULES:**
@@ -356,6 +358,10 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - {"The game may end early if participants reach unanimous commit vote (yay) on current pledges" if self.config.enable_commit_vote else "Commit vote early-stop is disabled for this run"}
 - The game also ends early if all participants submit identical pledges for 2 consecutive rounds (legacy convergence)
 - Your goal: maximize your utility by strategically choosing contributions
+
+**BUDGET CONSTRAINT:**
+- The combined budgets of all participants may NOT be sufficient to fund all projects
+- You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
 
 Please acknowledge that you understand these rules and are ready to participate!"""
 
@@ -385,6 +391,13 @@ Please acknowledge that you understand these rules and are ready to participate!
         lines.append(f"**TOTAL VALUATIONS:** {sum(valuations):.2f}")
         lines.append(f"**TOTAL PROJECT COSTS:** {game_state['total_cost']:.2f}")
         lines.append(f"**TOTAL BUDGET (all participants):** {game_state['total_budget']:.2f}")
+        _coverage = round(game_state['total_budget'] / game_state['total_cost'] * 100) if game_state['total_cost'] > 0 else 0
+        lines.append(f"**COLLECTIVE COVERAGE:** {_coverage}% of total project costs — you cannot fund all projects; coordinate on a subset")
+        lines.append("")
+        lines.append("**HOW YOUR UTILITY IS COMPUTED:**")
+        lines.append("- For each FUNDED project: your_utility = your_valuation \u2212 your_contribution (negative if you over-contribute)")
+        lines.append("- For UNFUNDED projects: your contribution is refunded at end of game, but within a round money pledged to one project cannot be reallocated to another \u2014 choose carefully and coordinate to ensure your highest-value projects get funded")
+        lines.append("- Total utility = sum of (valuation \u2212 contribution) across ALL funded projects, including projects funded entirely by others (where your contribution = 0, giving you full valuation as free utility)")
         lines.append("")
         lines.append("**STRATEGIC INSIGHT:**")
         lines.append("- Focus contributions on projects you value highly")
@@ -493,7 +506,8 @@ Respond with ONLY a JSON object in this exact format:
 **PROJECT STATUS:**
 {projects_text}
 
-**Currently funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}{reasoning_instruction}
+**Currently funded projects (LAST ROUND):** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.{reasoning_instruction}
 
 {format_section}"""
 
@@ -856,8 +870,10 @@ You are voting on whether to LOCK IN the current pledge profile immediately.
 **Current aggregate project status:**
 {chr(10).join(status_lines)}
 
-Vote **yay** if you are willing to finalize this exact profile now.
-Vote **nay** if you want another revision round.
+Vote **yay** if you are satisfied with the current pledge profile and want to finalize it now.
+Vote **nay** if you want one more revision round to improve contributions.
+
+**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this pledge profile as the final outcome. If ANY participant votes nay, one more revision round occurs.
 
 Respond with ONLY JSON:
 {{

@@ -149,7 +149,7 @@ Please acknowledge that you understand these rules and are ready to participate!
 {chr(10).join(pref_lines)}
 
 **STRATEGIC ANALYSIS:**
-- Your maximum possible utility: {max_utility:.2f} points (if you get ALL items)
+- Your theoretical maximum utility: {max_utility:.2f} points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
@@ -400,6 +400,11 @@ This is the open discussion phase where all agents can share information about t
 PROPOSAL: {json.dumps(proposal.get('allocation', {}), indent=2)}
 REASONING: {proposal.get('reasoning', 'No reasoning provided')}
 PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}
+
+**REMINDER — YOUR UTILITY:**
+- Your utility = sum of preference values for items you receive, multiplied by the round discount
+- Round 1: 100% | Round 2: {self.config.gamma_discount * 100:.0f}% | Round 3: {self.config.gamma_discount**2 * 100:.0f}% (\u03b3={self.config.gamma_discount} per round)
+- If no deal is reached by the final round, your utility is 0
 
 Please vote on this proposal. Consider:
 - How this allocation affects your utility

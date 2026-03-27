@@ -163,7 +163,7 @@ gpt-4o, you have been assigned the following SECRET preference values for each i
   4: Pencil → 5.22 (Medium Priority)
 
 **STRATEGIC ANALYSIS:**
-- Your maximum possible utility: 28.71 points (if you get ALL items)
+- Your theoretical maximum utility: 28.71 points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
@@ -407,6 +407,11 @@ PROPOSAL: {
 }
 REASONING: I take Apple and Stone; you get the rest.
 PROPOSED BY: gpt-4o
+
+**REMINDER — YOUR UTILITY:**
+- Your utility = sum of preference values for items you receive, multiplied by the round discount
+- Round 1: 100% | Round 2: 90% | Round 3: 81% (γ=0.9 per round)
+- If no deal is reached by the final round, your utility is 0
 
 Please vote on this proposal. Consider:
 - How this allocation affects your utility
@@ -771,7 +776,7 @@ A treaty proposal has been submitted:
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved rate is to your ideal position
 - Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A rate of 0.0 means 0% (minimum); 1.0 means 100% (maximum) on each issue
+- A rate of 0.0 means 0% (minimum policy level); 1.0 means 100% (maximum policy level) on each issue
 - Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
 - Utility is discounted by a factor each round — delaying costs you
 
@@ -798,7 +803,7 @@ Protocol: **Talk-Pledge-Revise** (with optional post-pledge commit vote)
 Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Pledge Submission → Feedback → [Commit Vote] → Reflection
 
 Control parameters: α (valuation alignment), σ (budget scarcity)
-`budget_ratio = 0.5 + 0.5 × σ`, so σ=0.0 → 50% of total cost, σ=1.0 → 100% of total cost
+`budget_ratio = σ`, so σ=0.2 → 20% of total cost, σ=1.0 → 100% of total cost
 Pledge modes: `"individual"` (default) or `"joint"` (legacy)
 Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 
@@ -841,6 +846,7 @@ You are participating in a co-funding exercise with one other participant to fun
 - Each participant has a PRIVATE BUDGET they can allocate across projects
 - Each round, you submit your own contribution vector — how much YOU pledge to each project
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
+- **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
 - Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
 
 **WHAT YOU CAN SEE:**
@@ -850,6 +856,7 @@ You are participating in a co-funding exercise with one other participant to fun
 **YOUR UTILITY:**
 - Utility = (sum of your valuations for funded projects) - (your contributions to funded projects)
 - You gain value from funded projects but pay for your contributions to them
+- **IMPORTANT**: If your contribution to a funded project exceeds your valuation, your net utility from that project is NEGATIVE
 - Contributions to unfunded projects cost you nothing (refunded)
 
 **IMPORTANT RULES:**
@@ -859,6 +866,10 @@ You are participating in a co-funding exercise with one other participant to fun
 - The game may end early if participants reach unanimous commit vote (yay) on current pledges
 - The game also ends early if all participants submit identical pledges for 2 consecutive rounds (legacy convergence)
 - Your goal: maximize your utility by strategically choosing contributions
+
+**BUDGET CONSTRAINT:**
+- The combined budgets of all participants may NOT be sufficient to fund all projects
+- You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
 
 Please acknowledge that you understand these rules and are ready to participate!
 ```
@@ -876,18 +887,19 @@ Please acknowledge that you understand these rules and are ready to participate!
 | per-project lines | Name, cost, valuation, priority label | `Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
 | `{sum(valuations):.2f}` | Sum of all valuations (always 100.00) | `100.00` |
 | `{total_cost:.2f}` | Sum of all project costs | `146.20` |
-| `{total_budget:.2f}` | Sum of budgets across all agents | `146.20` |
+| `{total_budget:.2f}` | Sum of budgets across all agents | `73.11` |
+| `{_coverage}` | `round(total_budget / total_cost * 100)` — collective % of costs covered | `50` |
 
 Priority thresholds: > 30 → **HIGH**, > 15 → **Medium**, ≤ 15 → *Low*
 
-**Rendered prompt (example: 5 projects, 2 agents, σ=1.0)**
+**Rendered prompt (example: 5 projects, 2 agents, σ=0.5)**
 
 ```
 CONFIDENTIAL: Your Co-Funding Preferences
 
 o3-mini-high, you have been assigned the following:
 
-**YOUR BUDGET:** 73.11 (maximum total you can contribute across all projects)
+**YOUR BUDGET:** 36.55 (maximum total you can contribute across all projects)
 
 **PROJECT DETAILS AND YOUR VALUATIONS:**
   Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)
@@ -898,7 +910,13 @@ o3-mini-high, you have been assigned the following:
 
 **TOTAL VALUATIONS:** 100.00
 **TOTAL PROJECT COSTS:** 146.20
-**TOTAL BUDGET (all participants):** 146.20
+**TOTAL BUDGET (all participants):** 73.11
+**COLLECTIVE COVERAGE:** 50% of total project costs — you cannot fund all projects; coordinate on a subset
+
+**HOW YOUR UTILITY IS COMPUTED:**
+- For each FUNDED project: your_utility = your_valuation − your_contribution (negative if you over-contribute)
+- For UNFUNDED projects: your contribution is refunded at end of game, but within a round money pledged to one project cannot be reallocated to another — choose carefully and coordinate to ensure your highest-value projects get funded
+- Total utility = sum of (valuation − contribution) across ALL funded projects, including projects funded entirely by others (where your contribution = 0, giving you full valuation as free utility)
 
 **STRATEGIC INSIGHT:**
 - Focus contributions on projects you value highly
@@ -1131,7 +1149,8 @@ Please submit your contribution pledge for Round 2/5.
   3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
   4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
 
-**Currently funded projects:** ['Project Alpha']
+**Currently funded projects (LAST ROUND):** ['Project Alpha']
+**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.
 
 **Instructions:**
 Submit a contribution vector specifying how much YOU pledge to each project.
@@ -1267,8 +1286,10 @@ You are voting on whether to LOCK IN the current pledge profile immediately.
   Project Delta: aggregate=0.00 / cost=40.80 (needs 40.80 more)
   Project Epsilon: aggregate=16.00 / cost=19.60 (needs 3.60 more)
 
-Vote **yay** if you are willing to finalize this exact profile now.
-Vote **nay** if you want another revision round.
+Vote **yay** if you are satisfied with the current pledge profile and want to finalize it now.
+Vote **nay** if you want one more revision round to improve contributions.
+
+**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this pledge profile as the final outcome. If ANY participant votes nay, one more revision round occurs.
 
 Respond with ONLY JSON:
 {

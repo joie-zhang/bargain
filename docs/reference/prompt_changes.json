@@ -1,0 +1,134 @@
+[
+  {
+    "id": "G3-01",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Rules: emphasize ALL-OR-NOTHING funding threshold",
+    "affected_prompt": "3.1 Game Rules",
+    "file": "game_environments/co_funding.py",
+    "description": "The current wording says projects are funded when total contributions 'meet or exceed cost' but does not convey that funding is binary. Agents may believe spreading thin contributions across many projects has proportional value, so they never concentrate enough to actually fund anything. This is the core mechanism behind the threshold public good game and must be unmistakable.",
+    "before_rendered": "- A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost\n- Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)",
+    "after_rendered": "- A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost\n- **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.\n- Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)"
+  },
+  {
+    "id": "G3-02",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Rules: add budget scarcity constraint warning",
+    "affected_prompt": "3.1 Game Rules",
+    "file": "game_environments/co_funding.py",
+    "description": "With sigma < 1.0 the collective budgets cover strictly less than 100% of total project costs. Agents are NEVER told this. A naive agent trying to fund all projects will always fail (e.g. sigma=0.5 means only half the total cost is covered collectively), yet the rules make it sound like full funding is achievable. This single omission is likely the primary driver of coordination failure — agents waste rounds attempting an impossible outcome instead of coordinating on a feasible subset.",
+    "before_rendered": "- Your goal: maximize your utility by strategically choosing contributions\n\nPlease acknowledge that you understand these rules and are ready to participate!",
+    "after_rendered": "- Your goal: maximize your utility by strategically choosing contributions\n\n**BUDGET CONSTRAINT:**\n- The combined budgets of all participants may NOT be sufficient to fund all projects\n- You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund\n\nPlease acknowledge that you understand these rules and are ready to participate!"
+  },
+  {
+    "id": "G3-03",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Rules: warn that over-contributing causes negative utility",
+    "affected_prompt": "3.1 Game Rules (YOUR UTILITY section)",
+    "file": "game_environments/co_funding.py",
+    "description": "Utility = valuation − contribution for each funded project. If an agent contributes more than their valuation to a funded project, net utility from that project is negative. Nowhere in the rules or preference prompt is this risk communicated. An agent who sees 'I value Project Alpha at 42.30' might contribute 50 without realizing this costs them 7.70 net. This is a basic incentive structure that agents need to internalize.",
+    "before_rendered": "- You gain value from funded projects but pay for your contributions to them\n- Contributions to unfunded projects cost you nothing (refunded)",
+    "after_rendered": "- You gain value from funded projects but pay for your contributions to them\n- **IMPORTANT**: If your contribution to a funded project exceeds your valuation for it, your net utility from that project is NEGATIVE — never contribute more than your valuation for any project\n- Contributions to unfunded projects cost you nothing (refunded)"
+  },
+  {
+    "id": "G3-04",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Preference assignment: show collective coverage percentage",
+    "affected_prompt": "3.2 Preference Assignment",
+    "file": "game_environments/co_funding.py",
+    "description": "The preference prompt shows TOTAL BUDGET and TOTAL PROJECT COSTS separately but never computes the coverage ratio. An agent who sees total_budget=73.11 and total_cost=146.20 must do their own arithmetic to realize only 50% of costs are collectively covered. Weaker models will miss this. Showing the percentage makes the scarcity concrete and immediately actionable.",
+    "before_rendered": "**TOTAL VALUATIONS:** 100.00\n**TOTAL PROJECT COSTS:** 146.20\n**TOTAL BUDGET (all participants):** 146.20\n\n**STRATEGIC INSIGHT:**",
+    "after_rendered": "**TOTAL VALUATIONS:** 100.00\n**TOTAL PROJECT COSTS:** 146.20\n**TOTAL BUDGET (all participants):** 73.11\n**COLLECTIVE COVERAGE:** 50% of total project costs — you cannot fund all projects; coordinate on a subset\n\n**STRATEGIC INSIGHT:**"
+  },
+  {
+    "id": "G3-05",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Preference assignment: restate utility formula inline",
+    "affected_prompt": "3.2 Preference Assignment",
+    "file": "game_environments/co_funding.py",
+    "description": "The rules state the utility formula but the preference assignment prompt — where agents first see their actual valuations — never restates it. An agent's first encounter with their concrete valuations has no connection to the formula they learned earlier. Adding the formula here helps agents immediately map 'valuation=42.30, cost=28.50' to 'net gain = 42.30 − my_contribution if funded'.",
+    "before_rendered": "**STRATEGIC INSIGHT:**\n- Focus contributions on projects you value highly\n- Coordinate with others to meet project cost thresholds\n- Don't over-contribute to projects others will fund",
+    "after_rendered": "**HOW YOUR UTILITY IS COMPUTED:**\n- For each FUNDED project: your_utility = your_valuation − your_contribution (can be negative if you over-contribute)\n- For UNFUNDED projects: your contribution is fully refunded — zero cost, zero gain\n- Total utility = sum of (valuation − contribution) across all projects YOU helped fund\n\n**STRATEGIC INSIGHT:**\n- Focus contributions on projects you value highly\n- Coordinate with others to meet project cost thresholds\n- Don't over-contribute to projects others will fund"
+  },
+  {
+    "id": "G3-06",
+    "game": 3,
+    "priority": "HIGH",
+    "title": "Pledge prompt: clarify aggregate/funded status is last-round data",
+    "affected_prompt": "3.5 Pledge Submission",
+    "file": "game_environments/co_funding.py",
+    "description": "The pledge submission prompt shows 'aggregate=30.00, FUNDED' for projects, but this is last round's state. This round starts with zero contributions. An agent who sees 'FUNDED' might reduce their contribution to that project (or drop to zero), causing it to be unfunded this round. The discussion prompt (own-mode only) has a partial warning, but the pledge prompt — where the actual decision is made — has no warning at all. This is a concrete mechanism for coordination failure.",
+    "before_rendered": "**Currently funded projects:** ['Project Alpha']\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project.",
+    "after_rendered": "**Currently funded projects (LAST ROUND):** ['Project Alpha']\n**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project."
+  },
+  {
+    "id": "G3-07",
+    "game": 3,
+    "priority": "MEDIUM",
+    "title": "Commit vote: explain unanimous consequence and round cost",
+    "affected_prompt": "3.7 Commit Vote",
+    "file": "game_environments/co_funding.py",
+    "description": "The commit vote prompt says 'vote yay if you are willing to finalize now / nay if you want another revision round' but doesn't explain: (1) how many yay votes are needed (unanimous = all N agents), (2) that the game ends immediately on unanimous yay with the current pledge profile as final, or (3) that a nay vote costs one revision round with no guarantee of improvement. Without this context, agents vote blindly.",
+    "before_rendered": "Vote **yay** if you are willing to finalize this exact profile now.\nVote **nay** if you want another revision round.",
+    "after_rendered": "Vote **yay** if you are satisfied with the current pledge profile and want to finalize it now.\nVote **nay** if you want one more revision round to improve contributions.\n\n**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this pledge profile as the final outcome. If ANY participant votes nay, one more revision round occurs."
+  },
+  {
+    "id": "G3-08",
+    "game": 3,
+    "priority": "MEDIUM",
+    "title": "Feedback prompt: expand with actionable adjustment guidance",
+    "affected_prompt": "3.6 Feedback",
+    "file": "game_environments/co_funding.py",
+    "description": "'Consider adjusting your contributions based on these aggregate results.' is too vague. After seeing round results, an agent needs category-specific guidance: near-threshold projects are worth pushing over; far-from-threshold projects should be abandoned; over-funded projects can be reduced. Without this, agents don't know in which direction to adjust, contributing to continued coordination failure.",
+    "before_rendered": "Funded projects: ['Project Alpha']\n\nConsider adjusting your contributions based on these aggregate results.",
+    "after_rendered": "Funded projects: ['Project Alpha']\n\nWhen deciding how to adjust your contributions next round:\n- **Near threshold** (>70% funded): consider increasing your contribution to push it over\n- **Far from threshold** (<30% funded): consider reallocating those contributions to better-funded projects\n- **Already funded**: you may be able to reduce slightly if others will maintain coverage\n- **Over-contributed**: if you contributed more than your valuation to a funded project, reduce to your valuation"
+  },
+  {
+    "id": "G1-01",
+    "game": 1,
+    "priority": "MEDIUM",
+    "title": "Voting prompt: add utility calculation reminder",
+    "affected_prompt": "1.6 Voting",
+    "file": "game_environments/item_allocation.py",
+    "description": "Game 2's voting prompt has a full 'REMINDER — HOW YOUR UTILITY IS CALCULATED' section with the formula. Game 1's voting prompt just says 'consider how this allocation affects your utility' with no formula reminder. Agents must recall from earlier in the conversation how to compute their utility from an item allocation. Adding the reminder — consistent with Game 2 — helps agents make better-calibrated accept/reject decisions, especially in later rounds when context is long.",
+    "before_rendered": "Please vote on this proposal. Consider:\n- How this allocation affects your utility\n- Whether you might get a better deal by continuing negotiation\n- The strategic implications of accepting vs. rejecting",
+    "after_rendered": "**REMINDER — YOUR UTILITY:**\n- Your utility = sum of preference values for items you receive, multiplied by the round discount\n- Round 1: 100% | Round 2: 90% | Round 3: 81% (γ=0.9 per round)\n- If no deal is reached, your utility is 0\n\nPlease vote on this proposal. Consider:\n- How this allocation affects your utility\n- Whether you might get a better deal by continuing negotiation\n- The strategic implications of accepting vs. rejecting"
+  },
+  {
+    "id": "G1-02",
+    "game": 1,
+    "priority": "MEDIUM",
+    "title": "Preference assignment: soften misleading 'all items' max utility framing",
+    "affected_prompt": "1.2 Preference Assignment",
+    "file": "game_environments/item_allocation.py",
+    "description": "'Your maximum possible utility: 28.71 points (if you get ALL items)' primes agents with an unrealistic reference point. In a multi-agent negotiation, getting all items requires proposing an allocation that no other agent would accept. This framing encourages greedy first proposals that fail unanimity, wasting early rounds. Labeling it 'theoretical maximum (solo)' calibrates expectations for a negotiated outcome.",
+    "before_rendered": "**STRATEGIC ANALYSIS:**\n- Your maximum possible utility: 28.71 points (if you get ALL items)",
+    "after_rendered": "**STRATEGIC ANALYSIS:**\n- Your theoretical maximum utility: 28.71 points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)"
+  },
+  {
+    "id": "G2-01",
+    "game": 2,
+    "priority": "MEDIUM",
+    "title": "Rules: state explicitly that no-deal yields zero utility for all",
+    "affected_prompt": "2.1 Game Rules",
+    "file": "game_environments/diplomatic_treaty.py",
+    "description": "Game 1's rules explicitly say 'No deal means everyone gets zero utility.' Game 2's rules do not contain an equivalent statement — they only say 'early agreement is better' (implying delay is costly but not that failure = zero). Agents who don't realize the disagreement payoff is zero have no lower bound on what they should accept, making them willing to hold out indefinitely for their ideal agreement.",
+    "before_rendered": "- Utility is discounted by 0.9 per round — early agreement is better\n\nPlease acknowledge that you understand these rules and are ready to negotiate!",
+    "after_rendered": "- Utility is discounted by 0.9 per round — early agreement is better\n- **If the final round ends without unanimous agreement, all parties receive ZERO utility** — any positive-utility compromise is strictly better than no deal\n\nPlease acknowledge that you understand these rules and are ready to negotiate!"
+  },
+  {
+    "id": "G2-02",
+    "game": 2,
+    "priority": "MEDIUM",
+    "title": "Voting prompt: fix 'score/opposed/supportive' terminology",
+    "affected_prompt": "2.6 Voting",
+    "file": "game_environments/diplomatic_treaty.py",
+    "description": "The voting reminder says 'A score of 0.0 means fully opposed; 1.0 means fully supportive on each proposition.' This is inconsistent with the rest of the game, which uses 'rate' not 'score', and semantically wrong: 0.0 is the MINIMUM POLICY LEVEL, not 'opposition.' An AI chip export quota of 0.0 means a complete ban — it is an extreme position, not 'opposition to the issue.' This framing could cause agents to misinterpret the utility calculation when comparing proposed rates to their ideal positions.",
+    "before_rendered": "- A score of 0.0 means fully opposed; 1.0 means fully supportive on each proposition\n- Maximum utility = 100.0 (every proposition at your exact ideal score)",
+    "after_rendered": "- A rate of 0.0 means 0% (minimum policy level); 1.0 means 100% (maximum policy level) on each issue\n- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)"
+  }
+]

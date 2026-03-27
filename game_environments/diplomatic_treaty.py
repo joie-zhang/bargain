@@ -682,8 +682,8 @@ Issues under negotiation: {issues_text}
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved score is to your ideal position
 - Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A score of 0.0 means fully opposed; 1.0 means fully supportive on each proposition
-- Maximum utility = 100.0 (every proposition at your exact ideal score)
+- A rate of 0.0 means 0% (minimum policy level); 1.0 means 100% (maximum policy level) on each issue
+- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
 - Utility is discounted by a factor each round — delaying costs you
 
 Please vote on this proposal. Consider:
