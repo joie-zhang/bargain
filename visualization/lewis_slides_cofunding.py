@@ -90,6 +90,7 @@ MODEL_ELO: Dict[str, int] = {
     "qwen3-32b": 1360,
     "gpt-4o": 1346,
     "gpt-5-nano": 1338,
+    "amazon-nova-micro-v1.0": 1220,
     "llama-3.1-8b-instruct": 1180,
 }
 
@@ -109,6 +110,7 @@ MODEL_SHORT: Dict[str, str] = {
     "qwen3-32b": "Qwen3-32B",
     "gpt-4o": "GPT-4o",
     "gpt-5-nano": "GPT-5-nano",
+    "amazon-nova-micro-v1.0": "Nova Micro",
     "llama-3.1-8b-instruct": "Llama 3.1 8B",
 }
 
@@ -171,160 +173,152 @@ def _parse_alpha_sigma(dirname: str) -> Tuple[Optional[float], Optional[float]]:
         return None, None
 
 
-def extract_results(experiment_dir: str) -> pd.DataFrame:
+def extract_results(experiment_dirs: List[str]) -> pd.DataFrame:
     """
-    Walk the cofunding experiment directory tree and collect one row per run.
+    Walk one or more cofunding experiment directory trees and collect one row per run.
 
-    Directory structure expected:
+    Directory structure expected under each dir:
         experiment_dir/model_scale/
             [model1]_vs_[model2]/
                 {weak_first,strong_first}/
                     alpha_*_sigma_*/
                         experiment_results.json  (or run_1_experiment_results.json)
-    """
-    model_scale_dir = os.path.join(experiment_dir, "model_scale")
-    if not os.path.isdir(model_scale_dir):
-        raise FileNotFoundError(f"No model_scale directory at {model_scale_dir}")
 
+    Self-play pairs (model1 == model2) are included: focal_model = model2,
+    reference_model = model1, utilities assigned by agent order.
+    """
     rows = []
     missing = 0
 
-    for pair_name in sorted(os.listdir(model_scale_dir)):
-        pair_path = os.path.join(model_scale_dir, pair_name)
-        if not os.path.isdir(pair_path) or "_vs_" not in pair_name:
+    for experiment_dir in experiment_dirs:
+        model_scale_dir = os.path.join(experiment_dir, "model_scale")
+        if not os.path.isdir(model_scale_dir):
+            print(f"  WARNING: No model_scale directory at {model_scale_dir}, skipping.")
             continue
 
-        model1, model2 = pair_name.split("_vs_", 1)
-
-        # Skip self-play
-        if model1 == model2:
-            continue
-
-        # Determine which is focal (non-reference) and which is reference
-        if _is_reference(model1) and not _is_reference(model2):
-            reference_model, focal_model = model1, model2
-        elif _is_reference(model2) and not _is_reference(model1):
-            reference_model, focal_model = model2, model1
-        else:
-            # Both or neither match reference pattern — use model1 as reference
-            reference_model, focal_model = model1, model2
-
-        focal_elo = MODEL_ELO.get(focal_model, 0)
-        reference_elo = MODEL_ELO.get(reference_model, 0)
-
-        for order_name in sorted(os.listdir(pair_path)):
-            order_path = os.path.join(pair_path, order_name)
-            if not os.path.isdir(order_path):
-                continue
-            if order_name not in ("weak_first", "strong_first"):
+        for pair_name in sorted(os.listdir(model_scale_dir)):
+            pair_path = os.path.join(model_scale_dir, pair_name)
+            if not os.path.isdir(pair_path) or "_vs_" not in pair_name:
                 continue
 
-            for cond_name in sorted(os.listdir(order_path)):
-                cond_path = os.path.join(order_path, cond_name)
-                if not os.path.isdir(cond_path):
+            model1, model2 = pair_name.split("_vs_", 1)
+
+            # Determine which is focal (non-reference) and which is reference
+            if _is_reference(model1) and not _is_reference(model2):
+                reference_model, focal_model = model1, model2
+            elif _is_reference(model2) and not _is_reference(model1):
+                reference_model, focal_model = model2, model1
+            else:
+                # Both or neither match reference pattern — use model1 as reference
+                reference_model, focal_model = model1, model2
+
+            focal_elo = MODEL_ELO.get(focal_model, 0)
+            reference_elo = MODEL_ELO.get(reference_model, 0)
+
+            for order_name in sorted(os.listdir(pair_path)):
+                order_path = os.path.join(pair_path, order_name)
+                if not os.path.isdir(order_path):
+                    continue
+                if order_name not in ("weak_first", "strong_first"):
                     continue
 
-                alpha, sigma = _parse_alpha_sigma(cond_name)
-                if alpha is None:
-                    continue
-
-                # Cofunding results may live directly in the condition dir
-                # (no run subdirectory), or inside run_N subdirs
-                result_files = []
-                for fname in ["experiment_results.json", "run_1_experiment_results.json"]:
-                    fp = os.path.join(cond_path, fname)
-                    if os.path.exists(fp):
-                        result_files.append((fp, "run_1"))
-
-                # Also check run_N subdirs
-                for entry in sorted(os.listdir(cond_path)):
-                    entry_path = os.path.join(cond_path, entry)
-                    if os.path.isdir(entry_path) and entry.startswith("run_"):
-                        for fname in ["run_1_experiment_results.json", "experiment_results.json"]:
-                            fp = os.path.join(entry_path, fname)
-                            if os.path.exists(fp):
-                                result_files.append((fp, entry))
-                                break
-
-                # Deduplicate by file path
-                seen_files = set()
-                unique_results = []
-                for fp, run_id in result_files:
-                    if fp not in seen_files:
-                        seen_files.add(fp)
-                        unique_results.append((fp, run_id))
-
-                if not unique_results:
-                    missing += 1
-                    continue
-
-                for result_file, run_id in unique_results:
-                    with open(result_file) as f:
-                        result = json.load(f)
-
-                    final_utils = result.get("final_utilities", {})
-                    if not final_utils or len(final_utils) < 2:
+                for cond_name in sorted(os.listdir(order_path)):
+                    cond_path = os.path.join(order_path, cond_name)
+                    if not os.path.isdir(cond_path):
                         continue
 
-                    # Assign utilities using agent_performance
-                    agent_perf = result.get("agent_performance", {})
-                    focal_util = None
-                    ref_util = None
+                    alpha, sigma = _parse_alpha_sigma(cond_name)
+                    if alpha is None:
+                        continue
 
-                    for agent_id, info in agent_perf.items():
-                        agent_model = info.get("model", "")
-                        u = final_utils.get(agent_id, 0.0)
-                        # Match by model name suffix
-                        if any(part in agent_model for part in focal_model.split("-")[:2]):
-                            focal_util = u
-                        elif any(part in agent_model for part in reference_model.split("-")[:2]):
-                            ref_util = u
+                    # Cofunding results may live directly in the condition dir
+                    # (no run subdirectory), or inside run_N subdirs
+                    result_files = []
+                    for fname in ["experiment_results.json", "run_1_experiment_results.json"]:
+                        fp = os.path.join(cond_path, fname)
+                        if os.path.exists(fp):
+                            result_files.append((fp, "run_1"))
 
-                    # Fallback: use model_order from path
-                    if focal_util is None or ref_util is None:
-                        agents = sorted(final_utils.keys())
-                        if order_name == "weak_first":
-                            # model1 is Agent_Alpha (first), model2 is Agent_Beta
+                    # Also check run_N subdirs
+                    for entry in sorted(os.listdir(cond_path)):
+                        entry_path = os.path.join(cond_path, entry)
+                        if os.path.isdir(entry_path) and entry.startswith("run_"):
+                            for fname in ["run_1_experiment_results.json", "experiment_results.json"]:
+                                fp = os.path.join(entry_path, fname)
+                                if os.path.exists(fp):
+                                    result_files.append((fp, entry))
+                                    break
+
+                    # Deduplicate by file path
+                    seen_files = set()
+                    unique_results = []
+                    for fp, run_id in result_files:
+                        if fp not in seen_files:
+                            seen_files.add(fp)
+                            unique_results.append((fp, run_id))
+
+                    if not unique_results:
+                        missing += 1
+                        continue
+
+                    for result_file, run_id in unique_results:
+                        with open(result_file) as f:
+                            result = json.load(f)
+
+                        final_utils = result.get("final_utilities", {})
+                        if not final_utils or len(final_utils) < 2:
+                            continue
+
+                        # Assign utilities using agent_performance
+                        agent_perf = result.get("agent_performance", {})
+                        focal_util = None
+                        ref_util = None
+
+                        for agent_id, info in agent_perf.items():
+                            agent_model = info.get("model", "")
+                            u = final_utils.get(agent_id, 0.0)
+                            # Match by model name suffix
+                            if any(part in agent_model for part in focal_model.split("-")[:2]):
+                                focal_util = u
+                            elif any(part in agent_model for part in reference_model.split("-")[:2]):
+                                ref_util = u
+
+                        # Fallback: use model_order from path
+                        if focal_util is None or ref_util is None:
+                            agents = sorted(final_utils.keys())
                             alpha_agent, beta_agent = agents[0], agents[1]
-                        else:
-                            alpha_agent, beta_agent = agents[0], agents[1]
 
-                        if _is_reference(model1):
-                            # model1=reference=Agent_Alpha in weak_first, or check order
-                            if order_name == "strong_first":
+                            if _is_reference(model1):
                                 ref_util = final_utils.get(alpha_agent, 0.0)
                                 focal_util = final_utils.get(beta_agent, 0.0)
                             else:
-                                ref_util = final_utils.get(alpha_agent, 0.0)
-                                focal_util = final_utils.get(beta_agent, 0.0)
-                        else:
-                            if order_name == "weak_first":
-                                focal_util = final_utils.get(alpha_agent, 0.0)
-                                ref_util = final_utils.get(beta_agent, 0.0)
-                            else:
-                                ref_util = final_utils.get(alpha_agent, 0.0)
-                                focal_util = final_utils.get(beta_agent, 0.0)
+                                if order_name == "weak_first":
+                                    focal_util = final_utils.get(alpha_agent, 0.0)
+                                    ref_util = final_utils.get(beta_agent, 0.0)
+                                else:
+                                    ref_util = final_utils.get(alpha_agent, 0.0)
+                                    focal_util = final_utils.get(beta_agent, 0.0)
 
-                    competition_index = (1.0 - float(alpha)) * (1.0 - float(sigma))
+                        competition_index = (1.0 - float(alpha)) * (1.0 - float(sigma))
 
-                    rows.append({
-                        "focal_model": focal_model,
-                        "focal_elo": focal_elo,
-                        "focal_short": _short(focal_model),
-                        "reference_model": reference_model,
-                        "reference_elo": reference_elo,
-                        "model_order": order_name,
-                        "run_id": run_id,
-                        "alpha": round(alpha, 4),
-                        "sigma": round(sigma, 4),
-                        "competition_index": round(competition_index, 4),
-                        "focal_utility": focal_util if focal_util is not None else float("nan"),
-                        "reference_utility": ref_util if ref_util is not None else float("nan"),
-                        "social_welfare": (focal_util or 0) + (ref_util or 0),
-                        "focal_advantage": (focal_util or 0) - (ref_util or 0),
-                        "consensus_reached": float(result.get("consensus_reached", False)),
-                        "final_round": result.get("final_round", -1),
-                    })
+                        rows.append({
+                            "focal_model": focal_model,
+                            "focal_elo": focal_elo,
+                            "focal_short": _short(focal_model),
+                            "reference_model": reference_model,
+                            "reference_elo": reference_elo,
+                            "model_order": order_name,
+                            "run_id": run_id,
+                            "alpha": round(alpha, 4),
+                            "sigma": round(sigma, 4),
+                            "competition_index": round(competition_index, 4),
+                            "focal_utility": focal_util if focal_util is not None else float("nan"),
+                            "reference_utility": ref_util if ref_util is not None else float("nan"),
+                            "social_welfare": (focal_util or 0) + (ref_util or 0),
+                            "focal_advantage": (focal_util or 0) - (ref_util or 0),
+                            "consensus_reached": float(result.get("consensus_reached", False)),
+                            "final_round": result.get("final_round", -1),
+                        })
 
     if missing > 0:
         print(f"  WARNING: {missing} condition directories had no results")
@@ -545,8 +539,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--experiment-dir",
+        nargs="+",
         default=None,
-        help="Path to experiment results directory (default: most recent cofunding_* dir).",
+        metavar="DIR",
+        help="Path(s) to experiment results directories (default: most recent cofunding_* dir).",
     )
     parser.add_argument(
         "--output-dir",
@@ -562,7 +558,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-runs-per-model",
         type=int,
-        default=3,
+        default=1,
         help="Minimum total runs per focal model to include in plots.",
     )
     parser.add_argument(
@@ -606,11 +602,11 @@ def main() -> None:
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    experiment_dir = args.experiment_dir or _find_experiment_dir(script_dir)
-    print(f"Experiment dir: {experiment_dir}")
+    experiment_dirs = args.experiment_dir or [_find_experiment_dir(script_dir)]
+    print(f"Experiment dir(s): {experiment_dirs}")
 
     # Extract data
-    df = extract_results(experiment_dir)
+    df = extract_results(experiment_dirs)
 
     # Filter models
     included_models, run_counts = get_model_filter(df, args.min_runs_per_model)
@@ -760,7 +756,7 @@ def main() -> None:
     report_path = output_dir / args.report_name
     write_report(
         report_path=report_path,
-        experiment_dir=experiment_dir,
+        experiment_dir="; ".join(experiment_dirs),
         min_runs=args.min_runs_per_model,
         generated_plots=generated_plots,
         models_used_by_plot=models_used_by_plot,

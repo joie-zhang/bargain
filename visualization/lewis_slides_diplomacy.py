@@ -71,6 +71,7 @@ plt.rcParams["font.size"] = 11
 
 MODEL_ELO: Dict[str, int] = {
     "gemini-3-pro": 1490,
+    "claude-opus-4-6": 1475,
     "claude-opus-4-5-thinking-32k": 1470,
     "claude-sonnet-4-5": 1450,
     "gpt-5.2-high": 1436,
@@ -82,11 +83,13 @@ MODEL_ELO: Dict[str, int] = {
     "gpt-5-nano": 1338,
     "QwQ-32B": 1316,
     "amazon-nova-micro": 1220,
+    "amazon-nova-micro-v1.0": 1220,
     "gpt-3.5-turbo-0125": 1105,
 }
 
 MODEL_SHORT: Dict[str, str] = {
     "gemini-3-pro": "Gemini 3 Pro",
+    "claude-opus-4-6": "Opus 4.6",
     "claude-opus-4-5-thinking-32k": "Claude Opus",
     "claude-sonnet-4-5": "Sonnet 4.5",
     "gpt-5.2-high": "GPT-5.2",
@@ -98,6 +101,7 @@ MODEL_SHORT: Dict[str, str] = {
     "gpt-5-nano": "GPT-5-nano",
     "QwQ-32B": "QwQ-32B",
     "amazon-nova-micro": "Nova Micro",
+    "amazon-nova-micro-v1.0": "Nova Micro",
     "gpt-3.5-turbo-0125": "GPT-3.5",
 }
 
@@ -154,114 +158,126 @@ def _parse_rho_theta_from_dirname(dirname: str) -> Tuple[Optional[float], Option
         return None, None
 
 
-def extract_results(experiment_dir: str) -> pd.DataFrame:
+def extract_results(experiment_dirs: List[str]) -> pd.DataFrame:
     """
-    Walk the experiment directory tree and collect one row per run.
+    Walk one or more experiment directory trees and collect one row per run.
 
-    Directory structure expected:
+    Directory structure expected under each dir:
         experiment_dir/model_scale/
             [model1]_vs_[model2]/
                 {weak_first,strong_first}/
                     rho_*_theta_*/
                         run_1/, run_2/, run_3/
                             run_N_experiment_results.json
-    """
-    model_scale_dir = os.path.join(experiment_dir, "model_scale")
-    if not os.path.isdir(model_scale_dir):
-        raise FileNotFoundError(f"No model_scale directory at {model_scale_dir}")
 
+    Self-play pairs (model1 == model2) are included: adversary_model = model2,
+    and Agent_Alpha is treated as baseline, Agent_Beta as adversary.
+    """
     rows = []
     missing = 0
 
-    for pair_name in sorted(os.listdir(model_scale_dir)):
-        pair_path = os.path.join(model_scale_dir, pair_name)
-        if not os.path.isdir(pair_path):
+    for experiment_dir in experiment_dirs:
+        model_scale_dir = os.path.join(experiment_dir, "model_scale")
+        if not os.path.isdir(model_scale_dir):
+            print(f"  WARNING: No model_scale directory at {model_scale_dir}, skipping.")
             continue
 
-        # Extract model names from directory name
-        if "_vs_" not in pair_name:
-            continue
-        model1, model2 = pair_name.split("_vs_", 1)
-
-        # Skip self-play
-        if model1 == model2:
-            continue
-
-        adversary_model = model2
-        adversary_elo = MODEL_ELO.get(adversary_model, 0)
-
-        for order_name in sorted(os.listdir(pair_path)):
-            order_path = os.path.join(pair_path, order_name)
-            if not os.path.isdir(order_path):
-                continue
-            if order_name not in ("weak_first", "strong_first"):
+        for pair_name in sorted(os.listdir(model_scale_dir)):
+            pair_path = os.path.join(model_scale_dir, pair_name)
+            if not os.path.isdir(pair_path):
                 continue
 
-            for cond_name in sorted(os.listdir(order_path)):
-                cond_path = os.path.join(order_path, cond_name)
-                if not os.path.isdir(cond_path):
+            # Extract model names from directory name
+            if "_vs_" not in pair_name:
+                continue
+            model1, model2 = pair_name.split("_vs_", 1)
+
+            adversary_model = model2
+            adversary_elo = MODEL_ELO.get(adversary_model, 0)
+
+            for order_name in sorted(os.listdir(pair_path)):
+                order_path = os.path.join(pair_path, order_name)
+                if not os.path.isdir(order_path):
+                    continue
+                if order_name not in ("weak_first", "strong_first"):
                     continue
 
-                rho, theta = _parse_rho_theta_from_dirname(cond_name)
-                if rho is None:
-                    continue
-
-                # Iterate over run subdirectories
-                for entry in sorted(os.listdir(cond_path)):
-                    run_path = os.path.join(cond_path, entry)
-                    if not os.path.isdir(run_path):
+                for cond_name in sorted(os.listdir(order_path)):
+                    cond_path = os.path.join(order_path, cond_name)
+                    if not os.path.isdir(cond_path):
                         continue
-                    run_id = entry  # e.g. "run_1", "run_2", "run_3"
 
-                    # All run dirs use the fixed filename "run_1_experiment_results.json"
-                    result_file = os.path.join(run_path, "run_1_experiment_results.json")
-                    if not os.path.exists(result_file):
+                    rho, theta = _parse_rho_theta_from_dirname(cond_name)
+                    if rho is None:
+                        continue
+
+                    # Collect result files: flat structure (run_N_experiment_results.json
+                    # directly in cond_path) or legacy run_N/ subdirectory structure.
+                    result_files = []
+                    for fname in sorted(os.listdir(cond_path)):
+                        if fname.startswith("run_") and fname.endswith("_experiment_results.json"):
+                            fp = os.path.join(cond_path, fname)
+                            run_id = fname.replace("_experiment_results.json", "")
+                            result_files.append((fp, run_id))
+
+                    # Also check run_N subdirs (legacy)
+                    for entry in sorted(os.listdir(cond_path)):
+                        entry_path = os.path.join(cond_path, entry)
+                        if os.path.isdir(entry_path) and entry.startswith("run_"):
+                            for fname in ["run_1_experiment_results.json", "experiment_results.json"]:
+                                fp = os.path.join(entry_path, fname)
+                                if os.path.exists(fp):
+                                    result_files.append((fp, entry))
+                                    break
+
+                    if not result_files:
                         missing += 1
                         continue
 
-                    with open(result_file) as f:
-                        result = json.load(f)
+                    for result_file, run_id in result_files:
+                        with open(result_file) as f:
+                            result = json.load(f)
 
-                    final_utils = result.get("final_utilities", {})
-                    alpha_util = final_utils.get("Agent_Alpha", 0.0)
-                    beta_util = final_utils.get("Agent_Beta", 0.0)
+                        final_utils = result.get("final_utilities", {})
+                        alpha_util = final_utils.get("Agent_Alpha", 0.0)
+                        beta_util = final_utils.get("Agent_Beta", 0.0)
 
-                    # Determine which agent is the baseline (GPT-5-nano)
-                    # Use agent_performance if available; fall back to model_order
-                    agent_perf = result.get("agent_performance", {})
-                    alpha_model = agent_perf.get("Agent_Alpha", {}).get("model", "")
+                        # Determine which agent is the baseline (GPT-5-nano)
+                        # Use agent_performance if available; fall back to model_order
+                        agent_perf = result.get("agent_performance", {})
+                        alpha_model = agent_perf.get("Agent_Alpha", {}).get("model", "")
 
-                    if alpha_model == BASELINE_MODEL:
-                        baseline_util = alpha_util
-                        adv_util = beta_util
-                    elif order_name == "weak_first":
-                        # weak_first → Agent_Alpha = model1 = gpt-5-nano
-                        baseline_util = alpha_util
-                        adv_util = beta_util
-                    else:
-                        # strong_first → Agent_Alpha = model2 = adversary
-                        baseline_util = beta_util
-                        adv_util = alpha_util
+                        if alpha_model == BASELINE_MODEL:
+                            baseline_util = alpha_util
+                            adv_util = beta_util
+                        elif order_name == "weak_first":
+                            # weak_first → Agent_Alpha = model1 = gpt-5-nano
+                            baseline_util = alpha_util
+                            adv_util = beta_util
+                        else:
+                            # strong_first → Agent_Alpha = model2 = adversary
+                            baseline_util = beta_util
+                            adv_util = alpha_util
 
-                    competition_index = theta * (1 - rho) / 2
+                        competition_index = theta * (1 - rho) / 2
 
-                    rows.append({
-                        "adversary_model": adversary_model,
-                        "adversary_elo": adversary_elo,
-                        "adversary_short": MODEL_SHORT.get(adversary_model, adversary_model),
-                        "model_order": order_name,
-                        "run_id": run_id,
-                        "rho": round(rho, 4),
-                        "theta": round(theta, 4),
-                        "competition_index": round(competition_index, 4),
-                        "baseline_utility": baseline_util,
-                        "adversary_utility": adv_util,
-                        "social_welfare": baseline_util + adv_util,
-                        "payoff_diff": adv_util - baseline_util,
-                        "util_ratio": adv_util / baseline_util if baseline_util > 0 else float("inf"),
-                        "consensus_reached": float(result.get("consensus_reached", False)),
-                        "final_round": result.get("final_round", -1),
-                    })
+                        rows.append({
+                            "adversary_model": adversary_model,
+                            "adversary_elo": adversary_elo,
+                            "adversary_short": MODEL_SHORT.get(adversary_model, adversary_model),
+                            "model_order": order_name,
+                            "run_id": run_id,
+                            "rho": round(rho, 4),
+                            "theta": round(theta, 4),
+                            "competition_index": round(competition_index, 4),
+                            "baseline_utility": baseline_util,
+                            "adversary_utility": adv_util,
+                            "social_welfare": baseline_util + adv_util,
+                            "payoff_diff": adv_util - baseline_util,
+                            "util_ratio": adv_util / baseline_util if baseline_util > 0 else float("inf"),
+                            "consensus_reached": float(result.get("consensus_reached", False)),
+                            "final_round": result.get("final_round", -1),
+                        })
 
     if missing > 0:
         print(f"  WARNING: {missing} result files missing")
@@ -472,8 +488,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Lewis-style slide plots for Game 2 (Diplomatic Treaty).")
     parser.add_argument(
         "--experiment-dir",
+        nargs="+",
         default=None,
-        help="Path to experiment results directory (default: most recent diplomacy_* dir).",
+        metavar="DIR",
+        help="One or more experiment results directories (default: most recent diplomacy_* dir).",
     )
     parser.add_argument(
         "--output-dir",
@@ -489,7 +507,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--min-runs-per-model",
         type=int,
-        default=5,
+        default=1,
         help="Minimum total runs per adversary model to include in plots.",
     )
     parser.add_argument(
@@ -528,11 +546,16 @@ def main() -> None:
     output_dir = (script_dir / args.output_dir) if not Path(args.output_dir).is_absolute() else Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    experiment_dir = args.experiment_dir or _find_experiment_dir(script_dir)
-    print(f"Experiment dir: {experiment_dir}")
+    if args.experiment_dir:
+        experiment_dirs = args.experiment_dir  # list from nargs='+'
+    else:
+        experiment_dirs = [_find_experiment_dir(script_dir)]
+    print(f"Experiment dirs ({len(experiment_dirs)}):")
+    for d in experiment_dirs:
+        print(f"  {d}")
 
     # Extract data
-    df = extract_results(experiment_dir)
+    df = extract_results(experiment_dirs)
 
     # Filter models
     included_models, run_counts = get_model_filter(df, args.min_runs_per_model)
@@ -668,7 +691,7 @@ def main() -> None:
     report_path = output_dir / args.report_name
     write_report(
         report_path=report_path,
-        experiment_dir=experiment_dir,
+        experiment_dir="; ".join(experiment_dirs),
         min_runs=args.min_runs_per_model,
         generated_plots=generated_plots,
         models_used_by_plot=models_used_by_plot,
