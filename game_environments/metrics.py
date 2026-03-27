@@ -51,7 +51,7 @@ def compute_utility(
     """
     Compute undiscounted utility for an agent given an agreement.
 
-    U_i(A) = Σ_k w_ik * (1 - |p_ik - a_k|)
+    U_i(A) = 100 * Σ_k w_ik * (1 - |p_ik - a_k|)
 
     Args:
         agent_id: Agent identifier
@@ -59,12 +59,12 @@ def compute_utility(
         game_state: Game state dict with agent_positions and agent_weights
 
     Returns:
-        Utility value in [0, 1]
+        Utility value in [0, 100]
     """
     positions = np.array(game_state["agent_positions"][agent_id])
     weights = np.array(game_state["agent_weights"][agent_id])
     a = np.array(agreement)
-    return float(np.sum(weights * (1 - np.abs(positions - a))))
+    return float(np.sum(weights * (1 - np.abs(positions - a)))) * 100.0
 
 
 def social_welfare(utilities: Dict[str, float]) -> float:
@@ -312,27 +312,42 @@ def is_pareto_efficient(
 
 def kalai_smorodinsky_fairness(utilities: Dict[str, float]) -> float:
     """
-    Compute Kalai-Smorodinsky fairness measure for 2-agent case.
+    Compute Kalai-Smorodinsky fairness measure generalized for N agents.
 
-    KS = min(U_1/U_2, U_2/U_1) with disagreement = 0.
+    For N=2: KS = min(U_1/U_2, U_2/U_1)
+    For N>2: KS = min_i(U_i) / max_i(U_i) (worst-off ratio)
+
+    This measures the ratio of the worst-off agent to the best-off agent.
+    A value of 1.0 means perfectly equal utilities across all agents.
 
     Args:
-        utilities: Dict mapping agent_id -> utility (must have exactly 2 agents)
+        utilities: Dict mapping agent_id -> utility (any number of agents >= 2)
 
     Returns:
         Fairness value in [0, 1], where 1 = perfectly equal
     """
     values = list(utilities.values())
-    if len(values) != 2:
+    if len(values) < 2:
         raise ValueError(
-            f"Kalai-Smorodinsky fairness requires exactly 2 agents, "
+            f"Kalai-Smorodinsky fairness requires at least 2 agents, "
             f"got {len(values)}"
         )
 
-    u1, u2 = values[0], values[1]
-    if abs(u1) < 1e-12 or abs(u2) < 1e-12:
+    max_val = max(abs(v) for v in values)
+    if max_val < 1e-12:
+        return 1.0  # All zero = equal
+
+    min_val = min(values)
+    max_val = max(values)
+
+    if abs(max_val) < 1e-12:
         return 0.0
-    return min(u1 / u2, u2 / u1)
+
+    if min_val < 0:
+        # If any utility is negative, fairness is 0
+        return 0.0
+
+    return min_val / max_val
 
 
 def efficiency_fairness_decomposition(

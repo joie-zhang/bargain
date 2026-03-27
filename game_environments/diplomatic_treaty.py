@@ -28,42 +28,58 @@ class DiplomaticTreatyGame(GameEnvironment):
       - Position preferences p_i: ideal outcome on each issue
       - Importance weights w_i: how much they care about each issue
     - Proposals are agreement vectors A = [a_1, ..., a_k] where a_k ∈ [0,1]
-    - Utility = Σ_k w_ik × (1 - |p_ik - a_k|)
+    - Utility = 100 × Σ_k w_ik × (1 - |p_ik - a_k|)
 
     Two control parameters:
     - ρ (rho): Preference correlation [-1, 1]
     - θ (theta): Interest overlap [0, 1]
     """
 
-    # Each issue is framed as a policy proposition.
-    # An agent's position on an issue is a score in [0, 1]:
-    #   0.0 = fully OPPOSED to the proposition
-    #   1.0 = fully SUPPORTIVE of the proposition
+    # Each issue is a continuous policy rate in [0, 1].
+    # An agent's position is their PREFERRED RATE on that issue:
+    #   0.0 = 0%  (minimum level of that policy)
+    #   1.0 = 100% (maximum level of that policy)
+    # Intermediate values are semantically meaningful — 0.35 literally means "35% of X".
     ISSUE_NAMES = [
-        "Bilateral tariff elimination",
-        "Forward military basing rights",
-        "Binding emissions targets",
-        "Joint offshore resource development",
-        "Visa-free short-stay mobility",
-        "Dual-use technology co-development",
-        "Bilateral currency trade settlement",
-        "Mutual professional credential recognition",
-        "Priority work authorization for degree-holders",
-        "International arbitration for maritime disputes",
+        "AI chip export quota",
+        "Autonomous weapons human oversight",
+        "Critical mineral revenue share",
+        "Disputed territory restoration",
+        "Nuclear warhead reduction",
+        "AI training data localization",
+        "Fentanyl precursor interdiction",
+        "Carbon border adjustment",
+        "Domestic content requirement",
+        "Bilateral sanctions relief",
     ]
 
-    # Full proposition text shown in the game-rules prompt, one per issue.
+    # Scale endpoints shown in the game-rules prompt — "0% = X | 100% = Y".
     ISSUE_PROPOSITIONS = [
-        "Eliminate all bilateral tariffs on manufactured goods over a 10-year schedule.",
-        "Grant the other party rights to station up to 5,000 troops at designated facilities on domestic territory.",
-        "Adopt legally binding national emission-reduction targets, enforceable through automatic bilateral trade penalties.",
-        "Jointly develop all disputed offshore energy reserves under a permanent 50/50 revenue-sharing arrangement.",
-        "Allow citizens of both parties visa-free entry for short stays of up to 90 days.",
-        "Co-develop and openly license dual-use technologies under a shared IP framework, without third-party licensing restrictions.",
-        "Invoice and settle all bilateral trade in a basket of both parties' currencies rather than a third-party reserve currency.",
-        "Automatically recognize professional qualifications (medicine, engineering, law) certified in either jurisdiction.",
-        "Grant priority work-permit processing to citizens of either party who hold a recognized university degree.",
-        "Submit all maritime boundary and exclusive economic zone disputes to binding arbitration by an international tribunal.",
+        "0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips",
+        "0% = fully autonomous lethal decisions (no human required) | 100% = every strike requires explicit human authorization",
+        "0% = host nation keeps all extraction revenues | 100% = partner nation receives all extraction revenues",
+        "0% = no territory returned (status quo frozen) | 100% = full pre-conflict borders restored",
+        "0% = no warheads eliminated | 100% = complete bilateral nuclear disarmament",
+        "0% = citizen AI training data freely processed abroad | 100% = all citizen AI data must be stored domestically",
+        "0% = no precursor shipments interdicted | 100% = all suspected precursor exports seized at border",
+        "0% = no carbon cost on imports | 100% = full domestic carbon price applied to all partner imports",
+        "0% = no domestic sourcing required | 100% = all goods must be locally produced for preferential tariff rates",
+        "0% = no sanctions lifted | 100% = all existing bilateral sanctions removed",
+    ]
+
+    # Plain-English interpretation of a position on each issue.
+    # Used in the preference assignment prompt: "your position of X means {template.format(pct=X*100)}"
+    ISSUE_INTERP_TEMPLATES = [
+        "~{pct}% of advanced AI chip production cleared for export",
+        "~{pct}% of lethal autonomous strikes require explicit human authorization",
+        "~{pct}% of extraction revenues paid to partner nation",
+        "~{pct}% of disputed territory returned to pre-conflict control",
+        "~{pct}% of bilateral nuclear warheads eliminated",
+        "~{pct}% of citizen AI training data must be stored domestically",
+        "~{pct}% of suspected precursor shipments interdicted at the border",
+        "~{pct}% of domestic carbon price applied to partner imports",
+        "~{pct}% domestic content required for preferential tariff rates",
+        "~{pct}% of existing bilateral sanctions lifted",
     ]
 
     def __init__(self, config: DiplomaticTreatyConfig):
@@ -324,7 +340,7 @@ class DiplomaticTreatyGame(GameEnvironment):
                 if i < len(self.ISSUE_PROPOSITIONS)
                 else "(see preference assignment)"
             )
-            issue_lines.append(f"  {i+1}. **{issue}**\n     Proposition: \"{proposition}\"")
+            issue_lines.append(f"  {i+1}. **{issue}**\n     Scale: {proposition}")
         issues_text = "\n".join(issue_lines)
 
         # Create clearer phrasing for 2-agent negotiations
@@ -335,13 +351,15 @@ class DiplomaticTreatyGame(GameEnvironment):
 
         return f"""Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy propositions.
+You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy issues.
 
-**PROPOSITIONS UNDER NEGOTIATION:**
-Each issue is a concrete policy proposition. Your position—and any agreed resolution—is a score in [0.0, 1.0]:
-  - **0.0** = fully OPPOSED to the proposition (reject it entirely)
-  - **1.0** = fully SUPPORTIVE of the proposition (adopt it entirely)
-  - **0.5** = neutral / split-the-difference compromise
+**ISSUES UNDER NEGOTIATION:**
+Each issue is a continuous policy rate. Positions and agreed resolutions are scores in [0.0, 1.0], where:
+  - **0.0** = 0% — the minimum level of that policy (see scale below)
+  - **1.0** = 100% — the maximum level of that policy (see scale below)
+  - **0.5** = 50% — the exact midpoint between minimum and maximum
+
+**Your position IS your preferred rate.** A position of 0.35 literally means you want ~35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
 
 {issues_text}
 
@@ -362,8 +380,8 @@ Each issue is a concrete policy proposition. Your position—and any agreed reso
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved score is to your ideal
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 1.0 (every proposition resolved at your exact ideal score)
+- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
+- Maximum utility = 100.0 (every proposition resolved at your exact ideal score)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
@@ -385,11 +403,18 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
         lines = ["🔒 CONFIDENTIAL: Your Diplomatic Preferences", ""]
         lines.append(f"{agent_id}, you have been assigned the following SECRET preferences:")
         lines.append("")
-        lines.append("**YOUR IDEAL POSITIONS** (what outcome you want on each issue):")
+        lines.append("**YOUR IDEAL POSITIONS** (your preferred rate on each issue):")
+        lines.append("  Each issue is a continuous policy rate: 0.0 = 0%, 1.0 = 100%.")
+        lines.append("  Your position is the rate you ideally want.")
+        lines.append("")
 
-        for issue, pos in zip(issues, positions):
-            pos_desc = self._describe_position(pos)
-            lines.append(f"  {issue}: {pos:.3f} ({pos_desc})")
+        for i, (issue, pos) in enumerate(zip(issues, positions)):
+            pct = round(pos * 100)
+            if i < len(self.ISSUE_INTERP_TEMPLATES):
+                interp = self.ISSUE_INTERP_TEMPLATES[i].format(pct=pct)
+            else:
+                interp = f"~{pct}% level"
+            lines.append(f"  {issue}: {pos:.3f} → {interp}")
 
         lines.append("")
         lines.append("**YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):")
@@ -531,7 +556,7 @@ Respond with ONLY a JSON object in this exact format:
         """
         Calculate diplomatic utility.
 
-        Utility = Σ_k w_k × (1 - |p_k - a_k|)
+        Utility = 100 × Σ_k w_k × (1 - |p_k - a_k|)
 
         Args:
             agent_id: ID of the agent
@@ -549,8 +574,8 @@ Respond with ONLY a JSON object in this exact format:
         # Value = 1 - |position - agreement| (distance penalty)
         values = 1 - np.abs(positions - agreement)
 
-        # Weighted sum
-        raw_utility = float(np.sum(weights * values))
+        # Weighted sum in [0, 1]; scale to [0, 100]
+        raw_utility = float(np.sum(weights * values)) * 100.0
 
         # Apply discount
         discounted_utility = raw_utility * (self.config.gamma_discount ** (round_num - 1))
@@ -582,20 +607,22 @@ Respond with ONLY a JSON object in this exact format:
 
         if round_num == 1 and not discussion_history:
             context = """**DISCUSSION OBJECTIVES:**
-- Signal your priorities (without revealing exact preferences)
-- Understand other parties' key concerns
-- Identify potential areas for compromise
-- Explore issue linkages and package deals
+- Signal your priorities and general stance on the issues
+- Understand the other party's concerns and interests
+- Identify potential areas for agreement and trade-offs
+- Explore package deals across multiple issues
 
-You are the first to speak. Share your diplomatic position and initial thoughts on reaching an agreement."""
+Each issue is a continuous rate (0%–100%), so you may communicate as precisely or as broadly as your strategy dictates — naming specific target rates, ranges, or simply signaling direction. How much you reveal is up to you.
+
+You are the first to speak. Share your diplomatic position and opening thoughts."""
         elif discussion_history:
             context = """**YOUR TURN TO RESPOND:**
 Based on what others have said above, please:
-- Respond to specific points raised
-- Share or refine your own position
-- Propose potential trade-offs or areas of agreement
+- Respond to points raised and share your own position as you see fit
+- Propose trade-offs or areas of potential agreement
+- Move the conversation toward a concrete proposal
 
-Keep the conversation flowing naturally."""
+How precisely you communicate your preferred rates is a strategic choice."""
         else:
             urgency = ""
             if round_num >= max_rounds - 1:
@@ -654,9 +681,9 @@ Issues under negotiation: {issues_text}
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved score is to your ideal position
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A score of 0.0 means fully opposed; 1.0 means fully supportive
-- Maximum utility = 1.0 (every proposition at your exact ideal score)
+- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
+- A score of 0.0 means fully opposed; 1.0 means fully supportive on each proposition
+- Maximum utility = 100.0 (every proposition at your exact ideal score)
 - Utility is discounted by a factor each round — delaying costs you
 
 Please vote on this proposal. Consider:
@@ -773,14 +800,5 @@ Remember: This analysis is completely private."""
 
     @staticmethod
     def _describe_position(value: float) -> str:
-        """Convert numeric position to descriptive support/opposition text."""
-        if value < 0.2:
-            return "strongly opposed"
-        elif value < 0.4:
-            return "moderately opposed"
-        elif value < 0.6:
-            return "neutral"
-        elif value < 0.8:
-            return "moderately supportive"
-        else:
-            return "strongly supportive"
+        """Convert numeric position to a percentage string (issues are continuous rates)."""
+        return f"~{round(value * 100)}%"
