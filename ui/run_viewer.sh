@@ -53,4 +53,4 @@ echo "Press Ctrl+C to stop"
 echo ""
 
 cd "$PROJECT_ROOT"
-streamlit run ui/negotiation_viewer.py --server.port "$PORT" --server.headless true
+streamlit run ui/experiment_viewer.py --server.port "$PORT" --server.headless true

@@ -4,6 +4,7 @@ Advanced UI Components for Negotiation Viewer
 Provides reusable components for visualizing negotiation data.
 """
 
+import html as html_module
 import streamlit as st
 import json
 from typing import Dict, List, Optional, Tuple
@@ -84,10 +85,13 @@ def render_message_bubble(
     if timestamp:
         time_str = datetime.fromtimestamp(timestamp).strftime("%H:%M:%S")
 
+    # Escape content so it is safe to embed in HTML (preserves < > & quotes etc.)
+    safe_content = html_module.escape(content).replace("\n", "<br>")
+
     st.markdown(f"""
     <div style="display: flex; justify-content: {align}; margin: 8px 0;">
         <div style="
-            max-width: 80%;
+            max-width: 90%;
             background-color: {bg_color};
             border-radius: 16px;
             padding: 12px 16px;
@@ -97,8 +101,8 @@ def render_message_bubble(
                 <span style="font-weight: bold; color: {text_color};">{agent_id}{private_badge}</span>
                 <span style="font-size: 11px; color: #9ca3af;">{time_str}</span>
             </div>
-            <div style="color: #374151; line-height: 1.5;">
-                {content[:500]}{'...' if len(content) > 500 else ''}
+            <div style="color: #374151; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
+                {safe_content}
             </div>
         </div>
     </div>

@@ -73,9 +73,11 @@ PHASE_CONFIG = {
     "vote_tabulation":        {"icon": "📊", "color": "#ef4444", "label": "Vote Tabulation"},
     "reflection":             {"icon": "🔄", "color": "#ec4899", "label": "Reflection"},
     # Cofunding phases
-    "pledge_submission":      {"icon": "💰", "color": "#10b981", "label": "Pledge Submission"},
-    "feedback":               {"icon": "💡", "color": "#f59e0b", "label": "Feedback"},
-    "aggregate_funding":      {"icon": "📊", "color": "#8b5cf6", "label": "Funding Status"},
+    "pledge_submission":         {"icon": "💰", "color": "#10b981", "label": "Pledge Submission"},
+    "feedback":                  {"icon": "💡", "color": "#f59e0b", "label": "Feedback"},
+    "aggregate_funding":         {"icon": "📊", "color": "#8b5cf6", "label": "Funding Status"},
+    "cofunding_commit_vote":     {"icon": "🗳️", "color": "#f59e0b", "label": "Commit Vote"},
+    "cofunding_commit_vote_summary": {"icon": "📊", "color": "#ef4444", "label": "Vote Summary"},
 }
 
 AGENT_COLORS = {
@@ -100,6 +102,7 @@ class ExperimentInfo:
     params: str               # e.g. "rho_0_5_theta_0_2" or "alpha_0_5_sigma_0_7"
     budget_level: str         # only for ttc_scaling, e.g. "budget_1000"; "" otherwise
     folder_path: str          # absolute path to leaf directory with JSON files
+    run_id: str = ""          # e.g. "run_1", "run_2"; "" for flat experiments
     display_label: str = ""   # computed human-readable label
 
     def __post_init__(self):
@@ -107,6 +110,8 @@ class ExperimentInfo:
         if self.budget_level:
             parts.append(self.budget_level)
         parts.append(self.params)
+        if self.run_id:
+            parts.append(self.run_id)
         self.display_label = " / ".join(parts)
 
 
@@ -214,6 +219,25 @@ def _discover_from_pair_dir(experiments, game_type, exp_name, sub_exp, pair_dir)
                     budget_level="",
                     folder_path=str(param_or_budget_dir),
                 ))
+            else:
+                # Check for run_N/ subdirectories (e.g. diplomacy_20260223_032204 pattern)
+                for run_dir in sorted(param_or_budget_dir.iterdir()):
+                    if not run_dir.is_dir() or run_dir.is_symlink():
+                        continue
+                    if not run_dir.name.startswith("run_"):
+                        continue
+                    if _has_result_files_run(run_dir):
+                        experiments.append(ExperimentInfo(
+                            game_type=game_type,
+                            experiment_name=exp_name,
+                            sub_experiment=sub_exp,
+                            model_pair=pair_name,
+                            model_order=order_name,
+                            params=pname,
+                            budget_level="",
+                            folder_path=str(run_dir),
+                            run_id=run_dir.name,
+                        ))
 
 
 def _extract_flat_metadata(top_dir: Path, name: str) -> Tuple[str, str, str]:
@@ -275,11 +299,20 @@ def _extract_flat_metadata(top_dir: Path, name: str) -> Tuple[str, str, str]:
 
 
 def _has_result_files(directory: Path) -> bool:
-    """Check if a directory contains experiment result JSON files."""
+    """Check if a directory contains experiment result JSON files (flat, not in subdirs)."""
     for f in directory.iterdir():
         if f.is_file() and f.name.endswith(".json") and "experiment_results" in f.name:
             return True
     return False
+
+
+def _has_result_files_run(run_dir: Path) -> bool:
+    """Check if a run_N/ directory contains run_1_experiment_results.json.
+
+    All run directories (run_1/, run_2/, run_3/) store their result file as
+    'run_1_experiment_results.json' regardless of the directory name.
+    """
+    return (run_dir / "run_1_experiment_results.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +359,11 @@ def classify_phase(entry: Dict) -> str:
     # Handle all_interactions naming: pledge_round_N → pledge_submission
     if phase.startswith("pledge"):
         return "pledge_submission"
+    # Co-funding commit votes (commit_vote_round_N from all_interactions)
+    if "commit_vote" in phase and "summary" not in phase:
+        return "cofunding_commit_vote"
+    if "commit_vote" in phase and "summary" in phase:
+        return "cofunding_commit_vote_summary"
     # Fuzzy matching
     for key in PHASE_CONFIG:
         if key in phase:
@@ -678,10 +716,10 @@ def render_private_thinking(entry: Dict):
     color = AGENT_COLORS.get(speaker, "#64748b")
     with st.expander(f"🧠 Private Thinking — {speaker}", expanded=False):
         st.markdown(
-            f'<div style="border-left: 3px solid {color}; padding: 8px 12px; '
-            f'color: #475569; font-style: italic;">{content}</div>',
+            f'<div style="border-left: 3px solid {color}; padding: 4px 12px; color: #475569; font-style: italic;"></div>',
             unsafe_allow_html=True,
         )
+        st.markdown(content)
 
 
 def render_reflection(entry: Dict):
@@ -691,9 +729,10 @@ def render_reflection(entry: Dict):
     color = AGENT_COLORS.get(speaker, "#ec4899")
     with st.expander(f"🔄 Reflection — {speaker}", expanded=False):
         st.markdown(
-            f'<div style="border-left: 3px solid {color}; padding: 8px 12px;">{content}</div>',
+            f'<div style="border-left: 3px solid {color}; padding: 4px 12px;"></div>',
             unsafe_allow_html=True,
         )
+        st.markdown(content)
 
 
 def render_feedback(entry: Dict):
@@ -703,9 +742,10 @@ def render_feedback(entry: Dict):
     color = AGENT_COLORS.get(speaker, "#f59e0b")
     with st.expander(f"💡 Feedback — {speaker}", expanded=False):
         st.markdown(
-            f'<div style="border-left: 3px solid {color}; padding: 8px 12px;">{content}</div>',
+            f'<div style="border-left: 3px solid {color}; padding: 4px 12px;"></div>',
             unsafe_allow_html=True,
         )
+        st.markdown(content)
 
 
 def _render_setup_entry(entry: Dict, phase: str):
@@ -716,9 +756,10 @@ def _render_setup_entry(entry: Dict, phase: str):
     color = AGENT_COLORS.get(speaker, cfg["color"])
     with st.expander(f'{cfg["icon"]} {cfg["label"]} — {speaker}', expanded=False):
         st.markdown(
-            f'<div style="border-left: 3px solid {color}; padding: 8px 12px;">{content}</div>',
+            f'<div style="border-left: 3px solid {color}; padding: 4px 12px;"></div>',
             unsafe_allow_html=True,
         )
+        st.markdown(content)
 
 
 # ---------------------------------------------------------------------------
@@ -1116,10 +1157,10 @@ def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
                 if phase == "private_thinking" and not show_private:
                     continue
 
-                # Show prompt if requested and available
+                # Show prompt if requested and available (full text)
                 if show_prompts and entry.get("prompt"):
                     with st.expander("📨 Prompt", expanded=False):
-                        st.code(entry["prompt"][:3000], language=None)
+                        st.code(entry["prompt"], language=None)
 
                 # Dispatch to game-specific renderers
                 if phase == "game_setup":
@@ -1158,6 +1199,55 @@ def _render_diplomacy_phase(entry, phase, item_names, preferences):
         _render_generic_entry(entry, phase)
 
 
+def _render_cofunding_vote_entry(entry: Dict):
+    """Render a co-funding commit vote with full reasoning."""
+    voter = entry.get("from", "Unknown")
+    color = AGENT_COLORS.get(voter, "#6b7280")
+
+    # Use pre-parsed vote if available, else parse content
+    parsed = entry.get("parsed_vote") or {}
+    if not parsed:
+        try:
+            parsed = json.loads(entry.get("content", "{}"))
+        except (json.JSONDecodeError, TypeError):
+            parsed = {}
+
+    decision = (parsed.get("commit_vote") or "").lower()
+    reasoning = parsed.get("reasoning", "")
+
+    if decision in ("yay", "nay"):
+        vote_color = "#10b981" if decision == "yay" else "#ef4444"
+        vote_icon = "✅" if decision == "yay" else "❌"
+        st.markdown(
+            f'<div style="border-left: 4px solid {color}; padding: 6px 12px; margin: 4px 0;">'
+            f'<strong style="color: {color};">{voter}</strong> voted '
+            f'<span style="color: {vote_color}; font-weight: bold;">{vote_icon} {decision.upper()}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        if reasoning:
+            with st.expander(f"💭 {voter} reasoning", expanded=False):
+                st.markdown(reasoning)
+    else:
+        _render_generic_entry(entry, "cofunding_commit_vote")
+
+
+def _render_cofunding_vote_summary(entry: Dict):
+    """Render co-funding commit vote tally."""
+    content = entry.get("content", "")
+    unanimous = entry.get("unanimous_yay", False)
+    result_color = "#10b981" if unanimous else "#f59e0b"
+    result_label = "✅ UNANIMOUS COMMIT" if unanimous else "🔄 REVISION ROUND"
+    st.markdown(
+        f'<div style="border-left: 4px solid {result_color}; padding: 8px 12px; '
+        f'background: {result_color}22; border-radius: 4px; margin: 8px 0;">'
+        f'<strong style="color: {result_color};">📊 {result_label}</strong><br>'
+        f'<span style="font-size: 12px; color: #6b7280;">{content}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def _render_cofunding_phase(entry, phase, item_names, item_costs, agent_budgets):
     """Dispatch cofunding-specific phase rendering."""
     if phase == "pledge_submission":
@@ -1166,22 +1256,35 @@ def _render_cofunding_phase(entry, phase, item_names, item_costs, agent_budgets)
         render_feedback(entry)
     elif phase == "aggregate_funding":
         render_cofunding_aggregate(entry, item_names, item_costs)
+    elif phase == "cofunding_commit_vote":
+        _render_cofunding_vote_entry(entry)
+    elif phase == "cofunding_commit_vote_summary":
+        _render_cofunding_vote_summary(entry)
     else:
         _render_generic_entry(entry, phase)
 
 
 def _render_voting_entry(entry: Dict):
-    """Render an individual agent's vote."""
+    """Render an individual agent's vote with full reasoning."""
     voter = entry.get("from", "Unknown")
     content = entry.get("content", "")
     color = AGENT_COLORS.get(voter, "#6b7280")
 
     # Try to parse structured vote
     vote_decision = None
+    reasoning = ""
+    parsed_dict = None
     try:
         parsed = json.loads(content) if isinstance(content, str) else content
         if isinstance(parsed, dict):
+            parsed_dict = parsed
             vote_decision = parsed.get("vote_decision") or parsed.get("vote")
+            reasoning = (
+                parsed.get("reasoning")
+                or parsed.get("explanation")
+                or parsed.get("justification")
+                or ""
+            )
     except (json.JSONDecodeError, TypeError):
         pass
 
@@ -1195,6 +1298,17 @@ def _render_voting_entry(entry: Dict):
             f'</div>',
             unsafe_allow_html=True,
         )
+        # Show full reasoning if present
+        if reasoning:
+            with st.expander(f"💭 {voter} reasoning", expanded=False):
+                st.markdown(reasoning)
+        # Show any extra structured fields (e.g. votes dict for multi-proposal rounds)
+        if parsed_dict:
+            extra = {k: v for k, v in parsed_dict.items()
+                     if k not in ("vote_decision", "vote", "reasoning", "explanation", "justification")}
+            if extra:
+                with st.expander(f"🔍 {voter} full vote data", expanded=False):
+                    st.json(extra)
     else:
         render_message_bubble(voter, content, "voting", entry.get("timestamp"))
 
@@ -1266,20 +1380,16 @@ def render_agent_comparison_tab(results: Dict, interactions: List[Dict],
                 phase = entry.get("phase", classify_phase(entry))
                 st.markdown(render_phase_badge(phase), unsafe_allow_html=True)
 
-                # Show prompt if requested
+                # Show prompt if requested (full text, no truncation)
                 if show_prompts and "prompt" in entry:
                     with st.expander("📨 Prompt", expanded=False):
-                        st.code(entry["prompt"][:3000], language=None)
+                        st.code(entry["prompt"], language=None)
 
-                # Show response
+                # Show response (full text)
                 response = entry.get("response", entry.get("content", ""))
                 if response:
-                    st.markdown(
-                        f'<div style="border-left: 3px solid {color}; padding: 6px 10px; '
-                        f'margin: 4px 0; font-size: 13px;">{response[:2000]}'
-                        f'{"..." if len(response) > 2000 else ""}</div>',
-                        unsafe_allow_html=True,
-                    )
+                    with st.expander("💬 Response", expanded=True):
+                        st.markdown(response)
 
                 # Show token usage if available
                 tokens = entry.get("token_usage", {})
@@ -1618,15 +1728,33 @@ def render_raw_data_tab(results: Dict, interactions: List[Dict], experiment_id: 
 
     if data_choice == "Conversation Logs":
         logs = results.get("conversation_logs", [])
-        st.caption(f"{len(logs)} entries")
-        st.json(logs[:20] if len(logs) > 20 else logs)
+        st.caption(f"{len(logs)} total entries")
+        page_size = 50
+        if len(logs) > page_size:
+            page = st.number_input("Page", min_value=1,
+                                   max_value=(len(logs) - 1) // page_size + 1,
+                                   value=1, key=f"log_page_{experiment_id}")
+            chunk = logs[(page - 1) * page_size: page * page_size]
+            st.caption(f"Showing entries {(page-1)*page_size+1}–{(page-1)*page_size+len(chunk)}")
+            st.json(chunk)
+        else:
+            st.json(logs)
     elif data_choice == "Experiment Results":
         # Show everything except conversation_logs (too large)
         summary = {k: v for k, v in results.items() if k != "conversation_logs"}
         st.json(summary)
     elif data_choice == "All Interactions":
-        st.caption(f"{len(interactions)} entries")
-        st.json(interactions[:10] if len(interactions) > 10 else interactions)
+        st.caption(f"{len(interactions)} total entries")
+        page_size = 20
+        if len(interactions) > page_size:
+            page = st.number_input("Page", min_value=1,
+                                   max_value=(len(interactions) - 1) // page_size + 1,
+                                   value=1, key=f"int_page_{experiment_id}")
+            chunk = interactions[(page - 1) * page_size: page * page_size]
+            st.caption(f"Showing entries {(page-1)*page_size+1}–{(page-1)*page_size+len(chunk)}")
+            st.json(chunk)
+        else:
+            st.json(interactions)
     elif data_choice == "Config":
         st.json(results.get("config", {}))
     elif data_choice == "Preferences":
@@ -1640,6 +1768,150 @@ def render_raw_data_tab(results: Dict, interactions: List[Dict], experiment_id: 
         mime="application/json",
         key=f"download_{experiment_id}",
     )
+
+
+# ---------------------------------------------------------------------------
+# SIDEBAR AGENT REFERENCE PANEL
+# ---------------------------------------------------------------------------
+
+def _pos_label(v: float) -> str:
+    """Short support/opposition label for a position value."""
+    if v < 0.2:
+        return "strongly opposed"
+    elif v < 0.4:
+        return "mod. opposed"
+    elif v < 0.6:
+        return "neutral"
+    elif v < 0.8:
+        return "mod. supportive"
+    else:
+        return "strongly supportive"
+
+
+def render_sidebar_agent_info(results: Dict, game_type: str):
+    """Append a sticky agent reference panel to the sidebar.
+
+    Shows model names and per-issue/project preferences for each agent so
+    the user has a handy reference while scrolling the main trajectory view.
+    """
+    perf = results.get("agent_performance", {})
+    config = results.get("config", {})
+    agents = sorted(perf.keys())
+    if not agents:
+        return
+
+    # Issue / project names from items list
+    raw_items = config.get("items", [])
+    if raw_items and isinstance(raw_items[0], dict):
+        item_names = [it.get("name", f"Item {i+1}") for i, it in enumerate(raw_items)]
+        item_costs = [it.get("cost") for it in raw_items]  # None for diplomacy
+    else:
+        item_names = [str(it) for it in raw_items]
+        item_costs = [None] * len(item_names)
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 👥 Agent Reference")
+
+    for agent in agents:
+        color = AGENT_COLORS.get(agent, "#6b7280")
+        model = perf.get(agent, {}).get("model", "unknown")
+        final_util = perf.get(agent, {}).get("final_utility")
+        util_str = f"  •  util {final_util:.2f}" if final_util is not None else ""
+
+        # Agent header
+        st.sidebar.markdown(
+            f'<div style="border-left: 4px solid {color}; padding: 4px 8px; '
+            f'background: {color}18; border-radius: 4px; margin: 6px 0 4px 0;">'
+            f'<span style="font-weight:700; color:{color}; font-size:13px;">{agent}</span><br>'
+            f'<span style="font-size:11px; color:#6b7280;">{model}{util_str}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        if game_type == "diplomacy":
+            _render_diplomacy_agent_prefs(agent, color, config, item_names)
+        elif game_type == "co_funding":
+            _render_cofunding_agent_prefs(agent, color, config, results, item_names, item_costs)
+        else:
+            prefs = results.get("agent_preferences", {}).get(agent, [])
+            if prefs:
+                st.sidebar.caption(f"preferences: {[round(v,2) for v in prefs]}")
+
+        st.sidebar.markdown("")  # spacing between agents
+
+
+def _render_diplomacy_agent_prefs(agent: str, color: str, config: Dict,
+                                   item_names: List[str]):
+    """Render per-issue ideal position + weight rows for a diplomacy agent."""
+    positions = config.get("agent_positions", {}).get(agent, [])
+    weights = config.get("agent_weights", {}).get(agent, [])
+
+    if not positions:
+        st.sidebar.caption("(no preference data)")
+        return
+
+    for i, (pos, wt) in enumerate(zip(positions, weights)):
+        name = item_names[i] if i < len(item_names) else f"Issue {i+1}"
+        pct = int(pos * 100)
+        wt_pct = int(wt * 100)
+        bar_color = color if pos >= 0.6 else ("#ef4444" if pos <= 0.4 else "#9ca3af")
+        wt_style = "font-weight:700;" if wt >= 0.20 else "color:#9ca3af;"
+
+        st.sidebar.markdown(
+            f'<div style="margin:3px 0; font-size:11px;">'
+            f'<div style="display:flex; justify-content:space-between; align-items:baseline;">'
+            f'<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; '
+            f'max-width:62%; display:inline-block;" title="{name}">{name}</span>'
+            f'<span style="{wt_style}">w={wt_pct}% &nbsp;pos={pct}%</span>'
+            f'</div>'
+            f'<div style="background:#e5e7eb; border-radius:3px; height:4px; overflow:hidden;">'
+            f'<div style="background:{bar_color}; height:100%; width:{pct}%;"></div>'
+            f'</div>'
+            f'<div style="color:#9ca3af; font-size:10px;">{_pos_label(pos)}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_cofunding_agent_prefs(agent: str, color: str, config: Dict, results: Dict,
+                                   item_names: List[str], item_costs: List):
+    """Render per-project valuation rows for a cofunding agent."""
+    valuations = results.get("agent_preferences", {}).get(agent, [])
+    budget = config.get("agent_budgets", {}).get(agent)
+
+    budget_str = f"Budget: ${budget:.1f}" if budget is not None else ""
+    if budget_str:
+        st.sidebar.markdown(
+            f'<div style="font-size:11px; color:#6b7280; margin-bottom:4px;">{budget_str}</div>',
+            unsafe_allow_html=True,
+        )
+
+    if not valuations:
+        st.sidebar.caption("(no valuation data)")
+        return
+
+    max_val = max(valuations) if valuations else 1.0
+
+    for i, val in enumerate(valuations):
+        name = item_names[i] if i < len(item_names) else f"Project {i+1}"
+        cost = item_costs[i] if item_costs[i] is not None else 0
+        bar_pct = int(val / max_val * 100) if max_val > 0 else 0
+        cost_str = f"  cost=${cost:.0f}" if cost else ""
+        val_style = "font-weight:700;" if val == max_val else ""
+
+        st.sidebar.markdown(
+            f'<div style="margin:3px 0; font-size:11px;">'
+            f'<div style="display:flex; justify-content:space-between; align-items:baseline;">'
+            f'<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; '
+            f'max-width:55%; display:inline-block;" title="{name}">{name}</span>'
+            f'<span style="{val_style}">{val:.1f}{cost_str}</span>'
+            f'</div>'
+            f'<div style="background:#e5e7eb; border-radius:3px; height:4px; overflow:hidden;">'
+            f'<div style="background:{color}; height:100%; width:{bar_pct}%;"></div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1736,6 +2008,17 @@ def render_sidebar(experiments: List[ExperimentInfo]):
         )
         filtered = [e for e in filtered if e.params == selected_params]
 
+    # --- Level 7: Run (for experiments with run_N/ subdirectory layout) ---
+    run_ids = sorted(set(e.run_id for e in filtered if e.run_id))
+    if run_ids:
+        selected_run = st.sidebar.selectbox(
+            "Run",
+            options=["All"] + run_ids,
+            key="sidebar_run",
+        )
+        if selected_run != "All":
+            filtered = [e for e in filtered if e.run_id == selected_run]
+
     # --- View options ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("### View Options")
@@ -1800,6 +2083,9 @@ def main():
 
     interactions = load_all_interactions(selected_exp.folder_path)
 
+    # Sidebar agent reference panel (appended below the filters)
+    render_sidebar_agent_info(results, selected_exp.game_type)
+
     # Header
     config = results.get("config", {})
     game_label = GAME_TYPES.get(selected_exp.game_type, selected_exp.game_type)
@@ -1825,31 +2111,35 @@ def main():
     experiment_id = (
         f"{selected_exp.experiment_name}_{selected_exp.sub_experiment}_"
         f"{selected_exp.model_pair}_{selected_exp.model_order}_"
-        f"{selected_exp.params}_{selected_exp.budget_level}"
+        f"{selected_exp.params}_{selected_exp.budget_level}_{selected_exp.run_id}"
     )
 
-    # Main tabs
-    tab_timeline, tab_comparison, tab_analytics, tab_raw = st.tabs(
-        ["📜 Timeline", "👥 Agent Comparison", "📊 Analytics", "🔍 Raw Data"]
+    # Main tab navigation — driven by session_state so the selected tab
+    # survives widget interactions (e.g. dropdowns inside Raw Data).
+    TAB_LABELS = ["📜 Timeline", "👥 Agent Comparison", "📊 Analytics", "🔍 Raw Data"]
+    active_tab = st.radio(
+        "View",
+        TAB_LABELS,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="main_tab_selector",
     )
+    st.markdown("---")
 
-    with tab_timeline:
+    if active_tab == "📜 Timeline":
         render_timeline_tab(
             results, selected_exp.game_type,
             options["show_prompts"], options["show_private"],
             experiment_id, interactions,
         )
-
-    with tab_comparison:
+    elif active_tab == "👥 Agent Comparison":
         render_agent_comparison_tab(
             results, interactions, selected_exp.game_type,
             options["show_prompts"], experiment_id,
         )
-
-    with tab_analytics:
+    elif active_tab == "📊 Analytics":
         render_analytics_tab(results, selected_exp.game_type, experiment_id, interactions)
-
-    with tab_raw:
+    elif active_tab == "🔍 Raw Data":
         render_raw_data_tab(results, interactions, experiment_id)
 
 
