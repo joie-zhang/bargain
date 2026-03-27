@@ -71,7 +71,7 @@ class CoFundingConfig(GameConfig):
     sigma: float = 0.5       # Budget abundance scale (0, 1]
     c_min: float = 10.0      # Minimum project cost
     c_max: float = 30.0      # Maximum project cost
-    pledge_mode: str = "joint"  # "joint" (agents propose full plans) or "individual" (legacy)
+    pledge_mode: str = "individual"  # "individual" (each agent submits own contributions) or "joint" (legacy full-plan mode)
     discussion_transparency: str = "own"  # "aggregate", "own", or "full"
     enable_commit_vote: bool = True
     enable_time_discount: bool = True

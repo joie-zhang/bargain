@@ -336,9 +336,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
-- Each round, you submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants (including yourself)
-- Your plan proposes how EVERY participant should allocate their budget
-- The contributions actually used are each participant's self-assignment from their own plan
+- Each round, you submit your own contribution vector — how much YOU pledge to each project
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
 
@@ -415,12 +413,17 @@ Please acknowledge that you understand these rules and are ready to participate!
         funded = game_state["funded_projects"]
         pledge_mode = game_state.get("pledge_mode", "joint")
 
+        # Own contributions from last round (so agent sees their own prior pledge at submission time)
+        own_prev = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * m)
+        if len(own_prev) != m:
+            own_prev = [0.0] * m
+
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
             status = "FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
             project_lines.append(
                 f"  {j}: {proj['name']} (cost={cost:.2f}, your_val={val:.2f}, "
-                f"aggregate={agg:.2f}, {status})"
+                f"aggregate={agg:.2f}, your_prev={own_prev[j]:.2f}, {status})"
             )
 
         projects_text = "\n".join(project_lines)
@@ -429,10 +432,10 @@ Please acknowledge that you understand these rules and are ready to participate!
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
-        # Build budget info for all agents (joint mode)
         all_budgets = game_state["agent_budgets"]
 
         if pledge_mode == "joint":
+            # Legacy joint mode: agents submit contribution vectors for all participants
             # Build example JSON with all agent IDs
             agent_example_entries = []
             for aid in sorted(all_budgets.keys()):
@@ -467,9 +470,9 @@ Respond with ONLY a JSON object in this exact format:
 - Each participant's total contributions must not exceed their budget
 - Contributions to unfunded projects will be refunded"""
         else:
-            # Legacy individual mode
+            # Individual mode (default): each agent submits only their own contribution vector
             format_section = f"""**Instructions:**
-Submit a contribution vector specifying how much you pledge to each project.
+Submit a contribution vector specifying how much YOU pledge to each project.
 
 Respond with ONLY a JSON object in this exact format:
 {{
@@ -692,19 +695,16 @@ Respond with ONLY a JSON object in this exact format:
                         f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f})"
                     )
             else:
-                min_you_to_keep = max(0.0, cost - others_prev[j])
                 if j in funded:
                     line = (
                         f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f}); "
-                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}, "
-                        f"min_you_to_keep_if_others_same={min_you_to_keep:.2f}"
+                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
                     )
                 else:
                     gap = cost - agg
                     line = (
                         f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f}); "
-                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}, "
-                        f"min_you_to_fund_if_others_same={min_you_to_keep:.2f}"
+                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
                     )
                 status_lines.append(line)
         status_text = "\n".join(status_lines)
