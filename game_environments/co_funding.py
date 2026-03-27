@@ -1208,15 +1208,20 @@ Consider what adjustments to your contributions might improve the outcome.
         aggregates = game_state["aggregate_totals"]
         funded = game_state["funded_projects"]
         costs = game_state["project_costs"]
+        m = len(projects)
+
+        own_prev = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * m)
+        if len(own_prev) != m:
+            own_prev = [0.0] * m
 
         lines = ["ROUND RESULTS - Aggregate Contributions:", ""]
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             if j in funded:
-                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} -- FUNDED")
+                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} -- FUNDED (your_prev={own_prev[j]:.2f})")
             else:
                 gap = cost - agg
                 pct = (agg / cost * 100) if cost > 0 else 0
-                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} ({pct:.0f}%) -- needs {gap:.2f} more")
+                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} ({pct:.0f}%) -- needs {gap:.2f} more (your_prev={own_prev[j]:.2f})")
 
         lines.append("")
         funded_names = [projects[j]["name"] for j in funded]
