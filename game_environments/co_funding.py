@@ -101,7 +101,7 @@ class CoFundingGame(GameEnvironment):
         # Generate budgets proportional to project scale while preventing
         # pathological under-provision at very low sigma.
         # sigma interpolates from "can fund ~half the total cost" to "can fund all."
-        budget_ratio = 0.5 + 0.5 * self.config.sigma
+        budget_ratio = self.config.sigma
         total_budget = budget_ratio * total_cost
         per_agent_budget = total_budget / n
 

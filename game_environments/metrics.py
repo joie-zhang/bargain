@@ -208,12 +208,12 @@ def nash_bargaining_solution(game_state: Dict) -> Dict[str, float]:
     if best_a is None:
         raise RuntimeError("NBS optimization failed on all restarts")
 
-    # Compute utilities at NBS agreement
+    # Compute utilities at NBS agreement (scale to [0, 100] to match compute_utility)
     nbs_utils = {}
     for i, aid in enumerate(agent_ids):
         nbs_utils[aid] = float(
             np.sum(weights[i] * (1 - np.abs(positions[i] - best_a)))
-        )
+        ) * 100.0
 
     return nbs_utils
 
