@@ -799,7 +799,7 @@ Phases per round: Setup → Preference Assignment → Discussion → Private Thi
 
 Control parameters: α (valuation alignment), σ (budget scarcity)
 `budget_ratio = 0.5 + 0.5 × σ`, so σ=0.0 → 50% of total cost, σ=1.0 → 100% of total cost
-Pledge modes: `"joint"` (default) or `"individual"` (legacy)
+Pledge modes: `"individual"` (default) or `"joint"` (legacy)
 Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 
 ---
@@ -839,9 +839,7 @@ You are participating in a co-funding exercise with one other participant to fun
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
-- Each round, you submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants (including yourself)
-- Your plan proposes how EVERY participant should allocate their budget
-- The contributions actually used are each participant's self-assignment from their own plan
+- Each round, you submit your own contribution vector — how much YOU pledge to each project
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
 
@@ -1103,7 +1101,7 @@ Remember: This analysis is completely private.
 
 ### 3.5 Pledge Submission Prompt
 
-#### Joint mode (default)
+#### Individual mode (default)
 
 **Variables**
 
@@ -1114,12 +1112,59 @@ Remember: This analysis is completely private.
 | `{budget:.2f}` | This agent's budget | `73.11` |
 | `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, funded status) | `0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)` |
 | `{funded_projects}` | Funded project names or empty list | `['Project Alpha']` |
-| `{budget_lines}` | Per-agent budget | `  - gpt-4o-mini: 73.11` |
-| `{example_contributions}` | Example JSON entries for all agents | `"gpt-4o-mini": [5.0, 10.0, 0.0, 8.0, 2.0]` |
 | `{m}` | Number of projects | `5` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 > **Fallback on parse failure:** zero contributions for all projects.
+
+**Rendered prompt**
+
+```
+Please submit your contribution pledge for Round 2/5.
+
+**YOUR BUDGET:** 73.11
+
+**PROJECT STATUS:**
+  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)
+  1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
+  2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
+  3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
+  4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+
+**Currently funded projects:** ['Project Alpha']
+
+**Instructions:**
+Submit a contribution vector specifying how much YOU pledge to each project.
+
+Respond with ONLY a JSON object in this exact format:
+{
+    "contributions": [5.0, 10.0, 0.0, 8.0, 2.0],
+    "reasoning": "Brief explanation of your contribution strategy"
+}
+
+**Rules:**
+- The "contributions" array must have exactly 5 values (one per project)
+- Each value must be non-negative (>= 0)
+- The sum of all contributions must not exceed your budget (73.11)
+- Contributions to unfunded projects will be refunded
+```
+
+---
+
+#### Joint mode (legacy)
+
+**Variables**
+
+| Variable | Description | Example value |
+|----------|-------------|---------------|
+| `{round_num}` | Current round | `2` |
+| `{t_rounds}` | Maximum rounds | `5` |
+| `{budget:.2f}` | This agent's budget | `73.11` |
+| `{projects_text}` | Per-project status lines | same as individual mode |
+| `{funded_projects}` | Funded names | `['Project Alpha']` |
+| `{budget_lines}` | Per-agent budget table | `  - gpt-4o-mini: 73.11` |
+| `{example_contributions}` | Example JSON entries for all agents | `"gpt-4o-mini": [5.0, 10.0, 0.0, 8.0, 2.0]` |
+| `{m}` | Number of projects | `5` |
 
 **Rendered prompt**
 
@@ -1164,54 +1209,36 @@ Respond with ONLY a JSON object in this exact format:
 
 ---
 
-#### Individual mode (legacy)
+### 3.6 Feedback Prompt
+
+Sent to each agent after all pledges are collected and aggregates are computed. Shows round results before the commit vote or next discussion.
 
 **Variables**
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{t_rounds}` | Maximum rounds | `5` |
-| `{budget:.2f}` | This agent's budget | `73.11` |
-| `{projects_text}` | Per-project status lines | same as joint mode |
-| `{funded_projects}` | Funded names | `['Project Alpha']` |
-| `{m}` | Number of projects | `5` |
+| per-project lines | Name, aggregate, cost, funded status + gap/percentage | `Project Alpha: 30.00 / 28.50 -- FUNDED` |
+| `{funded_names}` | List of funded project names | `['Project Alpha']` |
 
 **Rendered prompt**
 
 ```
-Please submit your contribution pledge for Round 2/5.
+ROUND RESULTS - Aggregate Contributions:
 
-**YOUR BUDGET:** 73.11
+  Project Alpha: 30.00 / 28.50 -- FUNDED
+  Project Beta: 33.00 / 35.20 (94%) -- needs 2.20 more
+  Project Gamma: 0.00 / 22.10 (0%) -- needs 22.10 more
+  Project Delta: 0.00 / 40.80 (0%) -- needs 40.80 more
+  Project Epsilon: 16.00 / 19.60 (82%) -- needs 3.60 more
 
-**PROJECT STATUS:**
-  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)
-  1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
-  2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
-  3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
-  4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+Funded projects: ['Project Alpha']
 
-**Currently funded projects:** ['Project Alpha']
-
-**Instructions:**
-Submit a contribution vector specifying how much you pledge to each project.
-
-Respond with ONLY a JSON object in this exact format:
-{
-    "contributions": [5.0, 10.0, 0.0, 8.0, 2.0],
-    "reasoning": "Brief explanation of your contribution strategy"
-}
-
-**Rules:**
-- The "contributions" array must have exactly 5 values (one per project)
-- Each value must be non-negative (>= 0)
-- The sum of all contributions must not exceed your budget (73.11)
-- Contributions to unfunded projects will be refunded
+Consider adjusting your contributions based on these aggregate results.
 ```
 
 ---
 
-### 3.6 Commit Vote Prompt (optional)
+### 3.7 Commit Vote Prompt (optional)
 
 **Variables**
 
@@ -1252,7 +1279,7 @@ Respond with ONLY JSON:
 
 ---
 
-### 3.7 Reflection Prompt
+### 3.8 Reflection Prompt
 
 **Variables**
 
@@ -1313,4 +1340,4 @@ When `reasoning_token_budget` is configured for a run, this line is appended to 
 |------|----------|-------------------|
 | Game 1: Item Allocation | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 2: Diplomatic Treaty | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 3: Co-Funding | Talk-Pledge-Revise | Rules → Prefs → Discussion → Thinking → Pledge → Feedback → [Commit Vote] → Reflection |
+| Game 3: Co-Funding | Talk-Pledge-Revise | Rules → Prefs → Discussion → Thinking → Pledge → **Feedback** → [Commit Vote] → Reflection |
