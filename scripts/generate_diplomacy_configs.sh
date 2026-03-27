@@ -83,17 +83,27 @@ while [[ $# -gt 0 ]]; do
             MODE="ambitious"
             shift
             ;;
+        --nano-vs-opus)
+            MODE="nano_vs_opus"
+            shift
+            ;;
+        --nano-vs-weak)
+            MODE="nano_vs_weak"
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious]"
+            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious|--nano-vs-opus|--nano-vs-weak]"
             echo ""
             echo "Experiment modes:"
-            echo "  --conservative Model-scale sweep: 4 pairs, 3x3 rho/theta grid, 1 run (72 configs)"
-            echo "  --ambitious    Model-scale sweep: 4 pairs, 5x5 rho/theta grid, 3 runs (600 configs)"
-            echo "  --model-scale  Model capability experiments: multiple model pairs, sweep rho/theta, no TTC"
-            echo "  --scaling      TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
-            echo "  --small        Reduced version of full experiment (fewer models, fewer params)"
-            echo "  --derisk       Minimal smoke test (1 config)"
-            echo "  (default)      Full experiment: both model-scale AND TTC scaling"
+            echo "  --conservative  Model-scale sweep: 4 pairs, 3x3 rho/theta grid, 1 run (72 configs)"
+            echo "  --ambitious     Model-scale sweep: 4 pairs, 5x5 rho/theta grid, 3 runs (600 configs)"
+            echo "  --model-scale   Model capability experiments: multiple model pairs, sweep rho/theta, no TTC"
+            echo "  --scaling       TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
+            echo "  --small         Reduced version of full experiment (fewer models, fewer params)"
+            echo "  --derisk        Minimal smoke test (1 config)"
+            echo "  --nano-vs-opus  gpt-5-nano vs claude-opus-4-6, 2 explicit param pairs, both orders (4 configs)"
+            echo "  --nano-vs-weak  gpt-5-nano vs gpt-5-nano and vs amazon-nova-micro-v1.0, same pairs (8 configs)"
+            echo "  (default)       Full experiment: both model-scale AND TTC scaling"
             exit 0
             ;;
         *)
@@ -124,6 +134,7 @@ DISCUSSION_TURNS=2
 MAX_TOKENS_PER_PHASE=10500
 BASE_SEED=42
 NUM_RUNS=1
+MS_PARAM_PAIRS=()  # explicit "rho:theta" pairs; if non-empty, overrides MS_RHO_VALUES × MS_THETA_VALUES grid
 
 # Reasoning phases (only used for TTC-scaling configs)
 REASONING_PHASES="thinking,reflection,discussion,proposal,voting"
@@ -188,6 +199,25 @@ elif [[ "$MODE" == "full" ]]; then
     MS_RHO_VALUES=(-0.8 -0.5 -0.2 0.0 0.2 0.5 0.8)
     MS_THETA_VALUES=(0.1 0.3 0.5 0.7 0.9)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
+elif [[ "$MODE" == "nano_vs_opus" ]]; then
+    MODEL_PAIRS=("gpt-5-nano,claude-opus-4-6")
+    MS_PARAM_PAIRS=("-1.0:1.0" "1.0:0.0")  # explicit pairs: (rho=-1,theta=1) and (rho=1,theta=0)
+    MS_RHO_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_THETA_VALUES=() # unused — overridden by MS_PARAM_PAIRS
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=1
+    MAX_ROUNDS=5
+elif [[ "$MODE" == "nano_vs_weak" ]]; then
+    MODEL_PAIRS=(
+        "gpt-5-nano,gpt-5-nano"
+        "gpt-5-nano,amazon-nova-micro-v1.0"
+    )
+    MS_PARAM_PAIRS=("-1.0:1.0" "1.0:0.0")  # same explicit pairs as nano_vs_opus
+    MS_RHO_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_THETA_VALUES=() # unused — overridden by MS_PARAM_PAIRS
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=1
+    MAX_ROUNDS=5
 else
     # scaling mode — no model-scale configs
     MODEL_PAIRS=()
@@ -240,7 +270,11 @@ fi
 # =============================================================================
 # Count totals
 # =============================================================================
-MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_RHO_VALUES[@]} * ${#MS_THETA_VALUES[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+if [[ ${#MS_PARAM_PAIRS[@]} -gt 0 ]]; then
+    MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_PARAM_PAIRS[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+else
+    MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_RHO_VALUES[@]} * ${#MS_THETA_VALUES[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+fi
 TTC_TOTAL=$((${#TTC_REASONING_MODELS[@]} * ${#TTC_TOKEN_BUDGETS[@]} * ${#TTC_RHO_VALUES[@]} * ${#TTC_THETA_VALUES[@]} * ${#TTC_MODEL_ORDERS[@]} * NUM_RUNS))
 TOTAL_EXPECTED=$((MS_TOTAL + TTC_TOTAL))
 
@@ -277,37 +311,50 @@ EXPERIMENT_ID=0
 # =============================================================================
 # Generate MODEL-SCALE configs (no TTC)
 # =============================================================================
+
+# Build unified (rho:theta) pair list — explicit pairs take priority over grid
+if [[ ${#MS_PARAM_PAIRS[@]} -gt 0 ]]; then
+    _MS_RHO_THETA_PAIRS=("${MS_PARAM_PAIRS[@]}")
+else
+    _MS_RHO_THETA_PAIRS=()
+    for _rho in "${MS_RHO_VALUES[@]}"; do
+        for _theta in "${MS_THETA_VALUES[@]}"; do
+            _MS_RHO_THETA_PAIRS+=("${_rho}:${_theta}")
+        done
+    done
+fi
+
 for model_pair in "${MODEL_PAIRS[@]}"; do
     IFS=',' read -ra MODELS <<< "${model_pair}"
     MODEL1="${MODELS[0]}"
     MODEL2="${MODELS[1]}"
 
-    for rho in "${MS_RHO_VALUES[@]}"; do
-        for theta in "${MS_THETA_VALUES[@]}"; do
-            for model_order in "${MS_MODEL_ORDERS[@]}"; do
-                for ((run_num=1; run_num<=NUM_RUNS; run_num++)); do
-                    EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
-                    CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
+    for rho_theta in "${_MS_RHO_THETA_PAIRS[@]}"; do
+        IFS=':' read -r rho theta <<< "${rho_theta}"
+        for model_order in "${MS_MODEL_ORDERS[@]}"; do
+            for ((run_num=1; run_num<=NUM_RUNS; run_num++)); do
+                EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
+                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
 
-                    # Model order determines which is Agent_Alpha
-                    if [[ "$model_order" == "weak_first" ]]; then
-                        MODELS_ARRAY="[\"${MODEL1}\", \"${MODEL2}\"]"
-                    else
-                        MODELS_ARRAY="[\"${MODEL2}\", \"${MODEL1}\"]"
-                    fi
+                # Model order determines which is Agent_Alpha
+                if [[ "$model_order" == "weak_first" ]]; then
+                    MODELS_ARRAY="[\"${MODEL1}\", \"${MODEL2}\"]"
+                else
+                    MODELS_ARRAY="[\"${MODEL2}\", \"${MODEL1}\"]"
+                fi
 
-                    SEED=$((BASE_SEED + EXPERIMENT_ID))
+                SEED=$((BASE_SEED + EXPERIMENT_ID))
 
-                    RHO_STR=$(echo "${rho}" | sed 's/\./_/g; s/-/n/g')
-                    THETA_STR=$(echo "${theta}" | sed 's/\./_/g')
+                RHO_STR=$(echo "${rho}" | sed 's/\./_/g; s/-/n/g')
+                THETA_STR=$(echo "${theta}" | sed 's/\./_/g')
 
-                    if [[ ${NUM_RUNS} -gt 1 ]]; then
-                        OUTPUT_DIR_SUFFIX="/run_${run_num}"
-                    else
-                        OUTPUT_DIR_SUFFIX=""
-                    fi
+                if [[ ${NUM_RUNS} -gt 1 ]]; then
+                    OUTPUT_DIR_SUFFIX="/run_${run_num}"
+                else
+                    OUTPUT_DIR_SUFFIX=""
+                fi
 
-                    cat > "${CONFIG_FILE}" << EOF
+                cat > "${CONFIG_FILE}" << EOF
 {
     "experiment_id": ${EXPERIMENT_ID},
     "experiment_type": "model_scale",
@@ -330,8 +377,7 @@ for model_pair in "${MODEL_PAIRS[@]}"; do
 }
 EOF
 
-                    EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
-                done
+                EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
             done
         done
     done

@@ -84,17 +84,27 @@ while [[ $# -gt 0 ]]; do
             MODE="ambitious"
             shift
             ;;
+        --nano-vs-opus)
+            MODE="nano_vs_opus"
+            shift
+            ;;
+        --nano-vs-weak)
+            MODE="nano_vs_weak"
+            shift
+            ;;
         --help|-h)
-            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious]"
+            echo "Usage: $0 [--derisk|--small|--model-scale|--scaling|--conservative|--ambitious|--nano-vs-opus|--nano-vs-weak]"
             echo ""
             echo "Experiment modes:"
-            echo "  --conservative Model-scale sweep: 4 pairs, 3x3 alpha/sigma grid, 1 run (72 configs)"
-            echo "  --ambitious    Model-scale sweep: 4 pairs, 5x5 alpha/sigma grid, 3 runs (600 configs)"
-            echo "  --model-scale  Model capability experiments: multiple model pairs, sweep alpha/sigma, no TTC"
-            echo "  --scaling      TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
-            echo "  --small        Reduced version of full experiment (fewer models, fewer params)"
-            echo "  --derisk       Minimal smoke test (1 config)"
-            echo "  (default)      Full experiment: both model-scale AND TTC scaling"
+            echo "  --conservative  Model-scale sweep: 4 pairs, 3x3 alpha/sigma grid, 1 run (72 configs)"
+            echo "  --ambitious     Model-scale sweep: 4 pairs, 5x5 alpha/sigma grid, 3 runs (600 configs)"
+            echo "  --model-scale   Model capability experiments: multiple model pairs, sweep alpha/sigma, no TTC"
+            echo "  --scaling       TTC scaling experiments: reasoning models vs baseline, sweep token budgets"
+            echo "  --small         Reduced version of full experiment (fewer models, fewer params)"
+            echo "  --derisk        Minimal smoke test (1 config)"
+            echo "  --nano-vs-opus  gpt-5-nano vs claude-opus-4-6, 2 explicit param pairs, both orders (4 configs)"
+            echo "  --nano-vs-weak  gpt-5-nano vs gpt-5-nano and vs amazon-nova-micro-v1.0, same pairs (8 configs)"
+            echo "  (default)       Full experiment: both model-scale AND TTC scaling"
             echo ""
             echo "Environment:"
             echo "  COFUNDING_DISCUSSION_TRANSPARENCY=aggregate|own|full (default: own)"
@@ -130,6 +140,7 @@ DISCUSSION_TURNS=2
 MAX_TOKENS_PER_PHASE=10500
 BASE_SEED=42
 NUM_RUNS=1
+MS_PARAM_PAIRS=()  # explicit "alpha:sigma" pairs; if non-empty, overrides MS_ALPHA_VALUES × MS_SIGMA_VALUES grid
 C_MIN=10.0
 C_MAX=30.0
 COFUNDING_DISCUSSION_TRANSPARENCY="${COFUNDING_DISCUSSION_TRANSPARENCY:-own}"
@@ -240,6 +251,25 @@ elif [[ "$MODE" == "full" ]]; then
     MS_ALPHA_VALUES=(0.0 0.2 0.4 0.6 0.8 1.0)
     MS_SIGMA_VALUES=(0.2 0.4 0.6 0.8 1.0)
     MS_MODEL_ORDERS=("weak_first" "strong_first")
+elif [[ "$MODE" == "nano_vs_opus" ]]; then
+    MODEL_PAIRS=("gpt-5-nano,claude-opus-4-6")
+    MS_PARAM_PAIRS=("0.0:0.3" "1.0:1.0")  # explicit pairs: (alpha=0,sigma=0.3) and (alpha=1,sigma=1.0)
+    MS_ALPHA_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_SIGMA_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=1
+    MAX_ROUNDS=5
+elif [[ "$MODE" == "nano_vs_weak" ]]; then
+    MODEL_PAIRS=(
+        "gpt-5-nano,gpt-5-nano"
+        "gpt-5-nano,amazon-nova-micro-v1.0"
+    )
+    MS_PARAM_PAIRS=("0.0:0.3" "1.0:1.0")  # same explicit pairs as nano_vs_opus
+    MS_ALPHA_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_SIGMA_VALUES=()   # unused — overridden by MS_PARAM_PAIRS
+    MS_MODEL_ORDERS=("weak_first" "strong_first")
+    NUM_RUNS=1
+    MAX_ROUNDS=5
 else
     # scaling mode -- no model-scale configs
     MODEL_PAIRS=()
@@ -292,7 +322,11 @@ fi
 # =============================================================================
 # Count totals
 # =============================================================================
-MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_ALPHA_VALUES[@]} * ${#MS_SIGMA_VALUES[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+if [[ ${#MS_PARAM_PAIRS[@]} -gt 0 ]]; then
+    MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_PARAM_PAIRS[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+else
+    MS_TOTAL=$((${#MODEL_PAIRS[@]} * ${#MS_ALPHA_VALUES[@]} * ${#MS_SIGMA_VALUES[@]} * ${#MS_MODEL_ORDERS[@]} * NUM_RUNS))
+fi
 TTC_TOTAL=$((${#TTC_REASONING_MODELS[@]} * ${#TTC_TOKEN_BUDGETS[@]} * ${#TTC_ALPHA_VALUES[@]} * ${#TTC_SIGMA_VALUES[@]} * ${#TTC_MODEL_ORDERS[@]} * NUM_RUNS))
 TOTAL_EXPECTED=$((MS_TOTAL + TTC_TOTAL))
 
@@ -329,37 +363,50 @@ EXPERIMENT_ID=0
 # =============================================================================
 # Generate MODEL-SCALE configs (no TTC)
 # =============================================================================
+
+# Build unified (alpha:sigma) pair list — explicit pairs take priority over grid
+if [[ ${#MS_PARAM_PAIRS[@]} -gt 0 ]]; then
+    _MS_ALPHA_SIGMA_PAIRS=("${MS_PARAM_PAIRS[@]}")
+else
+    _MS_ALPHA_SIGMA_PAIRS=()
+    for _alpha in "${MS_ALPHA_VALUES[@]}"; do
+        for _sigma in "${MS_SIGMA_VALUES[@]}"; do
+            _MS_ALPHA_SIGMA_PAIRS+=("${_alpha}:${_sigma}")
+        done
+    done
+fi
+
 for model_pair in "${MODEL_PAIRS[@]}"; do
     IFS=',' read -ra MODELS <<< "${model_pair}"
     MODEL1="${MODELS[0]}"
     MODEL2="${MODELS[1]}"
 
-    for alpha in "${MS_ALPHA_VALUES[@]}"; do
-        for sigma in "${MS_SIGMA_VALUES[@]}"; do
-            for model_order in "${MS_MODEL_ORDERS[@]}"; do
-                for ((run_num=1; run_num<=NUM_RUNS; run_num++)); do
-                    EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
-                    CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
+    for alpha_sigma in "${_MS_ALPHA_SIGMA_PAIRS[@]}"; do
+        IFS=':' read -r alpha sigma <<< "${alpha_sigma}"
+        for model_order in "${MS_MODEL_ORDERS[@]}"; do
+            for ((run_num=1; run_num<=NUM_RUNS; run_num++)); do
+                EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
+                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
 
-                    # Model order determines which is Agent_Alpha
-                    if [[ "$model_order" == "weak_first" ]]; then
-                        MODELS_ARRAY="[\"${MODEL1}\", \"${MODEL2}\"]"
-                    else
-                        MODELS_ARRAY="[\"${MODEL2}\", \"${MODEL1}\"]"
-                    fi
+                # Model order determines which is Agent_Alpha
+                if [[ "$model_order" == "weak_first" ]]; then
+                    MODELS_ARRAY="[\"${MODEL1}\", \"${MODEL2}\"]"
+                else
+                    MODELS_ARRAY="[\"${MODEL2}\", \"${MODEL1}\"]"
+                fi
 
-                    SEED=$((BASE_SEED + EXPERIMENT_ID))
+                SEED=$((BASE_SEED + EXPERIMENT_ID))
 
-                    ALPHA_STR=$(echo "${alpha}" | sed 's/\./_/g')
-                    SIGMA_STR=$(echo "${sigma}" | sed 's/\./_/g')
+                ALPHA_STR=$(echo "${alpha}" | sed 's/\./_/g')
+                SIGMA_STR=$(echo "${sigma}" | sed 's/\./_/g')
 
-                    if [[ ${NUM_RUNS} -gt 1 ]]; then
-                        OUTPUT_DIR_SUFFIX="/run_${run_num}"
-                    else
-                        OUTPUT_DIR_SUFFIX=""
-                    fi
+                if [[ ${NUM_RUNS} -gt 1 ]]; then
+                    OUTPUT_DIR_SUFFIX="/run_${run_num}"
+                else
+                    OUTPUT_DIR_SUFFIX=""
+                fi
 
-                    cat > "${CONFIG_FILE}" << EOF
+                cat > "${CONFIG_FILE}" << EOF
 {
     "experiment_id": ${EXPERIMENT_ID},
     "experiment_type": "model_scale",
@@ -387,8 +434,7 @@ for model_pair in "${MODEL_PAIRS[@]}"; do
 }
 EOF
 
-                    EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
-                done
+                EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
             done
         done
     done
