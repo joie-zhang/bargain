@@ -110,8 +110,9 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 - These preferences are SECRET and specific to you
 
 **VOTING RULES:**
-- You vote "accept" or "reject" on each proposal
-- A proposal needs UNANIMOUS acceptance to pass
+- All proposals submitted in a round are shown together during voting
+- You vote "accept" or "reject" on each proposal independently
+- A proposal needs UNANIMOUS acceptance from all agents to pass
 - If no proposal gets unanimous support, we continue to the next round
 
 **REWARD DISCOUNTING:**
@@ -447,34 +448,149 @@ This is the open discussion phase where all agents can share information about t
         round_num: int,
         reasoning_token_budget: Optional[int] = None
     ) -> str:
-        """Generate voting prompt."""
+        """Generate a voting prompt for a single proposal."""
+        single_proposal = proposal.copy()
+        single_proposal.setdefault("proposal_number", 1)
+        return self.get_batch_voting_prompt(
+            agent_id=agent_id,
+            proposals=[single_proposal],
+            game_state=game_state,
+            round_num=round_num,
+            reasoning_token_budget=reasoning_token_budget
+        )
+
+    def get_batch_voting_prompt(
+        self,
+        agent_id: str,
+        proposals: List[Dict[str, Any]],
+        game_state: Dict[str, Any],
+        round_num: int,
+        reasoning_token_budget: Optional[int] = None
+    ) -> str:
+        """Generate a batch voting prompt covering all proposals in the round."""
         reasoning_instruction = ""
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
-        return f"""A proposal has been made for item allocation:
+        proposal_blocks = []
+        for fallback_num, proposal in enumerate(proposals, start=1):
+            proposal_number = proposal.get("proposal_number", fallback_num)
+            proposal_blocks.append(
+                f"PROPOSAL #{proposal_number}:\n"
+                f"ALLOCATION: {json.dumps(proposal.get('allocation', {}), indent=2)}\n"
+                f"REASONING: {proposal.get('reasoning', 'No reasoning provided')}\n"
+                f"PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}"
+            )
 
-PROPOSAL: {json.dumps(proposal.get('allocation', {}), indent=2)}
-REASONING: {proposal.get('reasoning', 'No reasoning provided')}
-PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}
+        example_entries = []
+        for example_index, proposal in enumerate(proposals[: max(1, min(2, len(proposals)))], start=1):
+            proposal_number = proposal.get("proposal_number", example_index)
+            example_vote = "accept" if example_index == 1 else "reject"
+            example_entries.append(
+                "        {\n"
+                f'            "proposal_number": {proposal_number},\n'
+                f'            "vote": "{example_vote}",\n'
+                f'            "reasoning": "Brief explanation of your vote on Proposal #{proposal_number}"\n'
+                "        }"
+            )
+
+        proposals_text = "\n\n".join(proposal_blocks)
+        votes_example = ",\n".join(example_entries)
+
+        return f"""The following proposals have been made for item allocation this round:
+
+{proposals_text}
 
 **REMINDER — YOUR UTILITY:**
 - Your utility = sum of preference values for items you receive, multiplied by the round discount
 - Round 1: 100% | Round 2: {self.config.gamma_discount * 100:.0f}% | Round 3: {self.config.gamma_discount**2 * 100:.0f}% (\u03b3={self.config.gamma_discount} per round)
 - If no deal is reached by the final round, your utility is 0
 
-Please vote on this proposal. Consider:
-- How this allocation affects your utility
+Vote on EACH proposal independently. Consider:
+- How each allocation affects your utility
 - Whether you might get a better deal by continuing negotiation
-- The strategic implications of accepting vs. rejecting{reasoning_instruction}
+- The strategic implications of accepting or rejecting each proposal
+- You may accept zero, one, or multiple proposals
+- You may reject zero, one, or multiple proposals
+- Seeing all proposals together does not eliminate any proposal before you vote{reasoning_instruction}
 
 Respond with ONLY a JSON object in this exact format:
 {{
-    "vote": "accept",
-    "reasoning": "Brief explanation of your vote"
+    "votes": [
+{votes_example}
+    ]
 }}
 
-Vote must be either "accept" or "reject"."""
+Include exactly one vote entry for each proposal shown above.
+Each vote must be either "accept" or "reject"."""
+
+    def parse_batch_voting_response(
+        self,
+        response: str,
+        proposal_numbers: List[int],
+        agent_id: str,
+        round_num: int
+    ) -> List[Dict[str, Any]]:
+        """Parse a batch voting response into one vote per proposal."""
+        try:
+            if response.strip().startswith('{'):
+                payload = json.loads(response)
+            else:
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    payload = json.loads(json_match.group())
+                else:
+                    raise ValueError("No JSON found in batch vote response")
+
+            raw_votes = payload.get("votes", [])
+            if not isinstance(raw_votes, list):
+                raise ValueError("Batch vote response did not contain a votes list")
+        except (json.JSONDecodeError, ValueError, TypeError, AttributeError):
+            raw_votes = []
+
+        proposal_number_set = set(proposal_numbers)
+        parsed_votes = {}
+
+        for raw_vote in raw_votes:
+            if not isinstance(raw_vote, dict):
+                continue
+
+            try:
+                proposal_number = int(raw_vote.get("proposal_number"))
+            except (TypeError, ValueError):
+                continue
+
+            if proposal_number not in proposal_number_set:
+                continue
+
+            vote_value = str(raw_vote.get("vote", "reject")).strip().lower()
+            if vote_value not in ("accept", "reject"):
+                vote_value = "reject"
+
+            parsed_votes[proposal_number] = {
+                "proposal_number": proposal_number,
+                "vote": vote_value,
+                "reasoning": raw_vote.get("reasoning", ""),
+                "voter": agent_id,
+                "round": round_num,
+            }
+
+        vote_results = []
+        for proposal_number in proposal_numbers:
+            vote_results.append(
+                parsed_votes.get(
+                    proposal_number,
+                    {
+                        "proposal_number": proposal_number,
+                        "vote": "reject",
+                        "reasoning": "Missing or invalid vote entry",
+                        "voter": agent_id,
+                        "round": round_num,
+                    }
+                )
+            )
+
+        return vote_results
 
     def get_thinking_prompt(
         self,

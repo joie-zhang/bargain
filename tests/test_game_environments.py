@@ -248,6 +248,75 @@ class TestInterfaceImplementation:
         assert isinstance(prompt1, str)
         assert isinstance(prompt2, str)
 
+    def test_item_allocation_batch_voting_prompt_lists_all_proposals(self, item_allocation_game, agents):
+        """Game 1 should be able to show all proposals in one batch voting prompt."""
+        state = item_allocation_game.create_game_state(agents)
+        proposals = [
+            {
+                "proposal_number": 1,
+                "allocation": {"Agent_1": [0], "Agent_2": [1, 2]},
+                "reasoning": "Proposal one",
+                "proposed_by": "Agent_1",
+            },
+            {
+                "proposal_number": 2,
+                "allocation": {"Agent_1": [1], "Agent_2": [0, 2]},
+                "reasoning": "Proposal two",
+                "proposed_by": "Agent_2",
+            },
+        ]
+
+        prompt = item_allocation_game.get_batch_voting_prompt("Agent_1", proposals, state, 1)
+
+        assert "PROPOSAL #1" in prompt
+        assert "PROPOSAL #2" in prompt
+        assert '"votes"' in prompt
+        assert "Vote on EACH proposal independently." in prompt
+        assert "You may accept zero, one, or multiple proposals" in prompt
+
+    def test_item_allocation_parse_batch_voting_response_defaults_missing_votes(self, item_allocation_game):
+        """Missing or invalid batch vote entries should default to reject."""
+        response = """
+        {
+            "votes": [
+                {
+                    "proposal_number": 1,
+                    "vote": "accept",
+                    "reasoning": "Works for me"
+                },
+                {
+                    "proposal_number": 99,
+                    "vote": "accept",
+                    "reasoning": "Should be ignored"
+                }
+            ]
+        }
+        """
+
+        votes = item_allocation_game.parse_batch_voting_response(
+            response=response,
+            proposal_numbers=[1, 2],
+            agent_id="Agent_1",
+            round_num=2,
+        )
+
+        assert votes == [
+            {
+                "proposal_number": 1,
+                "vote": "accept",
+                "reasoning": "Works for me",
+                "voter": "Agent_1",
+                "round": 2,
+            },
+            {
+                "proposal_number": 2,
+                "vote": "reject",
+                "reasoning": "Missing or invalid vote entry",
+                "voter": "Agent_1",
+                "round": 2,
+            },
+        ]
+
     def test_get_thinking_prompt(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement get_thinking_prompt."""
         state1 = item_allocation_game.create_game_state(agents)

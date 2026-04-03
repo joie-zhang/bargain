@@ -119,8 +119,9 @@ You are participating in a strategic negotiation with another agent over 5 valua
 - These preferences are SECRET and specific to you
 
 **VOTING RULES:**
-- You vote "accept" or "reject" on each proposal
-- A proposal needs UNANIMOUS acceptance to pass
+- All proposals submitted in a round are shown together during voting
+- You vote "accept" or "reject" on each proposal independently
+- A proposal needs UNANIMOUS acceptance from all agents to pass
 - If no proposal gets unanimous support, we continue to the next round
 
 **REWARD DISCOUNTING:**
@@ -442,40 +443,61 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{proposal['allocation']}` | JSON allocation dict | `{"gpt-4o": [0, 2], "claude-3-7-sonnet": [1, 3, 4]}` |
-| `{proposal['reasoning']}` | Proposer's stated reasoning | `"I take Apple and Stone; you get the rest"` |
-| `{proposal['proposed_by']}` | Proposer agent ID | `gpt-4o` |
+| `{proposals_text}` | Formatted numbered list of all proposals shown together | see rendered prompt |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
 
 ```
-A proposal has been made for item allocation:
+The following proposals have been made for item allocation this round:
 
-PROPOSAL: {
+PROPOSAL #1:
+ALLOCATION: {
   "gpt-4o": [0, 2],
   "claude-3-7-sonnet": [1, 3, 4]
 }
 REASONING: I take Apple and Stone; you get the rest.
 PROPOSED BY: gpt-4o
 
+PROPOSAL #2:
+ALLOCATION: {
+  "gpt-4o": [1, 4],
+  "claude-3-7-sonnet": [0, 2, 3]
+}
+REASONING: I get Jewel and Pencil; you get Apple, Stone, and Quill.
+PROPOSED BY: claude-3-7-sonnet
+
 **REMINDER — YOUR UTILITY:**
 - Your utility = sum of preference values for items you receive, multiplied by the round discount
 - Round 1: 100% | Round 2: 90% | Round 3: 81% (γ=0.9 per round)
 - If no deal is reached by the final round, your utility is 0
 
-Please vote on this proposal. Consider:
-- How this allocation affects your utility
+Vote on EACH proposal independently. Consider:
+- How each allocation affects your utility
 - Whether you might get a better deal by continuing negotiation
-- The strategic implications of accepting vs. rejecting
+- The strategic implications of accepting or rejecting each proposal
+- You may accept zero, one, or multiple proposals
+- You may reject zero, one, or multiple proposals
+- Seeing all proposals together does not eliminate any proposal before you vote
 
 Respond with ONLY a JSON object in this exact format:
 {
-    "vote": "accept",
-    "reasoning": "Brief explanation of your vote"
+    "votes": [
+        {
+            "proposal_number": 1,
+            "vote": "accept",
+            "reasoning": "Brief explanation of your vote on Proposal #1"
+        },
+        {
+            "proposal_number": 2,
+            "vote": "reject",
+            "reasoning": "Brief explanation of your vote on Proposal #2"
+        }
+    ]
 }
 
-Vote must be either "accept" or "reject".
+Include exactly one vote entry for each proposal shown above.
+Each vote must be either "accept" or "reject".
 ```
 
 ---

@@ -822,6 +822,21 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["voting"])
 
+        batch_voting_supported = (
+            self.game_environment is not None
+            and hasattr(self.game_environment, "get_batch_voting_prompt")
+            and hasattr(self.game_environment, "parse_batch_voting_response")
+        )
+
+        prepared_batch_proposals = []
+        if batch_voting_supported:
+            for enum_proposal in enumerated_proposals:
+                proposal_for_voting = enum_proposal.get("original_proposal", {}).copy()
+                proposal_for_voting["proposal_number"] = enum_proposal["proposal_number"]
+                proposal_for_voting["proposed_by"] = enum_proposal["proposer"]
+                proposal_for_voting["round"] = round_num
+                prepared_batch_proposals.append(proposal_for_voting)
+
         for agent in agents:
             # Get reasoning budget for this specific agent
             reasoning_budget = self._get_reasoning_budget("voting", agent.agent_id)
@@ -842,41 +857,107 @@ class PhaseHandler:
             )
 
             try:
-                for enum_proposal in enumerated_proposals:
-                    # Build proposal_for_voting in the correct format for the game
-                    if self.game_environment is not None:
-                        # Pass through original proposal with its native format
-                        proposal_for_voting = enum_proposal.get("original_proposal", {}).copy()
-                        proposal_for_voting["proposed_by"] = enum_proposal["proposer"]
-                        proposal_for_voting["round"] = round_num
+                if batch_voting_supported:
+                    if "game_state" in preferences:
+                        game_state = preferences["game_state"]
                     else:
-                        proposal_for_voting = {
-                            "allocation": enum_proposal["allocation"],
-                            "proposed_by": enum_proposal["proposer"],
-                            "reasoning": enum_proposal.get("reasoning", ""),
-                            "round": round_num
+                        game_state = self._build_game_state(
+                            agents, items, preferences, round_num, max_rounds,
+                            agent.agent_id, "voting",
+                            proposals=prepared_batch_proposals
+                        )
+
+                    voting_prompt = self.game_environment.get_batch_voting_prompt(
+                        agent_id=agent.agent_id,
+                        proposals=prepared_batch_proposals,
+                        game_state=game_state,
+                        round_num=round_num,
+                        reasoning_token_budget=reasoning_budget
+                    )
+
+                    response = await agent.generate_response(voting_context, voting_prompt)
+                    token_usage = self._extract_token_usage(response)
+
+                    vote_results = self.game_environment.parse_batch_voting_response(
+                        response.content,
+                        [proposal["proposal_number"] for proposal in prepared_batch_proposals],
+                        agent.agent_id,
+                        round_num
+                    )
+
+                    for idx, (enum_proposal, vote_result) in enumerate(zip(enumerated_proposals, vote_results)):
+                        vote_entry = {
+                            "voter_id": agent.agent_id,
+                            "proposal_number": enum_proposal["proposal_number"],
+                            "vote": vote_result.get("vote", "reject"),
+                            "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
+                            "round": round_num,
+                            "timestamp": time.time()
+                        }
+                        agent_votes.append(vote_entry)
+
+                        self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
+
+                        proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
+                        enhanced_vote_response = {
+                            "voter": agent.agent_id,
+                            "proposal_number": enum_proposal["proposal_number"],
+                            "proposal_by": enum_proposal["proposer"],
+                            "vote_decision": vote_result.get("vote", "reject"),
+                            "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
+                            "proposal_details": {
+                                proposal_detail_key: enum_proposal.get(proposal_detail_key, {}),
+                                "original_reasoning": enum_proposal.get("reasoning", "")
+                            },
+                            "round": round_num,
+                            "timestamp": time.time()
                         }
 
-                    # Generate voting prompt
-                    if self.game_environment is not None:
-                        if "game_state" in preferences:
-                            game_state = preferences["game_state"]
-                        else:
-                            game_state = self._build_game_state(
-                                agents, items, preferences, round_num, max_rounds,
-                                agent.agent_id, "voting",
-                                proposals=[proposal_for_voting]
-                            )
-                        voting_prompt = self.game_environment.get_voting_prompt(
-                            agent_id=agent.agent_id,
-                            proposal=proposal_for_voting,
-                            game_state=game_state,
-                            round_num=round_num,
-                            reasoning_token_budget=reasoning_budget
+                        self.save_interaction(
+                            agent.agent_id,
+                            f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
+                            voting_prompt,
+                            json.dumps(enhanced_vote_response, default=str),
+                            round_num,
+                            token_usage if idx == 0 else None,
+                            model_name=agent.get_model_info()["model_name"]
                         )
-                    else:
-                        # Legacy mode: use default voting prompt
-                        voting_prompt = f"""A proposal has been made for item allocation:
+                else:
+                    for enum_proposal in enumerated_proposals:
+                        # Build proposal_for_voting in the correct format for the game
+                        if self.game_environment is not None:
+                            # Pass through original proposal with its native format
+                            proposal_for_voting = enum_proposal.get("original_proposal", {}).copy()
+                            proposal_for_voting["proposed_by"] = enum_proposal["proposer"]
+                            proposal_for_voting["round"] = round_num
+                        else:
+                            proposal_for_voting = {
+                                "allocation": enum_proposal["allocation"],
+                                "proposed_by": enum_proposal["proposer"],
+                                "reasoning": enum_proposal.get("reasoning", ""),
+                                "round": round_num
+                            }
+
+                        # Generate voting prompt
+                        if self.game_environment is not None:
+                            if "game_state" in preferences:
+                                game_state = preferences["game_state"]
+                            else:
+                                game_state = self._build_game_state(
+                                    agents, items, preferences, round_num, max_rounds,
+                                    agent.agent_id, "voting",
+                                    proposals=[proposal_for_voting]
+                                )
+                            voting_prompt = self.game_environment.get_voting_prompt(
+                                agent_id=agent.agent_id,
+                                proposal=proposal_for_voting,
+                                game_state=game_state,
+                                round_num=round_num,
+                                reasoning_token_budget=reasoning_budget
+                            )
+                        else:
+                            # Legacy mode: use default voting prompt
+                            voting_prompt = f"""A proposal has been made for item allocation:
 PROPOSAL: {json.dumps(proposal_for_voting['allocation'], indent=2)}
 REASONING: {proposal_for_voting.get('reasoning', 'No reasoning provided')}
 PROPOSED BY: {proposal_for_voting.get('proposed_by', 'Unknown')}
@@ -891,69 +972,69 @@ Respond with ONLY a JSON object in this exact format:
 }}
 Vote must be either "accept" or "reject"."""
 
-                    # Collect vote using game-environment-aware path or legacy
-                    if self.game_environment is not None:
-                        # Use game-specific voting prompt directly with generate_response
-                        response = await agent.generate_response(voting_context, voting_prompt)
-                        token_usage = self._extract_token_usage(response)
-                        try:
-                            vote_result = self._parse_vote_response(response.content, agent.agent_id, round_num)
-                        except (ValueError, json.JSONDecodeError) as e:
-                            self.logger.warning(f"Failed to parse vote from {agent.agent_id}: {e}")
-                            vote_result = {
-                                "vote": "reject",
-                                "reasoning": "Failed to parse vote response",
-                                "voter": agent.agent_id,
-                                "round": round_num,
-                            }
-                    else:
-                        vote_result = await agent.vote_on_proposal(
-                            voting_context,
-                            proposal_for_voting
+                        # Collect vote using game-environment-aware path or legacy
+                        if self.game_environment is not None:
+                            # Use game-specific voting prompt directly with generate_response
+                            response = await agent.generate_response(voting_context, voting_prompt)
+                            token_usage = self._extract_token_usage(response)
+                            try:
+                                vote_result = self._parse_vote_response(response.content, agent.agent_id, round_num)
+                            except (ValueError, json.JSONDecodeError) as e:
+                                self.logger.warning(f"Failed to parse vote from {agent.agent_id}: {e}")
+                                vote_result = {
+                                    "vote": "reject",
+                                    "reasoning": "Failed to parse vote response",
+                                    "voter": agent.agent_id,
+                                    "round": round_num,
+                                }
+                        else:
+                            vote_result = await agent.vote_on_proposal(
+                                voting_context,
+                                proposal_for_voting
+                            )
+                            # Extract token usage if present
+                            token_usage = vote_result.pop("_token_usage", None)
+
+                        vote_entry = {
+                            "voter_id": agent.agent_id,
+                            "proposal_number": enum_proposal["proposal_number"],
+                            "vote": vote_result.get("vote", "reject"),
+                            "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
+                            "round": round_num,
+                            "timestamp": time.time()
+                        }
+                        agent_votes.append(vote_entry)
+
+                        self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
+
+                        # Create enhanced vote response with full context
+                        # Use native proposal key (agreement or allocation)
+                        proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
+                        enhanced_vote_response = {
+                            "voter": agent.agent_id,
+                            "proposal_number": enum_proposal["proposal_number"],
+                            "proposal_by": enum_proposal["proposer"],
+                            "vote_decision": vote_result.get("vote", "reject"),
+                            "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
+                            "proposal_details": {
+                                proposal_detail_key: enum_proposal.get(proposal_detail_key, {}),
+                                "original_reasoning": enum_proposal.get("reasoning", "")
+                            },
+                            "round": round_num,
+                            "timestamp": time.time()
+                        }
+
+                        # Save the voting interaction with enhanced context
+                        vote_response_str = json.dumps(enhanced_vote_response, default=str)
+                        self.save_interaction(
+                            agent.agent_id,
+                            f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
+                            voting_prompt,
+                            vote_response_str,
+                            round_num,
+                            token_usage,
+                            model_name=agent.get_model_info()["model_name"]
                         )
-                        # Extract token usage if present
-                        token_usage = vote_result.pop("_token_usage", None)
-
-                    vote_entry = {
-                        "voter_id": agent.agent_id,
-                        "proposal_number": enum_proposal["proposal_number"],
-                        "vote": vote_result.get("vote", "reject"),
-                        "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
-                        "round": round_num,
-                        "timestamp": time.time()
-                    }
-                    agent_votes.append(vote_entry)
-
-                    self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
-
-                    # Create enhanced vote response with full context
-                    # Use native proposal key (agreement or allocation)
-                    proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
-                    enhanced_vote_response = {
-                        "voter": agent.agent_id,
-                        "proposal_number": enum_proposal["proposal_number"],
-                        "proposal_by": enum_proposal["proposer"],
-                        "vote_decision": vote_result.get("vote", "reject"),
-                        "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
-                        "proposal_details": {
-                            proposal_detail_key: enum_proposal.get(proposal_detail_key, {}),
-                            "original_reasoning": enum_proposal.get("reasoning", "")
-                        },
-                        "round": round_num,
-                        "timestamp": time.time()
-                    }
-
-                    # Save the voting interaction with enhanced context
-                    vote_response_str = json.dumps(enhanced_vote_response, default=str)
-                    self.save_interaction(
-                        agent.agent_id,
-                        f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
-                        voting_prompt,
-                        vote_response_str,
-                        round_num,
-                        token_usage,
-                        model_name=agent.get_model_info()["model_name"]
-                    )
                 
                 private_votes.extend(agent_votes)
                 
