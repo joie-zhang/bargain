@@ -52,12 +52,20 @@ class StrongModelAgentFactory:
         else:  # strong_first or random (random is handled earlier in experiment.py)
             reasoning_agent_index = 0  # First agent (Agent_Alpha) is reasoning
         
-        # Use Greek letters for agent names to maintain anonymity
+        # # Use Greek letters for agent names to maintain anonymity
+        # agent_names = [
+        #     "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta",
+        #     "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu",
+        #     "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon",
+        #     "Phi", "Chi", "Psi", "Omega"
+        # ]
+        
+        # Use numbers for agent names to maintain anonymity
         agent_names = [
-            "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta",
-            "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu",
-            "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon",
-            "Phi", "Chi", "Psi", "Omega"
+            "1", "2", "3", "4", "5", "6",
+            "7", "8", "9", "10", "11", "12",
+            "13", "14", "15", "16", "17",
+            "18", "19", "20"
         ]
 
         # DEBUG: Log the model order as received
@@ -75,7 +83,7 @@ class StrongModelAgentFactory:
             if i < len(agent_names):
                 agent_id = f"Agent_{agent_names[i]}"
             else:
-                agent_id = f"Agent_{i+1}"  # Fallback to numbers if we run out of Greek letters
+                agent_id = f"Agent_{i+1}"  # Fallback to numbers if we run out of hard-coded agent names
 
             # Only apply reasoning_token_budget to the reasoning agent, not the baseline
             agent_reasoning_budget = reasoning_token_budget if i == reasoning_agent_index else None
