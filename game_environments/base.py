@@ -438,9 +438,27 @@ class GameEnvironment(ABC):
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
+        vote_summary_lines = []
+        for prop_num in sorted(tabulation_result.get("votes_by_proposal", {}).keys()):
+            vote_counts = tabulation_result["votes_by_proposal"][prop_num]
+            vote_summary_lines.append(
+                f"- Proposal #{prop_num}: {vote_counts['accept']} accept, {vote_counts['reject']} reject"
+            )
+        vote_summary = "\n".join(vote_summary_lines) if vote_summary_lines else "- No vote summary available."
+
         return f"""Reflect on the outcome of round {round_num}.
 No proposal achieved unanimous acceptance.
-Consider what adjustments might lead to consensus in future rounds.{reasoning_instruction}"""
+
+**VOTING OUTCOME THIS ROUND:**
+{vote_summary}
+
+Take stock of what this round revealed before the next round begins.
+- What did you learn from the proposals and voting outcome?
+- Which participants seem to have compatible vs. conflicting priorities?
+- What seems to be blocking consensus?
+- How should you adjust your communication, concessions, or proposal strategy to improve the chances of agreement?
+
+Focus on concrete adjustments that could move the negotiation closer to consensus while still protecting your most important interests.{reasoning_instruction}"""
 
     def get_contextual_discussion_prompt(
         self,
