@@ -233,6 +233,8 @@ class PhaseHandler:
             "items": items,
             "agents": [a.agent_id for a in agents],
             "agent_id": agent_id,
+            # Preserve the canonical key expected by game environments.
+            "agent_preferences": preferences.get("agent_preferences", {}),
             "preferences": preferences.get("agent_preferences", {}).get(agent_id, []),
             "all_preferences": preferences.get("agent_preferences", {}),
             "phase": phase,
@@ -655,7 +657,6 @@ class PhaseHandler:
                 # Use game-specific prompt (already generated above) and parsing
                 response = await agent.generate_response(context, proposal_prompt)
                 token_usage = self._extract_token_usage(response)
-                game_state = preferences["game_state"]
                 proposal = self.game_environment.parse_proposal(
                     response.content, agent.agent_id, game_state,
                     [a.agent_id for a in agents]
@@ -743,7 +744,10 @@ class PhaseHandler:
 
             # Display: delegate to game_environment if available
             if self.game_environment is not None:
-                game_state = preferences.get("game_state", {})
+                game_state = preferences.get("game_state", {
+                    "items": items,
+                    "agent_preferences": preferences.get("agent_preferences", {}),
+                })
                 display_text = self.game_environment.format_proposal_display(proposal, game_state)
                 proposal_display_lines.append(f"PROPOSAL #{proposal_num}:")
                 proposal_display_lines.append(display_text)
@@ -1122,7 +1126,10 @@ Vote must be either "accept" or "reject"."""
                     if enum_prop["proposal_number"] == prop_num:
                         if self.game_environment is not None:
                             # Game-environment-aware utility calculation
-                            game_state = preferences["game_state"]
+                            game_state = preferences.get("game_state", {
+                                "items": items,
+                                "agent_preferences": preferences.get("agent_preferences", {}),
+                            })
                             winning_proposal = enum_prop.get("original_proposal", enum_prop)
                             for agent in agents:
                                 final_utilities[agent.agent_id] = self.game_environment.calculate_utility(
