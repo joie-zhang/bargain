@@ -378,6 +378,10 @@ Respond with ONLY a JSON object in this exact format:
                 history_section += f"{msg}\n\n"
             history_section += "---\n"
 
+        urgency = ""
+        if round_num >= max_rounds - 1:
+            urgency = "\n⏰ **URGENT**: This is one of the final rounds!"
+
         if round_num == 1 and not discussion_history:
             # First speaker in first round
             context = """**DISCUSSION OBJECTIVES:**
@@ -387,9 +391,10 @@ Respond with ONLY a JSON object in this exact format:
 - Identify mutually beneficial trade possibilities
 
 You are the first to speak. Please share your thoughts on the items and any initial ideas for how a deal might be reached."""
-        elif round_num == 1:
-            # Continuing discussion in first round
-            context = """**YOUR TURN TO RESPOND:**
+        elif discussion_history:
+            # Responding after other agents have already spoken this round
+            if round_num == 1:
+                context = """**YOUR TURN TO RESPOND:**
 Based on what others have said above, please:
 - Respond to specific points raised by other agents
 - Share your own perspective on the items
@@ -397,19 +402,29 @@ Based on what others have said above, please:
 - Ask clarifying questions if needed
 
 Keep the conversation flowing naturally."""
+            else:
+                context = f"""**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to specific points raised by other agents
+- Share your own perspective on the items
+- Propose potential trade-offs or areas of agreement
+- Ask clarifying questions if needed
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.{urgency}
+
+Keep the conversation flowing naturally."""
         else:
-            urgency = ""
-            if round_num >= max_rounds - 1:
-                urgency = "\n⏰ **URGENT**: This is one of the final rounds!"
+            # First speaker in a later round
+            context = f"""Previous proposals didn't reach consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
 
-            context = f"""Previous proposals didn't reach consensus. Adjust your approach based on what you learned.{urgency}
+**DISCUSSION FOCUS:**
+- Refer back to what earlier rounds revealed about agents' priorities and sticking points
+- Use lessons from failed proposals to shape what you emphasize, clarify, or revise
+- Highlight possible compromises, trade-offs, or coalition opportunities that could move the group closer to consensus
 
-**REFLECTION & STRATEGY:**
-- What did you learn from previous proposals and votes?
-- Which agents have conflicting vs. compatible preferences?
-- How can you adjust to build consensus?
-
-Given what happened in previous rounds, what's your updated strategy?"""
+You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy."""
 
         reasoning_instruction = ""
         if reasoning_token_budget:

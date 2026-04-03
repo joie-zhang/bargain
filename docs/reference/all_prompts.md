@@ -210,23 +210,24 @@ This is the open discussion phase where all agents can share information about t
 - Explore potential coalition opportunities
 - Identify mutually beneficial trade possibilities
 
-You are the first to speak. Please share your thoughts on the items and any initial ideas for how we might structure a deal.
+You are the first to speak. Please share your thoughts on the items and any initial ideas for how a deal might be reached.
 ```
 
 ---
 
-#### Case B — Round 1 (or any round), subsequent speakers (history present)
+#### Case B — Subsequent speaker (history present)
 
 **Variables**
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
+| `{round_num}` | Current round | `1` or `2` |
 | `{max_rounds}` | Maximum rounds | `3` |
 | `{items_text}` | Numbered list of items | `0: Apple`, … |
 | `{discussion_history}` | Prior messages this round, one per line | `gpt-4o: "I value Apple and Quill most highly…"` |
+| urgency line | Only present if `round_num > 1` and `round_num >= max_rounds - 1` | `⏰ **URGENT**: This is one of the final rounds!` |
 
-**Rendered prompt**
+**Rendered prompt (Round 1 example)**
 
 ```
 🗣️ PUBLIC DISCUSSION PHASE - Round 1/3
@@ -251,6 +252,42 @@ Based on what others have said above, please:
 - Share your own perspective on the items
 - Propose potential trade-offs or areas of agreement
 - Ask clarifying questions if needed
+
+Keep the conversation flowing naturally.
+```
+
+---
+
+**Rendered prompt (Later-round example: Round 2/3)**
+
+```
+🗣️ PUBLIC DISCUSSION PHASE - Round 2/3
+
+This is the open discussion phase where all agents can share information about their preferences.
+
+**ITEMS AVAILABLE:**
+  0: Apple
+  1: Jewel
+  2: Stone
+  3: Quill
+  4: Pencil
+
+**CONVERSATION SO FAR:**
+gpt-4o: "Apple still matters most to me, but I might be flexible on Pencil if that helps."
+
+---
+
+**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to specific points raised by other agents
+- Share your own perspective on the items
+- Propose potential trade-offs or areas of agreement
+- Ask clarifying questions if needed
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.
+⏰ **URGENT**: This is one of the final rounds!
 
 Keep the conversation flowing naturally.
 ```
@@ -282,15 +319,15 @@ This is the open discussion phase where all agents can share information about t
   3: Quill
   4: Pencil
 
-Previous proposals didn't reach consensus. Adjust your approach based on what you learned.
+Previous proposals didn't reach consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.
 ⏰ **URGENT**: This is one of the final rounds!
 
-**REFLECTION & STRATEGY:**
-- What did you learn from previous proposals and votes?
-- Which agents have conflicting vs. compatible preferences?
-- How can you adjust to build consensus?
+**DISCUSSION FOCUS:**
+- Refer back to what earlier rounds revealed about agents' priorities and sticking points
+- Use lessons from failed proposals to shape what you emphasize, clarify, or revise
+- Highlight possible compromises, trade-offs, or coalition opportunities that could move the group closer to consensus
 
-Given what happened in previous rounds, what's your updated strategy?
+You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy.
 ```
 
 ---

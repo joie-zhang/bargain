@@ -214,6 +214,25 @@ class TestInterfaceImplementation:
         assert isinstance(prompt1, str)
         assert isinstance(prompt2, str)
 
+    def test_item_allocation_later_round_discussion_branches(self, item_allocation_game, agents):
+        """Later discussion rounds should distinguish first speaker vs. responders."""
+        state = item_allocation_game.create_game_state(agents)
+
+        first_speaker_prompt = item_allocation_game.get_discussion_prompt(
+            "Agent_1", state, 2, 3, []
+        )
+        responder_prompt = item_allocation_game.get_discussion_prompt(
+            "Agent_1", state, 2, 3, ['**Agent_2**: I still want Apple most.']
+        )
+
+        assert "**DISCUSSION FOCUS:**" in first_speaker_prompt
+        assert "You are speaking first this round." in first_speaker_prompt
+        assert "Since this is not the first round" not in first_speaker_prompt
+
+        assert "**YOUR TURN TO RESPOND:**" in responder_prompt
+        assert "Since this is not the first round" in responder_prompt
+        assert "You do not need to reveal your full private strategy." in responder_prompt
+
     def test_get_voting_prompt(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement get_voting_prompt."""
         state1 = item_allocation_game.create_game_state(agents)
