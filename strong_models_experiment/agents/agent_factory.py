@@ -51,13 +51,14 @@ class StrongModelAgentFactory:
             reasoning_agent_index = 1  # Second agent (Agent_Beta) is reasoning
         else:  # strong_first or random (random is handled earlier in experiment.py)
             reasoning_agent_index = 0  # First agent (Agent_Alpha) is reasoning
-
-        # If only one model specified, create 3 agents of that model for negotiation
-        if len(models) == 1:
-            models = models * 3
         
         # Use Greek letters for agent names to maintain anonymity
-        agent_names = ["Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta"]
+        agent_names = [
+            "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta",
+            "Eta", "Theta", "Iota", "Kappa", "Lambda", "Mu", "Nu",
+            "Xi", "Omicron", "Pi", "Rho", "Sigma", "Tau", "Upsilon",
+            "Phi", "Chi", "Psi", "Omega"
+        ]
 
         # DEBUG: Log the model order as received
         self.logger.info(f"DEBUG: Models received in create_agents: {models}")

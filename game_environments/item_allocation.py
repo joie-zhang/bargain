@@ -344,7 +344,7 @@ Respond with ONLY a JSON object in this exact format:
 - Explore potential coalition opportunities
 - Identify mutually beneficial trade possibilities
 
-You are the first to speak. Please share your thoughts on the items and any initial ideas for how we might structure a deal."""
+You are the first to speak. Please share your thoughts on the items and any initial ideas for how a deal might be reached."""
         elif round_num == 1:
             # Continuing discussion in first round
             context = """**YOUR TURN TO RESPOND:**
