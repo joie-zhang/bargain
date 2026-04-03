@@ -250,13 +250,56 @@ class PhaseHandler:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["default"])
 
-        # Use GameEnvironment if available, otherwise fall back to PromptGenerator
         if self.game_environment is not None:
-            # Get the original game_state if stored in preferences
             if "game_state" in preferences:
                 game_state = preferences["game_state"]
             else:
                 game_state = {"items": items, "agent_preferences": preferences.get("agent_preferences", {})}
+        else:
+            game_state = None
+
+        if self.game_environment is not None and self.game_environment.uses_combined_setup_phase():
+            self.logger.info("📜 COMBINED GAME SETUP PROMPTS:")
+
+            for agent in agents:
+                setup_prompt = self.game_environment.get_combined_setup_prompt(
+                    agent_id=agent.agent_id,
+                    game_state=game_state
+                )
+
+                context = NegotiationContext(
+                    current_round=0,
+                    max_rounds=config["t_rounds"],
+                    items=items,
+                    agents=[a.agent_id for a in agents],
+                    agent_id=agent.agent_id,
+                    preferences=preferences["agent_preferences"][agent.agent_id],
+                    turn_type="setup"
+                )
+
+                agent_response = await agent.generate_response(context, setup_prompt)
+                response_content = agent_response.content
+                token_usage = self._extract_token_usage(agent_response)
+
+                self.logger.info(f"  📬 {agent.agent_id} response:")
+                self.logger.info(f"    {response_content}")
+                self.save_interaction(
+                    agent.agent_id,
+                    "game_setup",
+                    setup_prompt,
+                    response_content,
+                    0,
+                    token_usage,
+                    model_name=agent.get_model_info()["model_name"]
+                )
+
+            self.logger.info(
+                "Game setup phase completed - all agents briefed on rules and private preferences"
+            )
+            return
+
+        # Use GameEnvironment if available, otherwise fall back to PromptGenerator
+        if self.game_environment is not None:
             game_rules_prompt = self.game_environment.get_game_rules_prompt(game_state)
         else:
             game_rules_prompt = self.prompt_gen.create_game_rules_prompt(items, len(agents), config)
@@ -295,6 +338,12 @@ class PhaseHandler:
         if self.token_config["default"] is not None:
             for agent in agents:
                 agent.update_max_tokens(self.token_config["default"])
+
+        if self.game_environment is not None and self.game_environment.uses_combined_setup_phase():
+            self.logger.info(
+                "Skipping separate preference assignment phase - this game merges it into setup"
+            )
+            return
 
         for agent in agents:
             agent_preferences = preferences["agent_preferences"][agent.agent_id]

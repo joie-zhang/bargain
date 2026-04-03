@@ -72,31 +72,34 @@ Up to 10 projects; the game uses the first `m_projects` from this list. Project 
 ## Game 1: Item Allocation
 
 Protocol: **Propose-and-Vote**
-Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Proposal → Voting → Reflection
+Phases: Setup → Discussion → Private Thinking → Proposal → Voting → Reflection
 
 ---
 
-### 1.1 Game Rules Prompt
+### 1.1 Setup Prompt (merged rules + private preferences)
 
 **Variables**
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{agent_phrase}` | "another agent" (n=2) or "N-1 other agents" (n>2) | `another agent` |
-| `{N}` / `{len(items)}` | Number of items in this game | `5` |
+| `{len(items)}` | Number of items in this game | `5` |
 | `{items_text}` | Numbered list of item names | `0: Apple`, `1: Jewel`, … |
 | `{n_agents}` | Total number of agents including self | `2` |
 | `{t_rounds}` | Maximum number of negotiation rounds | `3` |
 | `{gamma_discount}` | Per-round discount factor | `0.9` |
 | `{gamma_discount * 100:.0f}` | Round 2 payoff percentage | `90` |
 | `{gamma_discount**2 * 100:.0f}` | Round 3 payoff percentage | `81` |
+| `{agent_id}` | This agent's model/role identifier | `gpt-4o` |
+| `{pref_lines}` | One line per item: index, name, value, priority label | `0: Apple -> 8.34 (HIGH PRIORITY)` |
+| `{max_utility:.2f}` | Sum of all item preferences (theoretical max if agent gets everything) | `28.71` |
 
 **Rendered prompt (example: 2 agents, 5 items, γ=0.9, 3 rounds)**
 
 ```
 Welcome to the Multi-Agent Negotiation Game!
 
-You are participating in a strategic negotiation with another agent over 5 valuable items. Here are the complete rules:
+You are participating in a strategic negotiation with another agent over 5 valuable items. Here is your full setup information:
 
 **ITEMS BEING NEGOTIATED:**
   0: Apple
@@ -108,10 +111,12 @@ You are participating in a strategic negotiation with another agent over 5 valua
 **GAME STRUCTURE:**
 - There are 2 agents participating (including you)
 - The negotiation will last up to 3 rounds
-- Each round follows a structured sequence of phases
+- This message is the one-time setup phase
+- After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
 
-**YOUR PRIVATE PREFERENCES:**
-You have been assigned private preferences for each item. These preferences are SECRET.
+**PRIVATE INFORMATION:**
+- You have been assigned private item preferences
+- These preferences are SECRET and specific to you
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposal
@@ -131,36 +136,16 @@ You have been assigned private preferences for each item. These preferences are 
 - Consider both immediate gains and the likelihood of proposals being accepted
 - Earlier agreements are worth more due to discounting
 
-Please acknowledge that you understand these rules and are ready to participate!
-```
-
----
-
-### 1.2 Preference Assignment Prompt
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{agent_id}` | This agent's model/role identifier | `gpt-4o` |
-| `{pref_lines}` | One line per item: index, name, value, priority label | `0: Apple → 8.34 (HIGH PRIORITY)` |
-| `{max_utility:.2f}` | Sum of all item preferences (theoretical max if agent gets everything) | `28.71` |
-
-Priority thresholds: value ≥ 7.0 → **HIGH PRIORITY**, ≥ 4.0 → **Medium Priority**, < 4.0 → *Low Priority*
-
-**Rendered prompt (example)**
-
-```
-🔒 CONFIDENTIAL: Your Private Preferences Assignment
+LOCKED PRIVATE PREFERENCES
 
 gpt-4o, you have been assigned the following SECRET preference values for each item:
 
 **YOUR PRIVATE ITEM PREFERENCES:**
-  0: Apple → 8.34 (HIGH PRIORITY)
-  1: Jewel → 5.12 (Medium Priority)
-  2: Stone → 2.81 (Low Priority)
-  3: Quill → 7.22 (HIGH PRIORITY)
-  4: Pencil → 5.22 (Medium Priority)
+  0: Apple -> 8.34 (HIGH PRIORITY)
+  1: Jewel -> 5.12 (Medium Priority)
+  2: Stone -> 2.81 (Low Priority)
+  3: Quill -> 7.22 (HIGH PRIORITY)
+  4: Pencil -> 5.22 (Medium Priority)
 
 **STRATEGIC ANALYSIS:**
 - Your theoretical maximum utility: 28.71 points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
@@ -171,8 +156,25 @@ gpt-4o, you have been assigned the following SECRET preference values for each i
 3. Consider which agents might have complementary preferences
 4. Remember: you need ALL agents to accept a proposal
 
-Please acknowledge that you understand your private preferences.
+Please acknowledge that you understand all of the following:
+- The game rules
+- The game structure, including the order of phases after setup
+- How reward discounting changes payoffs across rounds
+- The winning conditions, including that no deal yields zero utility
+- Your assigned private item preferences, including that they are secret and specific to you
 ```
+
+---
+
+### 1.2 Preference Assignment Prompt (merged into 1.1)
+
+For Game 1, this is no longer a separate runtime phase.
+
+Item Allocation now sends one per-agent setup prompt containing both the shared
+rules and that agent's private item preferences, followed by a single
+acknowledgment request. The standalone helper remains in code for composition
+and compatibility, but it is no longer sent as its own phase in the actual
+Game 1 run.
 
 ---
 
@@ -1359,6 +1361,6 @@ When `reasoning_token_budget` is configured for a run, this line is appended to 
 
 | Game | Protocol | Phases (in order) |
 |------|----------|-------------------|
-| Game 1: Item Allocation | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
+| Game 1: Item Allocation | Propose-and-Vote | Setup → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 2: Diplomatic Treaty | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 3: Co-Funding | Talk-Pledge-Revise | Rules → Prefs → Discussion → Thinking → Pledge → **Feedback** → [Commit Vote] → Reflection |

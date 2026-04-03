@@ -27,7 +27,7 @@ from game_environments import create_game_environment, GameEnvironment
 
 class StrongModelsExperiment:
     """
-    Runs the 14-phase strong models negotiation experiment.
+    Runs the strong models negotiation experiment.
     """
     
     def __init__(self, output_dir=None):
@@ -284,13 +284,20 @@ class StrongModelsExperiment:
         conversation_logs = []
         cofunding_commit_reached = False
         
-        # Run the 14-phase negotiation
+        # Run the setup phases and negotiation rounds
         try:
             # Phase 1A: Game Setup
             await self.phase_handler.run_game_setup_phase(agents, items, preferences, config)
             
             # Phase 1B: Private Preference Assignment
-            await self.phase_handler.run_private_preference_assignment(agents, items, preferences, config)
+            if game_environment.uses_combined_setup_phase():
+                self.logger.info(
+                    "Skipping separate preference assignment phase; it is merged into game setup for this game."
+                )
+            else:
+                await self.phase_handler.run_private_preference_assignment(
+                    agents, items, preferences, config
+                )
             
             # Determine negotiation protocol
             protocol = game_environment.get_protocol_type()

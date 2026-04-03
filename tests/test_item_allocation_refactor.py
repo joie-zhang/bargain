@@ -394,6 +394,33 @@ class TestPromptGeneration:
             # Value should appear in some form
             assert str(round(pref, 2)) in prompt or f"{pref:.2f}" in prompt
 
+    def test_item_allocation_uses_combined_setup_phase(self):
+        """Item Allocation should merge private preferences into setup."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
+        )
+        assert game.uses_combined_setup_phase() is True
+
+    def test_combined_setup_prompt_contains_rules_and_private_preferences(self):
+        """Combined setup prompt should include both shared and private information."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_combined_setup_prompt("Agent_1", state)
+
+        assert "GAME STRUCTURE" in prompt
+        assert "REWARD DISCOUNTING" in prompt
+        assert "WINNING CONDITIONS" in prompt
+        assert "YOUR PRIVATE ITEM PREFERENCES" in prompt
+        assert "Please acknowledge that you understand all of the following:" in prompt
+        assert "Your assigned private item preferences" in prompt
+
+        for pref in state["agent_preferences"]["Agent_1"]:
+            assert str(round(pref, 2)) in prompt or f"{pref:.2f}" in prompt
+
     def test_proposal_prompt_contains_instructions(self):
         """Test that proposal prompt contains clear instructions."""
         game = create_game_environment(

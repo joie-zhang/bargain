@@ -386,6 +386,29 @@ class GameEnvironment(ABC):
         """
         return "propose_and_vote"
 
+    def uses_combined_setup_phase(self) -> bool:
+        """
+        Return whether this game merges private preference assignment into setup.
+
+        When True, the runtime should send a single per-agent setup prompt and
+        skip the separate preference-assignment phase.
+        """
+        return False
+
+    def get_combined_setup_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """
+        Generate a combined setup prompt with shared rules and private preferences.
+
+        Only called when uses_combined_setup_phase() returns True.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement a combined setup prompt."
+        )
+
     def get_reflection_prompt(
         self,
         agent_id: str,

@@ -79,20 +79,22 @@ class ItemAllocationGame(GameEnvironment):
             "game_type": "item_allocation"
         }
 
-    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
-        """Generate item allocation game rules explanation."""
+    def _get_agent_phrase(self) -> str:
+        """Create clearer phrasing for 2-agent negotiations."""
+        if self.config.n_agents == 2:
+            return "another agent"
+        return f"{self.config.n_agents - 1} other agents"
+
+    def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
+        """Build the shared rules/setup block for item allocation."""
         items = game_state["items"]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
 
-        # Create clearer phrasing for 2-agent negotiations
-        if self.config.n_agents == 2:
-            agent_phrase = "another agent"
-        else:
-            agent_phrase = f"{self.config.n_agents - 1} other agents"
+        agent_phrase = self._get_agent_phrase()
 
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
-You are participating in a strategic negotiation with {agent_phrase} over {len(items)} valuable items. Here are the complete rules:
+You are participating in a strategic negotiation with {agent_phrase} over {len(items)} valuable items. Here is your full setup information:
 
 **ITEMS BEING NEGOTIATED:**
 {items_text}
@@ -100,10 +102,12 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 **GAME STRUCTURE:**
 - There are {self.config.n_agents} agents participating (including you)
 - The negotiation will last up to {self.config.t_rounds} rounds
-- Each round follows a structured sequence of phases
+- This message is the one-time setup phase
+- After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
 
-**YOUR PRIVATE PREFERENCES:**
-You have been assigned private preferences for each item. These preferences are SECRET.
+**PRIVATE INFORMATION:**
+- You have been assigned private item preferences
+- These preferences are SECRET and specific to you
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposal
@@ -121,27 +125,25 @@ You have been assigned private preferences for each item. These preferences are 
 - Your goal is to maximize your total utility (after discounting)
 - No deal means everyone gets zero utility
 - Consider both immediate gains and the likelihood of proposals being accepted
-- Earlier agreements are worth more due to discounting
+- Earlier agreements are worth more due to discounting"""
 
-Please acknowledge that you understand these rules and are ready to participate!"""
-
-    def get_preference_assignment_prompt(
+    def _get_private_preferences_block(
         self,
         agent_id: str,
         game_state: Dict[str, Any]
     ) -> str:
-        """Generate preference assignment prompt for an agent."""
+        """Build the per-agent private preference block."""
         items = game_state["items"]
         agent_prefs = game_state["agent_preferences"][agent_id]
 
         pref_lines = []
         for i, (item, value) in enumerate(zip(items, agent_prefs)):
             priority = self._get_priority_level(value)
-            pref_lines.append(f"  {i}: {item['name']} → {value:.2f} ({priority})")
+            pref_lines.append(f"  {i}: {item['name']} -> {value:.2f} ({priority})")
 
         max_utility = sum(agent_prefs)
 
-        return f"""🔒 CONFIDENTIAL: Your Private Preferences Assignment
+        return f"""LOCKED PRIVATE PREFERENCES
 
 {agent_id}, you have been assigned the following SECRET preference values for each item:
 
@@ -155,9 +157,49 @@ Please acknowledge that you understand these rules and are ready to participate!
 1. Other agents don't know your exact preferences
 2. You may choose to reveal some preferences truthfully or misleadingly
 3. Consider which agents might have complementary preferences
-4. Remember: you need ALL agents to accept a proposal
+4. Remember: you need ALL agents to accept a proposal"""
+
+    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
+        """Generate item allocation game rules explanation."""
+        rules_block = self._get_rules_block(game_state)
+        return f"""{rules_block}
+
+Please acknowledge that you understand these rules and are ready to participate!"""
+
+    def get_preference_assignment_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate preference assignment prompt for an agent."""
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+        return f"""{preferences_block}
 
 Please acknowledge that you understand your private preferences."""
+
+    def uses_combined_setup_phase(self) -> bool:
+        """Item Allocation merges private preference assignment into setup."""
+        return True
+
+    def get_combined_setup_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate the one-time setup prompt with rules and private preferences."""
+        rules_block = self._get_rules_block(game_state)
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+
+        return f"""{rules_block}
+
+{preferences_block}
+
+Please acknowledge that you understand all of the following:
+- The game rules
+- The game structure, including the order of phases after setup
+- How reward discounting changes payoffs across rounds
+- The winning conditions, including that no deal yields zero utility
+- Your assigned private item preferences, including that they are secret and specific to you"""
 
     def get_proposal_prompt(
         self,
