@@ -564,7 +564,9 @@ class PhaseHandler:
                 self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
                 # Log priorities/targets based on game type
                 priorities = thinking_response.get('key_priorities') or thinking_response.get('target_items', [])
+                concessions = thinking_response.get('potential_concessions') or thinking_response.get('anticipated_resistance', [])
                 self.logger.info(f"  Key priorities: {priorities}")
+                self.logger.info(f"  Potential concessions: {concessions}")
                 
                 thinking_response_str = json.dumps(thinking_response, default=str)
                 self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", 
@@ -574,8 +576,10 @@ class PhaseHandler:
                     "agent_id": agent.agent_id,
                     "reasoning": thinking_response.get('reasoning', ''),
                     "strategy": thinking_response.get('strategy', ''),
-                    "target_items": thinking_response.get('target_items', []),
-                    "anticipated_resistance": thinking_response.get('anticipated_resistance', [])
+                    "key_priorities": priorities,
+                    "potential_concessions": concessions,
+                    "target_items": thinking_response.get('target_items', priorities),
+                    "anticipated_resistance": thinking_response.get('anticipated_resistance', concessions)
                 })
                 
             except Exception as e:
@@ -584,6 +588,8 @@ class PhaseHandler:
                     "agent_id": agent.agent_id,
                     "reasoning": "Unable to complete strategic thinking due to error",
                     "strategy": "Will propose based on known preferences",
+                    "key_priorities": [],
+                    "potential_concessions": [],
                     "target_items": [],
                     "anticipated_resistance": []
                 })

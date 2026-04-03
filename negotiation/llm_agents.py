@@ -417,7 +417,7 @@ Response format: Provide your analysis as structured strategic thinking."""
             # Try to parse as JSON first
             if response_content.strip().startswith('{'):
                 try:
-                    return json.loads(response_content)
+                    return self._normalize_thinking_response(json.loads(response_content))
                 except json.JSONDecodeError as json_err:
                     # If JSON parsing fails, try several recovery strategies
                     import re
@@ -427,7 +427,7 @@ Response format: Provide your analysis as structured strategic thinking."""
                     json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_content, re.DOTALL)
                     if json_match:
                         try:
-                            return json.loads(json_match.group(1))
+                            return self._normalize_thinking_response(json.loads(json_match.group(1)))
                         except json.JSONDecodeError:
                             pass
                     
@@ -436,7 +436,7 @@ Response format: Provide your analysis as structured strategic thinking."""
                     json_objects = re.findall(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_content)
                     for json_obj in sorted(json_objects, key=len, reverse=True):
                         try:
-                            return json.loads(json_obj)
+                            return self._normalize_thinking_response(json.loads(json_obj))
                         except json.JSONDecodeError:
                             continue
                     
@@ -449,7 +449,7 @@ Response format: Provide your analysis as structured strategic thinking."""
                     # So revert double-escapes
                     fixed_content = fixed_content.replace('\\\\n', '\\n')
                     try:
-                        return json.loads(fixed_content)
+                        return self._normalize_thinking_response(json.loads(fixed_content))
                     except json.JSONDecodeError:
                         pass
                     
@@ -465,14 +465,14 @@ Response format: Provide your analysis as structured strategic thinking."""
             
             # Check if it's O3 format (often uses bullet points and structured text)
             if self._is_o3_thinking_format(response_content):
-                return self._parse_o3_thinking_format(response_content)
+                return self._normalize_thinking_response(self._parse_o3_thinking_format(response_content))
             
             # Otherwise, extract structured information from text
             result = {
                 "reasoning": "",
                 "strategy": "",
-                "target_items": [],
-                "anticipated_resistance": []
+                "key_priorities": [],
+                "potential_concessions": []
             }
             
             # Simple text parsing for structured elements
@@ -491,22 +491,22 @@ Response format: Provide your analysis as structured strategic thinking."""
                 elif 'strategy' in line.lower() and ':' in line:
                     current_section = 'strategy'
                     result['strategy'] = line.split(':', 1)[1].strip() if ':' in line else ""
-                elif 'target' in line.lower() and 'items' in line.lower():
-                    current_section = 'target_items'
-                elif 'resistance' in line.lower() or 'opposition' in line.lower():
-                    current_section = 'anticipated_resistance'
+                elif ('key' in line.lower() and 'priorit' in line.lower()) or ('target' in line.lower() and 'items' in line.lower()):
+                    current_section = 'key_priorities'
+                elif 'concession' in line.lower() or 'resistance' in line.lower() or 'opposition' in line.lower():
+                    current_section = 'potential_concessions'
                 else:
                     # Add content to current section
                     if current_section == 'reasoning':
                         result['reasoning'] += " " + line
                     elif current_section == 'strategy':
                         result['strategy'] += " " + line
-                    elif current_section == 'target_items' and line.startswith('-'):
-                        result['target_items'].append(line[1:].strip())
-                    elif current_section == 'anticipated_resistance' and line.startswith('-'):
-                        result['anticipated_resistance'].append(line[1:].strip())
+                    elif current_section == 'key_priorities' and line.startswith('-'):
+                        result['key_priorities'].append(line[1:].strip())
+                    elif current_section == 'potential_concessions' and line.startswith('-'):
+                        result['potential_concessions'].append(line[1:].strip())
             
-            return result
+            return self._normalize_thinking_response(result)
             
         except json.JSONDecodeError as json_err:
             # Log more details about JSON parsing errors
@@ -524,20 +524,30 @@ Response format: Provide your analysis as structured strategic thinking."""
                 self.logger.warning(f"Failed to parse thinking response as JSON: {error_msg}")
             
             # Return fallback response
-            return {
+            return self._normalize_thinking_response({
                 "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
                 "strategy": "Basic preference-driven approach",
-                "target_items": [],
-                "anticipated_resistance": []
-            }
+            })
         except Exception as e:
             self.logger.warning(f"Failed to parse thinking response: {e}\nResponse length: {len(response_content)}\nFirst 200 chars: {response_content[:200]}")
-            return {
+            return self._normalize_thinking_response({
                 "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
                 "strategy": "Basic preference-driven approach",
-                "target_items": [],
-                "anticipated_resistance": []
-            }
+            })
+
+    def _normalize_thinking_response(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize private thinking outputs across game schemas."""
+        priorities = result.get("key_priorities", result.get("target_items", [])) or []
+        concessions = result.get("potential_concessions", result.get("anticipated_resistance", [])) or []
+        return {
+            **result,
+            "reasoning": result.get("reasoning", ""),
+            "strategy": result.get("strategy", ""),
+            "key_priorities": priorities,
+            "potential_concessions": concessions,
+            "target_items": result.get("target_items", priorities),
+            "anticipated_resistance": result.get("anticipated_resistance", concessions),
+        }
     
     def _is_o3_thinking_format(self, response_content: str) -> bool:
         """Check if the response is in O3's typical thinking format."""

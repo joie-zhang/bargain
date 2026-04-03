@@ -312,7 +312,7 @@ class GameEnvironment(ABC):
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """

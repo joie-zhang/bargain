@@ -482,7 +482,7 @@ Vote must be either "accept" or "reject"."""
         game_state: Dict[str, Any],
         round_num: int,
         max_rounds: int,
-        discussion_history: List[Dict[str, Any]],
+        discussion_history: List[str],
         reasoning_token_budget: Optional[int] = None
     ) -> str:
         """Generate private thinking prompt.
@@ -496,7 +496,24 @@ Vote must be either "accept" or "reject"."""
             reasoning_token_budget: Optional target reasoning tokens (prompt instruction only)
         """
         items = game_state["items"]
+        agent_prefs = game_state["agent_preferences"][agent_id]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
+        priority_indices = sorted(
+            range(len(items)),
+            key=lambda i: agent_prefs[i],
+            reverse=True,
+        )[:3]
+        top_priorities = [
+            f"{i}: {items[i]['name']} (value={agent_prefs[i]:.2f})"
+            for i in priority_indices
+        ]
+
+        discussion_section = ""
+        if discussion_history:
+            discussion_section = "\n**DISCUSSION THIS ROUND:**\n"
+            for msg in discussion_history:
+                discussion_section += f"{msg}\n\n"
+            discussion_section += "---\n"
 
         urgency = ""
         if round_num >= max_rounds - 1:
@@ -509,29 +526,33 @@ Vote must be either "accept" or "reject"."""
 **REASONING DEPTH:**
 Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."""
 
-        return f"""🧠 PRIVATE THINKING PHASE - Round {round_num}/{max_rounds}
+        return f"""🧠 PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
+{discussion_section}
 
 This is your private strategic planning time.
 
 **ITEMS AVAILABLE:**
 {items_text}{urgency}
 
+**YOUR TOP PRIORITIES:**
+{chr(10).join(['- ' + p for p in top_priorities])}
+
 **STRATEGIC ANALYSIS TASKS:**
-1. What did you learn about other agents' preferences?
-2. Which items do others value less that you value highly?
-3. What allocation would maximize your utility while achieving consensus?
-4. What concessions might be necessary?{reasoning_instruction}
+1. What have you learned about other agents' priorities from the discussion so far?
+2. Which items are your highest priorities to secure, and which lower-value items could you concede on?
+3. What allocation would maximize your utility while still having a realistic path to unanimous acceptance?
+4. Where are the likely sticking points, and how should you adapt if other agents push for items you value highly?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:
 {{
-    "reasoning": "Your analysis of the situation",
-    "strategy": "Your overall approach for this round",
-    "target_items": [0, 2, 4],
-    "anticipated_resistance": ["Agent who might block", "..."]
+    "reasoning": "Your analysis of the item-allocation situation",
+    "strategy": "Your negotiation strategy for this round",
+    "key_priorities": ["0: Apple (value=9.20)", "..."],
+    "potential_concessions": ["4: Pencil (value=4.10)", "..."]
 }}
 
-Remember: This thinking is completely private."""
+Remember: This analysis is completely private."""
 
     def format_proposal_display(
         self,

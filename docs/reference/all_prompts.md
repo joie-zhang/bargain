@@ -341,13 +341,20 @@ You are speaking first this round. Open the discussion in a way that reflects wh
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
 | `{items_text}` | Numbered list of items | `0: Apple`, … |
+| `{discussion_history}` | Prior messages this round | `**Agent_Beta**: I care most about Jewel.` |
+| `{top_priorities}` | Top 3 items by private value | `0: Apple (value=9.20)` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: This is one of your final opportunities!` |
 | `{reasoning_token_budget}` | Optional: target reasoning tokens | `2000` |
 
 **Rendered prompt**
 
 ```
-🧠 PRIVATE THINKING PHASE - Round 1/3
+🧠 PRIVATE STRATEGIC ANALYSIS - Round 1/3
+
+**DISCUSSION THIS ROUND:**
+**Agent_Beta**: I care most about Jewel, but I can be flexible on Pencil.
+
+---
 
 This is your private strategic planning time.
 
@@ -358,22 +365,27 @@ This is your private strategic planning time.
   3: Quill
   4: Pencil
 
+**YOUR TOP PRIORITIES:**
+- 0: Apple (value=9.20)
+- 2: Stone (value=7.80)
+- 4: Pencil (value=4.10)
+
 **STRATEGIC ANALYSIS TASKS:**
-1. What did you learn about other agents' preferences?
-2. Which items do others value less that you value highly?
-3. What allocation would maximize your utility while achieving consensus?
-4. What concessions might be necessary?
+1. What have you learned about other agents' priorities from the discussion so far?
+2. Which items are your highest priorities to secure, and which lower-value items could you concede on?
+3. What allocation would maximize your utility while still having a realistic path to unanimous acceptance?
+4. Where are the likely sticking points, and how should you adapt if other agents push for items you value highly?
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:
 {
-    "reasoning": "Your analysis of the situation",
-    "strategy": "Your overall approach for this round",
-    "target_items": [0, 2, 4],
-    "anticipated_resistance": ["Agent who might block", "..."]
+    "reasoning": "Your analysis of the item-allocation situation",
+    "strategy": "Your negotiation strategy for this round",
+    "key_priorities": ["0: Apple (value=9.20)", "..."],
+    "potential_concessions": ["4: Pencil (value=4.10)", "..."]
 }
 
-Remember: This thinking is completely private.
+Remember: This analysis is completely private.
 ```
 
 ---

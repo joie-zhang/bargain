@@ -263,6 +263,25 @@ class TestInterfaceImplementation:
         assert isinstance(prompt1, str)
         assert isinstance(prompt2, str)
 
+    def test_item_allocation_thinking_prompt_uses_shared_schema(self, item_allocation_game, agents):
+        """Item allocation thinking prompt should use the shared priorities/concessions schema."""
+        state = item_allocation_game.create_game_state(agents)
+
+        prompt = item_allocation_game.get_thinking_prompt(
+            "Agent_1",
+            state,
+            2,
+            5,
+            ["**Agent_2**: I care most about Jewel."],
+        )
+
+        assert "**DISCUSSION THIS ROUND:**" in prompt
+        assert "**YOUR TOP PRIORITIES:**" in prompt
+        assert '"key_priorities"' in prompt
+        assert '"potential_concessions"' in prompt
+        assert '"target_items"' not in prompt
+        assert '"anticipated_resistance"' not in prompt
+
     def test_parse_proposal(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement parse_proposal."""
         state1 = item_allocation_game.create_game_state(agents)
