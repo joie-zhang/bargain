@@ -111,6 +111,18 @@ class TestGameStateCreation:
             for pref in prefs:
                 assert isinstance(pref, (int, float))
 
+    def test_preferences_sum_to_100_and_are_integer_valued(self):
+        """Generated preferences should stay integer-valued and sum to 100."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=5, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        for prefs in state["agent_preferences"].values():
+            assert abs(sum(prefs) - 100.0) < 1e-6
+            assert all(float(pref).is_integer() for pref in prefs)
+
     @pytest.mark.skip(reason="ItemAllocationGame delegates to create_competitive_preferences which doesn't use config seed yet")
     def test_reproducibility_with_seed(self):
         """Test that same seed produces same game state.
@@ -391,8 +403,54 @@ class TestPromptGeneration:
 
         # Should contain preference values
         for pref in state["agent_preferences"]["Agent_1"]:
-            # Value should appear in some form
-            assert str(round(pref, 2)) in prompt or f"{pref:.2f}" in prompt
+            expected = str(int(pref)) if float(pref).is_integer() else f"{pref:.2f}"
+            assert expected in prompt
+
+    def test_preference_prompt_omits_trailing_point_zero_zero_for_integer_values(self):
+        """Integer-valued preferences should render without .00 in prompts."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_preference_assignment_prompt("Agent_1", state)
+
+        for pref in state["agent_preferences"]["Agent_1"]:
+            if float(pref).is_integer():
+                assert f"-> {int(pref)} (" in prompt
+                assert f"-> {int(pref)}.00 (" not in prompt
+
+        assert "100 points" in prompt
+        assert "100.00 points" not in prompt
+
+    def test_thinking_prompt_omits_trailing_point_zero_zero_for_integer_values(self):
+        """Private thinking prompt should also use compact integer formatting."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=5, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_thinking_prompt(
+            "Agent_1",
+            state,
+            round_num=1,
+            max_rounds=5,
+            discussion_history=[],
+        )
+
+        priority_indices = sorted(
+            range(len(state["agent_preferences"]["Agent_1"])),
+            key=lambda i: state["agent_preferences"]["Agent_1"][i],
+            reverse=True,
+        )[:3]
+
+        for idx in priority_indices:
+            pref = state["agent_preferences"]["Agent_1"][idx]
+            if float(pref).is_integer():
+                assert f"value={int(pref)})" in prompt
+                assert f"value={int(pref)}.00)" not in prompt
 
     def test_item_allocation_uses_combined_setup_phase(self):
         """Item Allocation should merge private preferences into setup."""
@@ -419,7 +477,8 @@ class TestPromptGeneration:
         assert "Your assigned private item preferences" in prompt
 
         for pref in state["agent_preferences"]["Agent_1"]:
-            assert str(round(pref, 2)) in prompt or f"{pref:.2f}" in prompt
+            expected = str(int(pref)) if float(pref).is_integer() else f"{pref:.2f}"
+            assert expected in prompt
 
     def test_proposal_prompt_contains_instructions(self):
         """Test that proposal prompt contains clear instructions."""

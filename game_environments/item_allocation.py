@@ -85,6 +85,14 @@ class ItemAllocationGame(GameEnvironment):
             return "another agent"
         return f"{self.config.n_agents - 1} other agents"
 
+    @staticmethod
+    def _format_display_number(value: float) -> str:
+        """Render integer-valued floats without trailing .00."""
+        numeric_value = float(value)
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+        return f"{numeric_value:.2f}"
+
     def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
         """Build the shared rules/setup block for item allocation."""
         items = game_state["items"]
@@ -140,9 +148,11 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
         pref_lines = []
         for i, (item, value) in enumerate(zip(items, agent_prefs)):
             priority = self._get_priority_level(value)
-            pref_lines.append(f"  {i}: {item['name']} -> {value:.2f} ({priority})")
+            value_text = self._format_display_number(value)
+            pref_lines.append(f"  {i}: {item['name']} -> {value_text} ({priority})")
 
         max_utility = sum(agent_prefs)
+        max_utility_text = self._format_display_number(max_utility)
 
         return f"""LOCKED PRIVATE PREFERENCES
 
@@ -152,7 +162,7 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 {chr(10).join(pref_lines)}
 
 **STRATEGIC ANALYSIS:**
-- Your theoretical maximum utility: {max_utility:.2f} points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
+- Your theoretical maximum utility: {max_utility_text} points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
@@ -620,7 +630,7 @@ Each vote must be either "accept" or "reject"."""
             reverse=True,
         )[:3]
         top_priorities = [
-            f"{i}: {items[i]['name']} (value={agent_prefs[i]:.2f})"
+            f"{i}: {items[i]['name']} (value={self._format_display_number(agent_prefs[i])})"
             for i in priority_indices
         ]
 
