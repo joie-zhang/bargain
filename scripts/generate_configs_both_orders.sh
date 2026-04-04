@@ -102,14 +102,13 @@ STRONG_MODELS=(
     "QwQ-32B"  # Rank 163, Elo: 1336, Open-source
     "llama-3.3-70b-instruct"  # Rank 187, Elo: 1318, Open-source, Non-reasoning
     "Qwen2.5-72B-Instruct"  # Rank 209, Elo: 1302, Open-source, Non-reasoning
-    "gemma-2-27b-it"  # Rank 215, Elo: 1288, Open-source
-    "Meta-Llama-3-70B-Instruct"  # Rank 227, Elo: 1275, Open-source, Non-reasoning
+    "amazon-nova-pro-v1.0"  # Rank 213, Elo: 1290, Closed-source, 300K context
+    "command-r-plus-08-2024"  # Rank 226, Elo: 1276, 128K context
     "claude-3-haiku"  # Rank 238, Elo: 1260, Closed-source, Non-reasoning
     "phi-4"  # Rank 241, Elo: 1256, Open-source
 
-    # WEAK TIER - Elo < 1290 (9 models)
+    # WEAK TIER - Elo < 1290 (8 models in this roster)
     "amazon-nova-micro"  # Rank 245, Elo: 1240, Closed-source
-    "mixtral-8x22b-instruct-v0.1"  # Rank 253, Elo: 1228, Open-source
     "gpt-3.5-turbo-0125"  # Rank 256, Elo: 1223, Closed-source, Non-reasoning
     "llama-3.1-8b-instruct"  # Rank 264, Elo: 1211, Open-source, Non-reasoning
     "mixtral-8x7b-instruct-v0.1"  # Rank 270, Elo: 1196, Open-source
@@ -120,8 +119,8 @@ STRONG_MODELS=(
 )
 
 # Competition levels
-COMPETITION_LEVELS=(0.0 0.5 0.9 1.0)
-# COMPETITION_LEVELS=(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
+# COMPETITION_LEVELS=(0.0 0.5 0.9 1.0)
+COMPETITION_LEVELS=(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 0.95 1.0)
 
 # Base parameters
 NUM_ITEMS=5
@@ -332,9 +331,9 @@ echo "Generating SLURM scripts..."
 
 # Models that require GPUs (local inference)
 # Large models (70B+): 4 GPUs (320GB)
-#   - llama-3.3-70b-instruct, Qwen2.5-72B-Instruct, Meta-Llama-3-70B-Instruct
+#   - llama-3.3-70b-instruct, Qwen2.5-72B-Instruct
 # Medium models (27B-32B): 2 GPUs (160GB)
-#   - gemma-3-27b-it, QwQ-32B, gemma-2-27b-it, phi-4, Phi-3-mini-128k-instruct
+#   - gemma-3-27b-it, QwQ-32B, phi-4, Phi-3-mini-128k-instruct
 # Small models (<27B): 1 GPU (80GB)
 #   - llama-3.1-8b-instruct, Llama-3.2-3B-Instruct, Mistral-7B-Instruct-v0.2,
 #     Llama-3.2-1B-Instruct
@@ -343,8 +342,6 @@ LOCAL_MODELS=(
     "QwQ-32B"
     "llama-3.3-70b-instruct"
     "Qwen2.5-72B-Instruct"
-    "gemma-2-27b-it"
-    "Meta-Llama-3-70B-Instruct"
     "phi-4"
     "llama-3.1-8b-instruct"
     "Llama-3.2-3B-Instruct"
@@ -371,11 +368,9 @@ get_gpu_count() {
         # Large models (70B+): 4 GPUs
         "llama-3.3-70b-instruct") echo 4 ;;
         "Qwen2.5-72B-Instruct") echo 4 ;;
-        "Meta-Llama-3-70B-Instruct") echo 4 ;;
         # Medium models (27B-32B): 2 GPUs
         "gemma-3-27b-it") echo 2 ;;
         "QwQ-32B") echo 2 ;;
-        "gemma-2-27b-it") echo 2 ;;
         "phi-4") echo 2 ;;
         "Phi-3-mini-128k-instruct") echo 2 ;;
         # Small models (<27B): 1 GPU
@@ -946,7 +941,7 @@ submit_api_jobs() {
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check if both models are API-based (not local)
-            LOCAL_MODELS="gemma-3-27b-it QwQ-32B llama-3.3-70b-instruct Qwen2.5-72B-Instruct gemma-2-27b-it Meta-Llama-3-70B-Instruct phi-4 llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
+            LOCAL_MODELS="gemma-3-27b-it QwQ-32B llama-3.3-70b-instruct Qwen2.5-72B-Instruct phi-4 llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
             IS_LOCAL=false
             for lm in $LOCAL_MODELS; do
                 if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
@@ -973,9 +968,9 @@ submit_gpu_jobs() {
     echo "Total configs: ${TOTAL_CONFIGS}"
 
     # Large models (70B+): 4 GPUs, 320GB
-    LARGE_GPU_MODELS="llama-3.3-70b-instruct Qwen2.5-72B-Instruct Meta-Llama-3-70B-Instruct"
+    LARGE_GPU_MODELS="llama-3.3-70b-instruct Qwen2.5-72B-Instruct"
     # Medium models (27B-32B): 2 GPUs, 160GB
-    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B gemma-2-27b-it phi-4 Phi-3-mini-128k-instruct"
+    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B phi-4 Phi-3-mini-128k-instruct"
     # Small models (<27B): 1 GPU, 80GB
     SMALL_GPU_MODELS="llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Llama-3.2-1B-Instruct"
 
