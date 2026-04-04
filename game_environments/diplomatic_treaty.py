@@ -551,8 +551,10 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - Maximum utility = 100 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
-- You vote "accept" or "reject" on each proposed agreement
+- All treaty proposals submitted in a round are shown together during voting
+- You vote "accept" or "reject" on each proposal independently
 - A proposal needs UNANIMOUS acceptance from all parties to take effect
+- If no proposal gets unanimous support, negotiation continues to the next round
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 
 **REWARD DISCOUNTING:**
@@ -911,30 +913,66 @@ Issues under negotiation: {issues_text}
         round_num: int,
         reasoning_token_budget: Optional[int] = None
     ) -> str:
-        """Generate diplomatic voting prompt."""
+        """Generate a voting prompt for a single treaty proposal."""
+        single_proposal = proposal.copy()
+        single_proposal.setdefault("proposal_number", 1)
+        return self.get_batch_voting_prompt(
+            agent_id=agent_id,
+            proposals=[single_proposal],
+            game_state=game_state,
+            round_num=round_num,
+            reasoning_token_budget=reasoning_token_budget
+        )
+
+    def get_batch_voting_prompt(
+        self,
+        agent_id: str,
+        proposals: List[Dict[str, Any]],
+        game_state: Dict[str, Any],
+        round_num: int,
+        reasoning_token_budget: Optional[int] = None
+    ) -> str:
+        """Generate a batch voting prompt covering all treaty proposals in the round."""
         issues = game_state["issues"]
-        agreement = proposal.get("agreement", [])
         round_2_pct = round(self.config.gamma_discount * 100)
-
-        # Format agreement for display
-        agreement_lines = []
-        for i, (issue, val) in enumerate(zip(issues, agreement)):
-            pos_desc = self._describe_position(val)
-            agreement_lines.append(f"  {issue}: {pos_desc}")
-
-        agreement_display = "\n".join(agreement_lines)
 
         reasoning_instruction = ""
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
-        return f"""A treaty proposal has been submitted:
+        proposal_blocks = []
+        for fallback_num, proposal in enumerate(proposals, start=1):
+            proposal_number = proposal.get("proposal_number", fallback_num)
+            agreement_lines = []
+            for issue, val in zip(issues, proposal.get("agreement", [])):
+                pos_desc = self._describe_position(val)
+                agreement_lines.append(f"  {issue}: {pos_desc}")
 
-**PROPOSED AGREEMENT:**
-{agreement_display}
+            agreement_display = "\n".join(agreement_lines)
+            proposal_blocks.append(
+                f"PROPOSAL #{proposal_number}:\n"
+                f"AGREEMENT:\n{agreement_display}\n"
+                f"PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}"
+            )
 
-**REASONING:** {proposal.get('reasoning', 'No reasoning provided')}
-**PROPOSED BY:** {proposal.get('proposed_by', 'Unknown')}
+        example_entries = []
+        for example_index, proposal in enumerate(proposals[: max(1, min(2, len(proposals)))], start=1):
+            proposal_number = proposal.get("proposal_number", example_index)
+            example_vote = "accept" if example_index == 1 else "reject"
+            example_entries.append(
+                "        {\n"
+                f'            "proposal_number": {proposal_number},\n'
+                f'            "vote": "{example_vote}",\n'
+                f'            "reasoning": "Brief explanation of your vote on Proposal #{proposal_number}, referencing specific issues and rates"\n'
+                "        }"
+            )
+
+        proposals_text = "\n\n".join(proposal_blocks)
+        votes_example = ",\n".join(example_entries)
+
+        return f"""The following treaty proposals have been submitted this round:
+
+{proposals_text}
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved score is to your ideal position
@@ -943,18 +981,91 @@ Issues under negotiation: {issues_text}
 - Maximum utility = 100 (every issue resolved at your exact ideal rate)
 - Each additional round multiplies utility by {round_2_pct}% — delaying costs you
 
-Please vote on this proposal. Consider:
-- How close is each resolved score to your ideal position on each issue?
-- Could you realistically negotiate a better agreement before the final round?
-- The cost of delay: each additional round reduces your eventual payoff{reasoning_instruction}
+Vote on EACH proposal independently. Consider:
+- How close is each proposed rate to your ideal position on each issue?
+- Could you realistically negotiate a better agreement than each of these options before the final round?
+- The cost of delay: each additional round reduces your eventual payoff
+- You may accept zero, one, or multiple proposals
+- You may reject zero, one, or multiple proposals
+- Seeing all proposals together does not eliminate any proposal before you vote{reasoning_instruction}
 
-Respond with ONLY a JSON object:
+Respond with ONLY a JSON object in this exact format:
 {{
-    "vote": "accept",
-    "reasoning": "Explanation of your vote, referencing specific propositions and how they compare to your ideal positions"
+    "votes": [
+{votes_example}
+    ]
 }}
 
-Vote must be either "accept" or "reject"."""
+Include exactly one vote entry for each proposal shown above.
+Each vote must be either "accept" or "reject"."""
+
+    def parse_batch_voting_response(
+        self,
+        response: str,
+        proposal_numbers: List[int],
+        agent_id: str,
+        round_num: int
+    ) -> List[Dict[str, Any]]:
+        """Parse a batch voting response into one vote per treaty proposal."""
+        try:
+            if response.strip().startswith('{'):
+                payload = json.loads(response)
+            else:
+                json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                if json_match:
+                    payload = json.loads(json_match.group())
+                else:
+                    raise ValueError("No JSON found in batch vote response")
+
+            raw_votes = payload.get("votes", [])
+            if not isinstance(raw_votes, list):
+                raise ValueError("Batch vote response did not contain a votes list")
+        except (json.JSONDecodeError, ValueError, TypeError, AttributeError):
+            raw_votes = []
+
+        proposal_number_set = set(proposal_numbers)
+        parsed_votes = {}
+
+        for raw_vote in raw_votes:
+            if not isinstance(raw_vote, dict):
+                continue
+
+            try:
+                proposal_number = int(raw_vote.get("proposal_number"))
+            except (TypeError, ValueError):
+                continue
+
+            if proposal_number not in proposal_number_set:
+                continue
+
+            vote_value = str(raw_vote.get("vote", "reject")).strip().lower()
+            if vote_value not in ("accept", "reject"):
+                vote_value = "reject"
+
+            parsed_votes[proposal_number] = {
+                "proposal_number": proposal_number,
+                "vote": vote_value,
+                "reasoning": raw_vote.get("reasoning", ""),
+                "voter": agent_id,
+                "round": round_num,
+            }
+
+        vote_results = []
+        for proposal_number in proposal_numbers:
+            vote_results.append(
+                parsed_votes.get(
+                    proposal_number,
+                    {
+                        "proposal_number": proposal_number,
+                        "vote": "reject",
+                        "reasoning": "Missing or invalid vote entry",
+                        "voter": agent_id,
+                        "round": round_num,
+                    }
+                )
+            )
+
+        return vote_results
 
     def get_thinking_prompt(
         self,

@@ -341,6 +341,76 @@ class TestInterfaceImplementation:
             },
         ]
 
+    def test_diplomacy_batch_voting_prompt_lists_all_proposals(self, diplomacy_game, agents):
+        """Game 2 should be able to show all treaty proposals in one batch voting prompt."""
+        state = diplomacy_game.create_game_state(agents)
+        proposals = [
+            {
+                "proposal_number": 1,
+                "agreement": [65, 20, 55],
+                "reasoning": "Proposal one",
+                "proposed_by": "Agent_1",
+            },
+            {
+                "proposal_number": 2,
+                "agreement": [45, 60, 35],
+                "reasoning": "Proposal two",
+                "proposed_by": "Agent_2",
+            },
+        ]
+
+        prompt = diplomacy_game.get_batch_voting_prompt("Agent_1", proposals, state, 1)
+
+        assert "PROPOSAL #1" in prompt
+        assert "PROPOSAL #2" in prompt
+        assert '"votes"' in prompt
+        assert "Vote on EACH proposal independently." in prompt
+        assert "You may accept zero, one, or multiple proposals" in prompt
+        assert "REASONING:" not in prompt
+
+    def test_diplomacy_parse_batch_voting_response_defaults_missing_votes(self, diplomacy_game):
+        """Missing or invalid treaty vote entries should default to reject."""
+        response = """
+        {
+            "votes": [
+                {
+                    "proposal_number": 1,
+                    "vote": "accept",
+                    "reasoning": "Best available compromise"
+                },
+                {
+                    "proposal_number": 99,
+                    "vote": "accept",
+                    "reasoning": "Should be ignored"
+                }
+            ]
+        }
+        """
+
+        votes = diplomacy_game.parse_batch_voting_response(
+            response=response,
+            proposal_numbers=[1, 2],
+            agent_id="Agent_1",
+            round_num=2,
+        )
+
+        assert votes == [
+            {
+                "proposal_number": 1,
+                "vote": "accept",
+                "reasoning": "Best available compromise",
+                "voter": "Agent_1",
+                "round": 2,
+            },
+            {
+                "proposal_number": 2,
+                "vote": "reject",
+                "reasoning": "Missing or invalid vote entry",
+                "voter": "Agent_1",
+                "round": 2,
+            },
+        ]
+
     def test_get_thinking_prompt(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement get_thinking_prompt."""
         state1 = item_allocation_game.create_game_state(agents)

@@ -578,8 +578,10 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - Maximum utility = 100 (every issue resolved at your exact ideal rate)
 
 **VOTING RULES:**
-- You vote "accept" or "reject" on each proposed agreement
+- All treaty proposals submitted in a round are shown together during voting
+- You vote "accept" or "reject" on each proposal independently
 - A proposal needs UNANIMOUS acceptance from all parties to take effect
+- If no proposal gets unanimous support, negotiation continues to the next round
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 
 **REWARD DISCOUNTING:**
@@ -871,9 +873,7 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{agreement_display}` | One line per issue: name and integer percentage via `_describe_position` | `  AI chip export quota: 65%` |
-| `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge"` |
-| `{proposal['proposed_by']}` | Proposer agent ID | `gpt-4o` |
+| `{proposals_text}` | Formatted numbered list of all treaty proposals shown together | see rendered prompt |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 `_describe_position(value)` now returns `{round(value * 100)}%` with no decimal display.
@@ -881,17 +881,25 @@ Respond with ONLY a JSON object in this exact format:
 **Rendered prompt**
 
 ```
-A treaty proposal has been submitted:
+The following treaty proposals have been submitted this round:
 
-**PROPOSED AGREEMENT:**
+PROPOSAL #1:
+AGREEMENT:
   AI chip export quota: 65%
   Critical mineral emergency stockpile contribution: 20%
   Nuclear warhead reduction: 55%
   Fentanyl precursor control breadth: 50%
   Carbon cost on imports: 70%
+PROPOSED BY: gpt-4o
 
-**REASONING:** Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge.
-**PROPOSED BY:** gpt-4o
+PROPOSAL #2:
+AGREEMENT:
+  AI chip export quota: 45%
+  Critical mineral emergency stockpile contribution: 60%
+  Nuclear warhead reduction: 35%
+  Fentanyl precursor control breadth: 40%
+  Carbon cost on imports: 50%
+PROPOSED BY: claude-3-7-sonnet
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved rate is to your ideal position
@@ -900,18 +908,32 @@ A treaty proposal has been submitted:
 - Maximum utility = 100 (every issue resolved at your exact ideal rate)
 - Each additional round multiplies utility by 90% — delaying costs you
 
-Please vote on this proposal. Consider:
-- How close is each resolved rate to your ideal position on each issue?
-- Could you realistically negotiate a better agreement before the final round?
+Vote on EACH proposal independently. Consider:
+- How close is each proposed rate to your ideal position on each issue?
+- Could you realistically negotiate a better agreement than each of these options before the final round?
 - The cost of delay: each additional round reduces your eventual payoff
+- You may accept zero, one, or multiple proposals
+- You may reject zero, one, or multiple proposals
+- Seeing all proposals together does not eliminate any proposal before you vote
 
-Respond with ONLY a JSON object:
+Respond with ONLY a JSON object in this exact format:
 {
-    "vote": "accept",
-    "reasoning": "Explanation of your vote, referencing specific issues and how the proposed rates compare to your ideal positions"
+    "votes": [
+        {
+            "proposal_number": 1,
+            "vote": "accept",
+            "reasoning": "Brief explanation of your vote on Proposal #1, referencing specific issues and rates"
+        },
+        {
+            "proposal_number": 2,
+            "vote": "reject",
+            "reasoning": "Brief explanation of your vote on Proposal #2, referencing specific issues and rates"
+        }
+    ]
 }
 
-Vote must be either "accept" or "reject".
+Include exactly one vote entry for each proposal shown above.
+Each vote must be either "accept" or "reject".
 ```
 
 ---
