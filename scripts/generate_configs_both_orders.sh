@@ -68,67 +68,67 @@ echo ""
 # Weak models - baseline models for exploitation experiments
 # From Multi-Agent Strategic Games Evaluation Models (Weak Tier - Elo < 1290)
 WEAK_MODELS=(
-    gpt-5-nano
+    gpt-5-nano # Elo: ~1337 (gpt-5-nano-high in Mar 31 rankings)
     # "gpt-4o" # May 2024 version
     # "gemini-1-5-pro"
 )
 
 # Strong models - newer/more capable models that may exploit weak models
-# From Hugging Face Chatbot Arena Leaderboard (as of January 16, 2026)
+# From Chatbot Arena Leaderboard (as of March 31, 2026)
 STRONG_MODELS=(
+    "claude-opus-4-6"  # Rank 2, Elo: 1499, Closed-source, Reasoning
     # STRONG TIER - Elo ≥ 1415 (12 models)
-    "gemini-3-pro"  # Rank 1, Elo: 1490, Closed-source
-    # "grok-4-1-thinking"  # Rank 2, Elo: 1477, Closed-source, Reasoning - NOT AVAILABLE: Not released publicly yet
-    "gemini-3-flash"  # Rank 3, Elo: 1472, Closed-source
-    "claude-opus-4-5-thinking-32k"  # Rank 4, Elo: 1470, Closed-source, Reasoning
-    "claude-opus-4-5"  # Rank 5, Elo: 1467, Closed-source, Non-reasoning
-    "claude-sonnet-4-5"  # Rank 6, Elo: 1450, Closed-source, Non-reasoning
-    # "gpt-4.5-preview"  # Rank 7, Elo: 1444, Closed-source - DEPRECATED: Model no longer available
-    "glm-4.7"  # Rank 8, Elo: 1441, Open-source
-    "gpt-5.2-high"  # Rank 9, Elo: 1436, Closed-source, Reasoning
-    "qwen3-max"  # Rank 10, Elo: 1434, Open-source
-    "deepseek-r1-0528"  # Rank 11, Elo: 1418, Open-source, Reasoning
-    "grok-4"  # Rank 12, Elo: 1409, Closed-source
-    
+    "gemini-3-pro"  # Rank 5, Elo: 1486, Closed-source
+    # "grok-4-1-thinking"  # Rank 12, Elo: 1471, Closed-source, Reasoning - NOT AVAILABLE: Not released publicly yet
+    "gemini-3-flash"  # Rank 9, Elo: 1474, Closed-source
+    "claude-opus-4-5-thinking-32k"  # Rank 11, Elo: 1474, Closed-source, Reasoning
+    "claude-opus-4-5"  # Rank 13, Elo: 1468, Closed-source, Non-reasoning
+    "claude-sonnet-4-5"  # Rank 25, Elo: 1453, Closed-source, Non-reasoning
+    "glm-4.7"  # Rank 38, Elo: 1443, Open-source
+    "gpt-5.2-high"  # Rank 39, Elo: 1442, Closed-source, Reasoning
+    "qwen3-max"  # Rank 44, Elo: 1435, Open-source
+    "deepseek-r1-0528"  # Rank 60, Elo: 1422, Open-source, Reasoning
+    "grok-4"  # Rank 78, Elo: 1410, Closed-source
+
     # MEDIUM TIER - 1290 ≤ Elo < 1415 (15 models)
-    "claude-haiku-4-5"  # Rank 13, Elo: 1403, Closed-source, Non-reasoning
-    "deepseek-r1"  # Rank 14, Elo: 1397, Open-source, Reasoning
-    "claude-sonnet-4"  # Rank 15, Elo: 1390, Closed-source, Non-reasoning
-    "claude-3.5-sonnet"  # Rank 16, Elo: 1373, Closed-source, Non-reasoning
-    "gemma-3-27b-it"  # Rank 17, Elo: 1365, Open-source
-    "o3-mini-high"  # Rank 18, Elo: 1364, Closed-source, Reasoning
-    "deepseek-v3"  # Rank 19, Elo: 1358, Open-source
-    "gpt-4o"  # Rank 20, Elo: 1346, Closed-source, Non-reasoning
-    "QwQ-32B"  # Rank 21, Elo: 1336, Open-source
-    "llama-3.3-70b-instruct"  # Rank 22, Elo: 1320, Open-source, Non-reasoning
-    "Qwen2.5-72B-Instruct"  # Rank 23, Elo: 1303, Open-source, Non-reasoning
-    "gemma-2-27b-it"  # Rank 24, Elo: 1288, Open-source
-    "Meta-Llama-3-70B-Instruct"  # Rank 25, Elo: 1277, Open-source, Non-reasoning
-    "claude-3-haiku"  # Rank 26, Elo: 1262, Closed-source, Non-reasoning
-    "phi-4"  # Rank 27, Elo: 1256, Open-source
-    
+    "claude-haiku-4-5"  # Rank 80, Elo: 1407, Closed-source, Non-reasoning
+    "deepseek-r1"  # Rank 95, Elo: 1398, Open-source, Reasoning
+    "claude-sonnet-4"  # Rank 105, Elo: 1389, Closed-source, Non-reasoning
+    "claude-3.5-sonnet"  # Rank 123, Elo: 1372, Closed-source, Non-reasoning
+    "gemma-3-27b-it"  # Rank 128, Elo: 1365, Open-source
+    "o3-mini-high"  # Rank 130, Elo: 1363, Closed-source, Reasoning
+    "deepseek-v3"  # Rank 134, Elo: 1358, Open-source
+    "gpt-4o"  # Rank 154, Elo: 1345, Closed-source, Non-reasoning
+    "QwQ-32B"  # Rank 163, Elo: 1336, Open-source
+    "llama-3.3-70b-instruct"  # Rank 187, Elo: 1318, Open-source, Non-reasoning
+    "Qwen2.5-72B-Instruct"  # Rank 209, Elo: 1302, Open-source, Non-reasoning
+    "gemma-2-27b-it"  # Rank 215, Elo: 1288, Open-source
+    "Meta-Llama-3-70B-Instruct"  # Rank 227, Elo: 1275, Open-source, Non-reasoning
+    "claude-3-haiku"  # Rank 238, Elo: 1260, Closed-source, Non-reasoning
+    "phi-4"  # Rank 241, Elo: 1256, Open-source
+
     # WEAK TIER - Elo < 1290 (9 models)
-    "amazon-nova-micro"  # Rank 28, Elo: 1241, Closed-source
-    "mixtral-8x22b-instruct-v0.1"  # Rank 29, Elo: 1231, Open-source
-    "gpt-3.5-turbo-0125"  # Rank 30, Elo: 1225, Closed-source, Non-reasoning
-    "llama-3.1-8b-instruct"  # Rank 31, Elo: 1212, Open-source, Non-reasoning
-    "mixtral-8x7b-instruct-v0.1"  # Rank 32, Elo: 1198, Open-source
-    "Llama-3.2-3B-Instruct"  # Rank 33, Elo: 1167, Open-source, Non-reasoning
-    "Mistral-7B-Instruct-v0.2"  # Rank 34, Elo: 1151, Open-source
-    "Phi-3-mini-128k-instruct"  # Rank 35, Elo: 1130, Open-source
-    "Llama-3.2-1B-Instruct"  # Rank 36, Elo: 1112, Open-source, Non-reasoning
+    "amazon-nova-micro"  # Rank 245, Elo: 1240, Closed-source
+    "mixtral-8x22b-instruct-v0.1"  # Rank 253, Elo: 1228, Open-source
+    "gpt-3.5-turbo-0125"  # Rank 256, Elo: 1223, Closed-source, Non-reasoning
+    "llama-3.1-8b-instruct"  # Rank 264, Elo: 1211, Open-source, Non-reasoning
+    "mixtral-8x7b-instruct-v0.1"  # Rank 270, Elo: 1196, Open-source
+    "Llama-3.2-3B-Instruct"  # Rank 290, Elo: 1166, Open-source, Non-reasoning
+    "Mistral-7B-Instruct-v0.2"  # Rank 298, Elo: 1149, Open-source
+    "Phi-3-mini-128k-instruct"  # Rank 310, Elo: 1128, Open-source
+    "Llama-3.2-1B-Instruct"  # Rank 319, Elo: 1110, Open-source, Non-reasoning
 )
 
 # Competition levels
-# COMPETITION_LEVELS=(0.0 0.25 0.5 0.75 1.0)
-COMPETITION_LEVELS=(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
+COMPETITION_LEVELS=(0.0 0.5 0.9 1.0)
+# COMPETITION_LEVELS=(0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0)
 
 # Base parameters
 NUM_ITEMS=5
 MAX_ROUNDS=10
 # NUM_RUNS=6  # Number of runs per configuration
 NUM_RUNS=2  # Number of runs per configuration
-DISCUSSION_TURNS=2  # Number of discussion exchanges per round
+DISCUSSION_TURNS_LIST=(1 2)  # Discussion turns ablation values
 
 # Seeds for each scenario (used for both weak_first and strong_first orderings)
 # With balanced ordering, runs 1-3 (weak_first) and runs 4-6 (strong_first) use the same seeds
@@ -151,12 +151,12 @@ echo "  Weak models: ${#WEAK_MODELS[@]}"
 echo "  Strong models: ${#STRONG_MODELS[@]}"
 echo "  Competition levels: ${#COMPETITION_LEVELS[@]}"
 echo "  Runs per config: ${NUM_RUNS} (${WEAK_FIRST_RUNS} weak_first + ${STRONG_FIRST_RUNS} strong_first)"
-echo "  Discussion turns: ${DISCUSSION_TURNS}"
-echo "  Total configs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS}))"
+echo "  Discussion turns ablation: ${DISCUSSION_TURNS_LIST[*]}"
+echo "  Total configs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS} * ${#DISCUSSION_TURNS_LIST[@]}))"
 echo ""
 
 # Calculate total number of experiments for zero-padding
-TOTAL_EXPERIMENTS=$((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS}))
+TOTAL_EXPERIMENTS=$((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]} * ${#COMPETITION_LEVELS[@]} * ${NUM_RUNS} * ${#DISCUSSION_TURNS_LIST[@]}))
 # Calculate padding width (number of digits needed)
 PADDING_WIDTH=${#TOTAL_EXPERIMENTS}
 
@@ -166,36 +166,37 @@ EXPERIMENT_ID=0
 # Generate configs with balanced ordering: first WEAK_FIRST_RUNS use weak_first, rest use strong_first
 echo "Generating configs with balanced ordering..."
 echo "Note: Runs 1-${WEAK_FIRST_RUNS} (weak_first) and runs $((WEAK_FIRST_RUNS + 1))-${NUM_RUNS} (strong_first) use the same seeds for direct order comparison."
-for weak_model in "${WEAK_MODELS[@]}"; do
-    for strong_model in "${STRONG_MODELS[@]}"; do
-        for comp_level in "${COMPETITION_LEVELS[@]}"; do
-            for run_idx in $(seq 0 $((NUM_RUNS - 1))); do
-                # Create config file with zero-padded experiment ID
-                EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
-                CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
+for dt in "${DISCUSSION_TURNS_LIST[@]}"; do
+    for weak_model in "${WEAK_MODELS[@]}"; do
+        for strong_model in "${STRONG_MODELS[@]}"; do
+            for comp_level in "${COMPETITION_LEVELS[@]}"; do
+                for run_idx in $(seq 0 $((NUM_RUNS - 1))); do
+                    # Create config file with zero-padded experiment ID
+                    EXPERIMENT_ID_PADDED=$(printf "%0${PADDING_WIDTH}d" ${EXPERIMENT_ID})
+                    CONFIG_FILE="${CONFIG_DIR}/config_${EXPERIMENT_ID_PADDED}.json"
 
-                # Determine model order: first WEAK_FIRST_RUNS use weak_first, rest use strong_first
-                if [ $run_idx -lt $WEAK_FIRST_RUNS ]; then
-                    MODEL_ORDER="weak_first"
-                    MODELS_ARRAY="[\"${weak_model}\", \"${strong_model}\"]"
-                    OUTPUT_SUBDIR="weak_first"
-                    # For weak_first runs (0, 1, 2), use seeds 0, 1, 2
-                    SEED_IDX=$run_idx
-                else
-                    MODEL_ORDER="strong_first"
-                    MODELS_ARRAY="[\"${strong_model}\", \"${weak_model}\"]"
-                    OUTPUT_SUBDIR="strong_first"
-                    # For strong_first runs (3, 4, 5), reuse seeds 0, 1, 2
-                    # This makes run 4 use same seed as run 1, run 5 same as run 2, etc.
-                    SEED_IDX=$((run_idx - WEAK_FIRST_RUNS))
-                fi
+                    # Determine model order: first WEAK_FIRST_RUNS use weak_first, rest use strong_first
+                    if [ $run_idx -lt $WEAK_FIRST_RUNS ]; then
+                        MODEL_ORDER="weak_first"
+                        MODELS_ARRAY="[\"${weak_model}\", \"${strong_model}\"]"
+                        OUTPUT_SUBDIR="weak_first"
+                        # For weak_first runs (0, 1, 2), use seeds 0, 1, 2
+                        SEED_IDX=$run_idx
+                    else
+                        MODEL_ORDER="strong_first"
+                        MODELS_ARRAY="[\"${strong_model}\", \"${weak_model}\"]"
+                        OUTPUT_SUBDIR="strong_first"
+                        # For strong_first runs (3, 4, 5), reuse seeds 0, 1, 2
+                        # This makes run 4 use same seed as run 1, run 5 same as run 2, etc.
+                        SEED_IDX=$((run_idx - WEAK_FIRST_RUNS))
+                    fi
 
-                # Get seed for this scenario (same seed used for both orderings of the same scenario)
-                SEED=${SCENARIO_SEEDS[$SEED_IDX]}
-                RUN_NUM=$((run_idx + 1))
+                    # Get seed for this scenario (same seed used for both orderings of the same scenario)
+                    SEED=${SCENARIO_SEEDS[$SEED_IDX]}
+                    RUN_NUM=$((run_idx + 1))
 
-                # Write configuration as JSON
-                cat > "${CONFIG_FILE}" << EOF
+                    # Write configuration as JSON
+                    cat > "${CONFIG_FILE}" << EOF
 {
     "experiment_id": ${EXPERIMENT_ID},
     "weak_model": "${weak_model}",
@@ -207,12 +208,13 @@ for weak_model in "${WEAK_MODELS[@]}"; do
     "num_items": ${NUM_ITEMS},
     "max_rounds": ${MAX_ROUNDS},
     "random_seed": ${SEED},
-    "discussion_turns": ${DISCUSSION_TURNS},
-    "output_dir": "experiments/results/scaling_experiment_${TIMESTAMP}/${weak_model}_vs_${strong_model}/${OUTPUT_SUBDIR}/comp_${comp_level}/run_${RUN_NUM}"
+    "discussion_turns": ${dt},
+    "output_dir": "experiments/results/scaling_experiment_${TIMESTAMP}/${weak_model}_vs_${strong_model}/${OUTPUT_SUBDIR}/comp_${comp_level}/turns_${dt}/run_${RUN_NUM}"
 }
 EOF
 
-                EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
+                    EXPERIMENT_ID=$((EXPERIMENT_ID + 1))
+                done
             done
         done
     done
@@ -246,6 +248,7 @@ echo ""
 echo "✅ Generated ${EXPERIMENT_ID} total configuration files:"
 echo "   - Model pairs: $((${#WEAK_MODELS[@]} * ${#STRONG_MODELS[@]}))"
 echo "   - Competition levels: ${#COMPETITION_LEVELS[@]}"
+echo "   - Discussion turns ablation: ${DISCUSSION_TURNS_LIST[*]}"
 echo "   - Runs per config: ${NUM_RUNS}"
 echo "   - Location: ${CONFIG_DIR}"
 echo "   - Access via: ${BASE_DIR}/experiments/results/scaling_experiment/configs"
@@ -272,7 +275,7 @@ Competition levels (${#COMPETITION_LEVELS[@]}): ${COMPETITION_LEVELS[@]}
 
 Items per negotiation: ${NUM_ITEMS}
 Max rounds: ${MAX_ROUNDS}
-Discussion turns per round: ${DISCUSSION_TURNS}
+Discussion turns ablation: ${DISCUSSION_TURNS_LIST[*]}
 
 Random Seeds by Scenario (same seed used for both orderings):
   - Scenario 1: Seed ${SCENARIO_SEEDS[0]} (Run 1 weak_first, Run $((WEAK_FIRST_RUNS + 1)) strong_first)
@@ -298,7 +301,7 @@ echo "✅ Created summary: ${SUMMARY_FILE}"
 
 # Create a CSV index for easier analysis
 CSV_FILE="${CONFIG_DIR}/experiment_index.csv"
-echo "experiment_id,weak_model,strong_model,model_order,competition_level,run_number,seed,config_file" > "${CSV_FILE}"
+echo "experiment_id,weak_model,strong_model,model_order,competition_level,run_number,seed,discussion_turns,config_file" > "${CSV_FILE}"
 
 for config_file in "${CONFIG_DIR}"/config_*.json; do
     if [[ -f "$config_file" ]]; then
@@ -310,8 +313,9 @@ for config_file in "${CONFIG_DIR}"/config_*.json; do
         comp=$(grep -o '"competition_level": [0-9.]*' "$config_file" | grep -o '[0-9.]*')
         run=$(grep -o '"run_number": [0-9]*' "$config_file" | grep -o '[0-9]*')
         seed=$(grep -o '"random_seed": [0-9]*' "$config_file" | grep -o '[0-9]*')
-        
-        echo "${exp_id},${weak},${strong},${order},${comp},${run},${seed},$(basename $config_file)" >> "${CSV_FILE}"
+        dt=$(grep -o '"discussion_turns": [0-9]*' "$config_file" | grep -o '[0-9]*')
+
+        echo "${exp_id},${weak},${strong},${order},${comp},${run},${seed},${dt},$(basename $config_file)" >> "${CSV_FILE}"
     fi
 done
 
