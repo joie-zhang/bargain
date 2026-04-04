@@ -40,6 +40,8 @@ cd "${BASE_DIR}"
 if [ -f ~/.venv/bin/activate ]; then
     source ~/.venv/bin/activate
 fi
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
+echo "[$(date)] OpenRouter transport: ${OPENROUTER_TRANSPORT}" | tee -a "${LOG_FILE}"
 
 # Build command for 3-agent experiment
 # Note: --num-runs 1 means run 1 negotiation game in this Python process

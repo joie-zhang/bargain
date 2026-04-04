@@ -631,8 +631,9 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-direct}"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo ""
 
 # Get config file for this array task
@@ -1013,7 +1014,8 @@ cat "$CONFIG_FILE" | python3 -m json.tool
 echo ""
 
 source "${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-direct}"
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
+echo "OpenRouter transport: $OPENROUTER_TRANSPORT"
 
 # Extract and run the command directly
 GAME_TYPE=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['game_type'])")

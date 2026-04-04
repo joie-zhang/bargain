@@ -1,7 +1,8 @@
 """
 OpenRouter client for accessing various LLM models including Gemma.
 
-OpenRouter provides a unified API for multiple model providers.
+On Della, the default transport is the shared file-based proxy monitor first,
+with direct HTTPS as automatic fallback when the proxy path is unavailable.
 """
 
 import os
@@ -10,6 +11,7 @@ import asyncio
 import aiohttp
 import time
 import uuid
+import random
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
@@ -49,12 +51,17 @@ class OpenRouterConfig:
     site_url: Optional[str] = "https://github.com/negotiation-research"
     site_name: Optional[str] = "Negotiation Research"
     timeout: float = 300.0
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    transport: str = "direct"  # direct | proxy | auto
+    max_retries: int = 12
+    retry_delay: float = 2.0
+    transport: str = "auto"  # direct | proxy | auto (proxy-first)
     proxy_poll_dir: str = "/home/jz4391/openrouter_proxy"
     proxy_poll_interval: float = 0.1
     proxy_timeout: float = 6000.0
+    proxy_probe_timeout: float = 30.0
+
+
+class ProxyMonitorUnavailableError(RuntimeError):
+    """Raised when the shared OpenRouter proxy monitor appears unavailable."""
 
 
 class OpenRouterAgent(BaseLLMAgent):
@@ -94,13 +101,13 @@ class OpenRouterAgent(BaseLLMAgent):
                 f"This might indicate an invalid key format."
             )
         
-        transport = os.getenv("OPENROUTER_TRANSPORT", "direct").strip().lower()
+        transport = os.getenv("OPENROUTER_TRANSPORT", "auto").strip().lower()
         if transport not in {"direct", "proxy", "auto"}:
             self.logger.warning(
-                "Invalid OPENROUTER_TRANSPORT=%r; defaulting to 'direct'",
+                "Invalid OPENROUTER_TRANSPORT=%r; defaulting to 'auto'",
                 transport,
             )
-            transport = "direct"
+            transport = "auto"
 
         proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy")
 
@@ -124,12 +131,23 @@ class OpenRouterAgent(BaseLLMAgent):
             )
             proxy_timeout = 6000.0
 
+        probe_timeout_env = os.getenv("OPENROUTER_PROXY_PROBE_TIMEOUT", "30")
+        try:
+            proxy_probe_timeout = max(1.0, float(probe_timeout_env))
+        except ValueError:
+            self.logger.warning(
+                "Invalid OPENROUTER_PROXY_PROBE_TIMEOUT=%r; using 30",
+                probe_timeout_env,
+            )
+            proxy_probe_timeout = 30.0
+
         self.openrouter_config = OpenRouterConfig(
             api_key=api_key.strip(),
             transport=transport,
             proxy_poll_dir=proxy_poll_dir,
             proxy_poll_interval=proxy_poll_interval,
             proxy_timeout=proxy_timeout,
+            proxy_probe_timeout=proxy_probe_timeout,
         )
         self.session: Optional[aiohttp.ClientSession] = None
         
@@ -163,6 +181,21 @@ class OpenRouterAgent(BaseLLMAgent):
                 connector=connector,
                 json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
             )
+
+    def _proxy_monitor_hint(self) -> str:
+        host = os.getenv("OPENROUTER_PROXY_HOST", "della-vis1.princeton.edu")
+        return (
+            f"Ensure negotiation/openrouter_proxy_monitor.py is running on {host} "
+            f"and watching {self.openrouter_config.proxy_poll_dir}."
+        )
+
+    def _validate_request_result(self, result: Any, error: Any) -> None:
+        if error:
+            raise Exception(error)
+        if result is None:
+            raise Exception("OpenRouter API returned None result")
+        if not isinstance(result, str) or len(result.strip()) == 0:
+            raise Exception("OpenRouter API returned empty response content")
     
     def _extract_content_from_openrouter_response(self, data: Dict[str, Any]) -> str:
         """Extract message content from OpenRouter response payload."""
@@ -239,6 +272,17 @@ class OpenRouterAgent(BaseLLMAgent):
         processed_dir = poll_dir / "processed"
         poll_interval = self.openrouter_config.proxy_poll_interval
         client_timeout = self.openrouter_config.proxy_timeout
+        proxy_hint = self._proxy_monitor_hint()
+
+        poll_dir.mkdir(parents=True, exist_ok=True)
+        processed_dir.mkdir(parents=True, exist_ok=True)
+
+        effective_timeout = client_timeout
+        if self.openrouter_config.transport == "auto":
+            effective_timeout = min(
+                client_timeout,
+                self.openrouter_config.proxy_probe_timeout,
+            )
 
         # Use nanoseconds + uuid to avoid filename collisions across many workers.
         timestamp = f"{time.time_ns()}_{uuid.uuid4().hex}"
@@ -257,10 +301,12 @@ class OpenRouterAgent(BaseLLMAgent):
 
         start = time.time()
         while not response_path.exists():
-            if time.time() - start > client_timeout:
+            if time.time() - start > effective_timeout:
                 if request_path.exists():
                     request_path.unlink()
-                raise TimeoutError(f"No response after {client_timeout}s for {timestamp}")
+                raise ProxyMonitorUnavailableError(
+                    f"No proxy response after {effective_timeout}s for request {timestamp}. {proxy_hint}"
+                )
             await asyncio.sleep(poll_interval)
 
         with open(response_path, "r") as f:
@@ -296,55 +342,71 @@ class OpenRouterAgent(BaseLLMAgent):
 
         url = f"{self.openrouter_config.base_url}/chat/completions"
 
-        for attempt in range(self.openrouter_config.max_retries):
+        max_retries = self.openrouter_config.max_retries
+        for attempt in range(max_retries):
             try:
                 if self.openrouter_config.transport == "proxy":
                     result, error, usage = await self._send_request_via_proxy(
                         url, headers, payload, self.openrouter_config.timeout
                     )
+                    self._validate_request_result(result, error)
                 elif self.openrouter_config.transport == "direct":
                     result, error, usage = await self._send_request_direct(
                         url, headers, payload, self.openrouter_config.timeout
                     )
+                    self._validate_request_result(result, error)
                 else:
                     try:
-                        result, error, usage = await self._send_request_direct(
-                            url, headers, payload, self.openrouter_config.timeout
-                        )
-                    except Exception as direct_exc:
-                        self.logger.warning(
-                            "Direct OpenRouter request failed in auto mode (%s); "
-                            "falling back to proxy queue at %s",
-                            direct_exc,
-                            self.openrouter_config.proxy_poll_dir,
-                        )
                         result, error, usage = await self._send_request_via_proxy(
                             url, headers, payload, self.openrouter_config.timeout
                         )
-
-                if error:
-                    raise Exception(error)
-                if result is None:
-                    raise Exception("OpenRouter API returned None result")
-                if not result or len(result.strip()) == 0:
-                    raise Exception("OpenRouter API returned empty response content")
+                        self._validate_request_result(result, error)
+                    except Exception as proxy_exc:
+                        self.logger.warning(
+                            "OpenRouter proxy path failed in auto mode (%s); "
+                            "falling back to direct access to %s",
+                            proxy_exc,
+                            url,
+                        )
+                        result, error, usage = await self._send_request_direct(
+                            url, headers, payload, self.openrouter_config.timeout
+                        )
+                        self._validate_request_result(result, error)
                 return result, usage
             except asyncio.TimeoutError:
                 self.logger.warning(
-                    f"Request timeout (attempt {attempt + 1}/{self.openrouter_config.max_retries})"
+                    f"Request timeout (attempt {attempt + 1}/{max_retries})"
                 )
-                if attempt < self.openrouter_config.max_retries - 1:
-                    await asyncio.sleep(self.openrouter_config.retry_delay)
+                if attempt < max_retries - 1:
+                    wait_time = self.openrouter_config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    wait_time = min(wait_time, 300.0)
+                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                    await asyncio.sleep(wait_time)
                 else:
                     raise
             except Exception as e:
-                self.logger.error(f"Request failed: {e}")
-                if attempt < self.openrouter_config.max_retries - 1:
-                    await asyncio.sleep(self.openrouter_config.retry_delay)
+                error_str = str(e).lower()
+                is_rate_limit = "429" in error_str or "rate limit" in error_str or "rate_limit" in error_str
+                is_server_error = any(code in error_str for code in ["500", "502", "503", "504", "internal server error", "service unavailable"])
+
+                if is_rate_limit or is_server_error:
+                    self.logger.warning(
+                        f"{'Rate limit' if is_rate_limit else 'Server error'} "
+                        f"(attempt {attempt + 1}/{max_retries}): {e}"
+                    )
+                    if attempt < max_retries - 1:
+                        wait_time = self.openrouter_config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                        wait_time = min(wait_time, 300.0)
+                        self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        self.logger.error(f"Failed after {max_retries} attempts: {e}")
+                        raise
                 else:
+                    self.logger.error(f"Non-retryable error: {e}")
                     raise
 
-        raise Exception(f"Failed after {self.openrouter_config.max_retries} attempts")
+        raise Exception(f"Failed after {max_retries} attempts")
     
     async def discuss(self, context: Any, prompt: str) -> str:
         """Participate in discussion phase."""

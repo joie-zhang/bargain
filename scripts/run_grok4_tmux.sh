@@ -49,7 +49,9 @@ fi
 
 # Activate virtual environment
 source "${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
 echo "Python: $(which python3)"
+echo "OpenRouter transport: ${OPENROUTER_TRANSPORT}"
 echo ""
 
 # Track progress

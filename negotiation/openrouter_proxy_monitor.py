@@ -1,3 +1,11 @@
+"""
+Shared OpenRouter proxy monitor for restricted-network or Slurm workflows.
+
+This process runs on a login/visualization node, watches the shared queue at
+/home/jz4391/openrouter_proxy, and forwards requests to OpenRouter on behalf of
+compute-node jobs.
+"""
+
 import asyncio
 import json
 import logging
@@ -222,6 +230,7 @@ async def _run_and_cleanup(
         await handle_request(session, request_path)
     finally:
         task_map.pop(request_path, None)
+
 
 async def main():
     PROCESSED_DIR.mkdir(exist_ok=True)

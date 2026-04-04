@@ -423,8 +423,11 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
+# OpenRouter routing: proxy monitor first, then direct fallback.
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Activated virtual environment: \${BASE_DIR}/.venv"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo ""
 
 # Get config file for this array task
@@ -546,7 +549,9 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
 echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
@@ -630,7 +635,9 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
 echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""
@@ -714,7 +721,9 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
 echo "CUDA devices: \$(python3 -c 'import torch; print(torch.cuda.device_count())')"
 echo ""

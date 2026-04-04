@@ -604,8 +604,8 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
-# OpenRouter routing: direct calls now supported from compute nodes via proxy/default module.
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-direct}"
+# OpenRouter routing: proxy monitor first, then direct fallback.
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
 echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo ""
@@ -815,7 +815,7 @@ echo ""
 
 # Source virtual environment
 source "${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-direct}"
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
 echo "OpenRouter transport: $OPENROUTER_TRANSPORT"
 
 # Extract common config values

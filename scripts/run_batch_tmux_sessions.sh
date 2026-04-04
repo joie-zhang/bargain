@@ -99,6 +99,7 @@ start_batch() {
     tmux new-session -d -s "$session_name" bash -c "
         cd '$BASE_DIR'
         source .venv/bin/activate
+        export OPENROUTER_TRANSPORT=\${OPENROUTER_TRANSPORT:-auto}
 
         LOG_FILE='$log_file'
         CONFIG_DIR='$CONFIG_DIR'
@@ -106,6 +107,7 @@ start_batch() {
         echo '==========================================' | tee \"\$LOG_FILE\"
         echo 'Batch $batch_num: configs ${start_id}-${end_id}' | tee -a \"\$LOG_FILE\"
         echo 'Started: \$(date)' | tee -a \"\$LOG_FILE\"
+        echo 'OpenRouter transport: '\$OPENROUTER_TRANSPORT | tee -a \"\$LOG_FILE\"
         echo '==========================================' | tee -a \"\$LOG_FILE\"
         echo '' | tee -a \"\$LOG_FILE\"
 

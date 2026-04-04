@@ -86,11 +86,13 @@ run_job() {
     tmux new-session -d -s "$session_name" "
         cd $BASE_DIR
         source .venv/bin/activate
+        export OPENROUTER_TRANSPORT=\${OPENROUTER_TRANSPORT:-auto}
         echo '=========================================='
         echo 'Config ID: $config_id'
         echo 'Models: $models'
         echo 'Competition: $comp_level'
         echo 'Output: $output_dir'
+        echo 'OpenRouter transport:' \$OPENROUTER_TRANSPORT
         echo '=========================================='
         python3 run_strong_models_experiment.py \\
             --models $models \\

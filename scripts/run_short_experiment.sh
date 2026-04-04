@@ -23,6 +23,10 @@ echo "Model Order: Claude 3 Opus always goes first"
 echo "Max parallel jobs: ${MAX_PARALLEL}"
 echo ""
 
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
+echo "OpenRouter transport: ${OPENROUTER_TRANSPORT}"
+echo ""
+
 # Step 1: Generate configs if needed
 if [ ! -f "${CONFIG_DIR}/config_0.json" ]; then
     echo "Generating experiment configurations..."

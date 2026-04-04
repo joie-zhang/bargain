@@ -53,17 +53,19 @@ If your current key is invalid:
    export OPENROUTER_API_KEY="sk-or-v1-your-new-key-here"
    ```
 
-### Step 5: Restart Proxy Monitor
-If you're using the proxy monitor, restart it after updating the API key:
+### Step 5: Restart Or Check The Proxy Monitor
+On Della-PLI, this repo now defaults to the shared proxy monitor first and only
+falls back to direct `openrouter.ai` access if the proxy path is unavailable.
+
+If you manage the monitor manually on `della-vis1.princeton.edu`, restart it there:
 
 ```bash
-# Find the proxy monitor process
-ps aux | grep openrouter_proxy_monitor
-
-# Kill it (replace PID with actual process ID)
-kill <PID>
-
-# Restart it (adjust path as needed)
+tmux ls | grep openrouter_proxy_monitor
+tmux attach -t openrouter_proxy_monitor
+# or start a fresh session:
+tmux new -s openrouter_proxy_monitor
+cd /scratch/gpfs/DANQIC/jz4391/bargain
+source .venv/bin/activate
 python negotiation/openrouter_proxy_monitor.py
 ```
 
@@ -87,6 +89,6 @@ To avoid this issue in the future:
 
 If the diagnostic script passes but you still get 401 errors:
 1. Check if multiple processes are using different API keys
-2. Verify the proxy monitor is using the correct environment
+2. Verify the proxy monitor is running on the vis node and watching `/home/jz4391/openrouter_proxy`
 3. Check OpenRouter status page for service outages
 4. Contact OpenRouter support if account issues persist

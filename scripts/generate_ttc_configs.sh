@@ -402,7 +402,9 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
 echo "Python version: \$(python3 --version)"
+echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo ""
 
 # Get config file for this array task
@@ -595,6 +597,8 @@ echo ""
 
 # Source virtual environment
 source "${BASE_DIR}/.venv/bin/activate"
+export OPENROUTER_TRANSPORT="${OPENROUTER_TRANSPORT:-auto}"
+echo "OpenRouter transport: $OPENROUTER_TRANSPORT"
 
 # Extract config values
 REASONING_MODEL=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['reasoning_model'])")
