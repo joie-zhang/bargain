@@ -446,6 +446,33 @@ class TestInterfaceImplementation:
         assert '"target_items"' not in prompt
         assert '"anticipated_resistance"' not in prompt
 
+    def test_diplomacy_thinking_prompt_uses_full_preference_reminder(self, diplomacy_game, agents):
+        """Diplomacy thinking prompt should remind the agent of all issue weights and ideal positions."""
+        state = diplomacy_game.create_game_state(agents)
+
+        prompt = diplomacy_game.get_thinking_prompt(
+            "Agent_1",
+            state,
+            2,
+            5,
+            ["**Agent_2**: AI chip export controls still matter most to me."],
+        )
+
+        assert "**YOUR TOP PRIORITIES:**" not in prompt
+        assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
+        assert '"key_priorities"' in prompt
+        assert '"potential_concessions"' in prompt
+
+        for issue, weight, pos in zip(
+            state["issues"],
+            state["agent_weights"]["Agent_1"],
+            state["agent_positions"]["Agent_1"],
+        ):
+            assert (
+                f"{issue}: weight={diplomacy_game._format_percentage(weight)}, "
+                f"ideal={diplomacy_game._format_percentage(pos)}"
+            ) in prompt
+
     def test_parse_proposal(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement parse_proposal."""
         state1 = item_allocation_game.create_game_state(agents)

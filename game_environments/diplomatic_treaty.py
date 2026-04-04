@@ -1090,14 +1090,12 @@ Each vote must be either "accept" or "reject"."""
         positions = game_state["agent_positions"][agent_id]
         weights = game_state["agent_weights"][agent_id]
 
-        # Find top priorities
-        priority_indices = np.argsort(weights)[::-1][:3]
-        top_priorities = [
+        preference_lines = [
             (
-                f"{issues[i]} (weight: {self._format_percentage(weights[i])}, "
-                f"ideal: {self._format_percentage(positions[i])})"
+                f"  {issues[i]}: weight={self._format_percentage(weights[i])}, "
+                f"ideal={self._format_percentage(positions[i])}"
             )
-            for i in priority_indices
+            for i in range(len(issues))
         ]
 
         # Include what was said in the discussion this round
@@ -1122,8 +1120,8 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
         return f"""🧠 PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
 {urgency}
 {discussion_section}
-**YOUR TOP PRIORITIES:**
-{chr(10).join(['- ' + p for p in top_priorities])}
+**YOUR FULL PREFERENCE REMINDER:**
+{chr(10).join(preference_lines)}
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?

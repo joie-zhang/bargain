@@ -788,7 +788,7 @@ You are speaking first this round. Open the discussion in a way that reflects wh
 | `{max_rounds}` | Maximum rounds | `3` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: Final rounds - agreement urgency is high!` |
 | `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chip controls are non-negotiable for me…"` |
-| `{top_priorities}` | Top 3 issues by weight with ideal positions | `AI chip export quota (weight: 31%, ideal: 82%)` |
+| `{preference_lines}` | One line per issue with integer weight and ideal position | `AI chip export quota: weight=31%, ideal=82%` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -801,10 +801,12 @@ gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on
 
 ---
 
-**YOUR TOP PRIORITIES:**
-- AI chip export quota (weight: 31%, ideal: 82%)
-- Nuclear warhead reduction (weight: 23%, ideal: 65%)
-- Carbon cost on imports (weight: 22%, ideal: 77%)
+**YOUR FULL PREFERENCE REMINDER:**
+  AI chip export quota: weight=31%, ideal=82%
+  Critical mineral emergency stockpile contribution: weight=4%, ideal=14%
+  Nuclear warhead reduction: weight=23%, ideal=65%
+  Fentanyl precursor control breadth: weight=20%, ideal=49%
+  Carbon cost on imports: weight=22%, ideal=77%
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
