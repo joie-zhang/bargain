@@ -492,8 +492,8 @@ class DiplomaticTreatyGame(GameEnvironment):
     def _get_parties_phrase(self) -> str:
         """Create clearer phrasing for 2-agent negotiations."""
         if self.config.n_agents == 2:
-            return "another party"
-        return f"{self.config.n_agents - 1} other parties"
+            return "another delegation"
+        return f"{self.config.n_agents - 1} other delegations"
 
     def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
         """Build the shared rules/setup block for diplomatic treaty negotiation."""
@@ -513,10 +513,19 @@ class DiplomaticTreatyGame(GameEnvironment):
         issues_text = "\n".join(issue_lines)
 
         parties_phrase = self._get_parties_phrase()
+        privacy_phrase = (
+            "the other delegation does not know them"
+            if self.config.n_agents == 2
+            else "the other delegations do not know them"
+        )
 
         return f"""Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy issues. Here is your full setup information:
+You are one delegation in a diplomatic negotiation with {parties_phrase} over the terms of an international accord covering {len(issues)} policy issues. Here is your full setup information:
+
+These issues are shared accord clauses, not direct side-versus-side claims.
+The negotiation is about choosing one common policy setting for each issue, and every delegation evaluates that same package from its own interests and constraints.
+Different delegations may prefer different settings because of their own security, economic, legal, and domestic political priorities.
 
 **ISSUES UNDER NEGOTIATION:**
 Each issue is a continuous policy rate expressed as an integer percentage from 0% to 100%, where:
@@ -529,7 +538,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 {issues_text}
 
 **GAME STRUCTURE:**
-- There are {self.config.n_agents} parties negotiating (including you)
+- There are {self.config.n_agents} delegations negotiating (including you)
 - The negotiation will last up to {self.config.t_rounds} rounds
 - This message is the one-time setup phase
 - After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
@@ -538,7 +547,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 **PRIVATE INFORMATION:**
 - You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
 - You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
-- These positions and weights are PRIVATE and specific to you
+- These positions and weights are PRIVATE — {privacy_phrase}
 
 **AGREEMENT FORMAT:**
 - An agreement is a vector of {len(issues)} integer percentages, one per issue
@@ -553,7 +562,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 **VOTING RULES:**
 - All treaty proposals submitted in a round are shown together during voting
 - You vote "accept" or "reject" on each proposal independently
-- A proposal needs UNANIMOUS acceptance from all parties to take effect
+- A proposal needs UNANIMOUS acceptance from all delegations to take effect
 - If no proposal gets unanimous support, negotiation continues to the next round
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 

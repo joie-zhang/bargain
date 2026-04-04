@@ -519,10 +519,10 @@ Control parameters: ρ (position correlation across agents), θ (weight overlap 
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{parties_phrase}` | "another party" (n=2) or "N-1 other parties" | `another party` |
+| `{delegations_phrase}` | "another delegation" (n=2) or "N-1 other delegations" | `another delegation` |
 | `{len(issues)}` | Number of issues in this game | `5` |
 | `{issues_text}` | Numbered list of issue names with scale endpoints | see rendered prompt |
-| `{n_agents}` | Total number of negotiating parties | `2` |
+| `{n_agents}` | Total number of negotiating delegations | `2` |
 | `{t_rounds}` | Maximum rounds | `3` |
 | `{round_2_pct}` | Round 2 payoff percentage | `90` |
 | `{round_3_pct}` | Round 3 payoff percentage | `81` |
@@ -534,7 +534,11 @@ Control parameters: ρ (position correlation across agents), θ (weight overlap 
 ```
 Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with another party over 5 policy issues. Here is your full setup information:
+You are one delegation in a diplomatic negotiation with another delegation over the terms of an international accord covering 5 policy issues. Here is your full setup information:
+
+These issues are shared accord clauses, not direct side-versus-side claims.
+The negotiation is about choosing one common policy setting for each issue, and every delegation evaluates that same package from its own interests and constraints.
+Different delegations may prefer different settings because of their own security, economic, legal, and domestic political priorities.
 
 **ISSUES UNDER NEGOTIATION:**
 Each issue is a continuous policy rate expressed as an integer percentage from 0% to 100%, where:
@@ -556,7 +560,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
      Scale: 0% = no carbon cost on covered imports | 100% = full domestic carbon price applied to covered imports
 
 **GAME STRUCTURE:**
-- There are 2 parties negotiating (including you)
+- There are 2 delegations negotiating (including you)
 - The negotiation will last up to 3 rounds
 - This message is the one-time setup phase
 - After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
@@ -565,7 +569,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 **PRIVATE INFORMATION:**
 - You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
 - You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
-- These positions and weights are PRIVATE and specific to you
+- These positions and weights are PRIVATE — the other delegation does not know them
 
 **AGREEMENT FORMAT:**
 - An agreement is a vector of 5 integer percentages, one per issue
@@ -580,7 +584,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 **VOTING RULES:**
 - All treaty proposals submitted in a round are shown together during voting
 - You vote "accept" or "reject" on each proposal independently
-- A proposal needs UNANIMOUS acceptance from all parties to take effect
+- A proposal needs UNANIMOUS acceptance from all delegations to take effect
 - If no proposal gets unanimous support, negotiation continues to the next round
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 
