@@ -82,8 +82,8 @@ class LLMConfig:
     tokens_per_minute: int = 10000
     
     # Retry configuration
-    max_retries: int = 3
-    retry_delay: float = 1.0
+    max_retries: int = 12
+    retry_delay: float = 2.0
     
     # Model-specific parameters
     system_prompt: Optional[str] = None
@@ -275,6 +275,72 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
             base_prompt += f"\n\nADDITIONAL INSTRUCTIONS:\n{self.config.system_prompt}"
         
         return base_prompt
+
+    @staticmethod
+    def _format_phase_label(phase: Optional[str]) -> str:
+        """Format a phase identifier for readable context headers."""
+        if not phase:
+            return "Unknown Phase"
+        return phase.replace("_", " ").title()
+
+    def _serialize_history_entry(self, entry: Dict[str, Any]) -> Tuple[str, str]:
+        """Serialize a history entry into sender/content strings for the API."""
+        sender = entry.get("from") or entry.get("agent_id") or "other"
+        content = entry.get("content") or entry.get("response") or ""
+        phase = self._format_phase_label(entry.get("phase"))
+        round_num = entry.get("round")
+
+        header_parts = []
+        if round_num is not None:
+            header_parts.append(f"Round {round_num}")
+        if phase:
+            header_parts.append(phase)
+        header = " | ".join(header_parts)
+
+        if header:
+            serialized = f"[{header}] {content}"
+        else:
+            serialized = content
+
+        return str(sender), serialized
+
+    def _append_context_blocks(
+        self, messages: List[Dict[str, str]], context: NegotiationContext
+    ) -> None:
+        """Append accumulated public and private context to a message list."""
+        for entry in context.conversation_history:
+            sender, serialized = self._serialize_history_entry(entry)
+            if sender == self.agent_id:
+                messages.append({"role": "assistant", "content": serialized})
+            else:
+                messages.append({"role": "user", "content": f"[{sender}] {serialized}"})
+
+        if context.previous_proposals:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "PREVIOUS PROPOSALS AVAILABLE TO YOU:\n"
+                    f"{json.dumps(context.previous_proposals, indent=2, default=str)}"
+                ),
+            })
+
+        if context.previous_votes:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "PREVIOUS VOTES AVAILABLE TO YOU:\n"
+                    f"{json.dumps(context.previous_votes, indent=2, default=str)}"
+                ),
+            })
+
+        if context.strategic_notes:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "PRIVATE NOTES FROM EARLIER PHASES AVAILABLE ONLY TO YOU:\n\n"
+                    + "\n\n".join(context.strategic_notes)
+                ),
+            })
     
     def _format_preferences(self, preferences: Any, items: List[Any]) -> str:
         """Format preferences for display in prompt."""
@@ -391,24 +457,10 @@ STRATEGIC MINDSET:
 
 Response format: Provide your analysis as structured strategic thinking."""
 
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt}
-        ]
-        
-        # Add conversation history context if available
-        if hasattr(context, 'conversation_history') and context.conversation_history:
-            # Add recent context
-            recent_context = "RECENT DISCUSSION HIGHLIGHTS:\n"
-            for msg in context.conversation_history[-4:]:  # Last 4 messages
-                if isinstance(msg, dict) and msg.get('content'):
-                    agent = msg.get('agent_id', 'unknown')
-                    content = msg.get('content', '')[:150]  # Truncate for context
-                    recent_context += f"- {agent}: {content}\n"
-            
-            # Insert context before the main prompt
-            messages[1]["content"] = recent_context + "\n" + messages[1]["content"]
-        
+        messages = [{"role": "system", "content": system_prompt}]
+        self._append_context_blocks(messages, context)
+        messages.append({"role": "user", "content": prompt})
+
         return messages
     
     def _parse_thinking_response(self, response_content: str) -> Dict[str, Any]:
@@ -794,17 +846,7 @@ Response format: Provide your analysis as structured strategic thinking."""
         system_prompt = self._build_system_prompt(context)
         messages.append({"role": "system", "content": system_prompt})
         
-        # Add conversation history (last N messages to stay within limits)
-        max_history = 20  # Configurable
-        recent_history = context.conversation_history[-max_history:]
-        
-        for msg in recent_history:
-            if msg.get("from") == self.agent_id:
-                messages.append({"role": "assistant", "content": msg["content"]})
-            else:
-                sender = msg.get("from", "other")
-                content = f"[{sender}]: {msg['content']}"
-                messages.append({"role": "user", "content": content})
+        self._append_context_blocks(messages, context)
         
         # Add current prompt
         messages.append({"role": "user", "content": prompt})
@@ -850,9 +892,12 @@ Response format: Provide your analysis as structured strategic thinking."""
                 return response
                 
             except Exception as e:
-                self.logger.warning(f"Attempt {attempt + 1} failed: {e}")
+                self.logger.warning(f"Attempt {attempt + 1}/{self.config.max_retries} failed: {e}")
                 if attempt < self.config.max_retries - 1:
-                    await asyncio.sleep(self.config.retry_delay * (2 ** attempt))
+                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    wait_time = min(wait_time, 300.0)
+                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
+                    await asyncio.sleep(wait_time)
                 else:
                     raise
     
@@ -1373,29 +1418,28 @@ class AnthropicAgent(BaseLLMAgent):
                     f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
                     f"Waiting before retry..."
                 )
-                
+
                 if attempt < max_retries - 1:
-                    # Exponential backoff: 2^attempt seconds, with jitter
                     wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    # Cap wait time at 60 seconds to avoid excessive delays
-                    wait_time = min(wait_time, 60.0)
+                    wait_time = min(wait_time, 300.0)
                     self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
                     await asyncio.sleep(wait_time)
                 else:
                     self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
                     raise
-                    
+
             except anthropic.APIStatusError as e:
                 # Handle other API errors (500s, etc.)
                 self.logger.warning(
                     f"API error (attempt {attempt + 1}/{max_retries}): {e}"
                 )
                 if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt)
+                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    wait_time = min(wait_time, 300.0)
                     await asyncio.sleep(wait_time)
                 else:
                     raise
-                    
+
             except Exception as e:
                 # Re-raise non-API exceptions immediately
                 self.logger.error(f"Unexpected error in Anthropic API call: {e}")
@@ -1530,29 +1574,28 @@ class OpenAIAgent(BaseLLMAgent):
                     f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
                     f"Waiting before retry..."
                 )
-                
+
                 if attempt < max_retries - 1:
-                    # Exponential backoff: 2^attempt seconds, with jitter
                     wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    # Cap wait time at 60 seconds to avoid excessive delays
-                    wait_time = min(wait_time, 60.0)
+                    wait_time = min(wait_time, 300.0)
                     self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
                     await asyncio.sleep(wait_time)
                 else:
                     self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
                     raise
-                    
+
             except openai.APIError as e:
                 # Handle other API errors (500s, etc.)
                 self.logger.warning(
                     f"API error (attempt {attempt + 1}/{max_retries}): {e}"
                 )
                 if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt)
+                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                    wait_time = min(wait_time, 300.0)
                     await asyncio.sleep(wait_time)
                 else:
                     raise
-                    
+
             except Exception as e:
                 # Re-raise non-API exceptions immediately
                 self.logger.error(f"Unexpected error in OpenAI API call: {e}")
@@ -1967,18 +2010,16 @@ class GoogleAgent(BaseLLMAgent):
                             f"Daily quota exceeded: {e}. Stopping retries."
                         )
                         raise
-                    
+
                     # Rate limit error - retry with exponential backoff
                     self.logger.warning(
                         f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
                         f"Waiting before retry..."
                     )
-                    
+
                     if attempt < max_retries - 1:
-                        # Exponential backoff: 2^attempt seconds, with jitter
                         wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                        # Cap wait time at 60 seconds to avoid excessive delays
-                        wait_time = min(wait_time, 60.0)
+                        wait_time = min(wait_time, 300.0)
                         self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
                         await asyncio.sleep(wait_time)
                     else:
@@ -1986,7 +2027,6 @@ class GoogleAgent(BaseLLMAgent):
                         raise
                 else:
                     # Other errors - check if retryable (5xx errors)
-                    # Google API doesn't have specific exception types, so we check error message
                     is_server_error = (
                         "500" in error_str or
                         "502" in error_str or
@@ -1995,12 +2035,13 @@ class GoogleAgent(BaseLLMAgent):
                         "internal error" in error_str or
                         "service unavailable" in error_str
                     )
-                    
+
                     if is_server_error and attempt < max_retries - 1:
                         self.logger.warning(
                             f"Server error (attempt {attempt + 1}/{max_retries}): {e}"
                         )
-                        wait_time = self.config.retry_delay * (2 ** attempt)
+                        wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
+                        wait_time = min(wait_time, 300.0)
                         await asyncio.sleep(wait_time)
                     else:
                         # Non-retryable error or max retries exceeded

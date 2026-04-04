@@ -36,8 +36,8 @@ class AgentConfiguration:
     tokens_per_minute: int = 10000
     
     # Retry configuration
-    max_retries: int = 3
-    retry_delay: float = 1.0
+    max_retries: int = 12
+    retry_delay: float = 2.0
     
     # Model-specific parameters
     system_prompt: Optional[str] = None
