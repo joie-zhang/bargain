@@ -106,7 +106,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 92 | 79 ◄─► 105 | qwen3.5-35b-a3b | 1400 | ±6 | 9,959 | $0.16 / $1.30 | 262.1K | Alibaba | Apache 2.0 |
 | 93 | 78 ◄─► 106 | qwen3-235b-a22b-thinking-2507 | 1400 | ±7 | 9,059 | $0.15 / $1.50 | 131.1K | Alibaba | Apache 2.0 |
 | 94 | 81 ◄─► 104 | claude-sonnet-4-20250514-thinking-32k | 1399 | ±4 | 35,423 | $3 / $15 | 1M | Anthropic | Proprietary |
-| 95 | 81 ◄─► 108 | deepseek-r1 | 1398 | ±5 | 18,524 | $0.70 / $2.50 | 64K | DeepSeek | MIT |
+| 95 | 81 ◄─► 108 | deepseek-r1 | 1398 | ±5 | 18,524 | $0.70 / $2.50 | 128K | DeepSeek | MIT |
 | 96 | 71 ◄─► 116 | hunyuan-vision-1.5-thinking | 1397 | ±12 | 2,228 | N/A | N/A | Tencent | Proprietary |
 | 97 | 79 ◄─► 116 | amazon-nova-experimental-chat-12-10 | 1396 | ±10 | 3,706 | N/A | N/A | Amazon | Proprietary |
 | 98 | 81 ◄─► 114 | qwen3-vl-235b-a22b-thinking | 1396 | ±7 | 8,021 | $0.26 / $2.60 | 131.1K | Alibaba | Apache 2.0 |
@@ -145,7 +145,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 131 | 123 ◄─► 139 | minimax-m1 | 1363 | ±4 | 35,520 | $0.40 / $2.20 | 1M | MiniMax | Apache 2.0 |
 | 132 | 123 ◄─► 143 | grok-3-mini-high | 1363 | ±5 | 17,076 | $0.30 / $0.50 | 131.1K | xAI | Proprietary |
 | 133 | 125 ◄─► 147 | gemini-2.0-flash-001 | 1360 | ±4 | 43,918 | $0.10 / $0.40 | 1M | Google | Proprietary |
-| 134 | 127 ◄─► 151 | deepseek-v3 | 1358 | ±5 | 21,770 | $1.14 / $4.56 | N/A | DeepSeek | DeepSeek |
+| 134 | 127 ◄─► 151 | deepseek-v3 | 1358 | ±5 | 21,770 | $1.14 / $4.56 | 128K | DeepSeek | DeepSeek |
 | 135 | 128 ◄─► 153 | grok-3-mini-beta | 1358 | ±5 | 22,878 | $0.30 / $0.50 | 131.1K | xAI | Proprietary |
 | 136 | 128 ◄─► 154 | mistral-small-2506 | 1357 | ±5 | 17,848 | $0.10 / $0.30 | 32K | Mistral | Apache 2.0 |
 | 137 | 125 ◄─► 159 | intellect-3 | 1356 | ±8 | 5,363 | $0.20 / $1.10 | 131.1K | Prime Intellect | MIT |
@@ -177,15 +177,15 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 163 | 147 ◄─► 176 | qwq-32b | 1336 | ±4 | 25,526 | $0.15 / $0.58 | 131.1K | Alibaba | Apache 2.0 |
 | 164 | 149 ◄─► 176 | grok-2-2024-08-13 | 1335 | ±4 | 63,498 | $2 / $10 | 131.1K | xAI | Proprietary |
 | 165 | 149 ◄─► 177 | gpt-4o-2024-08-06 | 1334 | ±4 | 45,499 | $2.50 / $10 | 128K | OpenAI | Proprietary |
-| 166 | 150 ◄─► 177 | llama-3.1-405b-instruct-bf16 | 1334 | ±4 | 41,375 | $4 / $4 | 32.8K | Meta | Llama 3.1 Community |
+| 166 | 150 ◄─► 177 | llama-3.1-405b-instruct-bf16 | 1334 | ±4 | 41,375 | $4 / $4 | 128K | Meta | Llama 3.1 Community |
 | 167 | 147 ◄─► 178 | gemini-advanced-0514 | 1334 | ±5 | 50,148 | N/A | N/A | Google | Proprietary |
 | 168 | 145 ◄─► 184 | step-2-16k-exp-202412 | 1334 | ±9 | 4,833 | N/A | N/A | StepFun | Proprietary |
-| 169 | 155 ◄─► 178 | llama-3.1-405b-instruct-fp8 | 1333 | ±4 | 59,656 | $4 / $4 | 32.8K | Meta | Llama 3.1 Community |
+| 169 | 155 ◄─► 178 | llama-3.1-405b-instruct-fp8 | 1333 | ±4 | 59,656 | $4 / $4 | 128K | Meta | Llama 3.1 Community |
 | 170 | 152 ◄─► 184 | olmo-3.1-32b-instruct | 1331 | ±6 | 12,282 | $0.20 / $0.60 | 65.5K | Ai2 | Apache 2.0 |
 | 171 | 157 ◄─► 188 | yi-lightning | 1328 | ±5 | 27,332 | N/A | N/A | 01 AI | Proprietary |
 | 172 | 159 ◄─► 190 | qwen3-30b-a3b | 1328 | ±5 | 26,653 | $0.08 / $0.28 | 41K | Alibaba | Apache 2.0 |
 | 173 | 147 ◄─► 199 | llama-3.3-nemotron-49b-super-v1 | 1327 | ±12 | 2,218 | N/A | N/A | Nvidia | Nvidia |
-| 174 | 163 ◄─► 190 | llama-4-maverick-17b-128e-instruct | 1327 | ±4 | 40,211 | $0.63 / $1.80 | 131.1K | Meta | Llama 4 |
+| 174 | 163 ◄─► 190 | llama-4-maverick-17b-128e-instruct | 1327 | ±4 | 40,211 | $0.63 / $1.80 | 1M | Meta | Llama 4 |
 | 175 | 140 ◄─► 210 | molmo-2-8b | 1327 | ±21 | 805 | $0.20 / $0.20 | 36.9K | Ai2 | Apache 2.0 |
 | 176 | 155 ◄─► 199 | hunyuan-large-2025-02-10 | 1326 | ±10 | 3,738 | N/A | N/A | Tencent | Proprietary |
 | 177 | 169 ◄─► 195 | gpt-4-turbo-2024-04-09 | 1324 | ±4 | 98,114 | $10 / $30 | 128K | OpenAI | Proprietary |
@@ -198,7 +198,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 184 | 169 ◄─► 199 | ring-flash-2.0 | 1321 | ±7 | 7,223 | N/A | N/A | Ant Group | MIT |
 | 185 | 169 ◄─► 200 | step-1o-turbo-202506 | 1320 | ±7 | 9,110 | N/A | N/A | StepFun | Proprietary |
 | 186 | 171 ◄─► 199 | glm-4-plus | 1319 | ±5 | 26,126 | $0.44 / $1.76 | 204.8K | Zhipu AI | Proprietary |
-| 187 | 174 ◄─► 199 | llama-3.3-70b-instruct | 1318 | ±3 | 54,886 | $0.10 / $0.32 | 131.1K | Meta | Llama-3.3 |
+| 187 | 174 ◄─► 199 | llama-3.3-70b-instruct | 1318 | ±3 | 54,886 | $0.10 / $0.32 | 128K | Meta | Llama-3.3 |
 | 188 | 171 ◄─► 202 | gpt-oss-20b | 1318 | ±6 | 10,704 | $0.03 / $0.11 | 131.1K | OpenAI | Apache 2.0 |
 | 189 | 172 ◄─► 201 | gemma-3n-e4b-it | 1318 | ±5 | 22,728 | $0.02 / $0.04 | 32.8K | Google | Gemma |
 | 190 | 171 ◄─► 201 | nvidia-nemotron-3-nano-30b-a3b-bf16 | 1318 | ±6 | 15,607 | $0.06 / $0.24 | 262.1K | Nvidia | NVIDIA Open Model |
@@ -220,10 +220,10 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 206 | 193 ◄─► 211 | magistral-medium-2506 | 1303 | ±6 | 11,723 | $2 / $5 | 40K | Mistral | Proprietary |
 | 207 | 197 ◄─► 211 | mistral-small-3.1-24b-instruct-2503 | 1303 | ±4 | 33,474 | $0.10 / $0.30 | 32K | Mistral | Apache 2.0 |
 | 208 | 190 ◄─► 218 | gemma-3-4b-it | 1303 | ±9 | 4,171 | $0.04 / $0.08 | 131.1K | Google | Gemma |
-| 209 | 197 ◄─► 211 | qwen2.5-72b-instruct | 1302 | ±4 | 39,406 | $1.20 / $1.20 | N/A | Alibaba | Qwen |
+| 209 | 197 ◄─► 211 | qwen2.5-72b-instruct | 1302 | ±4 | 39,406 | $1.20 / $1.20 | 131K | Alibaba | Qwen |
 | 210 | 197 ◄─► 221 | llama-3.1-nemotron-70b-instruct | 1298 | ±8 | 7,140 | $1.20 / $1.20 | 131.1K | Nvidia | Llama 3.1 |
 | 211 | 200 ◄─► 223 | hunyuan-large-vision | 1294 | ±9 | 5,399 | N/A | N/A | Tencent | Proprietary |
-| 212 | 208 ◄─► 222 | llama-3.1-70b-instruct | 1293 | ±4 | 55,240 | $0.40 / $0.40 | 131.1K | Meta | Llama 3.1 Community |
+| 212 | 208 ◄─► 222 | llama-3.1-70b-instruct | 1293 | ±4 | 55,240 | $0.40 / $0.40 | 128K | Meta | Llama 3.1 Community |
 | 213 | 208 ◄─► 223 | amazon-nova-pro-v1.0 | 1290 | ±5 | 24,745 | $0.80 / $3.20 | 300K | Amazon | Proprietary |
 | 214 | 208 ◄─► 226 | jamba-1.5-large | 1288 | ±7 | 8,662 | $2 / $8 | 256K | AI21 Labs | Jamba Open |
 | 215 | 210 ◄─► 223 | gemma-2-27b-it | 1288 | ±3 | 75,754 | $0.65 / $0.65 | 8.2K | Google | Gemma license |
@@ -275,7 +275,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 261 | 247 ◄─► 266 | llama-3.1-tulu-3-8b | 1220 | ±11 | 2,896 | N/A | N/A | Ai2 | Llama 3.1 |
 | 262 | 258 ◄─► 267 | yi-1.5-34b-chat | 1213 | ±5 | 24,146 | N/A | N/A | 01 AI | Apache-2.0 |
 | 263 | 253 ◄─► 269 | zephyr-orpo-141b-A35b-v0.1 | 1212 | ±11 | 4,652 | N/A | N/A | HuggingFace | Apache 2.0 |
-| 264 | 260 ◄─► 267 | llama-3.1-8b-instruct | 1211 | ±4 | 49,605 | $0.02 / $0.05 | 16.4K | Meta | Llama 3.1 Community |
+| 264 | 260 ◄─► 267 | llama-3.1-8b-instruct | 1211 | ±4 | 49,605 | $0.02 / $0.05 | 128K | Meta | Llama 3.1 Community |
 | 265 | 257 ◄─► 273 | granite-3.1-8b-instruct | 1208 | ±11 | 3,090 | N/A | N/A | IBM | Apache 2.0 |
 | 266 | 262 ◄─► 273 | qwen1.5-32b-chat | 1203 | ±6 | 21,741 | N/A | N/A | Alibaba | Qianwen LICENSE |
 | 267 | 260 ◄─► 275 | gpt-3.5-turbo-1106 | 1201 | ±9 | 16,619 | $1 / $2 | 16.4K | OpenAI | Proprietary |
@@ -301,7 +301,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 287 | 275 ◄─► 295 | phi-3-small-8k-instruct | 1170 | ±6 | 17,766 | $0.15 / $0.60 | N/A | Microsoft | MIT |
 | 288 | 275 ◄─► 295 | llama-2-70b-chat | 1170 | ±6 | 38,492 | $0.70 / $2.80 | 4.1K | Meta | Llama 2 Community |
 | 289 | 275 ◄─► 298 | starling-lm-7b-alpha | 1167 | ±8 | 10,224 | N/A | N/A | UC Berkeley | CC-BY-NC-4.0 |
-| 290 | 277 ◄─► 298 | llama-3.2-3b-instruct | 1166 | ±8 | 7,936 | $0.05 / $0.34 | 80K | Meta | Llama 3.2 |
+| 290 | 277 ◄─► 298 | llama-3.2-3b-instruct | 1166 | ±8 | 7,936 | $0.05 / $0.34 | 128K | Meta | Llama 3.2 |
 | 291 | 275 ◄─► 301 | nous-hermes-2-mixtral-8x7b-dpo | 1164 | ±12 | 3,777 | $0.90 / $0.90 | N/A | NousResearch | Apache-2.0 |
 | 292 | 282 ◄─► 307 | qwq-32b-preview | 1156 | ±12 | 3,231 | $0.15 / $0.58 | 131.1K | Alibaba | Apache 2.0 |
 | 293 | 288 ◄─► 304 | granite-3.0-2b-instruct | 1155 | ±8 | 6,837 | N/A | N/A | IBM | Apache 2.0 |
@@ -321,7 +321,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 307 | 294 ◄─► 316 | codellama-34b-instruct | 1136 | ±9 | 7,366 | $0.35 / $1.40 | 16.4K | Meta | Llama 2 Community |
 | 308 | 293 ◄─► 316 | gemma-7b-it | 1135 | ±10 | 8,925 | $0.05 / $0.08 | 8.2K | Google | Gemma license |
 | 309 | 297 ◄─► 318 | zephyr-7b-beta | 1130 | ±9 | 11,118 | $0.15 / $0.15 | 16.4K | HuggingFace | MIT |
-| 310 | 300 ◄─► 318 | phi-3-mini-128k-instruct | 1128 | ±7 | 20,685 | $0.13 / $0.52 | N/A | Microsoft | MIT |
+| 310 | 300 ◄─► 318 | phi-3-mini-128k-instruct | 1128 | ±7 | 20,685 | $0.13 / $0.52 | 128K | Microsoft | MIT |
 | 311 | 301 ◄─► 318 | phi-3-mini-4k-instruct | 1127 | ±6 | 20,118 | $0.13 / $0.52 | N/A | Microsoft | MIT |
 | 312 | 297 ◄─► 321 | guanaco-33b | 1126 | ±12 | 2,921 | N/A | N/A | UW | Non-commercial |
 | 313 | 296 ◄─► 321 | zephyr-7b-alpha | 1126 | ±16 | 1,785 | N/A | N/A | HuggingFace | MIT |
@@ -330,7 +330,7 @@ View rankings across various LLMs on text-to-text tasks across math, coding, cre
 | 316 | 309 ◄─► 321 | vicuna-7b | 1114 | ±9 | 6,923 | $0.20 / $0.20 | N/A | LMSYS | Llama 2 Community |
 | 317 | 309 ◄─► 321 | gemma-1.1-2b-it | 1114 | ±8 | 10,854 | N/A | N/A | Google | Gemma license |
 | 318 | 305 ◄─► 322 | smollm2-1.7b-instruct | 1113 | ±14 | 2,199 | N/A | N/A | HuggingFace | Apache 2.0 |
-| 319 | 312 ◄─► 322 | llama-3.2-1b-instruct | 1110 | ±8 | 8,045 | $0.03 / $0.20 | 60K | Meta | Llama 3.2 |
+| 319 | 312 ◄─► 322 | llama-3.2-1b-instruct | 1110 | ±8 | 8,045 | $0.03 / $0.20 | 128K | Meta | Llama 3.2 |
 | 320 | 312 ◄─► 322 | mistral-7b-instruct | 1109 | ±9 | 8,977 | $0.07 / $0.28 | 4.1K | Mistral | Apache 2.0 |
 | 321 | 312 ◄─► 322 | llama-2-7b-chat | 1107 | ±7 | 14,148 | $0.15 / $0.15 | 4.1K | Meta | Llama 2 Community |
 | 322 | 317 ◄─► 325 | gemma-2b-it | 1091 | ±12 | 4,780 | $0.10 / $0.10 | N/A | Google | Gemma license |
@@ -380,7 +380,7 @@ Models used in this project and their March 31, 2026 Elo scores, verified agains
 | grok-4.1 | 1461 | 19 | N/A |  |
 | deepseek-v3.2 | 1424 | 55 | 163.8K |  |
 | deepseek-r1-0528 | 1422 | 60 | 163.8K |  |
-| llama-4-maverick-17b-128e-instruct | 1327 | 174 | 131.1K |  |
-| llama-3.3-70b-instruct | 1318 | 187 | 131.1K |  |
-| llama-3.1-8b-instruct | 1211 | 264 | 16.4K | Weak baseline model |
+| llama-4-maverick-17b-128e-instruct | 1327 | 174 | 1M |  |
+| llama-3.3-70b-instruct | 1318 | 187 | 128K |  |
+| llama-3.1-8b-instruct | 1211 | 264 | 128K | Weak baseline model |
 | amazon-nova-micro-v1.0 | 1240 | 245 | 128K | Used in experiments |
