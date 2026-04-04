@@ -443,7 +443,7 @@ You are speaking first this round. Open the discussion in a way that reflects wh
 
         return f"""🗣️ PUBLIC DISCUSSION PHASE - Round {round_num}/{max_rounds}
 
-This is the open discussion phase where all agents can share information about their preferences.
+This is the open discussion phase where agents can discuss and strategize publicly.
 
 **ITEMS AVAILABLE:**
 {items_text}
