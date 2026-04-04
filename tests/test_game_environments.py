@@ -233,6 +233,29 @@ class TestInterfaceImplementation:
         assert "Since this is not the first round" in responder_prompt
         assert "You do not need to reveal your full private strategy." in responder_prompt
 
+    def test_diplomatic_treaty_later_round_discussion_branches(self, diplomacy_game, agents):
+        """Later diplomatic discussion rounds should distinguish first speaker vs. responders."""
+        state = diplomacy_game.create_game_state(agents)
+
+        first_speaker_prompt = diplomacy_game.get_discussion_prompt(
+            "Agent_1", state, 2, 3, []
+        )
+        responder_prompt = diplomacy_game.get_discussion_prompt(
+            "Agent_1",
+            state,
+            2,
+            3,
+            ['**Agent_2**: AI chip export controls still matter most to me.'],
+        )
+
+        assert "**DISCUSSION FOCUS:**" in first_speaker_prompt
+        assert "You are speaking first this round." in first_speaker_prompt
+        assert "Since this is not the first round" not in first_speaker_prompt
+
+        assert "**YOUR TURN TO RESPOND:**" in responder_prompt
+        assert "Since this is not the first round" in responder_prompt
+        assert "You do not need to reveal your full private strategy." in responder_prompt
+
     def test_get_voting_prompt(self, item_allocation_game, diplomacy_game, agents):
         """Test that both implement get_voting_prompt."""
         state1 = item_allocation_game.create_game_state(agents)

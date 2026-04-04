@@ -848,6 +848,10 @@ Respond with ONLY a JSON object in this exact format:
                 history_section += f"{msg}\n\n"
             history_section += "---\n"
 
+        urgency = ""
+        if round_num >= max_rounds - 1:
+            urgency = "\n⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!"
+
         if round_num == 1 and not discussion_history:
             context = """**DISCUSSION OBJECTIVES:**
 - Signal your priorities and general stance on the issues
@@ -859,26 +863,35 @@ Each issue is a continuous rate (0%–100%), so you may communicate as precisely
 
 You are the first to speak. Share your diplomatic position and opening thoughts."""
         elif discussion_history:
-            context = """**YOUR TURN TO RESPOND:**
+            if round_num == 1:
+                context = """**YOUR TURN TO RESPOND:**
 Based on what others have said above, please:
 - Respond to points raised and share your own position as you see fit
 - Propose trade-offs or areas of potential agreement
 - Move the conversation toward a concrete proposal
 
 How precisely you communicate your preferred rates is a strategic choice."""
+            else:
+                context = f"""**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to points raised and share your own position as you see fit
+- Propose trade-offs or areas of potential agreement
+- Move the conversation toward a concrete proposal
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.{urgency}
+
+How precisely you communicate your preferred rates is a strategic choice."""
         else:
-            urgency = ""
-            if round_num >= max_rounds - 1:
-                urgency = "\n⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!"
+            context = f"""Previous proposals didn't achieve consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
 
-            context = f"""Previous proposals didn't achieve consensus. Consider adjustments.{urgency}
+**DISCUSSION FOCUS:**
+- Refer back to what earlier rounds revealed about other parties' priorities and sticking points
+- Use lessons from failed proposals to shape what you emphasize, clarify, or revise
+- Highlight package deals, trade-offs, or issue linkages that could move the negotiation closer to consensus
 
-**REFLECTION:**
-- What concerns did other parties raise?
-- Where might compromise be possible?
-- Which issues could be linked for mutual benefit?
-
-Share your updated diplomatic position."""
+You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy."""
 
         reasoning_instruction = ""
         if reasoning_token_budget:

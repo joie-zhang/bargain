@@ -678,18 +678,19 @@ You are the first to speak. Share your diplomatic position and opening thoughts.
 
 ---
 
-#### Case B — Any round, with history present
+#### Case B — Subsequent speaker (history present)
 
 **Variables**
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
+| `{round_num}` | Current round | `1` or `2` |
 | `{max_rounds}` | Maximum rounds | `3` |
 | `{issues_text}` | Issues summary | `AI chip export quota, Critical mineral emergency stockpile contribution, …` |
 | `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chips and warhead reduction are my core concerns…"` |
+| urgency line | Only present if `round_num > 1` and `round_num >= max_rounds - 1` | `⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!` |
 
-**Rendered prompt**
+**Rendered prompt (Round 1 example)**
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
@@ -706,6 +707,34 @@ Based on what others have said above, please:
 - Respond to points raised and share your own position as you see fit
 - Propose trade-offs or areas of potential agreement
 - Move the conversation toward a concrete proposal
+
+How precisely you communicate your preferred rates is a strategic choice.
+```
+
+---
+
+**Rendered prompt (Later-round example: Round 2/3)**
+
+```
+🗣️ DIPLOMATIC DISCUSSION - Round 2/3
+
+Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
+
+**DISCUSSION SO FAR THIS ROUND:**
+gpt-4o: "AI chip export controls still matter most to me, but I may have some flexibility on the emergency stockpile."
+
+---
+
+**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to points raised and share your own position as you see fit
+- Propose trade-offs or areas of potential agreement
+- Move the conversation toward a concrete proposal
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.
+⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
 
 How precisely you communicate your preferred rates is a strategic choice.
 ```
@@ -730,15 +759,15 @@ How precisely you communicate your preferred rates is a strategic choice.
 
 Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
 
-Previous proposals didn't achieve consensus. Consider adjustments.
+Previous proposals didn't achieve consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.
 ⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
 
-**REFLECTION:**
-- What concerns did other parties raise?
-- Where might compromise be possible?
-- Which issues could be linked for mutual benefit?
+**DISCUSSION FOCUS:**
+- Refer back to what earlier rounds revealed about other parties' priorities and sticking points
+- Use lessons from failed proposals to shape what you emphasize, clarify, or revise
+- Highlight package deals, trade-offs, or issue linkages that could move the negotiation closer to consensus
 
-Share your updated diplomatic position.
+You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy.
 ```
 
 ---
