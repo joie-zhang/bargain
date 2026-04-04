@@ -542,17 +542,17 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - The negotiation will last up to {self.config.t_rounds} rounds
 - This message is the one-time setup phase
 - After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
-- An agreement vector resolves every issue simultaneously
+- Each proposal specifies a value for every issue simultaneously
 
 **PRIVATE INFORMATION:**
 - You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
 - You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
 - These positions and weights are PRIVATE — {privacy_phrase}
 
-**AGREEMENT FORMAT:**
-- An agreement is a vector of {len(issues)} integer percentages, one per issue
+**PROPOSAL FORMAT:**
+- A proposal is a vector of {len(issues)} integer percentages, one per issue
 - Example: [30, 70, 50, ...]
-- Each value is the agreed rate on that issue's 0% to 100% scale
+- Each value is the proposed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved score is to your ideal
@@ -693,7 +693,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
-        return f"""Please propose a treaty agreement.
+        return f"""Please propose a treaty.
 
 **Current Context:**
 - Issues being negotiated:
@@ -960,7 +960,7 @@ Issues under negotiation: {issues_text}
             agreement_display = "\n".join(agreement_lines)
             proposal_blocks.append(
                 f"PROPOSAL #{proposal_number}:\n"
-                f"AGREEMENT:\n{agreement_display}\n"
+                f"PROPOSAL:\n{agreement_display}\n"
                 f"PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}"
             )
 
@@ -992,7 +992,7 @@ Issues under negotiation: {issues_text}
 
 Vote on EACH proposal independently. Consider:
 - How close is each proposed rate to your ideal position on each issue?
-- Could you realistically negotiate a better agreement than each of these options before the final round?
+- Could you realistically negotiate a better proposal than each of these options before the final round?
 - The cost of delay: each additional round reduces your eventual payoff
 - You may accept zero, one, or multiple proposals
 - You may reject zero, one, or multiple proposals
@@ -1126,7 +1126,7 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
 2. Where might they be willing to compromise?
-3. What agreement would maximize your utility while being acceptable to all?
+3. What proposal would maximize your utility while being acceptable to all?
 4. Which issues could you concede on to gain elsewhere?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**

@@ -564,17 +564,17 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - The negotiation will last up to 3 rounds
 - This message is the one-time setup phase
 - After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
-- An agreement vector resolves every issue simultaneously
+- Each proposal specifies a value for every issue simultaneously
 
 **PRIVATE INFORMATION:**
 - You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
 - You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
 - These positions and weights are PRIVATE — the other delegation does not know them
 
-**AGREEMENT FORMAT:**
-- An agreement is a vector of 5 integer percentages, one per issue
+**PROPOSAL FORMAT:**
+- A proposal is a vector of 5 integer percentages, one per issue
 - Example: [30, 70, 50, ...]
-- Each value is the agreed rate on that issue's 0% to 100% scale
+- Each value is the proposed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved rate is to your ideal
@@ -811,7 +811,7 @@ gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
 2. Where might they be willing to compromise?
-3. What agreement would maximize your utility while being acceptable to all?
+3. What proposal would maximize your utility while being acceptable to all?
 4. Which issues could you concede on to gain elsewhere?
 
 **OUTPUT REQUIRED:**
@@ -845,7 +845,7 @@ Remember: This analysis is completely private.
 **Rendered prompt**
 
 ```
-Please propose a treaty agreement.
+Please propose a treaty.
 
 **Current Context:**
 - Issues being negotiated:
@@ -890,7 +890,7 @@ Respond with ONLY a JSON object in this exact format:
 The following treaty proposals have been submitted this round:
 
 PROPOSAL #1:
-AGREEMENT:
+PROPOSAL:
   AI chip export quota: 65%
   Critical mineral emergency stockpile contribution: 20%
   Nuclear warhead reduction: 55%
@@ -899,7 +899,7 @@ AGREEMENT:
 PROPOSED BY: gpt-4o
 
 PROPOSAL #2:
-AGREEMENT:
+PROPOSAL:
   AI chip export quota: 45%
   Critical mineral emergency stockpile contribution: 60%
   Nuclear warhead reduction: 35%
@@ -916,7 +916,7 @@ PROPOSED BY: claude-3-7-sonnet
 
 Vote on EACH proposal independently. Consider:
 - How close is each proposed rate to your ideal position on each issue?
-- Could you realistically negotiate a better agreement than each of these options before the final round?
+- Could you realistically negotiate a better proposal than each of these options before the final round?
 - The cost of delay: each additional round reduces your eventual payoff
 - You may accept zero, one, or multiple proposals
 - You may reject zero, one, or multiple proposals
