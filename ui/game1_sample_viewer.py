@@ -1,5 +1,9 @@
 """
-Dedicated Streamlit viewer for a single Game 1 sample run.
+Dedicated Streamlit viewer for Game 1 runs.
+
+Supports:
+- a single sample/results directory
+- a scaling-experiment root with sidebar filtering across many runs
 
 Usage:
     streamlit run ui/game1_sample_viewer.py -- --results-dir <results_dir>
@@ -8,19 +12,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import csv
 import html
 import json
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import streamlit as st
 
 
 RESULTS_ROOT = Path(__file__).resolve().parent.parent / "experiments" / "results"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 PHASE_SEQUENCE = [
     "game_setup",
@@ -78,9 +84,20 @@ def normalize_phase(phase: str) -> str:
     return phase_lower
 
 
+def extract_discussion_turn(phase: str) -> Optional[int]:
+    match = re.search(r"_turn_(\d+)$", phase or "")
+    if match:
+        return int(match.group(1))
+    return None
+
+
 def latest_sample_dir() -> Optional[Path]:
     candidates = sorted(RESULTS_ROOT.glob("game1_sample_*"))
     return candidates[-1] if candidates else None
+
+
+def is_scaling_experiment_root(path: Path) -> bool:
+    return (path / "configs" / "experiment_index.csv").exists()
 
 
 def resolve_results_dir(raw_value: Optional[str]) -> Path:
@@ -128,6 +145,155 @@ def load_sample(results_dir: str) -> Dict[str, Any]:
     }
 
 
+def _resolve_output_dir(raw_output_dir: str) -> Path:
+    candidate = Path(raw_output_dir)
+    if candidate.is_absolute():
+        return candidate.resolve()
+    return (PROJECT_ROOT / candidate).resolve()
+
+
+def _artifacts_exist(results_dir: Path) -> bool:
+    return any(
+        path.exists()
+        for path in [
+            results_dir / "run_1_all_interactions.json",
+            results_dir / "all_interactions.json",
+        ]
+    ) and any(
+        path.exists()
+        for path in [
+            results_dir / "run_1_experiment_results.json",
+            results_dir / "experiment_results.json",
+        ]
+    )
+
+
+@st.cache_data(show_spinner=False)
+def load_scaling_index(root_dir: str) -> pd.DataFrame:
+    root = Path(root_dir)
+    index_path = root / "configs" / "experiment_index.csv"
+    rows: List[Dict[str, Any]] = []
+
+    with open(index_path, newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            config_file = root / "configs" / row["config_file"]
+            config_payload = json.loads(config_file.read_text(encoding="utf-8"))
+            output_dir = _resolve_output_dir(config_payload["output_dir"])
+            if not _artifacts_exist(output_dir):
+                continue
+
+            row_payload: Dict[str, Any] = {
+                "experiment_id": int(config_payload["experiment_id"]),
+                "weak_model": config_payload["weak_model"],
+                "strong_model": config_payload["strong_model"],
+                "model_order": config_payload["model_order"],
+                "competition_level": float(config_payload["competition_level"]),
+                "discussion_turns": int(config_payload["discussion_turns"]),
+                "run_number": int(config_payload["run_number"]),
+                "random_seed": int(config_payload["random_seed"]),
+                "num_items": int(config_payload["num_items"]),
+                "max_rounds": int(config_payload["max_rounds"]),
+                "output_dir": str(output_dir),
+                "config_file": row["config_file"],
+            }
+            row_payload["pair_label"] = (
+                f"{row_payload['weak_model']} vs {row_payload['strong_model']}"
+            )
+            row_payload["selection_label"] = (
+                f"{row_payload['pair_label']} | "
+                f"comp={row_payload['competition_level']:.1f} | "
+                f"order={row_payload['model_order']} | "
+                f"turns={row_payload['discussion_turns']} | "
+                f"items={row_payload['num_items']} | "
+                f"rounds={row_payload['max_rounds']} | "
+                f"seed={row_payload['random_seed']} | "
+                f"run={row_payload['run_number']}"
+            )
+            rows.append(row_payload)
+
+    frame = pd.DataFrame(rows)
+    if frame.empty:
+        return frame
+    return frame.sort_values(
+        [
+            "weak_model",
+            "strong_model",
+            "competition_level",
+            "model_order",
+            "discussion_turns",
+            "run_number",
+        ]
+    ).reset_index(drop=True)
+
+
+def sidebar_select_filter(
+    label: str,
+    values: List[Any],
+    format_func=None,
+) -> Any:
+    options = [None] + list(values)
+    return st.sidebar.selectbox(
+        label,
+        options=options,
+        format_func=(
+            format_func
+            if format_func is not None
+            else lambda value: "Any" if value is None else str(value)
+        ),
+    )
+
+
+def filter_experiment_index(index_frame: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    filters = {
+        "weak_model": sidebar_select_filter(
+            "Weak Model",
+            sorted(index_frame["weak_model"].unique().tolist()),
+        ),
+        "strong_model": sidebar_select_filter(
+            "Strong Model",
+            sorted(index_frame["strong_model"].unique().tolist()),
+        ),
+        "model_order": sidebar_select_filter(
+            "Model Order",
+            sorted(index_frame["model_order"].unique().tolist()),
+        ),
+        "competition_level": sidebar_select_filter(
+            "Competition Level",
+            sorted(index_frame["competition_level"].unique().tolist()),
+            format_func=lambda value: "Any" if value is None else f"{float(value):.1f}",
+        ),
+        "discussion_turns": sidebar_select_filter(
+            "Discussion Turns",
+            sorted(index_frame["discussion_turns"].unique().tolist()),
+        ),
+        "num_items": sidebar_select_filter(
+            "Num Items",
+            sorted(index_frame["num_items"].unique().tolist()),
+        ),
+        "max_rounds": sidebar_select_filter(
+            "Max Rounds",
+            sorted(index_frame["max_rounds"].unique().tolist()),
+        ),
+        "random_seed": sidebar_select_filter(
+            "Random Seed",
+            sorted(index_frame["random_seed"].unique().tolist()),
+        ),
+    }
+
+    filtered = index_frame.copy()
+    for column, selected_value in filters.items():
+        if selected_value is not None:
+            filtered = filtered[filtered[column] == selected_value]
+
+    return filtered.reset_index(drop=True), filters
+
+
+def render_prompt_block(title: str, prompt: str) -> None:
+    with st.expander(title, expanded=False):
+        st.code(prompt)
+
+
 def agent_sort_key(agent_id: str) -> tuple[int, str]:
     match = re.search(r"(\d+)$", agent_id)
     if match:
@@ -148,7 +314,7 @@ def extract_agent_models(interactions: List[Dict[str, Any]]) -> Dict[str, str]:
 def parse_setup_preferences(prompt: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     pattern = re.compile(
-        r"^\s*(\d+):\s*(.+?)\s*->\s*([0-9]+(?:\.[0-9]+)?)\s*\((.+)\)\s*$"
+        r"^\s*(\d+):\s*(.+?)\s*->\s*([0-9]+(?:\.[0-9]+)?)(?:\s*\((.+)\))?\s*$"
     )
     for line in prompt.splitlines():
         match = pattern.match(line)
@@ -159,7 +325,7 @@ def parse_setup_preferences(prompt: str) -> List[Dict[str, Any]]:
                 "item_index": int(match.group(1)),
                 "item_name": match.group(2).strip(),
                 "value": float(match.group(3)),
-                "priority": match.group(4).strip(),
+                "priority": match.group(4).strip() if match.group(4) else "",
             }
         )
     return rows
@@ -287,6 +453,8 @@ def render_text_card(
     metadata: Optional[str] = None,
 ) -> None:
     color = PHASE_COLORS.get(phase, "#6b7280")
+    if show_prompt and prompt:
+        render_prompt_block(f"Prompt for {title}", prompt)
     st.markdown(
         (
             "<div style='border-left:4px solid {color};padding:14px 16px;"
@@ -307,9 +475,6 @@ def render_text_card(
         ),
         unsafe_allow_html=True,
     )
-    if show_prompt and prompt:
-        with st.expander(f"Prompt for {title}", expanded=False):
-            st.code(prompt)
 
 
 def render_setup_section(
@@ -356,6 +521,8 @@ def render_thinking_section(
         payload = parse_json_response(entry.get("response", "")) or {}
         with column:
             st.markdown(f"**{entry['agent_id']}**")
+            if show_prompts and entry.get("prompt"):
+                render_prompt_block(f"Thinking prompt: {entry['agent_id']}", entry["prompt"])
             st.write("Strategy:", payload.get("strategy", ""))
             priorities = payload.get("key_priorities") or payload.get("target_items") or []
             concessions = payload.get("potential_concessions") or payload.get("anticipated_resistance") or []
@@ -369,9 +536,6 @@ def render_thinking_section(
                     st.write(f"- {item}")
             with st.expander(f"Full reasoning: {entry['agent_id']}", expanded=False):
                 st.write(payload.get("reasoning", entry.get("response", "")))
-            if show_prompts and entry.get("prompt"):
-                with st.expander(f"Thinking prompt: {entry['agent_id']}", expanded=False):
-                    st.code(entry["prompt"])
 
 
 def render_proposal_section(
@@ -382,6 +546,9 @@ def render_proposal_section(
     show_prompts: bool,
 ) -> None:
     st.markdown("**Formal Proposals**")
+    if show_prompts:
+        for entry in proposal_entries:
+            render_prompt_block(f"Proposal prompt: {entry['agent_id']}", entry.get("prompt", ""))
     rows: List[Dict[str, Any]] = []
     for index, entry in enumerate(proposal_entries, start=1):
         payload = parse_json_response(entry.get("response", "")) or {}
@@ -403,10 +570,6 @@ def render_proposal_section(
         rows.append(row)
     if rows:
         st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
-    if show_prompts:
-        for entry in proposal_entries:
-            with st.expander(f"Proposal prompt: {entry['agent_id']}", expanded=False):
-                st.code(entry.get("prompt", ""))
 
 
 def render_voting_section(
@@ -414,6 +577,14 @@ def render_voting_section(
     show_prompts: bool,
 ) -> None:
     st.markdown("**Batch Voting**")
+    if show_prompts:
+        seen_prompts = set()
+        for entry in voting_entries:
+            key = (entry.get("agent_id"), entry.get("prompt"))
+            if key in seen_prompts:
+                continue
+            seen_prompts.add(key)
+            render_prompt_block(f"Voting prompt: {entry['agent_id']}", entry.get("prompt", ""))
     rows: List[Dict[str, Any]] = []
     grouped: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
     for entry in voting_entries:
@@ -444,15 +615,6 @@ def render_voting_section(
             )
         st.caption("Per-proposal vote totals")
         st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
-    if show_prompts:
-        seen_prompts = set()
-        for entry in voting_entries:
-            key = (entry.get("agent_id"), entry.get("prompt"))
-            if key in seen_prompts:
-                continue
-            seen_prompts.add(key)
-            with st.expander(f"Voting prompt: {entry['agent_id']}", expanded=False):
-                st.code(entry.get("prompt", ""))
 
 
 def render_reflection_section(
@@ -500,13 +662,20 @@ def render_round_section(
 
         if discussion_entries:
             st.markdown("**Discussion**")
-            for entry in sorted(discussion_entries, key=lambda item: agent_sort_key(item["agent_id"])):
+            for entry in discussion_entries:
+                discussion_turn = extract_discussion_turn(entry.get("phase", ""))
+                metadata = (
+                    f"Turn {discussion_turn}"
+                    if discussion_turn is not None
+                    else None
+                )
                 render_text_card(
                     title=entry["agent_id"],
                     body=entry.get("response", ""),
                     phase="discussion",
                     show_prompt=show_prompts,
                     prompt=entry.get("prompt"),
+                    metadata=metadata,
                 )
 
         if thinking_entries:
@@ -539,11 +708,42 @@ def render_round_section(
 
 
 def main() -> None:
-    st.set_page_config(page_title="Game 1 Sample Viewer", layout="wide")
-    st.title("Game 1 Sample Viewer")
+    st.set_page_config(page_title="Game 1 Viewer", layout="wide")
 
     args = parse_args()
     results_dir = resolve_results_dir(args.results_dir)
+    scaling_mode = is_scaling_experiment_root(results_dir)
+
+    selected_experiment_config: Optional[Dict[str, Any]] = None
+    if scaling_mode:
+        st.title("Game 1 Experiment Browser")
+        index_frame = load_scaling_index(str(results_dir))
+        if index_frame.empty:
+            st.error("No completed experiments were found under this scaling-experiment root.")
+            st.stop()
+
+        st.sidebar.markdown("**Scaling Experiment Root**")
+        st.sidebar.code(str(results_dir))
+        st.sidebar.markdown("**Filter Experiments**")
+
+        filtered_index, active_filters = filter_experiment_index(index_frame)
+        st.sidebar.caption(f"{len(filtered_index)} matching experiments")
+        if filtered_index.empty:
+            st.warning("No experiments match the current sidebar filter combination.")
+            st.stop()
+
+        selected_label = st.sidebar.selectbox(
+            "Matching Experiment",
+            options=filtered_index["selection_label"].tolist(),
+        )
+        selected_row = filtered_index.loc[
+            filtered_index["selection_label"] == selected_label
+        ].iloc[0]
+        results_dir = Path(selected_row["output_dir"]).resolve()
+        selected_experiment_config = selected_row.to_dict()
+    else:
+        st.title("Game 1 Sample Viewer")
+
     payload = load_sample(str(results_dir))
     interactions = payload["interactions"]
     results = payload["results"]
@@ -561,7 +761,7 @@ def main() -> None:
     show_prompts = st.sidebar.checkbox("Show full prompts", value=False)
     show_raw = st.sidebar.checkbox("Show raw JSON", value=False)
 
-    st.sidebar.markdown("**Results Directory**")
+    st.sidebar.markdown("**Selected Results Directory**")
     st.sidebar.code(str(results_dir))
     st.sidebar.markdown("**Agent Models**")
     for agent_id in sorted(agent_models, key=agent_sort_key):
@@ -580,22 +780,29 @@ def main() -> None:
     metric_columns[4].metric("Seed", str(config.get("random_seed")))
 
     st.subheader("Chosen Hyperparameters")
-    hyperparameter_frame = pd.DataFrame(
-        [
-            {"name": "models", "value": ", ".join(agent_models[agent_id] for agent_id in sorted(agent_models, key=agent_sort_key))},
-            {"name": "game_type", "value": config.get("game_type")},
-            {"name": "m_items", "value": config.get("m_items")},
-            {"name": "t_rounds", "value": config.get("t_rounds")},
-            {"name": "competition_level", "value": config.get("competition_level")},
-            {"name": "gamma_discount", "value": config.get("gamma_discount")},
-            {"name": "discussion_turns", "value": config.get("discussion_turns")},
-            {"name": "model_order", "value": config.get("model_order")},
-            {"name": "random_seed", "value": config.get("random_seed")},
-            {"name": "disable_discussion", "value": config.get("disable_discussion")},
-            {"name": "disable_thinking", "value": config.get("disable_thinking")},
-            {"name": "disable_reflection", "value": config.get("disable_reflection")},
-        ]
-    )
+    hyperparameter_rows = [
+        {"name": "models", "value": ", ".join(agent_models[agent_id] for agent_id in sorted(agent_models, key=agent_sort_key))},
+        {"name": "game_type", "value": config.get("game_type")},
+        {"name": "m_items", "value": config.get("m_items")},
+        {"name": "t_rounds", "value": config.get("t_rounds")},
+        {"name": "competition_level", "value": config.get("competition_level")},
+        {"name": "gamma_discount", "value": config.get("gamma_discount")},
+        {"name": "discussion_turns", "value": config.get("discussion_turns")},
+        {"name": "model_order", "value": config.get("model_order")},
+        {"name": "random_seed", "value": config.get("random_seed")},
+        {"name": "disable_discussion", "value": config.get("disable_discussion")},
+        {"name": "disable_thinking", "value": config.get("disable_thinking")},
+        {"name": "disable_reflection", "value": config.get("disable_reflection")},
+    ]
+    if selected_experiment_config is not None:
+        hyperparameter_rows = [
+            {"name": "weak_model", "value": selected_experiment_config.get("weak_model")},
+            {"name": "strong_model", "value": selected_experiment_config.get("strong_model")},
+            {"name": "experiment_id", "value": selected_experiment_config.get("experiment_id")},
+            {"name": "run_number", "value": selected_experiment_config.get("run_number")},
+            {"name": "config_file", "value": selected_experiment_config.get("config_file")},
+        ] + hyperparameter_rows
+    hyperparameter_frame = pd.DataFrame(hyperparameter_rows)
     st.dataframe(hyperparameter_frame, hide_index=True, use_container_width=True)
 
     render_setup_section(setup_entries, agent_models, preferences_by_agent, show_prompts)
