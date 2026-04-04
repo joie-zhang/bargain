@@ -140,6 +140,9 @@ def test_private_voting_phase_batches_item_allocation_votes():
         assert len(agent_2.prompts) == 1
         assert "PROPOSAL #1" in agent_1.prompts[0]
         assert "PROPOSAL #2" in agent_1.prompts[0]
+        assert "REASONING:" not in agent_1.prompts[0]
+        assert "Proposal one" not in agent_1.prompts[0]
+        assert "Proposal two" not in agent_1.prompts[0]
 
         assert [(vote["voter_id"], vote["proposal_number"], vote["vote"], vote["reasoning"]) for vote in result["private_votes"]] == [
             ("Agent_1", 1, "accept", "Good for me"),

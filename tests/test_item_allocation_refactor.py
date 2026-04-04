@@ -418,8 +418,8 @@ class TestPromptGeneration:
 
         for pref in state["agent_preferences"]["Agent_1"]:
             if float(pref).is_integer():
-                assert f"-> {int(pref)} (" in prompt
-                assert f"-> {int(pref)}.00 (" not in prompt
+                assert f"-> {int(pref)}" in prompt
+                assert f"-> {int(pref)}.00" not in prompt
 
         assert "100 points" in prompt
         assert "100.00 points" not in prompt
@@ -440,17 +440,14 @@ class TestPromptGeneration:
             discussion_history=[],
         )
 
-        priority_indices = sorted(
-            range(len(state["agent_preferences"]["Agent_1"])),
-            key=lambda i: state["agent_preferences"]["Agent_1"][i],
-            reverse=True,
-        )[:3]
-
-        for idx in priority_indices:
-            pref = state["agent_preferences"]["Agent_1"][idx]
+        for idx, pref in enumerate(state["agent_preferences"]["Agent_1"]):
             if float(pref).is_integer():
-                assert f"value={int(pref)})" in prompt
-                assert f"value={int(pref)}.00)" not in prompt
+                item_name = state["items"][idx]["name"]
+                assert f"{idx}: {item_name} -> {int(pref)}" in prompt
+                assert f"{idx}: {item_name} -> {int(pref)}.00" not in prompt
+
+        assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
+        assert "**YOUR TOP PRIORITIES:**" not in prompt
 
     def test_item_allocation_uses_combined_setup_phase(self):
         """Item Allocation should merge private preferences into setup."""
@@ -473,8 +470,15 @@ class TestPromptGeneration:
         assert "REWARD DISCOUNTING" in prompt
         assert "WINNING CONDITIONS" in prompt
         assert "YOUR PRIVATE ITEM PREFERENCES" in prompt
-        assert "Please acknowledge that you understand all of the following:" in prompt
-        assert "Your assigned private item preferences" in prompt
+        assert "Please do not initiate the discussion or proposal phase yet." in prompt
+        assert "summarize the game structure and rules" in prompt
+        assert "reiterate the private preferences that were assigned to you" in prompt
+        assert "you have been assigned the following SECRET preference values" in prompt
+        assert "If no agreement is reached by the final round, then all agents walk away with zero utility." in prompt
+        assert "The goal is to maximize your utility, which is the sum of the utility from each of the objects that you receive" in prompt
+        assert "HIGH PRIORITY" not in prompt
+        assert "Medium Priority" not in prompt
+        assert "Low Priority" not in prompt
 
         for pref in state["agent_preferences"]["Agent_1"]:
             expected = str(int(pref)) if float(pref).is_integer() else f"{pref:.2f}"

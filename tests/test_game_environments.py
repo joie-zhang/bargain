@@ -273,6 +273,7 @@ class TestInterfaceImplementation:
         assert '"votes"' in prompt
         assert "Vote on EACH proposal independently." in prompt
         assert "You may accept zero, one, or multiple proposals" in prompt
+        assert "REASONING:" not in prompt
 
     def test_item_allocation_parse_batch_voting_response_defaults_missing_votes(self, item_allocation_game):
         """Missing or invalid batch vote entries should default to reject."""
@@ -344,8 +345,9 @@ class TestInterfaceImplementation:
             ["**Agent_2**: I care most about Jewel."],
         )
 
-        assert "**DISCUSSION THIS ROUND:**" in prompt
-        assert "**YOUR TOP PRIORITIES:**" in prompt
+        assert "**DISCUSSION THIS ROUND:**" not in prompt
+        assert "**YOUR TOP PRIORITIES:**" not in prompt
+        assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
         assert '"key_priorities"' in prompt
         assert '"potential_concessions"' in prompt
         assert '"target_items"' not in prompt
