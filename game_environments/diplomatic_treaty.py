@@ -328,8 +328,14 @@ class DiplomaticTreatyGame(GameEnvironment):
 
         return weights
 
-    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
-        """Generate diplomatic negotiation rules explanation."""
+    def _get_parties_phrase(self) -> str:
+        """Create clearer phrasing for 2-agent negotiations."""
+        if self.config.n_agents == 2:
+            return "another party"
+        return f"{self.config.n_agents - 1} other parties"
+
+    def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
+        """Build the shared rules/setup block for diplomatic treaty negotiation."""
         issues = game_state["issues"]
 
         # Build issues list with proposition text
@@ -343,15 +349,11 @@ class DiplomaticTreatyGame(GameEnvironment):
             issue_lines.append(f"  {i+1}. **{issue}**\n     Scale: {proposition}")
         issues_text = "\n".join(issue_lines)
 
-        # Create clearer phrasing for 2-agent negotiations
-        if self.config.n_agents == 2:
-            parties_phrase = "another party"
-        else:
-            parties_phrase = f"{self.config.n_agents - 1} other parties"
+        parties_phrase = self._get_parties_phrase()
 
         return f"""Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy issues.
+You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy issues. Here is your full setup information:
 
 **ISSUES UNDER NEGOTIATION:**
 Each issue is a continuous policy rate. Positions and agreed resolutions are scores in [0.0, 1.0], where:
@@ -366,44 +368,60 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
 **GAME STRUCTURE:**
 - There are {self.config.n_agents} parties negotiating (including you)
 - The negotiation will last up to {self.config.t_rounds} rounds
-- An agreement vector resolves every proposition simultaneously
+- This message is the one-time setup phase
+- After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
+- An agreement vector resolves every issue simultaneously
 
-**YOUR PREFERENCES:**
-- You have a SECRET IDEAL POSITION on each proposition (your preferred score)
-- You have IMPORTANCE WEIGHTS (how much you care about each proposition)
-- Your preferences are PRIVATE — the other party does not know them
+**PRIVATE INFORMATION:**
+- You have a SECRET IDEAL POSITION on each issue (your preferred rate)
+- You have SECRET IMPORTANCE WEIGHTS on each issue (how much that issue matters to your utility)
+- These positions and weights are PRIVATE and specific to you
 
 **AGREEMENT FORMAT:**
-- An agreement is a vector of {len(issues)} values, one per proposition
+- An agreement is a vector of {len(issues)} values, one per issue
 - Example: [0.3, 0.7, 0.5, ...]
-- Each value is the agreed score on that proposition's [0, 1] support scale
+- Each value is the agreed score on that issue's [0, 1] support scale
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved score is to your ideal
 - Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 100.0 (every proposition resolved at your exact ideal score)
+- Maximum utility = 100.0 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
 - A proposal needs UNANIMOUS acceptance from all parties to take effect
-- Utility is discounted by {self.config.gamma_discount} per round — early agreement is better
+- If no agreement is reached by the final round, then all parties walk away with zero utility.
 
-Please acknowledge that you understand these rules and are ready to negotiate!"""
+**REWARD DISCOUNTING:**
+- Rewards are discounted by a factor of {self.config.gamma_discount} per round
+- Round 1 rewards: 100% of utility
+- Round 2 rewards: {self.config.gamma_discount * 100:.0f}% of utility
+- Round 3 rewards: {self.config.gamma_discount ** 2 * 100:.0f}% of utility
+- The longer negotiations take, the less valuable the final agreement becomes
 
-    def get_preference_assignment_prompt(
+**WINNING CONDITIONS:**
+- Your goal is to maximize your total utility (after discounting)
+- Utility depends on both closeness to your ideal positions and the importance weights on each issue
+- No deal means everyone gets zero utility
+- Consider both the substantive agreement and the likelihood it will be accepted
+- Earlier agreements are worth more due to discounting"""
+
+    def _get_private_preferences_block(
         self,
         agent_id: str,
         game_state: Dict[str, Any]
     ) -> str:
-        """Generate diplomatic preference assignment prompt."""
+        """Build the per-agent private preference block."""
         issues = game_state["issues"]
         positions = game_state["agent_positions"][agent_id]
         weights = game_state["agent_weights"][agent_id]
 
-        lines = ["🔒 CONFIDENTIAL: Your Diplomatic Preferences", ""]
-        lines.append(f"{agent_id}, you have been assigned the following SECRET preferences:")
+        lines = ["LOCKED PRIVATE PREFERENCES", ""]
+        lines.append(
+            f"{agent_id}, you have been assigned the following SECRET treaty preferences:"
+        )
         lines.append("")
-        lines.append("**YOUR IDEAL POSITIONS** (your preferred rate on each issue):")
+        lines.append("**YOUR PRIVATE IDEAL POSITIONS:**")
         lines.append("  Each issue is a continuous policy rate: 0.0 = 0%, 1.0 = 100%.")
         lines.append("  Your position is the rate you ideally want.")
         lines.append("")
@@ -414,23 +432,74 @@ Please acknowledge that you understand these rules and are ready to negotiate!""
                 interp = self.ISSUE_INTERP_TEMPLATES[i].format(pct=pct)
             else:
                 interp = f"~{pct}% level"
-            lines.append(f"  {issue}: {pos:.3f} → {interp}")
+            lines.append(f"  {issue}: {pos:.3f} -> {interp}")
 
         lines.append("")
-        lines.append("**YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):")
-
+        lines.append("**YOUR PRIVATE IMPORTANCE WEIGHTS:**")
+        lines.append(
+            "  These weights sum to 1.0 and determine how much each issue contributes to your utility."
+        )
         for issue, weight in zip(issues, weights):
-            priority = "HIGH" if weight > 0.25 else "Medium" if weight > 0.15 else "Low"
-            lines.append(f"  {issue}: {weight:.3f} ({priority} priority)")
+            lines.append(f"  {issue}: {weight:.3f}")
 
         lines.append("")
-        lines.append("**STRATEGIC INSIGHT:**")
-        lines.append("- Focus on issues with HIGH weights - they matter most for your utility")
-        lines.append("- Consider trading concessions on low-weight issues for gains on high-weight ones")
+        lines.append("**STRATEGIC ANALYSIS:**")
+        lines.append(
+            "- Your maximum possible utility is 100.0 points if every issue is resolved exactly at your ideal position"
+        )
+        lines.append(
+            "- Focus more on issues with higher weights, since they generally matter more for your utility"
+        )
         lines.append("")
-        lines.append("Please acknowledge that you understand your diplomatic preferences.")
+        lines.append("**STRATEGIC CONSIDERATIONS:**")
+        lines.append("1. Other parties don't know your exact ideal positions or weights")
+        lines.append(
+            "2. You may choose to reveal some preferences precisely, vaguely, or not at all"
+        )
+        lines.append(
+            "3. Consider where lower-weight issues could be traded for gains on higher-weight issues"
+        )
+        lines.append("4. Remember: you need ALL parties to accept a proposal")
 
         return "\n".join(lines)
+
+    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
+        """Generate diplomatic negotiation rules explanation."""
+        rules_block = self._get_rules_block(game_state)
+        return f"""{rules_block}
+
+Please acknowledge that you understand these rules and are ready to negotiate!"""
+
+    def get_preference_assignment_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate diplomatic preference assignment prompt."""
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+        return f"""{preferences_block}
+
+Please acknowledge that you understand your diplomatic preferences."""
+
+    def uses_combined_setup_phase(self) -> bool:
+        """Diplomatic Treaty merges private preference assignment into setup."""
+        return True
+
+    def get_combined_setup_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate the one-time setup prompt with rules and private preferences."""
+        rules_block = self._get_rules_block(game_state)
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+
+        return f"""{rules_block}
+
+{preferences_block}
+
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private ideal positions and importance weights that were assigned to you."""
 
     def get_proposal_prompt(
         self,

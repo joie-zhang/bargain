@@ -598,6 +598,45 @@ class TestPromptGeneration:
         assert "win-win" not in prompt
         assert "zero-sum" not in prompt
 
+    def test_diplomatic_treaty_uses_combined_setup_phase(self):
+        """Diplomatic Treaty should merge private preferences into setup."""
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=3, random_seed=42
+        )
+        assert game.uses_combined_setup_phase() is True
+
+    def test_combined_setup_prompt_contains_rules_positions_and_weights(self):
+        """Combined setup prompt should include both shared and private information."""
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_combined_setup_prompt("Agent_1", state)
+
+        assert "GAME STRUCTURE" in prompt
+        assert "REWARD DISCOUNTING" in prompt
+        assert "WINNING CONDITIONS" in prompt
+        assert "YOUR PRIVATE IDEAL POSITIONS" in prompt
+        assert "YOUR PRIVATE IMPORTANCE WEIGHTS" in prompt
+        assert "These weights sum to 1.0" in prompt
+        assert "Please do not initiate the discussion or proposal phase yet." in prompt
+        assert "summarize the game structure and rules" in prompt
+        assert (
+            "reiterate the private ideal positions and importance weights that were assigned to you"
+            in prompt
+        )
+        assert "Focus more on issues with higher weights" in prompt
+        assert "HIGH priority" not in prompt
+        assert "Medium priority" not in prompt
+        assert "Low priority" not in prompt
+
+        for pos in state["agent_positions"]["Agent_1"]:
+            assert f"{pos:.3f}" in prompt
+        for weight in state["agent_weights"]["Agent_1"]:
+            assert f"{weight:.3f}" in prompt
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
