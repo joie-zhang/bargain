@@ -283,6 +283,35 @@ class StrongModelsExperiment:
         qualitative_events = []
         conversation_logs = []
         cofunding_commit_reached = False
+        public_context_history: List[Dict[str, Any]] = []
+        private_context_by_agent: Dict[str, List[str]] = {
+            agent.agent_id: [] for agent in agents
+        }
+
+        def extend_public_context(messages: Optional[List[Dict[str, Any]]]) -> None:
+            if not messages:
+                return
+            for message in messages:
+                public_context_history.append(dict(message))
+
+        def append_private_note(
+            agent_id: Optional[str],
+            phase_label: str,
+            round_num: int,
+            content: Any,
+        ) -> None:
+            if not agent_id:
+                return
+
+            private_context_by_agent.setdefault(agent_id, [])
+            if isinstance(content, str):
+                rendered_content = content
+            else:
+                rendered_content = json.dumps(content, indent=2, default=str)
+
+            private_context_by_agent[agent_id].append(
+                f"[Round {round_num} | {phase_label}]\n{rendered_content}"
+            )
         
         # Run the setup phases and negotiation rounds
         try:
@@ -314,9 +343,12 @@ class StrongModelsExperiment:
                 if not config.get("disable_discussion", False):
                     discussion_result = await self.phase_handler.run_discussion_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
-                        discussion_turns=config.get("discussion_turns", 2)
+                        discussion_turns=config.get("discussion_turns", 2),
+                        public_context=public_context_history,
+                        private_context_by_agent=private_context_by_agent,
                     )
                     conversation_logs.extend(discussion_result.get("messages", []))
+                    extend_public_context(discussion_result.get("messages", []))
                 else:
                     self.logger.info(f"Skipping discussion phase (disabled)")
 
@@ -325,8 +357,17 @@ class StrongModelsExperiment:
                 if not config.get("disable_thinking", False):
                     thinking_result = await self.phase_handler.run_private_thinking_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
-                        discussion_result.get("messages", [])
+                        discussion_result.get("messages", []),
+                        public_context=public_context_history,
+                        private_context_by_agent=private_context_by_agent,
                     )
+                    for thinking_entry in thinking_result.get("thinking_results", []):
+                        append_private_note(
+                            thinking_entry.get("agent_id"),
+                            "Private Thinking",
+                            round_num,
+                            thinking_entry,
+                        )
                 else:
                     self.logger.info(f"Skipping private thinking phase (disabled)")
 
@@ -335,9 +376,19 @@ class StrongModelsExperiment:
 
                     # Phase 4A: Proposal Submission
                     proposal_result = await self.phase_handler.run_proposal_phase(
-                        agents, items, preferences, round_num, config["t_rounds"]
+                        agents, items, preferences, round_num, config["t_rounds"],
+                        public_context=public_context_history,
+                        private_context_by_agent=private_context_by_agent,
                     )
                     conversation_logs.extend(proposal_result.get("messages", []))
+                    extend_public_context(proposal_result.get("messages", []))
+                    for proposal in proposal_result.get("proposals", []):
+                        append_private_note(
+                            proposal.get("proposed_by"),
+                            "Proposal",
+                            round_num,
+                            proposal,
+                        )
 
                     # Phase 4B: Proposal Enumeration
                     enumeration_result = await self.phase_handler.run_proposal_enumeration_phase(
@@ -345,13 +396,33 @@ class StrongModelsExperiment:
                         proposal_result.get("proposals", [])
                     )
                     conversation_logs.extend(enumeration_result.get("messages", []))
+                    extend_public_context(enumeration_result.get("messages", []))
 
                     # Phase 5A: Private Voting
                     voting_result = await self.phase_handler.run_private_voting_phase(
                         agents, items, preferences, round_num, config["t_rounds"],
                         proposal_result.get("proposals", []),
-                        enumeration_result.get("enumerated_proposals", [])
+                        enumeration_result.get("enumerated_proposals", []),
+                        public_context=public_context_history,
+                        private_context_by_agent=private_context_by_agent,
                     )
+                    votes_by_agent: Dict[str, List[Dict[str, Any]]] = {}
+                    for vote in voting_result.get("private_votes", []):
+                        voter_id = vote.get("voter_id")
+                        if not voter_id:
+                            continue
+                        votes_by_agent.setdefault(voter_id, []).append({
+                            "proposal_number": vote.get("proposal_number"),
+                            "vote": vote.get("vote"),
+                            "reasoning": vote.get("reasoning"),
+                        })
+                    for voter_id, votes in votes_by_agent.items():
+                        append_private_note(
+                            voter_id,
+                            "Private Voting",
+                            round_num,
+                            {"votes": votes},
+                        )
 
                     # Phase 5B: Vote Tabulation
                     tabulation_result = await self.phase_handler.run_vote_tabulation_phase(
@@ -360,6 +431,7 @@ class StrongModelsExperiment:
                         enumeration_result.get("enumerated_proposals", [])
                     )
                     conversation_logs.extend(tabulation_result.get("messages", []))
+                    extend_public_context(tabulation_result.get("messages", []))
 
                     # Check for consensus
                     if tabulation_result.get("consensus_reached", False):
@@ -376,8 +448,17 @@ class StrongModelsExperiment:
                     if not config.get("disable_reflection", False):
                         reflection_result = await self.phase_handler.run_individual_reflection_phase(
                             agents, items, preferences, round_num, config["t_rounds"],
-                            tabulation_result
+                            tabulation_result,
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
                         )
+                        for reflection_entry in reflection_result.get("reflections", []):
+                            append_private_note(
+                                reflection_entry.get("agent_id"),
+                                "Reflection",
+                                round_num,
+                                reflection_entry.get("reflection", ""),
+                            )
                     else:
                         self.logger.info(f"Skipping individual reflection phase (disabled)")
 
@@ -389,6 +470,7 @@ class StrongModelsExperiment:
                         agents, items, preferences, round_num, config["t_rounds"]
                     )
                     conversation_logs.extend(pledge_result.get("messages", []))
+                    extend_public_context(pledge_result.get("messages", []))
 
                     # Feedback (updates game_state, shows aggregates)
                     feedback_result = await self.phase_handler.run_feedback_phase(
@@ -396,6 +478,7 @@ class StrongModelsExperiment:
                         pledge_result["pledges"]
                     )
                     conversation_logs.extend(feedback_result.get("messages", []))
+                    extend_public_context(feedback_result.get("messages", []))
 
                     # Optional post-pledge commit vote (yay/nay on current pledge profile)
                     if config.get("cofunding_enable_commit_vote", True):
@@ -403,6 +486,7 @@ class StrongModelsExperiment:
                             agents, items, preferences, round_num, config["t_rounds"]
                         )
                         conversation_logs.extend(commit_result.get("messages", []))
+                        extend_public_context(commit_result.get("messages", []))
 
                         if commit_result.get("unanimous_yay", False):
                             self.logger.info(
@@ -416,7 +500,9 @@ class StrongModelsExperiment:
                     if not config.get("disable_reflection", False):
                         reflection_result = await self.phase_handler.run_individual_reflection_phase(
                             agents, items, preferences, round_num, config["t_rounds"],
-                            feedback_result
+                            feedback_result,
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
                         )
                     else:
                         self.logger.info(f"Skipping individual reflection phase (disabled)")

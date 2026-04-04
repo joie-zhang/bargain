@@ -393,7 +393,9 @@ class PhaseHandler:
     
     async def run_discussion_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                   preferences: Dict, round_num: int, max_rounds: int,
-                                  discussion_turns: int = 2) -> Dict:
+                                  discussion_turns: int = 2,
+                                  public_context: Optional[List[Dict[str, Any]]] = None,
+                                  private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
         """Phase 2: Public Discussion Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
@@ -422,6 +424,7 @@ class PhaseHandler:
             self.logger.info(f"  --- Discussion Turn {turn + 1}/{discussion_turns} ---")
 
             for i, agent in enumerate(agents):
+                accumulated_public_context = list(public_context or []) + list(messages)
                 context = NegotiationContext(
                     current_round=round_num,
                     max_rounds=max_rounds,
@@ -429,7 +432,9 @@ class PhaseHandler:
                     agents=[a.agent_id for a in agents],
                     agent_id=agent.agent_id,
                     preferences=preferences["agent_preferences"][agent.agent_id],
-                    turn_type="discussion"
+                    turn_type="discussion",
+                    conversation_history=accumulated_public_context,
+                    strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
                 )
 
                 # Build discussion history with speaker attribution
@@ -447,7 +452,7 @@ class PhaseHandler:
                         game_state = self._build_game_state(
                             agents, items, preferences, round_num, max_rounds,
                             agent.agent_id, "discussion",
-                            conversation_history=messages
+                            conversation_history=accumulated_public_context
                         )
 
                     # Get reasoning budget for this specific agent
@@ -504,7 +509,9 @@ class PhaseHandler:
     
     async def run_private_thinking_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                         preferences: Dict, round_num: int, max_rounds: int,
-                                        discussion_messages: List[Dict]) -> Dict:
+                                        discussion_messages: List[Dict],
+                                        public_context: Optional[List[Dict[str, Any]]] = None,
+                                        private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
         """Phase 3: Private Thinking Phase"""
         thinking_results = []
         
@@ -528,17 +535,14 @@ class PhaseHandler:
                     game_state = self._build_game_state(
                         agents, items, preferences, round_num, max_rounds,
                         agent.agent_id, "thinking",
-                        conversation_history=discussion_messages
+                        conversation_history=list(public_context or [])
                     )
                 thinking_prompt = self.game_environment.get_thinking_prompt(
                     agent_id=agent.agent_id,
                     game_state=game_state,
                     round_num=round_num,
                     max_rounds=max_rounds,
-                    discussion_history=[
-                        f"**{msg.get('from', 'Agent')}**: {msg.get('content', '')}"
-                        for msg in discussion_messages
-                    ] if discussion_messages else [],
+                    discussion_history=[],
                     reasoning_token_budget=reasoning_budget
                 )
             else:
@@ -552,7 +556,8 @@ class PhaseHandler:
                 agent_id=agent.agent_id,
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="thinking",
-                conversation_history=discussion_messages
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
             )
 
             try:
@@ -602,7 +607,9 @@ class PhaseHandler:
         }
     
     async def run_proposal_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
-                                preferences: Dict, round_num: int, max_rounds: int) -> Dict:
+                                preferences: Dict, round_num: int, max_rounds: int,
+                                public_context: Optional[List[Dict[str, Any]]] = None,
+                                private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
         """Phase 4A: Proposal Submission Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
@@ -629,7 +636,9 @@ class PhaseHandler:
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
                 preferences=preferences["agent_preferences"][agent.agent_id],
-                turn_type="proposal"
+                turn_type="proposal",
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
             )
 
             # Generate proposal prompt (for logging and potential custom prompts)
@@ -640,7 +649,8 @@ class PhaseHandler:
                 else:
                     game_state = self._build_game_state(
                         agents, items, preferences, round_num, max_rounds,
-                        agent.agent_id, "proposal"
+                        agent.agent_id, "proposal",
+                        conversation_history=list(public_context or [])
                     )
                 proposal_prompt = self.game_environment.get_proposal_prompt(
                     agent_id=agent.agent_id,
@@ -685,7 +695,7 @@ class PhaseHandler:
                 "phase": "proposal",
                 "round": round_num,
                 "from": agent.agent_id,
-                "content": f"I propose: {proposal_content} - {proposal.get('reasoning', 'No reasoning provided')}",
+                "content": f"I propose: {proposal_content}",
                 "proposal": proposal,
                 "timestamp": time.time(),
                 "agent_id": agent.agent_id
@@ -774,7 +784,6 @@ class PhaseHandler:
                     else:
                         proposal_display_lines.append(f"    → {agent_id}: (no items)")
 
-                proposal_display_lines.append(f"  Reasoning: {reasoning}")
                 proposal_display_lines.append("")
         
         proposal_summary = "\n".join(proposal_display_lines)
@@ -804,7 +813,9 @@ class PhaseHandler:
     
     async def run_private_voting_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                       preferences: Dict, round_num: int, max_rounds: int,
-                                      proposals: List[Dict], enumerated_proposals: List[Dict]) -> Dict:
+                                      proposals: List[Dict], enumerated_proposals: List[Dict],
+                                      public_context: Optional[List[Dict[str, Any]]] = None,
+                                      private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
         """Phase 5A: Private Voting Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
@@ -857,7 +868,9 @@ class PhaseHandler:
                 agent_id=agent.agent_id,
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="private_voting",
-                current_proposals=proposals
+                current_proposals=proposals,
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
             )
 
             try:
@@ -868,6 +881,7 @@ class PhaseHandler:
                         game_state = self._build_game_state(
                             agents, items, preferences, round_num, max_rounds,
                             agent.agent_id, "voting",
+                            conversation_history=list(public_context or []),
                             proposals=prepared_batch_proposals
                         )
 
@@ -950,6 +964,7 @@ class PhaseHandler:
                                 game_state = self._build_game_state(
                                     agents, items, preferences, round_num, max_rounds,
                                     agent.agent_id, "voting",
+                                    conversation_history=list(public_context or []),
                                     proposals=[proposal_for_voting]
                                 )
                             voting_prompt = self.game_environment.get_voting_prompt(
@@ -1190,7 +1205,9 @@ Vote must be either "accept" or "reject"."""
     
     async def run_individual_reflection_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                              preferences: Dict, round_num: int, max_rounds: int,
-                                             tabulation_result: Dict) -> Dict:
+                                             tabulation_result: Dict,
+                                             public_context: Optional[List[Dict[str, Any]]] = None,
+                                             private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
         """Phase 6: Individual Reflection Phase"""
         reflections = []
 
@@ -1213,7 +1230,8 @@ Vote must be either "accept" or "reject"."""
                 else:
                     game_state = self._build_game_state(
                         agents, items, preferences, round_num, max_rounds,
-                        agent.agent_id, "reflection"
+                        agent.agent_id, "reflection",
+                        conversation_history=list(public_context or [])
                     )
                 reflection_prompt = self.game_environment.get_reflection_prompt(
                     agent_id=agent.agent_id,
@@ -1235,7 +1253,9 @@ Consider what adjustments might lead to consensus in future rounds."""
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
                 preferences=preferences["agent_preferences"][agent.agent_id],
-                turn_type="reflection"
+                turn_type="reflection",
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
             )
             
             try:

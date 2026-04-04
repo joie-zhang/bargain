@@ -122,6 +122,7 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 - You vote "accept" or "reject" on each proposal independently
 - A proposal needs UNANIMOUS acceptance from all agents to pass
 - If no proposal gets unanimous support, we continue to the next round
+- If no agreement is reached by the final round, then all agents walk away with zero utility.
 
 **REWARD DISCOUNTING:**
 - Rewards are discounted by a factor of {self.config.gamma_discount} per round
@@ -131,6 +132,7 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 - The longer negotiations take, the less valuable the final allocation becomes
 
 **WINNING CONDITIONS:**
+- The goal is to maximize your utility, which is the sum of the utility from each of the objects that you receive.
 - Your goal is to maximize your total utility (after discounting)
 - No deal means everyone gets zero utility
 - Consider both immediate gains and the likelihood of proposals being accepted
@@ -147,9 +149,8 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 
         pref_lines = []
         for i, (item, value) in enumerate(zip(items, agent_prefs)):
-            priority = self._get_priority_level(value)
             value_text = self._format_display_number(value)
-            pref_lines.append(f"  {i}: {item['name']} -> {value_text} ({priority})")
+            pref_lines.append(f"  {i}: {item['name']} -> {value_text}")
 
         max_utility = sum(agent_prefs)
         max_utility_text = self._format_display_number(max_utility)
@@ -205,12 +206,8 @@ Please acknowledge that you understand your private preferences."""
 
 {preferences_block}
 
-Please acknowledge that you understand all of the following:
-- The game rules
-- The game structure, including the order of phases after setup
-- How reward discounting changes payoffs across rounds
-- The winning conditions, including that no deal yields zero utility
-- Your assigned private item preferences, including that they are secret and specific to you"""
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private preferences that were assigned to you."""
 
     def get_proposal_prompt(
         self,
@@ -488,7 +485,6 @@ This is the open discussion phase where agents can discuss and strategize public
             proposal_blocks.append(
                 f"PROPOSAL #{proposal_number}:\n"
                 f"ALLOCATION: {json.dumps(proposal.get('allocation', {}), indent=2)}\n"
-                f"REASONING: {proposal.get('reasoning', 'No reasoning provided')}\n"
                 f"PROPOSED BY: {proposal.get('proposed_by', 'Unknown')}"
             )
 
@@ -624,22 +620,10 @@ Each vote must be either "accept" or "reject"."""
         items = game_state["items"]
         agent_prefs = game_state["agent_preferences"][agent_id]
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
-        priority_indices = sorted(
-            range(len(items)),
-            key=lambda i: agent_prefs[i],
-            reverse=True,
-        )[:3]
-        top_priorities = [
-            f"{i}: {items[i]['name']} (value={self._format_display_number(agent_prefs[i])})"
-            for i in priority_indices
+        preference_lines = [
+            f"  {i}: {items[i]['name']} -> {self._format_display_number(agent_prefs[i])}"
+            for i in range(len(items))
         ]
-
-        discussion_section = ""
-        if discussion_history:
-            discussion_section = "\n**DISCUSSION THIS ROUND:**\n"
-            for msg in discussion_history:
-                discussion_section += f"{msg}\n\n"
-            discussion_section += "---\n"
 
         urgency = ""
         if round_num >= max_rounds - 1:
@@ -653,15 +637,14 @@ Each vote must be either "accept" or "reject"."""
 Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."""
 
         return f"""🧠 PRIVATE STRATEGIC ANALYSIS - Round {round_num}/{max_rounds}
-{discussion_section}
 
 This is your private strategic planning time.
 
 **ITEMS AVAILABLE:**
 {items_text}{urgency}
 
-**YOUR TOP PRIORITIES:**
-{chr(10).join(['- ' + p for p in top_priorities])}
+**YOUR FULL PREFERENCE REMINDER:**
+{chr(10).join(preference_lines)}
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other agents' priorities from the discussion so far?
@@ -701,8 +684,6 @@ Remember: This analysis is completely private."""
             else:
                 lines.append(f"  {agent_id}: (no items)")
 
-        lines.append(f"  Reasoning: {proposal.get('reasoning', 'None')}")
-
         return "\n".join(lines)
 
     def get_game_type(self) -> GameType:
@@ -720,13 +701,3 @@ Remember: This analysis is completely private."""
             "items": [item["name"] for item in game_state["items"]],
             "competition_level": self.config.competition_level
         }
-
-    @staticmethod
-    def _get_priority_level(value: float) -> str:
-        """Convert numeric preference to priority description."""
-        if value >= 7.0:
-            return "HIGH PRIORITY"
-        elif value >= 4.0:
-            return "Medium Priority"
-        else:
-            return "Low Priority"
