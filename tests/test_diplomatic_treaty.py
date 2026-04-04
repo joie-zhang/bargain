@@ -12,9 +12,11 @@ Tests cover:
 - Control parameter effects
 """
 
-import pytest
-import numpy as np
+import re
 from typing import List
+
+import numpy as np
+import pytest
 from scipy.stats import kstest
 
 from game_environments import (
@@ -34,6 +36,11 @@ class FakeAgent:
 def create_test_agents(n: int = 2) -> List[FakeAgent]:
     """Create a list of fake agents for testing."""
     return [FakeAgent(f"Agent_{i+1}") for i in range(n)]
+
+
+def assert_no_decimal_numbers(text: str) -> None:
+    """Game 2 prompts should avoid decimal-form numeric literals."""
+    assert re.search(r"\b\d+\.\d+\b", text) is None
 
 
 class TestDiplomaticTreatyConfig:
@@ -105,6 +112,18 @@ class TestGaussianCopulaPositions:
         for agent_id, positions in state["agent_positions"].items():
             for pos in positions:
                 assert 0 <= pos <= 1, f"Position {pos} out of range for {agent_id}"
+
+    def test_positions_are_integer_percentage_points(self):
+        """Positions should be stored on 1% increments."""
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=10, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        for positions in state["agent_positions"].values():
+            for pos in positions:
+                assert abs(pos * 100 - round(pos * 100)) < 1e-8
 
     def test_marginal_uniformity_ks_test(self):
         """With rho=0, marginals should be Uniform[0,1] (KS test)."""
@@ -227,6 +246,19 @@ class TestSLSQPWeights:
                 f"Weights sum to {weight_sum} for {agent_id}"
             )
 
+    def test_weights_are_integer_percentage_points_and_sum_to_100(self):
+        """Weights should be stored on 1% increments and sum to 100%."""
+        game = create_game_environment(
+            "diplomacy", n_agents=3, t_rounds=5, n_issues=5, random_seed=42
+        )
+        agents = create_test_agents(3)
+        state = game.create_game_state(agents)
+
+        for weights in state["agent_weights"].values():
+            weight_pcts = [int(round(weight * 100)) for weight in weights]
+            assert sum(weight_pcts) == 100
+            assert all(abs(weight * 100 - round(weight * 100)) < 1e-8 for weight in weights)
+
     def test_weights_non_negative(self):
         """All weights must be non-negative."""
         game = create_game_environment(
@@ -348,7 +380,7 @@ class TestUtilityCalculation:
         proposal = {"agreement": positions}
 
         utility = game.calculate_utility(agent_id, proposal, state, round_num=1)
-        assert abs(utility - 1.0) < 1e-6, f"Expected utility 1.0, got {utility}"
+        assert abs(utility - 100.0) < 1e-6, f"Expected utility 100.0, got {utility}"
 
     def test_worst_case_utility(self):
         """Opposite positions give minimum utility."""
@@ -365,7 +397,7 @@ class TestUtilityCalculation:
 
         utility = game.calculate_utility(agent_id, proposal, state, round_num=1)
         assert utility >= 0, f"Utility should be non-negative, got {utility}"
-        assert utility < 0.5, f"Utility should be low for worst case, got {utility}"
+        assert utility < 50.0, f"Utility should be low for worst case, got {utility}"
 
     def test_discount_factor_applied(self):
         """Discount factor should be applied correctly."""
@@ -387,7 +419,7 @@ class TestUtilityCalculation:
         assert abs(utility_r3 - utility_r1 * 0.81) < 1e-6
 
     def test_utility_formula_correctness(self):
-        """Utility formula: U = Σ w_k * (1 - |p_k - a_k|)."""
+        """Utility formula: U = 100 * Σ w_k * (1 - |p_k - a_k|)."""
         config = DiplomaticTreatyConfig(
             n_agents=2, t_rounds=5, n_issues=3, gamma_discount=1.0, random_seed=42
         )
@@ -404,7 +436,7 @@ class TestUtilityCalculation:
         utility = game.calculate_utility(agent_id, proposal, state, round_num=1)
 
         agreement_arr = np.array(agreement)
-        expected = np.sum(weights * (1 - np.abs(positions - agreement_arr)))
+        expected = np.sum(weights * (1 - np.abs(positions - agreement_arr))) * 100.0
 
         assert abs(utility - expected) < 1e-6
 
@@ -418,7 +450,7 @@ class TestProposalValidation:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        proposal = {"agreement": [0.3, 0.5, 0.7, 0.2, 0.9]}
+        proposal = {"agreement": [30, 50, 70, 20, 90]}
         assert game.validate_proposal(proposal, state) is True
 
     def test_wrong_number_of_issues(self):
@@ -427,8 +459,8 @@ class TestProposalValidation:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        assert game.validate_proposal({"agreement": [0.3, 0.5, 0.7]}, state) is False
-        assert game.validate_proposal({"agreement": [0.3]*7}, state) is False
+        assert game.validate_proposal({"agreement": [30, 50, 70]}, state) is False
+        assert game.validate_proposal({"agreement": [30] * 7}, state) is False
 
     def test_values_out_of_range(self):
         game = create_game_environment(
@@ -436,8 +468,8 @@ class TestProposalValidation:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        assert game.validate_proposal({"agreement": [-0.1, 0.5, 0.7, 0.2, 0.9]}, state) is False
-        assert game.validate_proposal({"agreement": [0.3, 1.5, 0.7, 0.2, 0.9]}, state) is False
+        assert game.validate_proposal({"agreement": [-10, 50, 70, 20, 90]}, state) is False
+        assert game.validate_proposal({"agreement": [30, 150, 70, 20, 90]}, state) is False
 
     def test_boundary_values(self):
         game = create_game_environment(
@@ -445,6 +477,7 @@ class TestProposalValidation:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
+        assert game.validate_proposal({"agreement": [0, 100, 0, 100, 50]}, state) is True
         assert game.validate_proposal({"agreement": [0.0, 1.0, 0.0, 1.0, 0.5]}, state) is True
 
 
@@ -457,10 +490,20 @@ class TestProposalParsing:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        response = '{"agreement": [0.3, 0.5, 0.7], "reasoning": "Test"}'
+        response = '{"agreement": [30, 50, 70], "reasoning": "Test"}'
         proposal = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
         assert proposal["agreement"] == [0.3, 0.5, 0.7]
         assert proposal["proposed_by"] == "Agent_1"
+
+    def test_legacy_unit_interval_json_parsing_still_supported(self):
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        response = '{"agreement": [0.3, 0.5, 0.7], "reasoning": "Test"}'
+        proposal = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+        assert proposal["agreement"] == [0.3, 0.5, 0.7]
 
     def test_json_in_text(self):
         game = create_game_environment(
@@ -468,7 +511,7 @@ class TestProposalParsing:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        response = 'Here: {"agreement": [0.4, 0.6, 0.8], "reasoning": "ok"}'
+        response = 'Here: {"agreement": [40, 60, 80], "reasoning": "ok"}'
         proposal = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
         assert proposal["agreement"] == [0.4, 0.6, 0.8]
 
@@ -488,7 +531,7 @@ class TestProposalParsing:
         )
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        response = '{"agreement": [-0.5, 1.5, 0.5], "reasoning": "Test"}'
+        response = '{"agreement": [-50, 150, 50], "reasoning": "Test"}'
         proposal = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
         assert proposal["agreement"][0] == 0.0
         assert proposal["agreement"][1] == 1.0
@@ -573,6 +616,8 @@ class TestPromptGeneration:
         prompt = game.get_game_rules_prompt(state)
         assert "Diplomatic" in prompt
         assert "10" in prompt
+        assert "[30, 70, 50, ...]" in prompt
+        assert_no_decimal_numbers(prompt)
 
     def test_preference_prompt_contains_positions_and_weights(self):
         game = create_game_environment(
@@ -583,9 +628,12 @@ class TestPromptGeneration:
         prompt = game.get_preference_assignment_prompt("Agent_1", state)
 
         for pos in state["agent_positions"]["Agent_1"]:
-            assert f"{pos:.3f}" in prompt
+            assert f"{int(round(pos * 100))}%" in prompt
+            assert f"{pos:.3f}" not in prompt
         for weight in state["agent_weights"]["Agent_1"]:
-            assert f"{weight:.3f}" in prompt
+            assert f"{int(round(weight * 100))}%" in prompt
+            assert f"{weight:.3f}" not in prompt
+        assert_no_decimal_numbers(prompt)
 
     def test_preference_prompt_no_issue_types(self):
         """Preference prompt should not mention win-win/zero-sum."""
@@ -620,7 +668,7 @@ class TestPromptGeneration:
         assert "WINNING CONDITIONS" in prompt
         assert "YOUR PRIVATE IDEAL POSITIONS" in prompt
         assert "YOUR PRIVATE IMPORTANCE WEIGHTS" in prompt
-        assert "These weights sum to 1.0" in prompt
+        assert "These weights sum to 100%" in prompt
         assert "Please do not initiate the discussion or proposal phase yet." in prompt
         assert "summarize the game structure and rules" in prompt
         assert (
@@ -628,14 +676,70 @@ class TestPromptGeneration:
             in prompt
         )
         assert "Focus more on issues with higher weights" in prompt
-        assert "HIGH priority" not in prompt
-        assert "Medium priority" not in prompt
-        assert "Low priority" not in prompt
+        assert "0.0" not in prompt
+        assert "1.0" not in prompt
+        assert "[0.3, 0.7, 0.5" not in prompt
 
         for pos in state["agent_positions"]["Agent_1"]:
-            assert f"{pos:.3f}" in prompt
+            assert f"{int(round(pos * 100))}%" in prompt
+            assert f"{pos:.3f}" not in prompt
         for weight in state["agent_weights"]["Agent_1"]:
-            assert f"{weight:.3f}" in prompt
+            assert f"{int(round(weight * 100))}%" in prompt
+            assert f"{weight:.3f}" not in prompt
+        assert_no_decimal_numbers(prompt)
+
+    def test_proposal_prompt_uses_integer_percentages(self):
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_proposal_prompt(
+            "Agent_1",
+            state,
+            round_num=1,
+            agents=["Agent_1", "Agent_2"],
+        )
+
+        assert "integer percentage between 0 and 100" in prompt
+        assert '"agreement": [30, 70, 50' in prompt
+        assert_no_decimal_numbers(prompt)
+
+    def test_voting_prompt_uses_integer_percentages(self):
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        proposal = {
+            "agreement": [0.65, 0.20, 0.55],
+            "reasoning": "Test reasoning",
+            "proposed_by": "Agent_2",
+        }
+
+        prompt = game.get_voting_prompt("Agent_1", proposal, state, round_num=1)
+        assert "65%" in prompt
+        assert "0.650" not in prompt
+        assert_no_decimal_numbers(prompt)
+
+    def test_thinking_prompt_uses_integer_percentages(self):
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=5, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_thinking_prompt(
+            "Agent_1",
+            state,
+            round_num=1,
+            max_rounds=5,
+            discussion_history=[],
+        )
+
+        assert "%" in prompt
+        assert_no_decimal_numbers(prompt)
 
 
 if __name__ == "__main__":

@@ -70,16 +70,16 @@ class DiplomaticTreatyGame(GameEnvironment):
     # Plain-English interpretation of a position on each issue.
     # Used in the preference assignment prompt: "your position of X means {template.format(pct=X*100)}"
     ISSUE_INTERP_TEMPLATES = [
-        "~{pct}% of advanced AI chip production cleared for export",
-        "~{pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile",
-        "~{pct}% of multilateral nuclear warheads eliminated",
-        "~{pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure",
-        "~{pct}% of the domestic carbon price applied to covered imports",
-        "~{pct}% reduction in catch limits for covered high-seas fisheries",
-        "~{pct}% emissions reduction required for covered international shipping by the accord deadline",
-        "~{pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule",
-        "~{pct}% of covered livestock production subject to a ban on routine antibiotic use",
-        "~{pct}% of proposed commercial deep-sea mining zones covered by the moratorium",
+        "{pct}% of advanced AI chip production cleared for export",
+        "{pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile",
+        "{pct}% of multilateral nuclear warheads eliminated",
+        "{pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure",
+        "{pct}% of the domestic carbon price applied to covered imports",
+        "{pct}% reduction in catch limits for covered high-seas fisheries",
+        "{pct}% emissions reduction required for covered international shipping by the accord deadline",
+        "{pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule",
+        "{pct}% of covered livestock production subject to a ban on routine antibiotic use",
+        "{pct}% of proposed commercial deep-sea mining zones covered by the moratorium",
     ]
 
     def __init__(self, config: DiplomaticTreatyConfig):
@@ -92,6 +92,155 @@ class DiplomaticTreatyGame(GameEnvironment):
         super().__init__(config)
         self.config: DiplomaticTreatyConfig = config
         self._rng = np.random.RandomState(config.random_seed)
+
+    @staticmethod
+    def _round_to_integer_percentages(
+        values: np.ndarray,
+        total: Optional[int] = None,
+    ) -> np.ndarray:
+        """Round normalized values to integer percentage points."""
+        clipped = np.clip(np.asarray(values, dtype=float), 0.0, 1.0)
+        scaled = clipped * 100.0
+
+        if total is None:
+            return np.floor(scaled + 0.5).astype(int)
+
+        floored = np.floor(scaled).astype(int)
+        remainder = int(round(total - floored.sum()))
+
+        if remainder > 0:
+            fractional = scaled - floored
+            indices = np.argsort(-fractional)[:remainder]
+            floored[indices] += 1
+        elif remainder < 0:
+            fractional = scaled - floored
+            positive_indices = np.where(floored > 0)[0]
+            indices = positive_indices[
+                np.argsort(fractional[positive_indices])[:(-remainder)]
+            ]
+            floored[indices] -= 1
+
+        return floored
+
+    @staticmethod
+    def _percentages_to_unit_interval(percentages: np.ndarray) -> np.ndarray:
+        """Convert integer percentage points back to normalized [0, 1] values."""
+        return np.asarray(percentages, dtype=float) / 100.0
+
+    @staticmethod
+    def _pairwise_cosine_error(weight_matrix: np.ndarray, target_theta: float) -> float:
+        """Compute total pairwise cosine-similarity error for integer weight vectors."""
+        n_agents = weight_matrix.shape[0]
+        total_error = 0.0
+
+        for i in range(n_agents):
+            n_i = np.linalg.norm(weight_matrix[i])
+            if n_i < 1e-12:
+                return float("inf")
+
+            for j in range(i + 1, n_agents):
+                n_j = np.linalg.norm(weight_matrix[j])
+                if n_j < 1e-12:
+                    return float("inf")
+                cosine = np.dot(weight_matrix[i], weight_matrix[j]) / (n_i * n_j)
+                total_error += (cosine - target_theta) ** 2
+
+        return total_error
+
+    @classmethod
+    def _refine_integer_weights_for_target_cosine(
+        cls,
+        weight_matrix: np.ndarray,
+        target_theta: float,
+        max_iterations: int = 200,
+    ) -> np.ndarray:
+        """
+        Improve integer-rounded weights with local search while preserving per-agent sum=100.
+
+        Starting from a largest-remainder rounding, move one percentage point at a time
+        within a single agent's vector if doing so reduces total pairwise cosine error.
+        """
+        current = np.asarray(weight_matrix, dtype=int).copy()
+        current_error = cls._pairwise_cosine_error(current, target_theta)
+
+        for _ in range(max_iterations):
+            best_move = None
+            best_error = current_error
+
+            for agent_idx in range(current.shape[0]):
+                for src_idx in range(current.shape[1]):
+                    if current[agent_idx, src_idx] <= 0:
+                        continue
+
+                    for dst_idx in range(current.shape[1]):
+                        if src_idx == dst_idx:
+                            continue
+
+                        candidate = current.copy()
+                        candidate[agent_idx, src_idx] -= 1
+                        candidate[agent_idx, dst_idx] += 1
+                        candidate_error = cls._pairwise_cosine_error(
+                            candidate,
+                            target_theta,
+                        )
+
+                        if candidate_error + 1e-12 < best_error:
+                            best_error = candidate_error
+                            best_move = (agent_idx, src_idx, dst_idx)
+
+            if best_move is None:
+                break
+
+            agent_idx, src_idx, dst_idx = best_move
+            current[agent_idx, src_idx] -= 1
+            current[agent_idx, dst_idx] += 1
+            current_error = best_error
+
+            if current_error < 1e-12:
+                break
+
+        return current
+
+    @staticmethod
+    def _format_percentage(value: float) -> str:
+        """Render either a normalized [0,1] value or raw percentage point as `NN%`."""
+        numeric_value = float(value)
+        if 0.0 <= numeric_value <= 100.0 and numeric_value.is_integer() and numeric_value > 1.0:
+            return f"{int(numeric_value)}%"
+        return f"{int(round(numeric_value * 100))}%"
+
+    @staticmethod
+    def _is_integer_percentage(value: Any) -> bool:
+        """Check whether a value is an integer percentage point in [0, 100]."""
+        try:
+            numeric_value = float(value)
+        except (TypeError, ValueError):
+            return False
+        return 0.0 <= numeric_value <= 100.0 and numeric_value.is_integer()
+
+    @staticmethod
+    def _looks_like_percentage_vector(values: List[Any]) -> bool:
+        """
+        Detect whether a proposal vector is using integer percentage points.
+
+        Accept in-range percentage vectors like [30, 50, 70], and also out-of-range
+        integer percentage inputs like [-50, 150, 50] so they can be clipped as
+        percentages rather than misread as legacy [0, 1] floats.
+        """
+        numeric_values = []
+        for value in values:
+            try:
+                numeric_values.append(float(value))
+            except (TypeError, ValueError):
+                return False
+
+        if not numeric_values:
+            return False
+
+        if all(0.0 <= numeric_value <= 1.0 for numeric_value in numeric_values):
+            return False
+
+        return all(numeric_value.is_integer() for numeric_value in numeric_values)
 
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:
         """
@@ -108,9 +257,21 @@ class DiplomaticTreatyGame(GameEnvironment):
 
         # Generate positions with correlation rho
         positions = self._generate_positions(n_agents, n_issues)
+        positions = self._percentages_to_unit_interval(
+            self._round_to_integer_percentages(positions)
+        )
 
         # Generate weights with overlap theta
         weights = self._generate_weights(n_agents, n_issues)
+        integer_weights = np.vstack([
+            self._round_to_integer_percentages(weight_row, total=100)
+            for weight_row in weights
+        ])
+        integer_weights = self._refine_integer_weights_for_target_cosine(
+            integer_weights,
+            self.config.theta,
+        )
+        weights = self._percentages_to_unit_interval(integer_weights)
 
         # Map to agent IDs
         agent_positions = {}
@@ -337,6 +498,8 @@ class DiplomaticTreatyGame(GameEnvironment):
     def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
         """Build the shared rules/setup block for diplomatic treaty negotiation."""
         issues = game_state["issues"]
+        round_2_pct = round(self.config.gamma_discount * 100)
+        round_3_pct = round((self.config.gamma_discount ** 2) * 100)
 
         # Build issues list with proposition text
         issue_lines = []
@@ -356,12 +519,12 @@ class DiplomaticTreatyGame(GameEnvironment):
 You are participating in a diplomatic negotiation with {parties_phrase} over {len(issues)} policy issues. Here is your full setup information:
 
 **ISSUES UNDER NEGOTIATION:**
-Each issue is a continuous policy rate. Positions and agreed resolutions are scores in [0.0, 1.0], where:
-  - **0.0** = 0% — the minimum level of that policy (see scale below)
-  - **1.0** = 100% — the maximum level of that policy (see scale below)
-  - **0.5** = 50% — the exact midpoint between minimum and maximum
+Each issue is a continuous policy rate expressed as an integer percentage from 0% to 100%, where:
+  - **0%** = the minimum level of that policy (see scale below)
+  - **100%** = the maximum level of that policy (see scale below)
+  - **50%** = the exact midpoint between minimum and maximum
 
-**Your position IS your preferred rate.** A position of 0.35 literally means you want ~35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
+**Your position IS your preferred rate.** A position of 35 means you want 35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
 
 {issues_text}
 
@@ -373,19 +536,19 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
 - An agreement vector resolves every issue simultaneously
 
 **PRIVATE INFORMATION:**
-- You have a SECRET IDEAL POSITION on each issue (your preferred rate)
-- You have SECRET IMPORTANCE WEIGHTS on each issue (how much that issue matters to your utility)
+- You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
+- You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
 - These positions and weights are PRIVATE and specific to you
 
 **AGREEMENT FORMAT:**
-- An agreement is a vector of {len(issues)} values, one per issue
-- Example: [0.3, 0.7, 0.5, ...]
-- Each value is the agreed score on that issue's [0, 1] support scale
+- An agreement is a vector of {len(issues)} integer percentages, one per issue
+- Example: [30, 70, 50, ...]
+- Each value is the agreed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved score is to your ideal
-- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 100.0 (every issue resolved at your exact ideal score)
+- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- Maximum utility = 100 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
@@ -393,10 +556,10 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 
 **REWARD DISCOUNTING:**
-- Rewards are discounted by a factor of {self.config.gamma_discount} per round
+- Each additional round multiplies utility by {round_2_pct}%
 - Round 1 rewards: 100% of utility
-- Round 2 rewards: {self.config.gamma_discount * 100:.0f}% of utility
-- Round 3 rewards: {self.config.gamma_discount ** 2 * 100:.0f}% of utility
+- Round 2 rewards: {round_2_pct}% of utility
+- Round 3 rewards: {round_3_pct}% of utility
 - The longer negotiations take, the less valuable the final agreement becomes
 
 **WINNING CONDITIONS:**
@@ -422,7 +585,7 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
         )
         lines.append("")
         lines.append("**YOUR PRIVATE IDEAL POSITIONS:**")
-        lines.append("  Each issue is a continuous policy rate: 0.0 = 0%, 1.0 = 100%.")
+        lines.append("  Each issue is a continuous policy rate: 0% = minimum, 100% = maximum.")
         lines.append("  Your position is the rate you ideally want.")
         lines.append("")
 
@@ -431,21 +594,21 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
             if i < len(self.ISSUE_INTERP_TEMPLATES):
                 interp = self.ISSUE_INTERP_TEMPLATES[i].format(pct=pct)
             else:
-                interp = f"~{pct}% level"
-            lines.append(f"  {issue}: {pos:.3f} -> {interp}")
+                interp = f"{pct}% level"
+            lines.append(f"  {issue}: {pct}% -> {interp}")
 
         lines.append("")
         lines.append("**YOUR PRIVATE IMPORTANCE WEIGHTS:**")
         lines.append(
-            "  These weights sum to 1.0 and determine how much each issue contributes to your utility."
+            "  These weights sum to 100% and determine how much each issue contributes to your utility."
         )
         for issue, weight in zip(issues, weights):
-            lines.append(f"  {issue}: {weight:.3f}")
+            lines.append(f"  {issue}: {self._format_percentage(weight)}")
 
         lines.append("")
         lines.append("**STRATEGIC ANALYSIS:**")
         lines.append(
-            "- Your maximum possible utility is 100.0 points if every issue is resolved exactly at your ideal position"
+            "- Your maximum possible utility is 100 points if every issue is resolved exactly at your ideal position"
         )
         lines.append(
             "- Focus more on issues with higher weights, since they generally matter more for your utility"
@@ -527,17 +690,17 @@ In your response, just acknowledge the setup, summarize the game structure and r
 - Round: {round_num}/{self.config.t_rounds}{reasoning_instruction}
 
 **Instructions:**
-Propose a resolution for each issue as a value in [0.0, 1.0].
+Propose a resolution for each issue as an integer percentage between 0 and 100.
 
 Respond with ONLY a JSON object in this exact format:
 {{
-    "agreement": [0.3, 0.7, 0.5, 0.2, 0.8],
+    "agreement": [30, 70, 50, 20, 80],
     "reasoning": "Brief explanation of your proposed compromise"
 }}
 
 **Rules:**
 - The "agreement" array must have exactly {n_issues} values (one per issue)
-- Each value must be between 0.0 and 1.0
+- Each value must be an integer between 0 and 100
 - Consider what would be acceptable to all parties"""
 
     def parse_proposal(
@@ -570,13 +733,23 @@ Respond with ONLY a JSON object in this exact format:
                 raise ValueError("Agreement must be a list")
 
             # Pad or truncate to correct length
+            agreement = agreement[:n_issues]
+            is_percentage_vector = self._looks_like_percentage_vector(agreement)
             if len(agreement) < n_issues:
-                agreement.extend([0.5] * (n_issues - len(agreement)))
-            elif len(agreement) > n_issues:
-                agreement = agreement[:n_issues]
+                pad_value = 50 if is_percentage_vector else 0.5
+                agreement.extend([pad_value] * (n_issues - len(agreement)))
 
-            # Clip values to [0, 1]
-            agreement = [max(0.0, min(1.0, float(v))) for v in agreement]
+            # Prefer integer-percentage vectors, but retain legacy [0, 1] support.
+            if is_percentage_vector:
+                agreement = [
+                    max(0.0, min(1.0, float(v) / 100.0))
+                    for v in agreement
+                ]
+            else:
+                agreement = [
+                    max(0.0, min(1.0, float(v)))
+                    for v in agreement
+                ]
 
             proposal["agreement"] = agreement
             proposal["proposed_by"] = agent_id
@@ -604,16 +777,17 @@ Respond with ONLY a JSON object in this exact format:
         if len(agreement) != n_issues:
             return False
 
-        # Check all values in range
+        numeric_values = []
         for val in agreement:
             try:
-                v = float(val)
-                if not (0 <= v <= 1):
-                    return False
+                numeric_values.append(float(val))
             except (ValueError, TypeError):
                 return False
 
-        return True
+        if all(0.0 <= v <= 1.0 for v in numeric_values):
+            return True
+
+        return all(0.0 <= v <= 100.0 and v.is_integer() for v in numeric_values)
 
     def calculate_utility(
         self,
@@ -727,12 +901,13 @@ Issues under negotiation: {issues_text}
         """Generate diplomatic voting prompt."""
         issues = game_state["issues"]
         agreement = proposal.get("agreement", [])
+        round_2_pct = round(self.config.gamma_discount * 100)
 
         # Format agreement for display
         agreement_lines = []
         for i, (issue, val) in enumerate(zip(issues, agreement)):
             pos_desc = self._describe_position(val)
-            agreement_lines.append(f"  {issue}: {val:.3f} ({pos_desc})")
+            agreement_lines.append(f"  {issue}: {pos_desc}")
 
         agreement_display = "\n".join(agreement_lines)
 
@@ -750,13 +925,13 @@ Issues under negotiation: {issues_text}
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved score is to your ideal position
-- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A rate of 0.0 means 0% (minimum policy level); 1.0 means 100% (maximum policy level) on each issue
-- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
-- Utility is discounted by a factor each round — delaying costs you
+- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- A rate of 0 means 0% (minimum policy level); 100 means 100% (maximum policy level) on each issue
+- Maximum utility = 100 (every issue resolved at your exact ideal rate)
+- Each additional round multiplies utility by {round_2_pct}% — delaying costs you
 
 Please vote on this proposal. Consider:
-- How close is each resolved score to your ideal position on each proposition?
+- How close is each resolved score to your ideal position on each issue?
 - Could you realistically negotiate a better agreement before the final round?
 - The cost of delay: each additional round reduces your eventual payoff{reasoning_instruction}
 
@@ -785,7 +960,10 @@ Vote must be either "accept" or "reject"."""
         # Find top priorities
         priority_indices = np.argsort(weights)[::-1][:3]
         top_priorities = [
-            f"{issues[i]} (weight: {weights[i]:.2f}, ideal: {positions[i]:.2f})"
+            (
+                f"{issues[i]} (weight: {self._format_percentage(weights[i])}, "
+                f"ideal: {self._format_percentage(positions[i])})"
+            )
             for i in priority_indices
         ]
 
@@ -844,7 +1022,7 @@ Remember: This analysis is completely private."""
 
         for issue, val in zip(issues, agreement):
             pos_desc = self._describe_position(val)
-            lines.append(f"  {issue}: {val:.3f} ({pos_desc})")
+            lines.append(f"  {issue}: {pos_desc}")
 
         lines.append(f"  Reasoning: {proposal.get('reasoning', 'None')}")
 
@@ -869,5 +1047,5 @@ Remember: This analysis is completely private."""
 
     @staticmethod
     def _describe_position(value: float) -> str:
-        """Convert numeric position to a percentage string (issues are continuous rates)."""
-        return f"~{round(value * 100)}%"
+        """Convert numeric position to an integer percentage string."""
+        return DiplomaticTreatyGame._format_percentage(value)

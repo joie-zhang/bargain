@@ -87,6 +87,19 @@ AGENT_COLORS = {
 }
 
 
+def _diplomacy_pct_value(value: float) -> int:
+    """Convert a diplomacy rate to an integer percentage for display."""
+    numeric_value = float(value)
+    if -1.0 <= numeric_value <= 1.0:
+        return int(round(numeric_value * 100))
+    return int(round(numeric_value))
+
+
+def _format_diplomacy_pct(value: float) -> str:
+    """Render a diplomacy rate as `NN%`."""
+    return f"{_diplomacy_pct_value(value)}%"
+
+
 # ---------------------------------------------------------------------------
 # DATA CLASSES
 # ---------------------------------------------------------------------------
@@ -564,15 +577,16 @@ def render_diplomacy_proposal(entry: Dict, item_names: List[str], preferences: D
         # Diplomacy agreement vector format: display issue-by-issue
         for i, val in enumerate(agreement):
             name = item_names[i] if i < len(item_names) else f"Issue {i}"
-            bar_pct = val * 100
+            display_pct = _diplomacy_pct_value(val)
+            bar_pct = max(0, min(display_pct, 100))
             st.markdown(
                 f'<div style="margin: 4px 0;">'
                 f'<div style="display: flex; justify-content: space-between; font-size: 13px;">'
                 f'<span>{name}</span>'
-                f'<span style="color: #6b7280;">{val:.3f}</span>'
+                f'<span style="color: #6b7280;">{display_pct}%</span>'
                 f'</div>'
                 f'<div style="background: #e5e7eb; border-radius: 4px; height: 6px; overflow: hidden;">'
-                f'<div style="background: #10b981; height: 100%; width: {bar_pct:.0f}%;"></div>'
+                f'<div style="background: #10b981; height: 100%; width: {bar_pct}%;"></div>'
                 f'</div></div>',
                 unsafe_allow_html=True,
             )
@@ -638,7 +652,7 @@ def render_diplomacy_proposal_enumeration(entry: Dict, item_names: List[str]):
         if agreement is not None:
             # Diplomacy agreement vector
             issue_vals = ", ".join(
-                f"{item_names[i] if i < len(item_names) else f'Issue {i}'}: {v:.3f}"
+                f"{item_names[i] if i < len(item_names) else f'Issue {i}'}: {_format_diplomacy_pct(v)}"
                 for i, v in enumerate(agreement)
             )
             st.markdown(f"**Proposal #{num}** (by {proposer}): {issue_vals}")
@@ -771,8 +785,8 @@ def _parse_diplomacy_weights(interactions: List[Dict]) -> Dict[str, List[float]]
 
     The prompt contains a section like:
         **YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):
-          Trade Policy: 0.049 (Low priority)
-          Military Access: 0.005 (Negligible)
+          Trade Policy: 31%
+          Military Access: 5%
           ...
     """
     weights: Dict[str, List[float]] = {}
@@ -794,8 +808,13 @@ def _parse_diplomacy_weights(interactions: List[Dict]) -> Dict[str, List[float]]
         next_header = rest.find("\n**")
         if next_header > 0:
             rest = rest[:next_header]
-        # Parse "IssueName: 0.049 (priority)" lines
-        parsed = re.findall(r":\s+([\d.]+)\s+\(", rest)
+        percent_matches = re.findall(r":\s+(\d+)%", rest)
+        if percent_matches:
+            weights[agent] = [int(v) / 100.0 for v in percent_matches]
+            continue
+
+        # Fall back to legacy decimal-weight prompts.
+        parsed = re.findall(r":\s+([\d.]+)\s*(?:\(|$)", rest, re.MULTILINE)
         if parsed:
             weights[agent] = [float(v) for v in parsed]
     return weights
@@ -861,17 +880,18 @@ def _render_diplomacy_summary(agents, item_names, preferences, final_utils,
         with cols[idx]:
             model = perf.get(agent, {}).get("model", "?")
             positions = preferences.get(agent, [])
+            position_pcts = [_diplomacy_pct_value(v) for v in positions]
             fig = go.Figure()
             fig.add_trace(go.Bar(
-                x=item_names[:len(positions)],
-                y=positions,
+                x=item_names[:len(position_pcts)],
+                y=position_pcts,
                 marker_color=colors[idx],
-                text=[f"{v:.3f}" for v in positions],
+                text=[f"{v}%" for v in position_pcts],
                 textposition="outside",
             ))
             fig.update_layout(
                 title=dict(text=f"{agent} ({model})", font=dict(size=14)),
-                yaxis=dict(range=[0, 1.1], title="Position"),
+                yaxis=dict(range=[0, 110], title="Position (%)"),
                 height=300,
                 margin=dict(t=40, b=30, l=40, r=20),
             )
@@ -888,18 +908,19 @@ def _render_diplomacy_summary(agents, item_names, preferences, final_utils,
                 if not w:
                     st.info("Weights not available")
                     continue
+                weight_pcts = [_diplomacy_pct_value(v) for v in w]
                 fig = go.Figure()
                 fig.add_trace(go.Bar(
-                    x=item_names[:len(w)],
-                    y=w,
+                    x=item_names[:len(weight_pcts)],
+                    y=weight_pcts,
                     marker_color=colors[idx],
-                    text=[f"{v:.3f}" for v in w],
+                    text=[f"{v}%" for v in weight_pcts],
                     textposition="outside",
                 ))
-                max_w = max(w) if w else 1.0
+                max_w = max(weight_pcts) if weight_pcts else 100
                 fig.update_layout(
                     title=dict(text=f"{agent}", font=dict(size=14)),
-                    yaxis=dict(range=[0, max_w * 1.3], title="Weight"),
+                    yaxis=dict(range=[0, max(30, max_w + 10)], title="Weight (%)"),
                     height=300,
                     margin=dict(t=40, b=30, l=40, r=20),
                 )
@@ -1467,7 +1488,7 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str,
                     )
                 else:
                     raw = 0.0
-                discounted = raw * (gamma ** (round_num - 1))
+                discounted = raw * 100 * (gamma ** (round_num - 1))
                 utility_data.append({
                     "Round": round_num,
                     "Agent": agent,
@@ -1602,14 +1623,14 @@ def _render_diplomacy_analytics(results: Dict, experiment_id: str,
     st.subheader("Agent Ideal Positions")
     if preferences:
         agents = list(preferences.keys())
-        values = [preferences[a] for a in agents]
+        values = [[_diplomacy_pct_value(v) for v in preferences[a]] for a in agents]
         fig = go.Figure(data=go.Heatmap(
             z=values,
             x=item_names,
             y=agents,
             colorscale="Blues",
             showscale=True,
-            hovertemplate="Agent: %{y}<br>Issue: %{x}<br>Position: %{z:.3f}<extra></extra>",
+            hovertemplate="Agent: %{y}<br>Issue: %{x}<br>Position: %{z}%<extra></extra>",
         ))
         fig.update_layout(height=250)
         st.plotly_chart(fig, use_container_width=True, key=f"pref_heatmap_{experiment_id}")

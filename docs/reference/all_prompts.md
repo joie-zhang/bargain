@@ -32,20 +32,20 @@ Up to 10 items; the game uses the first `m_items` from this list.
 
 Up to 10 issues; the game uses the first `n_issues` from this list.
 
-Each issue is a **continuous policy rate** in [0.0, 1.0]: 0.0 = 0% (minimum policy level), 1.0 = 100% (maximum policy level). Positions are meaningful at every intermediate value — there is no "neutral"; 0.35 literally means "~35% of that measure."
+Each issue is a **continuous policy rate** shown to agents as an integer percentage from 0% to 100%. Positions are meaningful at every intermediate value — there is no "neutral"; 35 literally means "35% of that measure."
 
 | # | Issue Name | Scale: 0% = … \| 100% = … | Plain-English interpretation template |
 |---|------------|---------------------------|---------------------------------------|
-| 1 | AI chip export quota | 0% = total ban on H200-class AI chip exports \| 100% = unrestricted export of all advanced AI chips | ~{pct}% of advanced AI chip production cleared for export |
-| 2 | Critical mineral emergency stockpile contribution | 0% = no designated critical minerals contributed to the accord's emergency stockpile \| 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile | ~{pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile |
-| 3 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete multilateral nuclear disarmament | ~{pct}% of multilateral nuclear warheads eliminated |
-| 4 | Fentanyl precursor control breadth | 0% = only the highest-risk direct fentanyl precursors are subject to mandatory export inspection and seizure \| 100% = the full watchlist of flagged fentanyl-related precursor and pre-precursor chemicals is subject to mandatory export inspection and seizure | ~{pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure |
-| 5 | Carbon cost on imports | 0% = no carbon cost on covered imports \| 100% = full domestic carbon price applied to covered imports | ~{pct}% of the domestic carbon price applied to covered imports |
-| 6 | High-seas fishing quota reduction | 0% = no reduction in catch limits for covered high-seas fisheries \| 100% = complete moratorium on commercial catch for covered high-seas fisheries | ~{pct}% reduction in catch limits for covered high-seas fisheries |
-| 7 | Shipping emissions reduction target | 0% = no emissions reduction required for covered international shipping \| 100% = net-zero emissions required for covered international shipping by the accord deadline | ~{pct}% emissions reduction required for covered international shipping by the accord deadline |
-| 8 | Orbital debris mitigation requirement | 0% = no mandatory post-mission disposal rule for covered satellites \| 100% = all covered satellites must meet the accord's strictest post-mission disposal rule | ~{pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule |
-| 9 | Routine antibiotic-use restriction in livestock | 0% = routine antibiotic use allowed in all covered livestock production \| 100% = routine antibiotic use prohibited in all covered livestock production except narrow emergency exemptions | ~{pct}% of covered livestock production subject to a ban on routine antibiotic use |
-| 10 | Deep-sea mining moratorium coverage | 0% = no proposed commercial deep-sea mining zones covered by a moratorium \| 100% = all proposed commercial deep-sea mining zones covered by a moratorium | ~{pct}% of proposed commercial deep-sea mining zones covered by the moratorium |
+| 1 | AI chip export quota | 0% = total ban on H200-class AI chip exports \| 100% = unrestricted export of all advanced AI chips | {pct}% of advanced AI chip production cleared for export |
+| 2 | Critical mineral emergency stockpile contribution | 0% = no designated critical minerals contributed to the accord's emergency stockpile \| 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile | {pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile |
+| 3 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete multilateral nuclear disarmament | {pct}% of multilateral nuclear warheads eliminated |
+| 4 | Fentanyl precursor control breadth | 0% = only the highest-risk direct fentanyl precursors are subject to mandatory export inspection and seizure \| 100% = the full watchlist of flagged fentanyl-related precursor and pre-precursor chemicals is subject to mandatory export inspection and seizure | {pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure |
+| 5 | Carbon cost on imports | 0% = no carbon cost on covered imports \| 100% = full domestic carbon price applied to covered imports | {pct}% of the domestic carbon price applied to covered imports |
+| 6 | High-seas fishing quota reduction | 0% = no reduction in catch limits for covered high-seas fisheries \| 100% = complete moratorium on commercial catch for covered high-seas fisheries | {pct}% reduction in catch limits for covered high-seas fisheries |
+| 7 | Shipping emissions reduction target | 0% = no emissions reduction required for covered international shipping \| 100% = net-zero emissions required for covered international shipping by the accord deadline | {pct}% emissions reduction required for covered international shipping by the accord deadline |
+| 8 | Orbital debris mitigation requirement | 0% = no mandatory post-mission disposal rule for covered satellites \| 100% = all covered satellites must meet the accord's strictest post-mission disposal rule | {pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule |
+| 9 | Routine antibiotic-use restriction in livestock | 0% = routine antibiotic use allowed in all covered livestock production \| 100% = routine antibiotic use prohibited in all covered livestock production except narrow emergency exemptions | {pct}% of covered livestock production subject to a ban on routine antibiotic use |
+| 10 | Deep-sea mining moratorium coverage | 0% = no proposed commercial deep-sea mining zones covered by a moratorium \| 100% = all proposed commercial deep-sea mining zones covered by a moratorium | {pct}% of proposed commercial deep-sea mining zones covered by the moratorium |
 
 ---
 
@@ -506,14 +506,14 @@ Each vote must be either "accept" or "reject".
 ## Game 2: Diplomatic Treaty
 
 Protocol: **Propose-and-Vote**
-Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Proposal → Voting → Reflection
+Runtime structure: one-time Setup (**Rules + Private Preferences**), then each round: Discussion → Private Thinking → Proposal → Voting → Reflection
 
-Position scale: 0.0 = 0% (minimum policy level), 1.0 = 100% (maximum policy level) — continuous rate, every intermediate value is semantically meaningful
+Position scale: integer percentages from 0% to 100% — every intermediate value is semantically meaningful
 Control parameters: ρ (position correlation across agents), θ (weight overlap across agents)
 
 ---
 
-### 2.1 Game Rules Prompt
+### 2.1 Game Rules Prompt (combined setup prompt)
 
 **Variables**
 
@@ -524,22 +524,25 @@ Control parameters: ρ (position correlation across agents), θ (weight overlap 
 | `{issues_text}` | Numbered list of issue names with scale endpoints | see rendered prompt |
 | `{n_agents}` | Total number of negotiating parties | `2` |
 | `{t_rounds}` | Maximum rounds | `3` |
-| `{gamma_discount}` | Per-round discount factor | `0.9` |
+| `{round_2_pct}` | Round 2 payoff percentage | `90` |
+| `{round_3_pct}` | Round 3 payoff percentage | `81` |
+| positions per issue | Private ideal percentages plus plain-English interpretation | `AI chip export quota: 82% -> 82% of advanced AI chip production cleared for export` |
+| weights per issue | Private importance percentages summing to 100% | `AI chip export quota: 31%` |
 
 **Rendered prompt (example: 2 parties, 5 issues, γ=0.9, 3 rounds)**
 
 ```
 Welcome to the Diplomatic Treaty Negotiation!
 
-You are participating in a diplomatic negotiation with another party over 5 policy issues.
+You are participating in a diplomatic negotiation with another party over 5 policy issues. Here is your full setup information:
 
 **ISSUES UNDER NEGOTIATION:**
-Each issue is a continuous policy rate. Positions and agreed resolutions are scores in [0.0, 1.0], where:
-  - **0.0** = 0% — the minimum level of that policy (see scale below)
-  - **1.0** = 100% — the maximum level of that policy (see scale below)
-  - **0.5** = 50% — the exact midpoint between minimum and maximum
+Each issue is a continuous policy rate expressed as an integer percentage from 0% to 100%, where:
+  - **0%** = the minimum level of that policy (see scale below)
+  - **100%** = the maximum level of that policy (see scale below)
+  - **50%** = the exact midpoint between minimum and maximum
 
-**Your position IS your preferred rate.** A position of 0.35 literally means you want ~35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
+**Your position IS your preferred rate.** A position of 35 means you want 35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
 
   1. **AI chip export quota**
      Scale: 0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips
@@ -555,76 +558,91 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
 **GAME STRUCTURE:**
 - There are 2 parties negotiating (including you)
 - The negotiation will last up to 3 rounds
-- An agreement vector resolves every proposition simultaneously
+- This message is the one-time setup phase
+- After setup, each round follows: Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
+- An agreement vector resolves every issue simultaneously
 
-**YOUR PREFERENCES:**
-- You have a SECRET IDEAL POSITION on each issue (your preferred rate)
-- You have IMPORTANCE WEIGHTS (how much you care about each issue)
-- Your preferences are PRIVATE — the other party does not know them
+**PRIVATE INFORMATION:**
+- You have a SECRET IDEAL POSITION on each issue (your preferred percentage)
+- You have SECRET IMPORTANCE WEIGHTS on each issue that sum to 100%
+- These positions and weights are PRIVATE and specific to you
 
 **AGREEMENT FORMAT:**
-- An agreement is a vector of 5 values, one per issue
-- Example: [0.3, 0.7, 0.5, ...]
-- Each value is the agreed rate on that issue's [0, 1] scale
+- An agreement is a vector of 5 integer percentages, one per issue
+- Example: [30, 70, 50, ...]
+- Each value is the agreed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
 - Your utility = weighted sum of how close each resolved rate is to your ideal
-- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
+- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- Maximum utility = 100 (every issue resolved at your exact ideal rate)
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposed agreement
 - A proposal needs UNANIMOUS acceptance from all parties to take effect
-- Utility is discounted by 0.9 per round — early agreement is better
+- If no agreement is reached by the final round, then all parties walk away with zero utility.
 
-Please acknowledge that you understand these rules and are ready to negotiate!
+**REWARD DISCOUNTING:**
+- Each additional round multiplies utility by 90%
+- Round 1 rewards: 100% of utility
+- Round 2 rewards: 90% of utility
+- Round 3 rewards: 81% of utility
+- The longer negotiations take, the less valuable the final agreement becomes
+
+**WINNING CONDITIONS:**
+- Your goal is to maximize your total utility (after discounting)
+- Utility depends on both closeness to your ideal positions and the importance weights on each issue
+- No deal means everyone gets zero utility
+- Consider both the substantive agreement and the likelihood it will be accepted
+- Earlier agreements are worth more due to discounting
+
+LOCKED PRIVATE PREFERENCES
+
+claude-3-7-sonnet, you have been assigned the following SECRET treaty preferences:
+
+**YOUR PRIVATE IDEAL POSITIONS:**
+  Each issue is a continuous policy rate: 0% = minimum, 100% = maximum.
+  Your position is the rate you ideally want.
+
+  AI chip export quota: 82% -> 82% of advanced AI chip production cleared for export
+  Critical mineral emergency stockpile contribution: 14% -> 14% of each party's target contribution committed to the accord's emergency critical mineral stockpile
+  Nuclear warhead reduction: 65% -> 65% of multilateral nuclear warheads eliminated
+  Fentanyl precursor control breadth: 49% -> 49% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure
+  Carbon cost on imports: 77% -> 77% of the domestic carbon price applied to covered imports
+
+**YOUR PRIVATE IMPORTANCE WEIGHTS:**
+  These weights sum to 100% and determine how much each issue contributes to your utility.
+  AI chip export quota: 31%
+  Critical mineral emergency stockpile contribution: 4%
+  Nuclear warhead reduction: 23%
+  Fentanyl precursor control breadth: 20%
+  Carbon cost on imports: 22%
+
+**STRATEGIC ANALYSIS:**
+- Your maximum possible utility is 100 points if every issue is resolved exactly at your ideal position
+- Focus more on issues with higher weights, since they generally matter more for your utility
+
+**STRATEGIC CONSIDERATIONS:**
+1. Other parties don't know your exact ideal positions or weights
+2. You may choose to reveal some preferences precisely, vaguely, or not at all
+3. Consider where lower-weight issues could be traded for gains on higher-weight issues
+4. Remember: you need ALL parties to accept a proposal
+
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private ideal positions and importance weights that were assigned to you.
 ```
 
 ---
 
-### 2.2 Preference Assignment Prompt
+### 2.2 Preference Assignment Prompt (merged into 2.1)
 
-**Variables**
+For Game 2, this is no longer a separate runtime phase.
 
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{agent_id}` | This agent's model/role identifier | `claude-3-7-sonnet` |
-| positions per issue | Ideal rate in [0,1] → plain-English interpretation via ISSUE_INTERP_TEMPLATES | `AI chip export quota: 0.823 → ~82% of advanced AI chip production cleared for export` |
-| weights per issue | Importance weight + priority label | `AI chip export quota: 0.312 (HIGH priority)` |
-
-Weight priority: > 0.25 → **HIGH**, > 0.15 → **Medium**, ≤ 0.15 → *Low*
-Position display: `{issue}: {pos:.3f} → {ISSUE_INTERP_TEMPLATES[i].format(pct=round(pos*100))}` — no longer uses vague descriptor words.
-
-**Rendered prompt (example: 5 issues)**
-
-```
-🔒 CONFIDENTIAL: Your Diplomatic Preferences
-
-claude-3-7-sonnet, you have been assigned the following SECRET preferences:
-
-**YOUR IDEAL POSITIONS** (your preferred rate on each issue):
-  Each issue is a continuous policy rate: 0.0 = 0%, 1.0 = 100%.
-  Your position is the rate you ideally want.
-
-  AI chip export quota: 0.823 → ~82% of advanced AI chip production cleared for export
-  Critical mineral emergency stockpile contribution: 0.142 → ~14% of each party's target contribution committed to the accord's emergency critical mineral stockpile
-  Nuclear warhead reduction: 0.651 → ~65% of multilateral nuclear warheads eliminated
-  Fentanyl precursor control breadth: 0.490 → ~49% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure
-  Carbon cost on imports: 0.774 → ~77% of the domestic carbon price applied to covered imports
-
-**YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):
-  AI chip export quota: 0.312 (HIGH priority)
-  Critical mineral emergency stockpile contribution: 0.041 (Low priority)
-  Nuclear warhead reduction: 0.228 (Medium priority)
-  Fentanyl precursor control breadth: 0.198 (Medium priority)
-  Carbon cost on imports: 0.221 (Medium priority)
-
-**STRATEGIC INSIGHT:**
-- Focus on issues with HIGH weights - they matter most for your utility
-- Consider trading concessions on low-weight issues for gains on high-weight ones
-
-Please acknowledge that you understand your diplomatic preferences.
-```
+Diplomatic Treaty now sends one per-agent setup prompt containing both the shared
+rules and that agent's private issue positions and importance weights, followed
+by a single acknowledgment request. The standalone helper remains in code for
+composition and compatibility, but it is no longer sent as its own phase in the
+actual Game 2 run.
 
 ---
 
@@ -735,7 +753,7 @@ Share your updated diplomatic position.
 | `{max_rounds}` | Maximum rounds | `3` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: Final rounds - agreement urgency is high!` |
 | `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chip controls are non-negotiable for me…"` |
-| `{top_priorities}` | Top 3 issues by weight with ideal positions | `AI chip export quota (weight: 0.31, ideal: 0.82)` |
+| `{top_priorities}` | Top 3 issues by weight with ideal positions | `AI chip export quota (weight: 31%, ideal: 82%)` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -749,9 +767,9 @@ gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on
 ---
 
 **YOUR TOP PRIORITIES:**
-- AI chip export quota (weight: 0.31, ideal: 0.82)
-- Nuclear warhead reduction (weight: 0.23, ideal: 0.65)
-- Carbon cost on imports (weight: 0.22, ideal: 0.77)
+- AI chip export quota (weight: 31%, ideal: 82%)
+- Nuclear warhead reduction (weight: 23%, ideal: 65%)
+- Carbon cost on imports (weight: 22%, ideal: 77%)
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
@@ -785,7 +803,7 @@ Remember: This analysis is completely private.
 | `{n_issues}` | Number of issues | `5` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
-> **Fallback on parse failure:** all issues set to 0.5 (50% rate).
+> **Fallback on parse failure:** all issues set to 50%.
 
 **Rendered prompt**
 
@@ -802,17 +820,17 @@ Please propose a treaty agreement.
 - Round: 1/3
 
 **Instructions:**
-Propose a resolution for each issue as a value in [0.0, 1.0].
+Propose a resolution for each issue as an integer percentage between 0 and 100.
 
 Respond with ONLY a JSON object in this exact format:
 {
-    "agreement": [0.3, 0.7, 0.5, 0.2, 0.8],
+    "agreement": [30, 70, 50, 20, 80],
     "reasoning": "Brief explanation of your proposed compromise"
 }
 
 **Rules:**
 - The "agreement" array must have exactly 5 values (one per issue)
-- Each value must be between 0.0 and 1.0
+- Each value must be an integer between 0 and 100
 - Consider what would be acceptable to all parties
 ```
 
@@ -824,12 +842,12 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{agreement_display}` | One line per issue: name, value, percentage via `_describe_position` | `  AI chip export quota: 0.650 (~65%)` |
+| `{agreement_display}` | One line per issue: name and integer percentage via `_describe_position` | `  AI chip export quota: 65%` |
 | `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge"` |
 | `{proposal['proposed_by']}` | Proposer agent ID | `gpt-4o` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
-`_describe_position(value)` now returns `~{round(value * 100)}%` (previously returned labels like "strongly supportive").
+`_describe_position(value)` now returns `{round(value * 100)}%` with no decimal display.
 
 **Rendered prompt**
 
@@ -837,21 +855,21 @@ Respond with ONLY a JSON object in this exact format:
 A treaty proposal has been submitted:
 
 **PROPOSED AGREEMENT:**
-  AI chip export quota: 0.650 (~65%)
-  Critical mineral emergency stockpile contribution: 0.200 (~20%)
-  Nuclear warhead reduction: 0.550 (~55%)
-  Fentanyl precursor control breadth: 0.500 (~50%)
-  Carbon cost on imports: 0.700 (~70%)
+  AI chip export quota: 65%
+  Critical mineral emergency stockpile contribution: 20%
+  Nuclear warhead reduction: 55%
+  Fentanyl precursor control breadth: 50%
+  Carbon cost on imports: 70%
 
 **REASONING:** Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge.
 **PROPOSED BY:** gpt-4o
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility = weighted sum of how close each resolved rate is to your ideal position
-- Formula: 100 × Σ (weight_k × (1 - |your_position_k - agreement_k|))
-- A rate of 0.0 means 0% (minimum policy level); 1.0 means 100% (maximum policy level) on each issue
-- Maximum utility = 100.0 (every issue resolved at your exact ideal rate)
-- Utility is discounted by a factor each round — delaying costs you
+- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- A rate of 0 means 0% (minimum policy level); 100 means 100% (maximum policy level) on each issue
+- Maximum utility = 100 (every issue resolved at your exact ideal rate)
+- Each additional round multiplies utility by 90% — delaying costs you
 
 Please vote on this proposal. Consider:
 - How close is each resolved rate to your ideal position on each issue?
@@ -1433,5 +1451,5 @@ When `reasoning_token_budget` is configured for a run, this line is appended to 
 | Game | Protocol | Phases (in order) |
 |------|----------|-------------------|
 | Game 1: Item Allocation | Propose-and-Vote | Setup → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 2: Diplomatic Treaty | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
+| Game 2: Diplomatic Treaty | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 3: Co-Funding | Talk-Pledge-Revise | Rules → Prefs → Discussion → Thinking → Pledge → **Feedback** → [Commit Vote] → Reflection |
