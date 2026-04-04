@@ -584,6 +584,26 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
+    "amazon-nova-pro-v1.0": {
+        "name": "Amazon Nova Pro v1.0",
+        "model_id": "amazon/nova-pro-v1",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Replacement candidate for the low-context Gemma-2-27B slot: Elo 1290, 300K context, OpenRouter",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "command-r-plus-08-2024": {
+        "name": "Command R Plus 08-2024",
+        "model_id": "cohere/command-r-plus-08-2024",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Replacement candidate for the low-context Llama-3-70B slot: Elo 1276, 128K context, OpenRouter",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
     "claude-3-haiku": {
         "name": "Claude 3 Haiku",
         "model_id": "claude-3-haiku-20240307",
@@ -689,9 +709,10 @@ STRONG_MODELS_CONFIG = {
     "Phi-3-mini-128k-instruct": {
         "name": "Phi 3 Mini 128k Instruct",
         "model_id": "microsoft/phi-3-mini-128k-instruct",
-        "provider": "OpenRouter",
-        "api_type": "openrouter",
-        "description": "Rank 35, Elo: 1130, Open-source",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct",
+        "description": "Rank 35, Elo: 1130, Open-source, Local Princeton cluster weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
@@ -705,6 +726,221 @@ STRONG_MODELS_CONFIG = {
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
+    },
+    "llama-3.2-3b-instruct": {
+        "name": "Llama 3.2 3B Instruct",
+        "model_id": "meta-llama/llama-3.2-3b-instruct",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "qwq-32b-preview": {
+        "name": "QwQ 32B Preview",
+        "model_id": "qwen/qwq-32b",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Best-effort Arena-name alias routed to the currently available OpenRouter QwQ 32B model.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+
+    # Exact Arena-name aliases and compatibility routes used by the
+    # Mar. 31, 2026 Arena docs and the smooth-coverage rosters.
+    # These preserve user-facing leaderboard names while routing to the
+    # currently supported provider/model surfaces in this repo.
+    "claude-opus-4-6-thinking": {
+        "name": "Claude Opus 4.6 Thinking",
+        "model_id": "claude-opus-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Arena alias for Claude Opus 4.6 with thinking enabled; mapped here to Anthropic adaptive thinking via `thinking` plus `extra_body.output_config`.",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking": {"type": "adaptive"},
+            "extra_body": {
+                "output_config": {"effort": "high"}
+            }
+        },
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-opus-4-5-20251101-thinking-32k": {
+        "name": "Claude Opus 4.5 2025-11-01 Thinking 32K",
+        "model_id": "claude-opus-4-5-20251101",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Exact Arena-name alias for the 32K thinking variant.",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking_budget_tokens": 32000
+        },
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-opus-4-5-20251101": {
+        "name": "Claude Opus 4.5 2025-11-01",
+        "model_id": "claude-opus-4-5-20251101",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gemini-2.5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "model_id": "gemini-2.5-pro",
+        "provider": "Google",
+        "api_type": "google",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "qwen3-max-preview": {
+        "name": "Qwen3 Max Preview",
+        "model_id": "qwen/qwen3-max",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Arena-name alias routed to the current OpenRouter Qwen3 Max model.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-haiku-4-5-20251001": {
+        "name": "Claude Haiku 4.5 2025-10-01",
+        "model_id": "claude-haiku-4-5-20251001",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "claude-sonnet-4-20250514": {
+        "name": "Claude Sonnet 4 2025-05-14",
+        "model_id": "claude-sonnet-4-20250514",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "claude-3-5-sonnet-20241022": {
+        "name": "Claude 3.5 Sonnet 2024-10-22",
+        "model_id": "anthropic/claude-3.5-sonnet",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Best-effort Arena-name alias. Anthropic retired the dated snapshot; this routes to OpenRouter's current Claude 3.5 Sonnet endpoint instead.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "gpt-4o-2024-05-13": {
+        "name": "GPT-4o 2024-05-13",
+        "model_id": "gpt-4o-2024-05-13",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "qwq-32b": {
+        "name": "QwQ 32B",
+        "model_id": "qwen/qwq-32b",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "gpt-4.1-nano-2025-04-14": {
+        "name": "GPT-4.1 Nano 2025-04-14",
+        "model_id": "gpt-4.1-nano-2025-04-14",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "gpt-4o-mini-2024-07-18": {
+        "name": "GPT-4o Mini 2024-07-18",
+        "model_id": "gpt-4o-mini-2024-07-18",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "qwen2.5-72b-instruct": {
+        "name": "Qwen2.5 72B Instruct",
+        "model_id": "qwen/qwen-2.5-72b-instruct",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "llama-3-70b-instruct": {
+        "name": "Llama 3 70B Instruct",
+        "model_id": "meta-llama/llama-3-70b-instruct",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "claude-3-haiku-20240307": {
+        "name": "Claude 3 Haiku 2024-03-07",
+        "model_id": "claude-3-haiku-20240307",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
+    "amazon-nova-micro-v1.0": {
+        "name": "Amazon Nova Micro v1.0",
+        "model_id": "amazon/nova-micro-v1",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias routed through OpenRouter.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.2-1b-instruct": {
+        "name": "Llama 3.2 1B Instruct",
+        "model_id": "meta-llama/llama-3.2-1b-instruct",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "gpt-5.4-high": {
+        "name": "GPT-5.4 High",
+        "model_id": "gpt-5.4",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Arena-name alias for GPT-5.4 with high reasoning effort.",
+        "temperature": 1.0,
+        "reasoning_effort": "high",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
     },
     
     # Additional models available but not currently in use

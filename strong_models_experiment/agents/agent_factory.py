@@ -167,6 +167,11 @@ class StrongModelAgentFactory:
         # Use the enum if available, otherwise use a default
         model_type = model_type_map.get(model_name, ModelType.CLAUDE_3_5_SONNET)
         
+        # Build custom_parameters for Anthropic.
+        # Allow model configs to declare default thinking/output controls and let
+        # runtime reasoning_token_budget override only the thinking budget piece.
+        custom_params = dict(model_config.get("custom_parameters", {}))
+
         # Set appropriate max_tokens based on model type
         # Haiku models have a 4096 token limit, others can go higher
         if "haiku" in model_name.lower():
@@ -175,9 +180,11 @@ class StrongModelAgentFactory:
             actual_max_tokens = min(max_tokens, 4096)
         else:
             actual_max_tokens = min(max_tokens, 8192)
-        
-        # Build custom_parameters for Anthropic
-        custom_params = {}
+
+        configured_budget = custom_params.get("thinking_budget_tokens")
+        if configured_budget is not None:
+            # Anthropic requires max_tokens > thinking.budget_tokens.
+            actual_max_tokens = max(actual_max_tokens, int(configured_budget) + 1024)
 
         # Add reasoning token budget for extended thinking if specified
         # This enables API-level control via thinking.budget_tokens
@@ -185,6 +192,7 @@ class StrongModelAgentFactory:
             # Anthropic requires minimum of 1024 tokens for extended thinking
             budget = max(reasoning_token_budget, 1024)
             custom_params["thinking_budget_tokens"] = budget
+            actual_max_tokens = max(actual_max_tokens, budget + 1024)
             self.logger.info(f"Anthropic extended thinking enabled with budget_tokens={budget}")
 
         llm_config = LLMConfig(
@@ -234,8 +242,10 @@ class StrongModelAgentFactory:
         else:
             model_type = ModelType.GPT_4  # default fallback
 
-        # Extract reasoning_effort if available and add to custom_parameters
-        custom_params = {}
+        # Allow model configs to pass through provider-native parameters (for
+        # example reasoning_effort) while keeping runtime budget overrides highest
+        # priority.
+        custom_params = dict(model_config.get("custom_parameters", {}))
         if "reasoning_effort" in model_config:
             custom_params["reasoning_effort"] = model_config["reasoning_effort"]
 

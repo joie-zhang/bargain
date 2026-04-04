@@ -25,8 +25,8 @@
 | 21 | QwQ-32B | 1336 | 16 | Cluster | `QwQ-32B` |
 | 22 | Llama-3.3-70B-Instruct | 1320 | 17 | Cluster | `Llama-3.3-70B-Instruct` |
 | 23 | Qwen2.5-72B-Instruct | 1303 | 15 | Cluster | `Qwen2.5-72B-Instruct` |
-| 24 | Gemma-2-27B-it | 1288 | 11 | Cluster | `gemma-2-27b-it` |
-| 25 | Llama-3-70B-Instruct | 1277 | 15 | Cluster | `Meta-Llama-3-70B-Instruct` |
+| 24 | Amazon-Nova-Pro-V1.0 | 1290 | 13 | OpenRouter | `amazon/nova-pro-v1` |
+| 25 | Command-R-Plus-08-2024 | 1276 | 14 | OpenRouter | `cohere/command-r-plus-08-2024` |
 | 26 | Claude 3 Haiku | 1262 | 6 | Anthropic | `claude-3-haiku-20240307` |
 | 27 | Phi-4 | 1256 | 15 | Cluster | `phi-4` |
 | 28 | Amazon-Nova-Micro | 1241 | 10 | OpenRouter | `amazon/nova-micro-v1` |
@@ -48,8 +48,6 @@
 /scratch/gpfs/DANQIC/models/QwQ-32B
 /scratch/gpfs/DANQIC/models/Llama-3.3-70B-Instruct
 /scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct
-/scratch/gpfs/DANQIC/models/gemma-2-27b-it
-/scratch/gpfs/DANQIC/models/Meta-Llama-3-70B-Instruct
 /scratch/gpfs/DANQIC/models/phi-4
 /scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct
 /scratch/gpfs/DANQIC/models/Llama-3.2-3B-Instruct

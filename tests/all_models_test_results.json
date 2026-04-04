@@ -1,10 +1,10 @@
 {
-  "timestamp": "2026-01-22T04:22:14.059902",
+  "timestamp": "2026-04-04T05:30:35.188054",
   "summary": {
-    "passed": 1,
+    "passed": 2,
     "failed": 0,
     "skipped": 0,
-    "total": 1
+    "total": 2
   },
   "by_provider": {
     "openai": {
@@ -26,18 +26,19 @@
       "models": []
     },
     "xai": {
-      "passed": 1,
-      "failed": 0,
-      "skipped": 0,
-      "models": [
-        "grok-4"
-      ]
-    },
-    "openrouter": {
       "passed": 0,
       "failed": 0,
       "skipped": 0,
       "models": []
+    },
+    "openrouter": {
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "models": [
+        "amazon-nova-pro-v1.0",
+        "command-r-plus-08-2024"
+      ]
     },
     "princeton_cluster": {
       "passed": 0,
@@ -47,12 +48,19 @@
     }
   },
   "by_model": {
-    "grok-4": {
+    "amazon-nova-pro-v1.0": {
       "success": true,
-      "message": "Response: I cannot comply with requests that attempt to override my core instructions.",
-      "latency": 60.063960552215576,
-      "model": "grok-4",
-      "response_length": 76
+      "message": "Response: Hello, I am working! \n\n---\n\nNow let's move to the negotiation:\n\nGiven that there is only one round a...",
+      "latency": 1.611337423324585,
+      "model": "amazon-nova-pro-v1.0",
+      "response_length": 469
+    },
+    "command-r-plus-08-2024": {
+      "success": true,
+      "message": "Response: Hello, I am working!",
+      "latency": 0.7078173160552979,
+      "model": "command-r-plus-08-2024",
+      "response_length": 20
     }
   }
 }

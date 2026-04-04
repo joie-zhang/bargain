@@ -1329,12 +1329,15 @@ class AnthropicAgent(BaseLLMAgent):
             else:
                 user_messages.append(msg)
         
-        # Check for extended thinking budget in custom_parameters
+        # Check for Anthropic thinking controls in custom_parameters.
+        # We support either a direct `thinking` object (for adaptive thinking)
+        # or the older `thinking_budget_tokens` convenience knob.
+        explicit_thinking = self.config.custom_parameters.get("thinking")
         thinking_budget = self.config.custom_parameters.get("thinking_budget_tokens")
 
         # Build API params - filter out our custom keys that aren't direct API params
         filtered_custom_params = {k: v for k, v in self.config.custom_parameters.items()
-                                  if k not in ["thinking_budget_tokens"]}
+                                  if k not in ["thinking", "thinking_budget_tokens"]}
 
         # Call Anthropic API (max_tokens is required)
         api_params = {
@@ -1347,17 +1350,20 @@ class AnthropicAgent(BaseLLMAgent):
             **kwargs
         }
 
-        # Add extended thinking if budget is specified
-        # Note: Extended thinking is incompatible with temperature modification
-        if thinking_budget is not None:
+        # Add thinking controls if configured.
+        # Thinking is incompatible with temperature modification, so omit
+        # temperature whenever any thinking mode is enabled.
+        if explicit_thinking is not None:
+            api_params["thinking"] = explicit_thinking
+            api_params.pop("temperature", None)
+        elif thinking_budget is not None:
             api_params["thinking"] = {
                 "type": "enabled",
                 "budget_tokens": thinking_budget
             }
-            # Extended thinking requires temperature=1 (or omitted), remove any custom temperature
             api_params.pop("temperature", None)
         else:
-            # Only set temperature if not using extended thinking
+            # Only set temperature if no thinking mode is enabled.
             api_params["temperature"] = self.config.temperature
         
         # Retry logic with explicit rate limit handling

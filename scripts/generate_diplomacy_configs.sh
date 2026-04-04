@@ -147,11 +147,18 @@ PROMPT_ONLY="true"
 
 # Requested Mar 2026 run set
 BASELINE_MODEL="gpt-5-nano"
+# ADVERSARY_MODELS=(
+#     "claude-opus-4-6"
+#     "gemini-3-flash"
+#     "gpt-5.2-chat-latest-20260210"
+#     "qwen3-235b-a22b-instruct-2507"
+# )
 ADVERSARY_MODELS=(
     "claude-opus-4-6"
+    "gpt-3.5-turbo-0125"
     "gemini-3-flash"
-    "gpt-5.2-chat-latest-20260210"
-    "qwen3-235b-a22b-instruct-2507"
+    "grok-4"
+    "o3-mini-high"
 )
 PRIMARY_MODEL_PAIRS=(
     "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
