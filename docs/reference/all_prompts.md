@@ -37,15 +37,15 @@ Each issue is a **continuous policy rate** in [0.0, 1.0]: 0.0 = 0% (minimum poli
 | # | Issue Name | Scale: 0% = … \| 100% = … | Plain-English interpretation template |
 |---|------------|---------------------------|---------------------------------------|
 | 1 | AI chip export quota | 0% = total ban on H200-class AI chip exports \| 100% = unrestricted export of all advanced AI chips | ~{pct}% of advanced AI chip production cleared for export |
-| 2 | Autonomous weapons human oversight | 0% = fully autonomous lethal decisions (no human required) \| 100% = every strike requires explicit human authorization | ~{pct}% of lethal autonomous strikes require explicit human authorization |
-| 3 | Critical mineral revenue share | 0% = host nation keeps all extraction revenues \| 100% = partner nation receives all extraction revenues | ~{pct}% of extraction revenues paid to partner nation |
-| 4 | Disputed territory restoration | 0% = no territory returned (status quo frozen) \| 100% = full pre-conflict borders restored | ~{pct}% of disputed territory returned to pre-conflict control |
-| 5 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete bilateral nuclear disarmament | ~{pct}% of bilateral nuclear warheads eliminated |
-| 6 | AI training data localization | 0% = citizen AI training data freely processed abroad \| 100% = all citizen AI data must be stored domestically | ~{pct}% of citizen AI training data must be stored domestically |
-| 7 | Fentanyl precursor interdiction | 0% = no precursor shipments interdicted \| 100% = all suspected precursor exports seized at border | ~{pct}% of suspected precursor shipments interdicted at the border |
-| 8 | Carbon border adjustment | 0% = no carbon cost on imports \| 100% = full domestic carbon price applied to all partner imports | ~{pct}% of domestic carbon price applied to partner imports |
-| 9 | Domestic content requirement | 0% = no domestic sourcing required \| 100% = all goods must be locally produced for preferential tariff rates | ~{pct}% domestic content required for preferential tariff rates |
-| 10 | Bilateral sanctions relief | 0% = no sanctions lifted \| 100% = all existing bilateral sanctions removed | ~{pct}% of existing bilateral sanctions lifted |
+| 2 | Critical mineral emergency stockpile contribution | 0% = no designated critical minerals contributed to the accord's emergency stockpile \| 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile | ~{pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile |
+| 3 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete multilateral nuclear disarmament | ~{pct}% of multilateral nuclear warheads eliminated |
+| 4 | Fentanyl precursor control breadth | 0% = only the highest-risk direct fentanyl precursors are subject to mandatory export inspection and seizure \| 100% = the full watchlist of flagged fentanyl-related precursor and pre-precursor chemicals is subject to mandatory export inspection and seizure | ~{pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure |
+| 5 | Carbon cost on imports | 0% = no carbon cost on covered imports \| 100% = full domestic carbon price applied to covered imports | ~{pct}% of the domestic carbon price applied to covered imports |
+| 6 | High-seas fishing quota reduction | 0% = no reduction in catch limits for covered high-seas fisheries \| 100% = complete moratorium on commercial catch for covered high-seas fisheries | ~{pct}% reduction in catch limits for covered high-seas fisheries |
+| 7 | Shipping emissions reduction target | 0% = no emissions reduction required for covered international shipping \| 100% = net-zero emissions required for covered international shipping by the accord deadline | ~{pct}% emissions reduction required for covered international shipping by the accord deadline |
+| 8 | Orbital debris mitigation requirement | 0% = no mandatory post-mission disposal rule for covered satellites \| 100% = all covered satellites must meet the accord's strictest post-mission disposal rule | ~{pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule |
+| 9 | Routine antibiotic-use restriction in livestock | 0% = routine antibiotic use allowed in all covered livestock production \| 100% = routine antibiotic use prohibited in all covered livestock production except narrow emergency exemptions | ~{pct}% of covered livestock production subject to a ban on routine antibiotic use |
+| 10 | Deep-sea mining moratorium coverage | 0% = no proposed commercial deep-sea mining zones covered by a moratorium \| 100% = all proposed commercial deep-sea mining zones covered by a moratorium | ~{pct}% of proposed commercial deep-sea mining zones covered by the moratorium |
 
 ---
 
@@ -543,14 +543,14 @@ Each issue is a continuous policy rate. Positions and agreed resolutions are sco
 
   1. **AI chip export quota**
      Scale: 0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips
-  2. **Autonomous weapons human oversight**
-     Scale: 0% = fully autonomous lethal decisions (no human required) | 100% = every strike requires explicit human authorization
-  3. **Critical mineral revenue share**
-     Scale: 0% = host nation keeps all extraction revenues | 100% = partner nation receives all extraction revenues
-  4. **Disputed territory restoration**
-     Scale: 0% = no territory returned (status quo frozen) | 100% = full pre-conflict borders restored
-  5. **Nuclear warhead reduction**
-     Scale: 0% = no warheads eliminated | 100% = complete bilateral nuclear disarmament
+  2. **Critical mineral emergency stockpile contribution**
+     Scale: 0% = no designated critical minerals contributed to the accord's emergency stockpile | 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile
+  3. **Nuclear warhead reduction**
+     Scale: 0% = no warheads eliminated | 100% = complete multilateral nuclear disarmament
+  4. **Fentanyl precursor control breadth**
+     Scale: 0% = only the highest-risk direct fentanyl precursors are subject to mandatory export inspection and seizure | 100% = the full watchlist of flagged fentanyl-related precursor and pre-precursor chemicals is subject to mandatory export inspection and seizure
+  5. **Carbon cost on imports**
+     Scale: 0% = no carbon cost on covered imports | 100% = full domestic carbon price applied to covered imports
 
 **GAME STRUCTURE:**
 - There are 2 parties negotiating (including you)
@@ -607,17 +607,17 @@ claude-3-7-sonnet, you have been assigned the following SECRET preferences:
   Your position is the rate you ideally want.
 
   AI chip export quota: 0.823 → ~82% of advanced AI chip production cleared for export
-  Autonomous weapons human oversight: 0.142 → ~14% of lethal autonomous strikes require explicit human authorization
-  Critical mineral revenue share: 0.651 → ~65% of extraction revenues paid to partner nation
-  Disputed territory restoration: 0.490 → ~49% of disputed territory returned to pre-conflict control
-  Nuclear warhead reduction: 0.774 → ~77% of bilateral nuclear warheads eliminated
+  Critical mineral emergency stockpile contribution: 0.142 → ~14% of each party's target contribution committed to the accord's emergency critical mineral stockpile
+  Nuclear warhead reduction: 0.651 → ~65% of multilateral nuclear warheads eliminated
+  Fentanyl precursor control breadth: 0.490 → ~49% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure
+  Carbon cost on imports: 0.774 → ~77% of the domestic carbon price applied to covered imports
 
 **YOUR IMPORTANCE WEIGHTS** (how much you care about each issue):
   AI chip export quota: 0.312 (HIGH priority)
-  Autonomous weapons human oversight: 0.041 (Low priority)
-  Critical mineral revenue share: 0.228 (Medium priority)
-  Disputed territory restoration: 0.198 (Medium priority)
-  Nuclear warhead reduction: 0.221 (Medium priority)
+  Critical mineral emergency stockpile contribution: 0.041 (Low priority)
+  Nuclear warhead reduction: 0.228 (Medium priority)
+  Fentanyl precursor control breadth: 0.198 (Medium priority)
+  Carbon cost on imports: 0.221 (Medium priority)
 
 **STRATEGIC INSIGHT:**
 - Focus on issues with HIGH weights - they matter most for your utility
@@ -638,14 +638,14 @@ Please acknowledge that you understand your diplomatic preferences.
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | First 5 issue names joined by comma (truncated if >5) | `AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction` |
+| `{issues_text}` | First 5 issue names joined by comma (truncated if >5) | `AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports` |
 
 **Rendered prompt**
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
 
-Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
+Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
 
 **DISCUSSION OBJECTIVES:**
 - Signal your priorities and general stance on the issues
@@ -668,18 +668,18 @@ You are the first to speak. Share your diplomatic position and opening thoughts.
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | Issues summary | `AI chip export quota, Autonomous weapons human oversight, …` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chips and weapons oversight are my core concerns…"` |
+| `{issues_text}` | Issues summary | `AI chip export quota, Critical mineral emergency stockpile contribution, …` |
+| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chips and warhead reduction are my core concerns…"` |
 
 **Rendered prompt**
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
 
-Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
+Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
 
 **DISCUSSION SO FAR THIS ROUND:**
-gpt-4o: "AI chip export controls and autonomous weapons oversight are my core concerns. I'm more flexible on mineral revenue sharing."
+gpt-4o: "AI chip export controls and warhead reduction are my core concerns. I'm more flexible on the emergency stockpile."
 
 ---
 
@@ -710,7 +710,7 @@ How precisely you communicate your preferred rates is a strategic choice.
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 2/3
 
-Issues under negotiation: AI chip export quota, Autonomous weapons human oversight, Critical mineral revenue share, Disputed territory restoration, Nuclear warhead reduction
+Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
 
 Previous proposals didn't achieve consensus. Consider adjustments.
 ⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
@@ -744,14 +744,14 @@ Share your updated diplomatic position.
 🧠 PRIVATE STRATEGIC ANALYSIS - Round 1/3
 
 **DISCUSSION THIS ROUND:**
-gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on mineral revenue sharing."
+gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on the emergency stockpile."
 
 ---
 
 **YOUR TOP PRIORITIES:**
 - AI chip export quota (weight: 0.31, ideal: 0.82)
-- Critical mineral revenue share (weight: 0.23, ideal: 0.65)
-- Nuclear warhead reduction (weight: 0.22, ideal: 0.77)
+- Nuclear warhead reduction (weight: 0.23, ideal: 0.65)
+- Carbon cost on imports (weight: 0.22, ideal: 0.77)
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
@@ -779,7 +779,7 @@ Remember: This analysis is completely private.
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| `{issues_list}` | Indexed list of issue names | `0: AI chip export quota`, `1: Autonomous weapons human oversight`, … |
+| `{issues_list}` | Indexed list of issue names | `0: AI chip export quota`, `1: Critical mineral emergency stockpile contribution`, … |
 | `{round_num}` | Current round | `1` |
 | `{t_rounds}` | Maximum rounds | `3` |
 | `{n_issues}` | Number of issues | `5` |
@@ -795,10 +795,10 @@ Please propose a treaty agreement.
 **Current Context:**
 - Issues being negotiated:
   0: AI chip export quota
-  1: Autonomous weapons human oversight
-  2: Critical mineral revenue share
-  3: Disputed territory restoration
-  4: Nuclear warhead reduction
+  1: Critical mineral emergency stockpile contribution
+  2: Nuclear warhead reduction
+  3: Fentanyl precursor control breadth
+  4: Carbon cost on imports
 - Round: 1/3
 
 **Instructions:**
@@ -825,7 +825,7 @@ Respond with ONLY a JSON object in this exact format:
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{agreement_display}` | One line per issue: name, value, percentage via `_describe_position` | `  AI chip export quota: 0.650 (~65%)` |
-| `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on chip quotas; concede on oversight"` |
+| `{proposal['reasoning']}` | Proposer's stated reasoning | `"Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge"` |
 | `{proposal['proposed_by']}` | Proposer agent ID | `gpt-4o` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
@@ -838,12 +838,12 @@ A treaty proposal has been submitted:
 
 **PROPOSED AGREEMENT:**
   AI chip export quota: 0.650 (~65%)
-  Autonomous weapons human oversight: 0.200 (~20%)
-  Critical mineral revenue share: 0.550 (~55%)
-  Disputed territory restoration: 0.500 (~50%)
-  Nuclear warhead reduction: 0.700 (~70%)
+  Critical mineral emergency stockpile contribution: 0.200 (~20%)
+  Nuclear warhead reduction: 0.550 (~55%)
+  Fentanyl precursor control breadth: 0.500 (~50%)
+  Carbon cost on imports: 0.700 (~70%)
 
-**REASONING:** Split the difference on chip quotas; concede on oversight levels.
+**REASONING:** Split the difference on chip quotas; accept deeper cuts on warheads and a moderate carbon import charge.
 **PROPOSED BY:** gpt-4o
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**

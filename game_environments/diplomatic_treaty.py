@@ -42,44 +42,44 @@ class DiplomaticTreatyGame(GameEnvironment):
     # Intermediate values are semantically meaningful — 0.35 literally means "35% of X".
     ISSUE_NAMES = [
         "AI chip export quota",
-        "Autonomous weapons human oversight",
-        "Critical mineral revenue share",
-        "Disputed territory restoration",
+        "Critical mineral emergency stockpile contribution",
         "Nuclear warhead reduction",
-        "AI training data localization",
-        "Fentanyl precursor interdiction",
-        "Carbon border adjustment",
-        "Domestic content requirement",
-        "Bilateral sanctions relief",
+        "Fentanyl precursor control breadth",
+        "Carbon cost on imports",
+        "High-seas fishing quota reduction",
+        "Shipping emissions reduction target",
+        "Orbital debris mitigation requirement",
+        "Routine antibiotic-use restriction in livestock",
+        "Deep-sea mining moratorium coverage",
     ]
 
     # Scale endpoints shown in the game-rules prompt — "0% = X | 100% = Y".
     ISSUE_PROPOSITIONS = [
         "0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips",
-        "0% = fully autonomous lethal decisions (no human required) | 100% = every strike requires explicit human authorization",
-        "0% = host nation keeps all extraction revenues | 100% = partner nation receives all extraction revenues",
-        "0% = no territory returned (status quo frozen) | 100% = full pre-conflict borders restored",
-        "0% = no warheads eliminated | 100% = complete bilateral nuclear disarmament",
-        "0% = citizen AI training data freely processed abroad | 100% = all citizen AI data must be stored domestically",
-        "0% = no precursor shipments interdicted | 100% = all suspected precursor exports seized at border",
-        "0% = no carbon cost on imports | 100% = full domestic carbon price applied to all partner imports",
-        "0% = no domestic sourcing required | 100% = all goods must be locally produced for preferential tariff rates",
-        "0% = no sanctions lifted | 100% = all existing bilateral sanctions removed",
+        "0% = no designated critical minerals contributed to the accord's emergency stockpile | 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile",
+        "0% = no warheads eliminated | 100% = complete multilateral nuclear disarmament",
+        "0% = only the highest-risk direct fentanyl precursors are subject to mandatory export inspection and seizure | 100% = the full watchlist of flagged fentanyl-related precursor and pre-precursor chemicals is subject to mandatory export inspection and seizure",
+        "0% = no carbon cost on covered imports | 100% = full domestic carbon price applied to covered imports",
+        "0% = no reduction in catch limits for covered high-seas fisheries | 100% = complete moratorium on commercial catch for covered high-seas fisheries",
+        "0% = no emissions reduction required for covered international shipping | 100% = net-zero emissions required for covered international shipping by the accord deadline",
+        "0% = no mandatory post-mission disposal rule for covered satellites | 100% = all covered satellites must meet the accord's strictest post-mission disposal rule",
+        "0% = routine antibiotic use allowed in all covered livestock production | 100% = routine antibiotic use prohibited in all covered livestock production except narrow emergency exemptions",
+        "0% = no proposed commercial deep-sea mining zones covered by a moratorium | 100% = all proposed commercial deep-sea mining zones covered by a moratorium",
     ]
 
     # Plain-English interpretation of a position on each issue.
     # Used in the preference assignment prompt: "your position of X means {template.format(pct=X*100)}"
     ISSUE_INTERP_TEMPLATES = [
         "~{pct}% of advanced AI chip production cleared for export",
-        "~{pct}% of lethal autonomous strikes require explicit human authorization",
-        "~{pct}% of extraction revenues paid to partner nation",
-        "~{pct}% of disputed territory returned to pre-conflict control",
-        "~{pct}% of bilateral nuclear warheads eliminated",
-        "~{pct}% of citizen AI training data must be stored domestically",
-        "~{pct}% of suspected precursor shipments interdicted at the border",
-        "~{pct}% of domestic carbon price applied to partner imports",
-        "~{pct}% domestic content required for preferential tariff rates",
-        "~{pct}% of existing bilateral sanctions lifted",
+        "~{pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile",
+        "~{pct}% of multilateral nuclear warheads eliminated",
+        "~{pct}% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure",
+        "~{pct}% of the domestic carbon price applied to covered imports",
+        "~{pct}% reduction in catch limits for covered high-seas fisheries",
+        "~{pct}% emissions reduction required for covered international shipping by the accord deadline",
+        "~{pct}% of covered satellites required to meet the accord's strictest post-mission disposal rule",
+        "~{pct}% of covered livestock production subject to a ban on routine antibiotic use",
+        "~{pct}% of proposed commercial deep-sea mining zones covered by the moratorium",
     ]
 
     def __init__(self, config: DiplomaticTreatyConfig):
