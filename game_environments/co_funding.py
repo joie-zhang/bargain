@@ -490,7 +490,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 
 **WHAT YOU CAN SEE:**
 - During discussion, you may see previous-round aggregate project status
-- During voting, you see the full JOINT PROPOSAL for the current round and the aggregate status it would create
+- During voting, you see the aggregate project status the joint proposal would create, but not other participants' individual contribution vectors
 - You do NOT see other participants' private preferences
 
 **YOUR UTILITY:**
@@ -555,7 +555,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
         lines.append("")
         lines.append("**HOW YOUR UTILITY IS COMPUTED:**")
         lines.append("- For each FUNDED project: your_utility = your_valuation \u2212 your_contribution (negative if you over-contribute)")
-        lines.append("- For UNFUNDED projects: your contribution does not reduce your utility")
+        lines.append("- For UNFUNDED projects: you do not pay that contribution in the final outcome. But within a proposal, budget assigned to one project is not available for any other project.")
         lines.append("- Total utility = sum of (valuation \u2212 contribution) across ALL funded projects, including projects funded entirely by others (where your contribution = 0, giving you full valuation as free utility)")
         lines.append("")
         lines.append("**STRATEGIC INSIGHT:**")
@@ -629,7 +629,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
 
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
-            status = "FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
+            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
             val_text = self._format_display_number(val)
             project_lines.append(
                 f"  {j}: {proj['name']} (cost={cost:.2f}, your_val={val_text}, "
@@ -705,8 +705,8 @@ Respond with ONLY a JSON object in this exact format:
 **PROJECT STATUS:**
 {projects_text}
 
-**Currently funded projects (LAST ROUND):** {[projects[j]['name'] for j in funded] if funded else 'None'}
-**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.{reasoning_instruction}
+**Provisionally funded projects (PREVIOUS ROUND):** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.{reasoning_instruction}
 
 {format_section}"""
 
@@ -908,7 +908,7 @@ Respond with ONLY a JSON object in this exact format:
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             if transparency_mode == "aggregate":
                 if j in funded:
-                    status_lines.append(f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f})")
+                    status_lines.append(f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost:.2f})")
                 else:
                     gap = cost - agg
                     status_lines.append(
@@ -917,7 +917,7 @@ Respond with ONLY a JSON object in this exact format:
             else:
                 if j in funded:
                     line = (
-                        f"  {proj['name']}: FUNDED (aggregate={agg:.2f} >= cost={cost:.2f}); "
+                        f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost:.2f}); "
                         f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
                     )
                 else:
@@ -933,7 +933,7 @@ Respond with ONLY a JSON object in this exact format:
         if transparency_mode != "aggregate":
             attribution_section = ""
             if transparency_mode == "full":
-                attribution_lines = ["**PREVIOUS ROUND PROJECT ATTRIBUTION (who funded what):**"]
+                attribution_lines = ["**PREVIOUS ROUND PROJECT ATTRIBUTION (who pledged what):**"]
                 if not current_pledges:
                     attribution_lines.append("- No prior pledges yet (round 1).")
                 else:
@@ -944,7 +944,7 @@ Respond with ONLY a JSON object in this exact format:
                             if len(contribs) != m:
                                 contribs = [0.0] * m
                             per_agent.append(f"{aid}={contribs[j]:.2f}")
-                        funded_tag = "FUNDED" if j in funded else "UNFUNDED"
+                        funded_tag = "PROVISIONALLY FUNDED" if j in funded else "UNFUNDED"
                         attribution_lines.append(
                             f"- {proj['name']}: {', '.join(per_agent)} | "
                             f"aggregate={agg:.2f}/{cost:.2f} ({funded_tag})"
@@ -961,16 +961,15 @@ Respond with ONLY a JSON object in this exact format:
                 label = " (you)" if aid == agent_id else ""
                 budget_lines.append(
                     f"  {aid}{label}: budget={self._format_display_number(all_budgets[aid])}, "
-                    f"last_round_pledged={spent_prev:.2f}, last_round_unallocated={remaining_prev:.2f}"
+                    f"prev_round_pledged={spent_prev:.2f}, prev_round_unallocated={remaining_prev:.2f}"
                 )
             budget_section = "\n".join(budget_lines)
             extra_transparency_block = f"""
 
-**IMPORTANT: funded status above reflects LAST ROUND only.**
-If any participant revises downward this round, previously funded projects can become unfunded.
-Reaffirm or revise your plan explicitly for projects you want to remain funded.
+**IMPORTANT: any provisionally funded status above reflects the PREVIOUS ROUND only.**
+If contributions change this round, projects that were provisionally funded in the previous round may no longer clear their cost threshold, so any support you still want must be proposed again.
 
-**LAST ROUND BUDGET USAGE (before this round's revision):**
+**PREVIOUS ROUND BUDGET USAGE (before this round's revision):**
 {budget_section}{attribution_section}"""
 
         # Inject prior turns so each speaker sees what has been said this round
@@ -1020,7 +1019,7 @@ Share your updated strategy for this round."""
 **CURRENT PROJECT STATUS:**
 {status_text}
 
-**Funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**Provisionally funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
 {extra_transparency_block}
 {history_section}
 {context}{reasoning_instruction}"""
@@ -1036,19 +1035,12 @@ Share your updated strategy for this round."""
         """Generate a voting prompt for the round's single joint proposal."""
         projects = game_state["projects"]
         costs = game_state["project_costs"]
-        contributions_by_agent = proposal.get("contributions_by_agent", {})
         aggregates = proposal.get("aggregate_totals", [0.0] * len(projects))
         funded = set(proposal.get("funded_projects", []))
 
-        profile_lines = []
-        for aid in sorted(contributions_by_agent.keys()):
-            contribs = contributions_by_agent.get(aid, [0.0] * len(projects))
-            profile_lines.append(f"- {aid}: {[round(float(x), 2) for x in contribs]}")
-        profile_text = "\n".join(profile_lines) if profile_lines else "- No contributions available"
-
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
             status_lines.append(
                 f"  {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
             )
@@ -1059,16 +1051,13 @@ Share your updated strategy for this round."""
 
         return f"""The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-**Per-participant contributions:**
-{profile_text}
-
 **Aggregate project status if accepted:**
 {chr(10).join(status_lines)}
 
 Please vote on this proposal. Consider:
-- Which projects would be funded if this proposal is accepted
+- Which projects would be provisionally funded if this proposal is accepted
 - How much you would contribute under this proposal
-- Your utility from the funded set after subtracting your own contributions
+- Your utility from the resulting funded set after subtracting your own contributions
 - If no joint proposal is unanimously accepted by the final round, your utility is 0{reasoning_instruction}
 
 Respond with ONLY a JSON object in this exact format:
@@ -1091,35 +1080,25 @@ Vote must be either "accept" or "reject"."""
         costs = game_state["project_costs"]
         aggregates = game_state["aggregate_totals"]
         funded = set(game_state.get("funded_projects", []))
-        current_pledges = game_state.get("current_pledges", {})
-
-        profile_lines = []
-        for aid in sorted(current_pledges.keys()):
-            contribs = current_pledges.get(aid, {}).get("contributions", [0.0] * len(projects))
-            profile_lines.append(f"- {aid}: {[round(float(x), 2) for x in contribs]}")
-        profile_text = "\n".join(profile_lines) if profile_lines else "- No pledges available"
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
             status_lines.append(
                 f"  {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
             )
 
         return f"""POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}
 
-You are voting on whether to LOCK IN the current pledge profile immediately.
-
-**Current pledge profile:**
-{profile_text}
+You are voting on whether to LOCK IN the current aggregate project status immediately.
 
 **Current aggregate project status:**
 {chr(10).join(status_lines)}
 
-Vote **yay** if you are satisfied with the current pledge profile and want to finalize it now.
-Vote **nay** if you want one more revision round to improve contributions.
+Vote **yay** if you are satisfied with the current aggregate project status and your own current contribution vector, and want to finalize now.
+Vote **nay** if you want another revision round to improve contributions.
 
-**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this pledge profile as the final outcome. If ANY participant votes nay, one more revision round occurs.
+**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this round's contributions as the final outcome. If ANY participant votes nay, another revision round occurs.
 
 Respond with ONLY JSON:
 {{
@@ -1373,7 +1352,7 @@ Remember: This analysis is completely private."""
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "FUNDED" if j in funded else f"gap={cost - agg:.2f}"
+            status = "PROVISIONALLY FUNDED" if j in funded else f"gap={cost - agg:.2f}"
             status_lines.append(f"  {proj['name']}: aggregate={agg:.2f}, cost={cost:.2f} ({status})")
 
         reasoning_instruction = ""
@@ -1385,11 +1364,11 @@ Remember: This analysis is completely private."""
 **CURRENT STATUS:**
 {chr(10).join(status_lines)}
 
-**Funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**Provisionally funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
 **Vote outcome this round:** {"accepted unanimously" if tabulation_result.get("consensus_reached", False) else "not accepted unanimously"}
 **Your utility under this round's joint proposal:** {utility:.2f}
 **Raw utility (before discount):** {raw_utility:.2f}
-**Discount factor this round:** {discount_factor:.4f}
+**Discount factor this round:** {discount_factor:.2f}
 
 Consider what adjustments to your contributions might improve the outcome.
 - Are there projects close to being funded that deserve more support?
@@ -1676,7 +1655,7 @@ Consider what adjustments to your contributions might improve the outcome.
         lines = ["ROUND RESULTS - Aggregate Contributions:", ""]
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             if j in funded:
-                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} -- FUNDED (your_prev={own_prev[j]:.2f})")
+                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} -- PROVISIONALLY FUNDED (your_prev={own_prev[j]:.2f})")
             else:
                 gap = cost - agg
                 pct = (agg / cost * 100) if cost > 0 else 0
@@ -1684,7 +1663,7 @@ Consider what adjustments to your contributions might improve the outcome.
 
         lines.append("")
         funded_names = [projects[j]["name"] for j in funded]
-        lines.append(f"Funded projects: {funded_names if funded_names else 'None'}")
+        lines.append(f"Provisionally funded projects: {funded_names if funded_names else 'None'}")
         lines.append("")
         lines.append("Consider adjusting your contributions based on these aggregate results.")
 

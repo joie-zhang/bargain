@@ -1610,24 +1610,19 @@ Consider what adjustments might lead to consensus in future rounds."""
         fallback_lines = [
             f"POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}",
             "",
-            "Current pledge profile (this round):",
+            "Aggregate project status:",
         ]
-        for aid in sorted(current_pledges.keys()):
-            contribs = current_pledges.get(aid, {}).get("contributions", [])
-            fallback_lines.append(f"- {aid}: {[round(float(x), 2) for x in contribs]}")
-        fallback_lines.append("")
-        fallback_lines.append("Aggregate project status:")
         for j, proj in enumerate(projects):
             cost = costs[j] if j < len(costs) else 0.0
             agg = aggregates[j] if j < len(aggregates) else 0.0
-            status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
             fallback_lines.append(
                 f"- {proj.get('name', f'Project_{j+1}')}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
             )
         fallback_lines.extend(
             [
                 "",
-                "Vote YAY if you are willing to lock in this exact profile now.",
+                "Vote YAY if you are willing to lock in the current aggregate project status now.",
                 "Vote NAY if you prefer another revision round.",
                 "",
                 "Respond with ONLY JSON:",

@@ -1013,7 +1013,7 @@ You are participating in a co-funding exercise with one other participant to fun
 
 **WHAT YOU CAN SEE:**
 - During discussion, you may see previous-round aggregate project status
-- During voting, you see the full JOINT PROPOSAL for the current round and the aggregate status it would create
+- During voting, you see the aggregate project status the joint proposal would create, but not other participants' individual contribution vectors
 - You do NOT see other participants' private preferences
 
 **YOUR UTILITY:**
@@ -1052,7 +1052,7 @@ o3-mini-high, you have been assigned the following SECRET co-funding preferences
 
 **HOW YOUR UTILITY IS COMPUTED:**
 - For each FUNDED project: your_utility = your_valuation − your_contribution (negative if you over-contribute)
-- For UNFUNDED projects: your contribution does not reduce your utility
+- For UNFUNDED projects: you do not pay that contribution in the final outcome. But within a proposal, budget assigned to one project is not available for any other project.
 - Total utility = sum of (valuation − contribution) across ALL funded projects, including projects funded entirely by others (where your contribution = 0, giving you full valuation as free utility)
 
 **STRATEGIC INSIGHT:**
@@ -1103,7 +1103,7 @@ DISCUSSION PHASE - Round 1/5
   Project Delta: needs 40.80 more (aggregate=0.00 / cost=40.80)
   Project Epsilon: needs 19.60 more (aggregate=0.00 / cost=19.60)
 
-**Funded projects:** None
+**Provisionally funded projects:** None
 
 **DISCUSSION OBJECTIVES:**
 - Signal which projects you believe are most valuable to fund
@@ -1124,8 +1124,8 @@ You are the first to speak. Share your initial thoughts on which projects to pri
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `2` |
 | `{max_rounds}` | Maximum rounds | `5` |
-| `{status_text}` | Per-project status | `Project Alpha: FUNDED (aggregate=30.00 >= cost=28.50)` |
-| `{funded_projects}` | Funded project names | `['Project Alpha']` |
+| `{status_text}` | Per-project status | `Project Alpha: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50)` |
+| `{funded_projects}` | Provisionally funded project names | `['Project Alpha']` |
 | `{extra_transparency_block}` | Extra budget/attribution info (non-aggregate modes) | see below |
 | `{discussion_history}` | Prior messages this round | `o3-mini-high: "I want to focus on Alpha and Beta."` |
 
@@ -1135,21 +1135,20 @@ You are the first to speak. Share your initial thoughts on which projects to pri
 DISCUSSION PHASE - Round 2/5
 
 **CURRENT PROJECT STATUS:**
-  Project Alpha: FUNDED (aggregate=30.00 >= cost=28.50); your_prev=20.00, others_prev=10.00, min_you_to_keep_if_others_same=18.50
+  Project Alpha: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50); your_prev=20.00, others_prev=10.00, min_you_to_keep_if_others_same=18.50
   Project Beta: needs 2.20 more (aggregate=33.00 / cost=35.20); your_prev=18.00, others_prev=15.00, min_you_to_fund_if_others_same=20.20
   Project Gamma: needs 22.10 more (aggregate=0.00 / cost=22.10); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=22.10
   Project Delta: needs 40.80 more (aggregate=0.00 / cost=40.80); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=40.80
   Project Epsilon: needs 3.60 more (aggregate=16.00 / cost=19.60); your_prev=10.00, others_prev=6.00, min_you_to_fund_if_others_same=13.60
 
-**Funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Project Alpha']
 
-**IMPORTANT: funded status above reflects LAST ROUND only.**
-If any participant revises downward this round, previously funded projects can become unfunded.
-Reaffirm or revise your plan explicitly for projects you want to remain funded.
+**IMPORTANT: any provisionally funded status above reflects the PREVIOUS ROUND only.**
+If contributions change this round, projects that were provisionally funded in the previous round may no longer clear their cost threshold, so any support you still want must be proposed again.
 
-**LAST ROUND BUDGET USAGE (before this round's revision):**
-  gpt-4o-mini: budget=73.11, last_round_pledged=48.00, last_round_unallocated=25.11
-  o3-mini-high (you): budget=73.11, last_round_pledged=48.00, last_round_unallocated=25.11
+**PREVIOUS ROUND BUDGET USAGE (before this round's revision):**
+  gpt-4o-mini: budget=73.11, prev_round_pledged=48.00, prev_round_unallocated=25.11
+  o3-mini-high (you): budget=73.11, prev_round_pledged=48.00, prev_round_unallocated=25.11
 
 **DISCUSSION SO FAR THIS ROUND:**
 o3-mini-high: "I want to focus on Alpha and Beta — they're close to funded."
@@ -1167,8 +1166,8 @@ Keep the discussion focused on reaching a funded consensus.
 
 **Full transparency extra block (replaces own-mode block above):**
 ```
-**PREVIOUS ROUND PROJECT ATTRIBUTION (who funded what):**
-- Project Alpha: gpt-4o-mini=10.00, o3-mini-high=20.00 | aggregate=30.00/28.50 (FUNDED)
+**PREVIOUS ROUND PROJECT ATTRIBUTION (who pledged what):**
+- Project Alpha: gpt-4o-mini=10.00, o3-mini-high=20.00 | aggregate=30.00/28.50 (PROVISIONALLY FUNDED)
 - Project Beta: gpt-4o-mini=15.00, o3-mini-high=18.00 | aggregate=33.00/35.20 (UNFUNDED)
 - Project Gamma: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/22.10 (UNFUNDED)
 - Project Delta: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/40.80 (UNFUNDED)
@@ -1195,7 +1194,7 @@ DISCUSSION PHASE - Round 3/5
 **CURRENT PROJECT STATUS:**
   [as above...]
 
-**Funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Project Alpha']
 
 [extra_transparency_block if applicable]
 
@@ -1280,8 +1279,8 @@ Remember: This analysis is completely private.
 | `{round_num}` | Current round | `2` |
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{budget:.2f}` | This agent's budget | `73.11` |
-| `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, funded status) | `0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)` |
-| `{funded_projects}` | Funded project names or empty list | `['Project Alpha']` |
+| `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, provisional funded status) | `0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)` |
+| `{funded_projects}` | Provisionally funded project names or empty list | `['Project Alpha']` |
 | `{m}` | Number of projects | `5` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
@@ -1295,14 +1294,14 @@ Please submit your proposal for Round 2/5.
 **YOUR BUDGET:** 73.11
 
 **PROJECT STATUS:**
-  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)
+  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
   1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
   2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
   3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
   4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
 
-**Currently funded projects (LAST ROUND):** ['Project Alpha']
-**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.
+**Provisionally funded projects (PREVIOUS ROUND):** ['Project Alpha']
+**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
 
 **Instructions:**
 Submit a contribution vector specifying how much YOU propose contributing to each project.
@@ -1346,13 +1345,15 @@ Please submit your proposal for Round 2/5.
 **YOUR BUDGET:** 73.11
 
 **PROJECT STATUS:**
-  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, FUNDED)
+  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
   1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
   2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
   3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
   4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
 
-**Currently funded projects:** ['Project Alpha']
+**Provisionally funded projects (PREVIOUS ROUND):** ['Project Alpha']
+
+**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
 
 **Instructions:**
 Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
@@ -1387,29 +1388,24 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| per-agent lines | Per-agent contribution vectors | `- gpt-4o-mini: [20.0, 18.0, 0.0, 0.0, 10.0]` |
-| project status lines | Per-project aggregate vs cost + funded status | `Project Alpha: aggregate=30.00 / cost=28.50 (FUNDED)` |
+| project status lines | Per-project aggregate vs cost + provisional funded status | `Project Alpha: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)` |
 
 **Rendered prompt**
 
 ```
 The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-**Per-participant contributions:**
-- gpt-4o-mini: [10.0, 15.0, 0.0, 0.0, 6.0]
-- o3-mini-high: [20.0, 18.0, 0.0, 0.0, 10.0]
-
 **Aggregate project status if accepted:**
-  Project Alpha: aggregate=30.00 / cost=28.50 (FUNDED)
+  Project Alpha: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)
   Project Beta: aggregate=33.00 / cost=35.20 (needs 2.20 more)
   Project Gamma: aggregate=0.00 / cost=22.10 (needs 22.10 more)
   Project Delta: aggregate=0.00 / cost=40.80 (needs 40.80 more)
   Project Epsilon: aggregate=16.00 / cost=19.60 (needs 3.60 more)
 
 Please vote on this proposal. Consider:
-- Which projects would be funded if this proposal is accepted
+- Which projects would be provisionally funded if this proposal is accepted
 - How much you would contribute under this proposal
-- Your utility from the funded set after subtracting your own contributions
+- Your utility from the resulting funded set after subtracting your own contributions
 - If no joint proposal is unanimously accepted by the final round, your utility is 0
 
 Respond with ONLY JSON:
@@ -1430,12 +1426,12 @@ Vote must be either "accept" or "reject".
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `2` |
-| `{status_lines}` | Per-project aggregate, cost, funded/gap status | `Project Alpha: aggregate=30.00, cost=28.50 (FUNDED)` |
-| `{funded_projects}` | Funded project names | `['Project Alpha']` |
+| `{status_lines}` | Per-project aggregate, cost, provisional-funded/gap status | `Project Alpha: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)` |
+| `{funded_projects}` | Provisionally funded project names | `['Project Alpha']` |
 | vote outcome line | Whether the joint proposal was accepted unanimously | `accepted unanimously` |
 | `{utility:.2f}` | This agent's discounted utility under the round's joint proposal | `14.30` |
 | `{raw_utility:.2f}` | Utility before discount | `14.30` |
-| `{discount_factor:.4f}` | Applied discount factor | `1.0000` (or `0.9000` if discounting on) |
+| `{discount_factor:.2f}` | Applied discount factor | `1.00` (or `0.90` if discounting on) |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -1444,17 +1440,17 @@ Vote must be either "accept" or "reject".
 Reflect on the outcome of Round 2.
 
 **CURRENT STATUS:**
-  Project Alpha: aggregate=30.00, cost=28.50 (FUNDED)
+  Project Alpha: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)
   Project Beta: aggregate=33.00, cost=35.20 (gap=2.20)
   Project Gamma: aggregate=0.00, cost=22.10 (gap=22.10)
   Project Delta: aggregate=0.00, cost=40.80 (gap=40.80)
   Project Epsilon: aggregate=16.00, cost=19.60 (gap=3.60)
 
-**Funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Project Alpha']
 **Vote outcome this round:** accepted unanimously
 **Your utility under this round's joint proposal:** 14.30
 **Raw utility (before discount):** 14.30
-**Discount factor this round:** 1.0000
+**Discount factor this round:** 1.00
 
 Consider what adjustments to your contributions might improve the outcome.
 - Are there projects close to being funded that deserve more support?
