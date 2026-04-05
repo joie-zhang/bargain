@@ -579,6 +579,34 @@ class TestPrompts:
         assert "BUDGET" in prompt
         assert "Agent_1" in prompt
 
+    def test_cofunding_uses_combined_setup_phase(self):
+        """Co-funding should merge private preferences into setup."""
+        game = make_game()
+        assert game.uses_combined_setup_phase() is True
+
+    def test_combined_setup_prompt_contains_rules_budget_and_valuations(self):
+        """Combined setup prompt should include both shared and private information."""
+        game = make_game()
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_combined_setup_prompt("Agent_1", state)
+
+        assert "GAME STRUCTURE" in prompt
+        assert "HOW IT WORKS" in prompt
+        assert "YOUR PRIVATE BUDGET" in prompt
+        assert "PROJECT DETAILS AND YOUR VALUATIONS" in prompt
+        assert "Please do not initiate the discussion or proposal phase yet." in prompt
+        assert "summarize the game structure and rules" in prompt
+        assert (
+            "reiterate the private budget and project valuations that were assigned to you"
+            in prompt
+        )
+        assert f"{state['agent_budgets']['Agent_1']:.2f}" in prompt
+
+        for val in state["agent_valuations"]["Agent_1"]:
+            assert f"{val:.2f}" in prompt
+
     def test_proposal_prompt(self):
         game = make_game()
         agents = create_test_agents(2)

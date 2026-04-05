@@ -308,8 +308,14 @@ class CoFundingGame(GameEnvironment):
 
     # ---- Abstract method implementations ----
 
-    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
-        """Generate co-funding game rules explanation."""
+    def _get_parties_phrase(self) -> str:
+        """Create clearer phrasing for 2-agent co-funding games."""
+        if self.config.n_agents == 2:
+            return "one other participant"
+        return f"{self.config.n_agents - 1} other participants"
+
+    def _get_rules_block(self, game_state: Dict[str, Any]) -> str:
+        """Build the shared setup/rules block for co-funding."""
         projects = game_state["projects"]
 
         projects_text = "\n".join([
@@ -317,14 +323,11 @@ class CoFundingGame(GameEnvironment):
             for p in projects
         ])
 
-        if self.config.n_agents == 2:
-            parties_phrase = "one other participant"
-        else:
-            parties_phrase = f"{self.config.n_agents - 1} other participants"
+        parties_phrase = self._get_parties_phrase()
 
         return f"""Welcome to the Participatory Budgeting (Co-Funding) Game!
 
-You are participating in a co-funding exercise with {parties_phrase} to fund public projects.
+You are participating in a co-funding exercise with {parties_phrase} to fund public projects. Here is your full setup information:
 
 **PROJECTS AVAILABLE FOR FUNDING:**
 {projects_text}
@@ -332,8 +335,14 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 **GAME STRUCTURE:**
 - There are {self.config.n_agents} participants (including you)
 - The game lasts up to {self.config.t_rounds} rounds
+- This message is the one-time setup phase
 - Each round follows a Propose-and-Vote cycle:
   Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
+
+**PRIVATE INFORMATION:**
+- You have a SECRET contribution budget
+- You have SECRET project valuations
+- These budget and valuation details are PRIVATE and specific to you
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
@@ -364,24 +373,27 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 **BUDGET CONSTRAINT:**
 - The combined budgets of all participants may NOT be sufficient to fund all projects
 - You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
+"""
 
-Please acknowledge that you understand these rules and are ready to participate!"""
-
-    def get_preference_assignment_prompt(
+    def _get_private_preferences_block(
         self,
         agent_id: str,
         game_state: Dict[str, Any]
     ) -> str:
-        """Generate preference assignment prompt showing budget, costs, and valuations."""
+        """Build the per-agent private preference block."""
         projects = game_state["projects"]
         valuations = game_state["agent_valuations"][agent_id]
         budget = game_state["agent_budgets"][agent_id]
         costs = game_state["project_costs"]
 
-        lines = ["CONFIDENTIAL: Your Co-Funding Preferences", ""]
-        lines.append(f"{agent_id}, you have been assigned the following:")
+        lines = ["LOCKED PRIVATE PREFERENCES", ""]
+        lines.append(
+            f"{agent_id}, you have been assigned the following SECRET co-funding preferences:"
+        )
         lines.append("")
-        lines.append(f"**YOUR BUDGET:** {budget:.2f} (maximum total you can contribute across all projects)")
+        lines.append(
+            f"**YOUR PRIVATE BUDGET:** {budget:.2f} (maximum total you can contribute across all projects)"
+        )
         lines.append("")
         lines.append("**PROJECT DETAILS AND YOUR VALUATIONS:**")
 
@@ -405,10 +417,46 @@ Please acknowledge that you understand these rules and are ready to participate!
         lines.append("- Focus contributions on projects you value highly")
         lines.append("- Coordinate with others to meet project cost thresholds")
         lines.append("- Don't over-contribute to projects others will fund")
-        lines.append("")
-        lines.append("Please acknowledge that you understand your preferences and budget.")
 
         return "\n".join(lines)
+
+    def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
+        """Generate co-funding game rules explanation."""
+        rules_block = self._get_rules_block(game_state)
+        return f"""{rules_block}
+
+Please acknowledge that you understand these rules and are ready to participate!"""
+
+    def get_preference_assignment_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate preference assignment prompt showing budget, costs, and valuations."""
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+        return f"""{preferences_block}
+
+Please acknowledge that you understand your preferences and budget."""
+
+    def uses_combined_setup_phase(self) -> bool:
+        """Co-Funding merges private preference assignment into setup."""
+        return True
+
+    def get_combined_setup_prompt(
+        self,
+        agent_id: str,
+        game_state: Dict[str, Any]
+    ) -> str:
+        """Generate the one-time setup prompt with rules and private preferences."""
+        rules_block = self._get_rules_block(game_state)
+        preferences_block = self._get_private_preferences_block(agent_id, game_state)
+
+        return f"""{rules_block}
+
+{preferences_block}
+
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget and project valuations that were assigned to you."""
 
     def get_proposal_prompt(
         self,

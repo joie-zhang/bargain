@@ -948,7 +948,7 @@ Each vote must be either "accept" or "reject".
 ## Game 3: Co-Funding / Participatory Budgeting
 
 Protocol: **Propose-and-Vote** (with a single joint proposal assembled from per-agent submissions)
-Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Proposal → Voting → Reflection
+Runtime structure: one-time Setup (**Rules + Private Preferences**), then each round: Discussion → Private Thinking → Proposal → Voting → Reflection
 
 Control parameters: α (valuation alignment), σ (budget scarcity)
 `budget_ratio = σ`, so σ=0.2 → 20% of total cost, σ=1.0 → 100% of total cost
@@ -957,7 +957,7 @@ Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 
 ---
 
-### 3.1 Game Rules Prompt
+### 3.1 Game Rules Prompt (combined setup prompt)
 
 **Variables**
 
@@ -969,12 +969,19 @@ Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{enable_time_discount}` | Boolean flag | `False` |
 | `{gamma_discount}` | Per-round discount factor | `0.9` |
+| `{budget:.2f}` | This agent's total contribution budget | `36.55` |
+| per-project lines | Name, cost, valuation, priority label | `Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
+| `{sum(valuations):.2f}` | Sum of all valuations (always 100.00) | `100.00` |
+| `{total_cost:.2f}` | Sum of all project costs | `146.20` |
+| `{total_budget:.2f}` | Sum of budgets across all agents | `73.11` |
+| `{_coverage}` | `round(total_budget / total_cost * 100)` — collective % of costs covered | `50` |
+
 **Rendered prompt (example: 2 agents, 5 projects, no time discount)**
 
 ```
 Welcome to the Participatory Budgeting (Co-Funding) Game!
 
-You are participating in a co-funding exercise with one other participant to fund public projects.
+You are participating in a co-funding exercise with one other participant to fund public projects. Here is your full setup information:
 
 **PROJECTS AVAILABLE FOR FUNDING:**
   - Project Alpha: cost = 28.50
@@ -986,8 +993,14 @@ You are participating in a co-funding exercise with one other participant to fun
 **GAME STRUCTURE:**
 - There are 2 participants (including you)
 - The game lasts up to 5 rounds
+- This message is the one-time setup phase
 - Each round follows a Propose-and-Vote cycle:
   Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
+
+**PRIVATE INFORMATION:**
+- You have a SECRET contribution budget
+- You have SECRET project valuations
+- These budget and valuation details are PRIVATE and specific to you
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
@@ -1019,35 +1032,11 @@ You are participating in a co-funding exercise with one other participant to fun
 - The combined budgets of all participants may NOT be sufficient to fund all projects
 - You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
 
-Please acknowledge that you understand these rules and are ready to participate!
-```
+LOCKED PRIVATE PREFERENCES
 
----
+o3-mini-high, you have been assigned the following SECRET co-funding preferences:
 
-### 3.2 Preference Assignment Prompt
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{agent_id}` | This agent's model/role identifier | `o3-mini-high` |
-| `{budget:.2f}` | This agent's total contribution budget | `73.11` |
-| per-project lines | Name, cost, valuation, priority label | `Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
-| `{sum(valuations):.2f}` | Sum of all valuations (always 100.00) | `100.00` |
-| `{total_cost:.2f}` | Sum of all project costs | `146.20` |
-| `{total_budget:.2f}` | Sum of budgets across all agents | `73.11` |
-| `{_coverage}` | `round(total_budget / total_cost * 100)` — collective % of costs covered | `50` |
-
-Priority thresholds: > 30 → **HIGH**, > 15 → **Medium**, ≤ 15 → *Low*
-
-**Rendered prompt (example: 5 projects, 2 agents, σ=0.5)**
-
-```
-CONFIDENTIAL: Your Co-Funding Preferences
-
-o3-mini-high, you have been assigned the following:
-
-**YOUR BUDGET:** 36.55 (maximum total you can contribute across all projects)
+**YOUR PRIVATE BUDGET:** 36.55 (maximum total you can contribute across all projects)
 
 **PROJECT DETAILS AND YOUR VALUATIONS:**
   Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)
@@ -1071,8 +1060,21 @@ o3-mini-high, you have been assigned the following:
 - Coordinate with others to meet project cost thresholds
 - Don't over-contribute to projects others will fund
 
-Please acknowledge that you understand your preferences and budget.
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget and project valuations that were assigned to you.
 ```
+
+---
+
+### 3.2 Preference Assignment Prompt (merged into 3.1)
+
+For Game 3, this is no longer a separate runtime phase.
+
+Co-Funding now sends one per-agent setup prompt containing both the shared
+rules and that agent's private budget and project valuations, followed by a
+single acknowledgment request. The standalone helper remains in code for
+composition and compatibility, but it is no longer sent as its own phase in the
+actual Game 3 run.
 
 ---
 
@@ -1482,4 +1484,4 @@ When `reasoning_token_budget` is configured for a run, this line is appended to 
 |------|----------|-------------------|
 | Game 1: Item Allocation | Propose-and-Vote | Setup → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 2: Diplomatic Treaty | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 3: Co-Funding | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
+| Game 3: Co-Funding | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
