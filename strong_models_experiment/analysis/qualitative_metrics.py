@@ -17,11 +17,11 @@ _COMMITMENT_PATTERNS = (
         r"\b(?:i|we)\s*(?:will|can|shall|'ll)\s*"
         r"(?:contribute|pledge|allocate|commit|put)\s*\$?\s*"
         r"([0-9]+(?:\.[0-9]+)?)\s*(?:to|toward|towards|for)\s*"
-        r"(project\s+[a-z0-9_\- ]+)",
+        r"((?:project\s+)?[a-z0-9_\- ]+)",
         flags=re.IGNORECASE,
     ),
     re.compile(
-        r"\b(project\s+[a-z0-9_\- ]+)\s*[:\-]?\s*"
+        r"\b((?:project\s+)?[a-z0-9_\- ]+)\s*[:\-]?\s*"
         r"(?:i|we)\s*(?:will|can|shall|'ll)\s*"
         r"(?:contribute|pledge|allocate|commit|put)\s*\$?\s*"
         r"([0-9]+(?:\.[0-9]+)?)",
@@ -61,7 +61,7 @@ def _normalize_project_aliases(projects: List[Dict[str, Any]]) -> Dict[str, int]
         low = name.lower()
         aliases[low] = idx
 
-        # If formatted like "Project Alpha", also allow "alpha".
+        # If formatted like "Project X", also allow the short form "x".
         if low.startswith("project "):
             short = low.replace("project ", "", 1).strip()
             if short:
@@ -131,10 +131,10 @@ def _extract_commitment_events(
         for pattern in _COMMITMENT_PATTERNS:
             for match in pattern.finditer(content):
                 g1, g2 = match.group(1), match.group(2)
-                if g1.lower().startswith("project "):
-                    project_raw, amount_raw = g1, g2
-                else:
+                if re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", g1):
                     amount_raw, project_raw = g1, g2
+                else:
+                    project_raw, amount_raw = g1, g2
 
                 project_idx = _resolve_project_index(project_raw, project_aliases)
                 if project_idx is None:

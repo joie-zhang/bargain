@@ -62,9 +62,16 @@ class CoFundingGame(GameEnvironment):
     """
 
     PROJECT_NAMES = [
-        "Project Alpha", "Project Beta", "Project Gamma",
-        "Project Delta", "Project Epsilon", "Project Zeta",
-        "Project Eta", "Project Theta", "Project Iota", "Project Kappa"
+        "Market Street Protected Bike Lane",
+        "Parkside Adventure Playground",
+        "Oak Avenue Crosswalk Beacons",
+        "Cedar Pool Access Lift",
+        "Harborview Bus Shelter Canopies",
+        "Eastgate Court Night Lights",
+        "Riverwalk Bottle-Fill Stations",
+        "Dog Park",
+        "Pollinator Garden Network",
+        "Community Wi-Fi Plaza Hubs",
     ]
 
     def __init__(self, config: CoFundingConfig):

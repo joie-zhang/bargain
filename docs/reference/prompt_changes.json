@@ -28,7 +28,7 @@
     "title": "Rules: warn that over-contributing causes negative utility",
     "affected_prompt": "3.1 Game Rules (YOUR UTILITY section)",
     "file": "game_environments/co_funding.py",
-    "description": "Utility = valuation − contribution for each funded project. If an agent contributes more than their valuation to a funded project, net utility from that project is negative. Nowhere in the rules or preference prompt is this risk communicated. An agent who sees 'I value Project Alpha at 42.30' might contribute 50 without realizing this costs them 7.70 net. This is a basic incentive structure that agents need to internalize.",
+    "description": "Utility = valuation − contribution for each funded project. If an agent contributes more than their valuation to a funded project, net utility from that project is negative. Nowhere in the rules or preference prompt is this risk communicated. An agent who sees 'I value Market Street Protected Bike Lane at 42.30' might contribute 50 without realizing this costs them 7.70 net. This is a basic incentive structure that agents need to internalize.",
     "before_rendered": "- You gain value from funded projects but pay for your contributions to them\n- Contributions to unfunded projects cost you nothing (refunded)",
     "after_rendered": "- You gain value from funded projects but pay for your contributions to them\n- **IMPORTANT**: If your contribution to a funded project exceeds your valuation for it, your net utility from that project is NEGATIVE — never contribute more than your valuation for any project\n- Contributions to unfunded projects cost you nothing (refunded)"
   },
@@ -62,8 +62,8 @@
     "affected_prompt": "3.5 Pledge Submission",
     "file": "game_environments/co_funding.py",
     "description": "The pledge submission prompt shows 'aggregate=30.00, FUNDED' for projects, but this is last round's state. This round starts with zero contributions. An agent who sees 'FUNDED' might reduce their contribution to that project (or drop to zero), causing it to be unfunded this round. The discussion prompt (own-mode only) has a partial warning, but the pledge prompt — where the actual decision is made — has no warning at all. This is a concrete mechanism for coordination failure.",
-    "before_rendered": "**Currently funded projects:** ['Project Alpha']\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project.",
-    "after_rendered": "**Currently funded projects (LAST ROUND):** ['Project Alpha']\n**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project."
+    "before_rendered": "**Currently funded projects:** ['Market Street Protected Bike Lane']\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project.",
+    "after_rendered": "**Currently funded projects (LAST ROUND):** ['Market Street Protected Bike Lane']\n**NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.\n\n**Instructions:**\nSubmit a contribution vector specifying how much YOU pledge to each project."
   },
   {
     "id": "G3-07",
@@ -84,8 +84,8 @@
     "affected_prompt": "3.6 Feedback",
     "file": "game_environments/co_funding.py",
     "description": "'Consider adjusting your contributions based on these aggregate results.' is too vague. After seeing round results, an agent needs category-specific guidance: near-threshold projects are worth pushing over; far-from-threshold projects should be abandoned; over-funded projects can be reduced. Without this, agents don't know in which direction to adjust, contributing to continued coordination failure.",
-    "before_rendered": "Funded projects: ['Project Alpha']\n\nConsider adjusting your contributions based on these aggregate results.",
-    "after_rendered": "Funded projects: ['Project Alpha']\n\nWhen deciding how to adjust your contributions next round:\n- **Near threshold** (>70% funded): consider increasing your contribution to push it over\n- **Far from threshold** (<30% funded): consider reallocating those contributions to better-funded projects\n- **Already funded**: you may be able to reduce slightly if others will maintain coverage\n- **Over-contributed**: if you contributed more than your valuation to a funded project, reduce to your valuation"
+    "before_rendered": "Funded projects: ['Market Street Protected Bike Lane']\n\nConsider adjusting your contributions based on these aggregate results.",
+    "after_rendered": "Funded projects: ['Market Street Protected Bike Lane']\n\nWhen deciding how to adjust your contributions next round:\n- **Near threshold** (>70% funded): consider increasing your contribution to push it over\n- **Far from threshold** (<30% funded): consider reallocating those contributions to better-funded projects\n- **Already funded**: you may be able to reduce slightly if others will maintain coverage\n- **Over-contributed**: if you contributed more than your valuation to a funded project, reduce to your valuation"
   },
   {
     "id": "G1-01",

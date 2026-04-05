@@ -55,16 +55,16 @@ Up to 10 projects; the game uses the first `m_projects` from this list. Project 
 
 | Index | Name |
 |-------|------|
-| 0 | Project Alpha |
-| 1 | Project Beta |
-| 2 | Project Gamma |
-| 3 | Project Delta |
-| 4 | Project Epsilon |
-| 5 | Project Zeta |
-| 6 | Project Eta |
-| 7 | Project Theta |
-| 8 | Project Iota |
-| 9 | Project Kappa |
+| 0 | Market Street Protected Bike Lane |
+| 1 | Parkside Adventure Playground |
+| 2 | Oak Avenue Crosswalk Beacons |
+| 3 | Cedar Pool Access Lift |
+| 4 | Harborview Bus Shelter Canopies |
+| 5 | Eastgate Court Night Lights |
+| 6 | Riverwalk Bottle-Fill Stations |
+| 7 | Dog Park |
+| 8 | Pollinator Garden Network |
+| 9 | Community Wi-Fi Plaza Hubs |
 
 ---
 ---
@@ -964,13 +964,13 @@ Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{parties_phrase}` | "one other participant" (n=2) or "N-1 other participants" | `one other participant` |
-| `{projects_text}` | List of project names with costs | `  - Project Alpha: cost = 28.50` |
+| `{projects_text}` | List of project names with costs | `  - Market Street Protected Bike Lane: cost = 28.50` |
 | `{n_agents}` | Total number of participants | `2` |
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{enable_time_discount}` | Boolean flag | `False` |
 | `{gamma_discount}` | Per-round discount factor | `0.9` |
 | `{budget:.2f}` | This agent's total contribution budget | `36.55` |
-| per-project lines | Name, cost, valuation, priority label | `Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
+| per-project lines | Name, cost, valuation, priority label | `Market Street Protected Bike Lane (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
 | `{sum(valuations):.2f}` | Sum of all valuations (always 100.00) | `100.00` |
 | `{total_cost:.2f}` | Sum of all project costs | `146.20` |
 | `{total_budget:.2f}` | Sum of budgets across all agents | `73.11` |
@@ -984,11 +984,11 @@ Welcome to the Participatory Budgeting (Co-Funding) Game!
 You are participating in a co-funding exercise with one other participant to fund public projects. Here is your full setup information:
 
 **PROJECTS AVAILABLE FOR FUNDING:**
-  - Project Alpha: cost = 28.50
-  - Project Beta: cost = 35.20
-  - Project Gamma: cost = 22.10
-  - Project Delta: cost = 40.80
-  - Project Epsilon: cost = 19.60
+  - Market Street Protected Bike Lane: cost = 28.50
+  - Parkside Adventure Playground: cost = 35.20
+  - Oak Avenue Crosswalk Beacons: cost = 22.10
+  - Cedar Pool Access Lift: cost = 40.80
+  - Harborview Bus Shelter Canopies: cost = 19.60
 
 **GAME STRUCTURE:**
 - There are 2 participants (including you)
@@ -1039,11 +1039,11 @@ o3-mini-high, you have been assigned the following SECRET co-funding preferences
 **YOUR PRIVATE BUDGET:** 36.55 (maximum total you can contribute across all projects)
 
 **PROJECT DETAILS AND YOUR VALUATIONS:**
-  Project Alpha (cost: 28.50): Your valuation = 42.30 (HIGH priority)
-  Project Beta (cost: 35.20): Your valuation = 28.40 (Medium priority)
-  Project Gamma (cost: 22.10): Your valuation = 12.60 (Low priority)
-  Project Delta (cost: 40.80): Your valuation = 9.80 (Low priority)
-  Project Epsilon (cost: 19.60): Your valuation = 6.90 (Low priority)
+  Market Street Protected Bike Lane (cost: 28.50): Your valuation = 42.30 (HIGH priority)
+  Parkside Adventure Playground (cost: 35.20): Your valuation = 28.40 (Medium priority)
+  Oak Avenue Crosswalk Beacons (cost: 22.10): Your valuation = 12.60 (Low priority)
+  Cedar Pool Access Lift (cost: 40.80): Your valuation = 9.80 (Low priority)
+  Harborview Bus Shelter Canopies (cost: 19.60): Your valuation = 6.90 (Low priority)
 
 **TOTAL VALUATIONS:** 100.00
 **TOTAL PROJECT COSTS:** 146.20
@@ -1088,7 +1088,7 @@ actual Game 3 run.
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `1` |
 | `{max_rounds}` | Maximum rounds | `5` |
-| `{status_text}` | Per-project status lines (varies by transparency mode — see below) | `Project Alpha: needs 28.50 more (aggregate=0.00 / cost=28.50)` |
+| `{status_text}` | Per-project status lines (varies by transparency mode — see below) | `Market Street Protected Bike Lane: needs 28.50 more (aggregate=0.00 / cost=28.50)` |
 | `{funded_projects}` | List of funded project names or "None" | `None` |
 
 **Rendered prompt (aggregate transparency mode, round 1)**
@@ -1097,11 +1097,11 @@ actual Game 3 run.
 DISCUSSION PHASE - Round 1/5
 
 **CURRENT PROJECT STATUS:**
-  Project Alpha: needs 28.50 more (aggregate=0.00 / cost=28.50)
-  Project Beta: needs 35.20 more (aggregate=0.00 / cost=35.20)
-  Project Gamma: needs 22.10 more (aggregate=0.00 / cost=22.10)
-  Project Delta: needs 40.80 more (aggregate=0.00 / cost=40.80)
-  Project Epsilon: needs 19.60 more (aggregate=0.00 / cost=19.60)
+  Market Street Protected Bike Lane: needs 28.50 more (aggregate=0.00 / cost=28.50)
+  Parkside Adventure Playground: needs 35.20 more (aggregate=0.00 / cost=35.20)
+  Oak Avenue Crosswalk Beacons: needs 22.10 more (aggregate=0.00 / cost=22.10)
+  Cedar Pool Access Lift: needs 40.80 more (aggregate=0.00 / cost=40.80)
+  Harborview Bus Shelter Canopies: needs 19.60 more (aggregate=0.00 / cost=19.60)
 
 **Provisionally funded projects:** None
 
@@ -1124,10 +1124,10 @@ You are the first to speak. Share your initial thoughts on which projects to pri
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `2` |
 | `{max_rounds}` | Maximum rounds | `5` |
-| `{status_text}` | Per-project status | `Project Alpha: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50)` |
-| `{funded_projects}` | Provisionally funded project names | `['Project Alpha']` |
+| `{status_text}` | Per-project status | `Market Street Protected Bike Lane: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50)` |
+| `{funded_projects}` | Provisionally funded project names | `['Market Street Protected Bike Lane']` |
 | `{extra_transparency_block}` | Extra budget/attribution info (non-aggregate modes) | see below |
-| `{discussion_history}` | Prior messages this round | `o3-mini-high: "I want to focus on Alpha and Beta."` |
+| `{discussion_history}` | Prior messages this round | `o3-mini-high: "I want to focus on Market Street Protected Bike Lane and Parkside Adventure Playground."` |
 
 **Rendered prompt (own transparency, round 2)**
 
@@ -1135,13 +1135,13 @@ You are the first to speak. Share your initial thoughts on which projects to pri
 DISCUSSION PHASE - Round 2/5
 
 **CURRENT PROJECT STATUS:**
-  Project Alpha: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50); your_prev=20.00, others_prev=10.00, min_you_to_keep_if_others_same=18.50
-  Project Beta: needs 2.20 more (aggregate=33.00 / cost=35.20); your_prev=18.00, others_prev=15.00, min_you_to_fund_if_others_same=20.20
-  Project Gamma: needs 22.10 more (aggregate=0.00 / cost=22.10); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=22.10
-  Project Delta: needs 40.80 more (aggregate=0.00 / cost=40.80); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=40.80
-  Project Epsilon: needs 3.60 more (aggregate=16.00 / cost=19.60); your_prev=10.00, others_prev=6.00, min_you_to_fund_if_others_same=13.60
+  Market Street Protected Bike Lane: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50); your_prev=20.00, others_prev=10.00, min_you_to_keep_if_others_same=18.50
+  Parkside Adventure Playground: needs 2.20 more (aggregate=33.00 / cost=35.20); your_prev=18.00, others_prev=15.00, min_you_to_fund_if_others_same=20.20
+  Oak Avenue Crosswalk Beacons: needs 22.10 more (aggregate=0.00 / cost=22.10); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=22.10
+  Cedar Pool Access Lift: needs 40.80 more (aggregate=0.00 / cost=40.80); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=40.80
+  Harborview Bus Shelter Canopies: needs 3.60 more (aggregate=16.00 / cost=19.60); your_prev=10.00, others_prev=6.00, min_you_to_fund_if_others_same=13.60
 
-**Provisionally funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Market Street Protected Bike Lane']
 
 **IMPORTANT: any provisionally funded status above reflects the PREVIOUS ROUND only.**
 If contributions change this round, projects that were provisionally funded in the previous round may no longer clear their cost threshold, so any support you still want must be proposed again.
@@ -1151,7 +1151,7 @@ If contributions change this round, projects that were provisionally funded in t
   o3-mini-high (you): budget=73.11, prev_round_pledged=48.00, prev_round_unallocated=25.11
 
 **DISCUSSION SO FAR THIS ROUND:**
-o3-mini-high: "I want to focus on Alpha and Beta — they're close to funded."
+o3-mini-high: "I want to focus on Market Street Protected Bike Lane and Parkside Adventure Playground — they're close to funded."
 
 ---
 
@@ -1167,11 +1167,11 @@ Keep the discussion focused on reaching a funded consensus.
 **Full transparency extra block (replaces own-mode block above):**
 ```
 **PREVIOUS ROUND PROJECT ATTRIBUTION (who pledged what):**
-- Project Alpha: gpt-4o-mini=10.00, o3-mini-high=20.00 | aggregate=30.00/28.50 (PROVISIONALLY FUNDED)
-- Project Beta: gpt-4o-mini=15.00, o3-mini-high=18.00 | aggregate=33.00/35.20 (UNFUNDED)
-- Project Gamma: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/22.10 (UNFUNDED)
-- Project Delta: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/40.80 (UNFUNDED)
-- Project Epsilon: gpt-4o-mini=6.00, o3-mini-high=10.00 | aggregate=16.00/19.60 (UNFUNDED)
+- Market Street Protected Bike Lane: gpt-4o-mini=10.00, o3-mini-high=20.00 | aggregate=30.00/28.50 (PROVISIONALLY FUNDED)
+- Parkside Adventure Playground: gpt-4o-mini=15.00, o3-mini-high=18.00 | aggregate=33.00/35.20 (UNFUNDED)
+- Oak Avenue Crosswalk Beacons: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/22.10 (UNFUNDED)
+- Cedar Pool Access Lift: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/40.80 (UNFUNDED)
+- Harborview Bus Shelter Canopies: gpt-4o-mini=6.00, o3-mini-high=10.00 | aggregate=16.00/19.60 (UNFUNDED)
 ```
 
 ---
@@ -1194,7 +1194,7 @@ DISCUSSION PHASE - Round 3/5
 **CURRENT PROJECT STATUS:**
   [as above...]
 
-**Provisionally funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Market Street Protected Bike Lane']
 
 [extra_transparency_block if applicable]
 
@@ -1219,11 +1219,11 @@ Share your updated strategy for this round.
 | `{round_num}` | Current round | `2` |
 | `{max_rounds}` | Maximum rounds | `5` |
 | urgency line | Only if `round_num >= max_rounds - 1` | `**CRITICAL**: Final rounds -- decide on your strategy now!` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o-mini: "Let's focus on Alpha and Beta."` |
+| `{discussion_history}` | Prior messages this round | `gpt-4o-mini: "Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground."` |
 | `{budget:.2f}` | This agent's budget | `73.11` |
 | `{own_contribs}` | This agent's contributions from last round | `[20.0, 18.0, 0.0, 0.0, 10.0]` |
 | `{aggregates}` | Aggregate totals per project | `[30.0, 33.0, 0.0, 0.0, 16.0]` |
-| `{preference_lines}` | One line per project with valuation and cost | `Project Alpha (val=42.30, cost=28.50)` |
+| `{preference_lines}` | One line per project with valuation and cost | `Market Street Protected Bike Lane (val=42.30, cost=28.50)` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -1232,7 +1232,7 @@ Share your updated strategy for this round.
 PRIVATE STRATEGIC ANALYSIS - Round 2/5
 
 **DISCUSSION THIS ROUND:**
-gpt-4o-mini: "Let's focus on Alpha and Beta — they're almost funded."
+gpt-4o-mini: "Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground — they're almost funded."
 
 ---
 
@@ -1242,11 +1242,11 @@ gpt-4o-mini: "Let's focus on Alpha and Beta — they're almost funded."
 - Aggregate totals: [30.0, 33.0, 0.0, 0.0, 16.0]
 
 **YOUR FULL PREFERENCE REMINDER:**
-  Project Alpha (val=42.30, cost=28.50)
-  Project Beta (val=28.40, cost=35.20)
-  Project Gamma (val=12.60, cost=22.10)
-  Project Delta (val=9.80, cost=40.80)
-  Project Epsilon (val=6.90, cost=19.60)
+  Market Street Protected Bike Lane (val=42.30, cost=28.50)
+  Parkside Adventure Playground (val=28.40, cost=35.20)
+  Oak Avenue Crosswalk Beacons (val=12.60, cost=22.10)
+  Cedar Pool Access Lift (val=9.80, cost=40.80)
+  Harborview Bus Shelter Canopies (val=6.90, cost=19.60)
 
 **STRATEGIC ANALYSIS:**
 1. Which projects are viable to fund given current aggregates?
@@ -1279,8 +1279,8 @@ Remember: This analysis is completely private.
 | `{round_num}` | Current round | `2` |
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{budget:.2f}` | This agent's budget | `73.11` |
-| `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, provisional funded status) | `0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)` |
-| `{funded_projects}` | Provisionally funded project names or empty list | `['Project Alpha']` |
+| `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, provisional funded status) | `0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)` |
+| `{funded_projects}` | Provisionally funded project names or empty list | `['Market Street Protected Bike Lane']` |
 | `{m}` | Number of projects | `5` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
@@ -1294,13 +1294,13 @@ Please submit your proposal for Round 2/5.
 **YOUR BUDGET:** 73.11
 
 **PROJECT STATUS:**
-  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
-  1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
-  2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
-  3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
-  4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+  0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
+  1: Parkside Adventure Playground (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
+  2: Oak Avenue Crosswalk Beacons (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
+  3: Cedar Pool Access Lift (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
+  4: Harborview Bus Shelter Canopies (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
 
-**Provisionally funded projects (PREVIOUS ROUND):** ['Project Alpha']
+**Provisionally funded projects (PREVIOUS ROUND):** ['Market Street Protected Bike Lane']
 **NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
 
 **Instructions:**
@@ -1332,7 +1332,7 @@ Respond with ONLY a JSON object in this exact format:
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{budget:.2f}` | This agent's budget | `73.11` |
 | `{projects_text}` | Per-project status lines | same as individual mode |
-| `{funded_projects}` | Funded names | `['Project Alpha']` |
+| `{funded_projects}` | Funded names | `['Market Street Protected Bike Lane']` |
 | `{budget_lines}` | Per-agent budget table | `  - gpt-4o-mini: 73.11` |
 | `{example_contributions}` | Example JSON entries for all agents | `"gpt-4o-mini": [5.0, 10.0, 0.0, 8.0, 2.0]` |
 | `{m}` | Number of projects | `5` |
@@ -1345,13 +1345,13 @@ Please submit your proposal for Round 2/5.
 **YOUR BUDGET:** 73.11
 
 **PROJECT STATUS:**
-  0: Project Alpha (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
-  1: Project Beta (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
-  2: Project Gamma (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
-  3: Project Delta (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
-  4: Project Epsilon (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+  0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
+  1: Parkside Adventure Playground (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
+  2: Oak Avenue Crosswalk Beacons (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
+  3: Cedar Pool Access Lift (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
+  4: Harborview Bus Shelter Canopies (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
 
-**Provisionally funded projects (PREVIOUS ROUND):** ['Project Alpha']
+**Provisionally funded projects (PREVIOUS ROUND):** ['Market Street Protected Bike Lane']
 
 **NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
 
@@ -1388,7 +1388,7 @@ Respond with ONLY a JSON object in this exact format:
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| project status lines | Per-project aggregate vs cost + provisional funded status | `Project Alpha: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)` |
+| project status lines | Per-project aggregate vs cost + provisional funded status | `Market Street Protected Bike Lane: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)` |
 
 **Rendered prompt**
 
@@ -1396,11 +1396,11 @@ Respond with ONLY a JSON object in this exact format:
 The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
 **Aggregate project status if accepted:**
-  Project Alpha: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)
-  Project Beta: aggregate=33.00 / cost=35.20 (needs 2.20 more)
-  Project Gamma: aggregate=0.00 / cost=22.10 (needs 22.10 more)
-  Project Delta: aggregate=0.00 / cost=40.80 (needs 40.80 more)
-  Project Epsilon: aggregate=16.00 / cost=19.60 (needs 3.60 more)
+  Market Street Protected Bike Lane: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)
+  Parkside Adventure Playground: aggregate=33.00 / cost=35.20 (needs 2.20 more)
+  Oak Avenue Crosswalk Beacons: aggregate=0.00 / cost=22.10 (needs 22.10 more)
+  Cedar Pool Access Lift: aggregate=0.00 / cost=40.80 (needs 40.80 more)
+  Harborview Bus Shelter Canopies: aggregate=16.00 / cost=19.60 (needs 3.60 more)
 
 Please vote on this proposal. Consider:
 - Which projects would be provisionally funded if this proposal is accepted
@@ -1426,8 +1426,8 @@ Vote must be either "accept" or "reject".
 | Variable | Description | Example value |
 |----------|-------------|---------------|
 | `{round_num}` | Current round | `2` |
-| `{status_lines}` | Per-project aggregate, cost, provisional-funded/gap status | `Project Alpha: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)` |
-| `{funded_projects}` | Provisionally funded project names | `['Project Alpha']` |
+| `{status_lines}` | Per-project aggregate, cost, provisional-funded/gap status | `Market Street Protected Bike Lane: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)` |
+| `{funded_projects}` | Provisionally funded project names | `['Market Street Protected Bike Lane']` |
 | vote outcome line | Whether the joint proposal was accepted unanimously | `accepted unanimously` |
 | `{utility:.2f}` | This agent's discounted utility under the round's joint proposal | `14.30` |
 | `{raw_utility:.2f}` | Utility before discount | `14.30` |
@@ -1440,13 +1440,13 @@ Vote must be either "accept" or "reject".
 Reflect on the outcome of Round 2.
 
 **CURRENT STATUS:**
-  Project Alpha: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)
-  Project Beta: aggregate=33.00, cost=35.20 (gap=2.20)
-  Project Gamma: aggregate=0.00, cost=22.10 (gap=22.10)
-  Project Delta: aggregate=0.00, cost=40.80 (gap=40.80)
-  Project Epsilon: aggregate=16.00, cost=19.60 (gap=3.60)
+  Market Street Protected Bike Lane: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)
+  Parkside Adventure Playground: aggregate=33.00, cost=35.20 (gap=2.20)
+  Oak Avenue Crosswalk Beacons: aggregate=0.00, cost=22.10 (gap=22.10)
+  Cedar Pool Access Lift: aggregate=0.00, cost=40.80 (gap=40.80)
+  Harborview Bus Shelter Canopies: aggregate=16.00, cost=19.60 (gap=3.60)
 
-**Provisionally funded projects:** ['Project Alpha']
+**Provisionally funded projects:** ['Market Street Protected Bike Lane']
 **Vote outcome this round:** accepted unanimously
 **Your utility under this round's joint proposal:** 14.30
 **Raw utility (before discount):** 14.30

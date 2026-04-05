@@ -84,13 +84,13 @@ def test_compute_qualitative_metrics_v1_end_to_end():
             "phase": "discussion",
             "round": 1,
             "from": "Agent_A",
-            "content": "I will contribute 5 to Project Alpha.",
+            "content": "I will contribute 5 to Market Street Protected Bike Lane.",
         },
         {
             "phase": "discussion",
             "round": 1,
             "from": "Agent_A",
-            "content": "Let's focus on Project Alpha first.",
+            "content": "Let's focus on Market Street Protected Bike Lane first.",
         },
         {
             "phase": "pledge_submission",
@@ -118,7 +118,10 @@ def test_compute_qualitative_metrics_v1_end_to_end():
         },
     ]
     game_state = {
-        "projects": [{"name": "Project Alpha"}, {"name": "Project Beta"}],
+        "projects": [
+            {"name": "Market Street Protected Bike Lane"},
+            {"name": "Parkside Adventure Playground"},
+        ],
         "round_pledges": [
             {"Agent_A": [0.0, 0.0], "Agent_B": [1.0, 0.0]},
             {"Agent_A": [5.0, 0.0], "Agent_B": [3.0, 0.0]},
