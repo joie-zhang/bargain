@@ -28,7 +28,10 @@ class DiplomaticTreatyGame(GameEnvironment):
       - Position preferences p_i: ideal outcome on each issue
       - Importance weights w_i: how much they care about each issue
     - Proposals are agreement vectors A = [a_1, ..., a_k] where a_k ∈ [0,1]
-    - Utility = 100 × Σ_k w_ik × (1 - |p_ik - a_k|)
+    - Internally, positions/agreements/weights are normalized to [0,1]
+    - Prompts show those same values as integer percentages
+    - Internal utility = 100 × Σ_k w_ik × (1 - |p_ik - a_k|)
+    - Prompt-facing equivalent = Σ_k weight_pct_ik × (1 - |ideal_pct_ik - agreement_pct_k| / 100)
 
     Two control parameters:
     - ρ (rho): Preference correlation [-1, 1]
@@ -241,6 +244,14 @@ class DiplomaticTreatyGame(GameEnvironment):
             return False
 
         return all(numeric_value.is_integer() for numeric_value in numeric_values)
+
+    @classmethod
+    def _normalize_agreement_vector(cls, agreement: List[Any]) -> np.ndarray:
+        """Accept either integer percentages or normalized [0,1] values and return [0,1]."""
+        numeric = np.asarray(agreement, dtype=float)
+        if cls._looks_like_percentage_vector(numeric.tolist()):
+            numeric = numeric / 100.0
+        return np.clip(numeric, 0.0, 1.0)
 
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:
         """
@@ -533,7 +544,9 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
   - **100%** = the maximum level of that policy (see scale below)
   - **50%** = the exact midpoint between minimum and maximum
 
-**Your position IS your preferred rate.** A position of 35 means you want 35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
+**Your position is your preferred rate.** A position of 35 means you want a 35% policy setting on that issue.
+A higher position does NOT mean the issue is more important; importance is tracked separately by your weights.
+Percentages here are policy settings, not generic resources, unless the issue text itself says so.
 
 {issues_text}
 
@@ -555,8 +568,13 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - Each value is the proposed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
-- Your utility = weighted sum of how close each resolved score is to your ideal
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- Your utility is the weighted sum of how close the agreement is to your ideal rates
+- `weight_k` = the importance percentage for issue k; your weights sum to 100%
+- `ideal_rate_k` and `agreement_rate_k` = policy rates from 0% to 100% on that issue's scale
+- Formula, using the percentages shown to you: Σ (weight_k × (1 - |ideal_rate_k - agreement_rate_k| / 100))
+- Example: weight=30%, ideal rate=80%, agreement=70% -> 27 utility points
+- Example: weight=40%, ideal rate=20%, agreement=30% -> 36 utility points
+- The second issue matters more even though its preferred rate is lower, because 40% > 30%
 - Maximum utility = 100 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
@@ -595,9 +613,9 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
             f"{agent_id}, you have been assigned the following SECRET treaty preferences:"
         )
         lines.append("")
-        lines.append("**YOUR PRIVATE IDEAL POSITIONS:**")
-        lines.append("  Each issue is a continuous policy rate: 0% = minimum, 100% = maximum.")
-        lines.append("  Your position is the rate you ideally want.")
+        lines.append("**YOUR PRIVATE IDEAL POSITIONS (PREFERRED RATES):**")
+        lines.append("  Each position is your ideal policy rate on that issue's 0% to 100% scale.")
+        lines.append("  Higher position = higher preferred policy setting on that issue, NOT higher importance.")
         lines.append("")
 
         for i, (issue, pos) in enumerate(zip(issues, positions)):
@@ -606,15 +624,16 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
                 interp = self.ISSUE_INTERP_TEMPLATES[i].format(pct=pct)
             else:
                 interp = f"{pct}% level"
-            lines.append(f"  {issue}: {pct}% -> {interp}")
+            lines.append(f"  {issue}: preferred rate = {pct}% -> {interp}")
 
         lines.append("")
         lines.append("**YOUR PRIVATE IMPORTANCE WEIGHTS:**")
         lines.append(
             "  These weights sum to 100% and determine how much each issue contributes to your utility."
         )
+        lines.append("  Higher weight = more important to you. Weight is NOT the policy rate.")
         for issue, weight in zip(issues, weights):
-            lines.append(f"  {issue}: {self._format_percentage(weight)}")
+            lines.append(f"  {issue}: importance weight = {self._format_percentage(weight)}")
 
         lines.append("")
         lines.append("**STRATEGIC ANALYSIS:**")
@@ -622,7 +641,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
             "- Your maximum possible utility is 100 points if every issue is resolved exactly at your ideal position"
         )
         lines.append(
-            "- Focus more on issues with higher weights, since they generally matter more for your utility"
+            "- Higher weights matter more for your utility; higher preferred rates do NOT mean higher importance"
         )
         lines.append("")
         lines.append("**STRATEGIC CONSIDERATIONS:**")
@@ -673,7 +692,7 @@ Please acknowledge that you understand your diplomatic preferences."""
 {preferences_block}
 
 Please do not initiate the discussion or proposal phase yet.
-In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private ideal positions and importance weights that were assigned to you."""
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private preferred rates and importance weights that were assigned to you."""
 
     def get_proposal_prompt(
         self,
@@ -712,6 +731,7 @@ Respond with ONLY a JSON object in this exact format:
 **Rules:**
 - The "agreement" array must have exactly {n_issues} values (one per issue)
 - Each value must be an integer between 0 and 100
+- Each value is a policy rate on that issue's scale, not an importance weight
 - Consider what would be acceptable to all parties"""
 
     def parse_proposal(
@@ -751,16 +771,7 @@ Respond with ONLY a JSON object in this exact format:
                 agreement.extend([pad_value] * (n_issues - len(agreement)))
 
             # Prefer integer-percentage vectors, but retain legacy [0, 1] support.
-            if is_percentage_vector:
-                agreement = [
-                    max(0.0, min(1.0, float(v) / 100.0))
-                    for v in agreement
-                ]
-            else:
-                agreement = [
-                    max(0.0, min(1.0, float(v)))
-                    for v in agreement
-                ]
+            agreement = self._normalize_agreement_vector(agreement).tolist()
 
             proposal["agreement"] = agreement
             proposal["proposed_by"] = agent_id
@@ -810,7 +821,8 @@ Respond with ONLY a JSON object in this exact format:
         """
         Calculate diplomatic utility.
 
-        Utility = 100 × Σ_k w_k × (1 - |p_k - a_k|)
+        Internally: utility = 100 × Σ_k w_k × (1 - |p_k - a_k|)
+        Prompt-facing equivalent: Σ_k weight_k × (1 - |ideal_rate_k - agreement_rate_k| / 100)
 
         Args:
             agent_id: ID of the agent
@@ -821,7 +833,7 @@ Respond with ONLY a JSON object in this exact format:
         Returns:
             Discounted utility value
         """
-        agreement = np.array(proposal.get("agreement", []))
+        agreement = self._normalize_agreement_vector(proposal.get("agreement", []))
         positions = np.array(game_state["agent_positions"][agent_id])
         weights = np.array(game_state["agent_weights"][agent_id])
 
@@ -984,8 +996,11 @@ Issues under negotiation: {issues_text}
 {proposals_text}
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
-- Your utility = weighted sum of how close each resolved score is to your ideal position
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- Your utility is the weighted sum of how close each proposal is to your ideal rates
+- `weight_k` = how important issue k is to you; your weights sum to 100%
+- `ideal_rate_k` and `agreement_rate_k` = policy rates on that issue's 0% to 100% scale
+- Formula, using the displayed percentages: Σ (weight_k × (1 - |ideal_rate_k - agreement_rate_k| / 100))
+- Higher rate does NOT mean more important; closeness to YOUR ideal is what matters
 - A rate of 0 means 0% (minimum policy level); 100 means 100% (maximum policy level) on each issue
 - Maximum utility = 100 (every issue resolved at your exact ideal rate)
 - Each additional round multiplies utility by {round_2_pct}% — delaying costs you
@@ -1092,8 +1107,8 @@ Each vote must be either "accept" or "reject"."""
 
         preference_lines = [
             (
-                f"  {issues[i]}: weight={self._format_percentage(weights[i])}, "
-                f"ideal={self._format_percentage(positions[i])}"
+                f"  {issues[i]}: importance={self._format_percentage(weights[i])}, "
+                f"preferred_rate={self._format_percentage(positions[i])}"
             )
             for i in range(len(issues))
         ]
@@ -1122,6 +1137,11 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 {discussion_section}
 **YOUR FULL PREFERENCE REMINDER:**
 {chr(10).join(preference_lines)}
+
+**INTERPRETATION REMINDER:**
+- `importance` = how much that issue affects your utility
+- `preferred_rate` = which policy setting you want on that issue
+- A higher preferred rate does NOT mean higher importance
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?

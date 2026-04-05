@@ -440,6 +440,19 @@ class TestUtilityCalculation:
 
         assert abs(utility - expected) < 1e-6
 
+    def test_calculate_utility_accepts_integer_percentage_agreements(self):
+        """Integer-percentage agreements should match normalized [0,1] agreements."""
+        config = DiplomaticTreatyConfig(
+            n_agents=2, t_rounds=5, n_issues=3, gamma_discount=1.0, random_seed=42
+        )
+        game = DiplomaticTreatyGame(config)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        utility_pct = game.calculate_utility("Agent_1", {"agreement": [30, 60, 90]}, state, 1)
+        utility_unit = game.calculate_utility("Agent_1", {"agreement": [0.30, 0.60, 0.90]}, state, 1)
+        assert abs(utility_pct - utility_unit) < 1e-6
+
 
 class TestProposalValidation:
     """Tests for proposal validation."""
@@ -666,16 +679,21 @@ class TestPromptGeneration:
         assert "GAME STRUCTURE" in prompt
         assert "REWARD DISCOUNTING" in prompt
         assert "WINNING CONDITIONS" in prompt
-        assert "YOUR PRIVATE IDEAL POSITIONS" in prompt
+        assert "YOUR PRIVATE IDEAL POSITIONS (PREFERRED RATES)" in prompt
         assert "YOUR PRIVATE IMPORTANCE WEIGHTS" in prompt
         assert "These weights sum to 100%" in prompt
+        assert "A higher position does NOT mean the issue is more important" in prompt
+        assert "importance weight =" in prompt
+        assert "preferred rate =" in prompt
+        assert "27 utility points" in prompt
+        assert "36 utility points" in prompt
         assert "Please do not initiate the discussion or proposal phase yet." in prompt
         assert "summarize the game structure and rules" in prompt
         assert (
-            "reiterate the private ideal positions and importance weights that were assigned to you"
+            "reiterate the private preferred rates and importance weights that were assigned to you"
             in prompt
         )
-        assert "Focus more on issues with higher weights" in prompt
+        assert "Higher weights matter more for your utility" in prompt
         assert "0.0" not in prompt
         assert "1.0" not in prompt
         assert "[0.3, 0.7, 0.5" not in prompt
@@ -721,6 +739,7 @@ class TestPromptGeneration:
         prompt = game.get_voting_prompt("Agent_1", proposal, state, round_num=1)
         assert "65%" in prompt
         assert "0.650" not in prompt
+        assert "Higher rate does NOT mean more important" in prompt
         assert_no_decimal_numbers(prompt)
 
     def test_thinking_prompt_uses_integer_percentages(self):
@@ -739,6 +758,9 @@ class TestPromptGeneration:
         )
 
         assert "%" in prompt
+        assert "importance=" in prompt
+        assert "preferred_rate=" in prompt
+        assert "A higher preferred rate does NOT mean higher importance" in prompt
         assert_no_decimal_numbers(prompt)
 
 
