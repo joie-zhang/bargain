@@ -69,7 +69,10 @@ class TestValuationGeneration:
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         for aid, vals in state["agent_valuations"].items():
-            assert abs(sum(vals) - 100.0) < 0.01, f"{aid} valuations sum to {sum(vals)}"
+            assert sum(vals) == 100, f"{aid} valuations sum to {sum(vals)}"
+            assert all(float(v).is_integer() for v in vals), (
+                f"{aid} valuations are not all integers: {vals}"
+            )
 
     def test_valuations_non_negative(self):
         """All valuations should be non-negative."""
@@ -107,7 +110,8 @@ class TestValuationGeneration:
         vecs = []
         for aid in ["Agent_1", "Agent_2", "Agent_3"]:
             vals = state["agent_valuations"][aid]
-            assert abs(sum(vals) - 100.0) < 0.01
+            assert sum(vals) == 100
+            assert all(float(v).is_integer() for v in vals)
             assert all(v >= -1e-9 for v in vals)
             vecs.append(np.array(vals))
         # Verify ALL pairwise cosine similarities match alpha
@@ -139,12 +143,12 @@ class TestGameStateCreation:
             assert key in state, f"Missing key: {key}"
 
     def test_budget_scales_between_half_and_full_cost(self):
-        """Total budget should equal sigma * total_cost."""
+        """Total budget should track sigma * total_cost after integer equal-budget rounding."""
         game = make_game(sigma=0.6)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         expected_budget = 0.6 * state["total_cost"]
-        assert abs(state["total_budget"] - expected_budget) < 0.1
+        assert abs(state["total_budget"] - expected_budget) <= (len(agents) / 2) + 0.1
 
     def test_per_agent_budget_equal(self):
         """Each agent should get equal budget."""
@@ -154,6 +158,9 @@ class TestGameStateCreation:
         budgets = list(state["agent_budgets"].values())
         assert abs(budgets[0] - budgets[1]) < 0.01
         assert abs(budgets[1] - budgets[2]) < 0.01
+        assert all(float(b).is_integer() for b in budgets)
+        assert float(state["total_budget"]).is_integer()
+        assert sum(int(b) for b in budgets) == state["total_budget"]
 
     def test_project_costs_in_range(self):
         """Project costs should be within [c_min, c_max]."""
@@ -602,10 +609,28 @@ class TestPrompts:
             "reiterate the private budget and project valuations that were assigned to you"
             in prompt
         )
-        assert f"{state['agent_budgets']['Agent_1']:.2f}" in prompt
+        budget_text = game._format_display_number(state["agent_budgets"]["Agent_1"])
+        assert f"**YOUR PRIVATE BUDGET:** {budget_text} " in prompt
 
         for val in state["agent_valuations"]["Agent_1"]:
-            assert f"{val:.2f}" in prompt
+            assert f"Your valuation = {game._format_display_number(val)} (" in prompt
+
+    def test_preference_assignment_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+        game = make_game()
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["agent_budgets"]["Agent_1"] = 27
+        state["total_budget"] = 54
+        state["agent_valuations"]["Agent_1"] = [40, 30, 20, 10, 0]
+
+        prompt = game.get_preference_assignment_prompt("Agent_1", state)
+
+        assert "**YOUR PRIVATE BUDGET:** 27 " in prompt
+        assert "Your valuation = 40 (" in prompt
+        assert "**TOTAL VALUATIONS:** 100" in prompt
+        assert "**YOUR PRIVATE BUDGET:** 27.00" not in prompt
+        assert "Your valuation = 40.00" not in prompt
+        assert "**TOTAL VALUATIONS:** 100.00" not in prompt
 
     def test_proposal_prompt(self):
         game = make_game()
@@ -614,6 +639,22 @@ class TestPrompts:
         prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
         assert "contributions" in prompt
 
+    def test_proposal_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["agent_budgets"]["Agent_1"] = 27
+        state["agent_valuations"]["Agent_1"] = [40, 30, 30]
+
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
+
+        assert "**YOUR BUDGET:** 27" in prompt
+        assert "your_val=40" in prompt
+        assert "your budget (27)" in prompt
+        assert "**YOUR BUDGET:** 27.00" not in prompt
+        assert "your_val=40.00" not in prompt
+        assert "your budget (27.00)" not in prompt
+
     def test_discussion_prompt(self):
         game = make_game()
         agents = create_test_agents(2)
@@ -621,6 +662,20 @@ class TestPrompts:
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
         assert "DISCUSSION" in prompt
         assert "LAST ROUND BUDGET USAGE" in prompt
+
+    def test_discussion_prompt_omits_trailing_point_zero_zero_for_integer_budgets(self):
+        game = make_game()
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["agent_budgets"]["Agent_1"] = 27
+        state["agent_budgets"]["Agent_2"] = 28
+
+        prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
+
+        assert "budget=27" in prompt
+        assert "budget=28" in prompt
+        assert "budget=27.00" not in prompt
+        assert "budget=28.00" not in prompt
 
     def test_discussion_prompt_aggregate_mode(self):
         game = make_game(discussion_transparency="aggregate")
@@ -656,6 +711,20 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
         assert "STRATEGIC" in prompt
+
+    def test_thinking_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["agent_budgets"]["Agent_1"] = 27
+        state["agent_valuations"]["Agent_1"] = [40, 30, 30]
+
+        prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
+
+        assert "- Budget: 27" in prompt
+        assert "val=40" in prompt
+        assert "- Budget: 27.00" not in prompt
+        assert "val=40.00" not in prompt
 
     def test_reflection_prompt(self):
         game = make_game()

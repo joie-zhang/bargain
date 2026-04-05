@@ -78,6 +78,129 @@ class CoFundingGame(GameEnvironment):
         self.config: CoFundingConfig = config
         self._rng = np.random.RandomState(config.random_seed)
 
+    @staticmethod
+    def _round_to_nearest_int(value: float) -> int:
+        """Round a scalar to the nearest integer using half-up semantics."""
+        return int(np.floor(float(value) + 0.5))
+
+    @staticmethod
+    def _format_display_number(value: float) -> str:
+        """Render integer-valued floats without trailing .00."""
+        numeric_value = float(value)
+        if numeric_value.is_integer():
+            return str(int(numeric_value))
+        return f"{numeric_value:.2f}"
+
+    @staticmethod
+    def _round_to_integer_values(
+        values: np.ndarray,
+        total: Optional[int] = None,
+    ) -> np.ndarray:
+        """Round non-negative values to integers, optionally preserving an exact total."""
+        clipped = np.maximum(np.asarray(values, dtype=float), 0.0)
+
+        if total is None:
+            return np.floor(clipped + 0.5).astype(int)
+
+        current_sum = clipped.sum()
+        if current_sum <= 0.0:
+            rounded = np.zeros_like(clipped, dtype=int)
+            if rounded.size:
+                rounded[0] = total
+            return rounded
+
+        scaled = clipped / current_sum * total
+        floored = np.floor(scaled).astype(int)
+        remainder = int(total - floored.sum())
+
+        if remainder > 0:
+            fractional = scaled - floored
+            indices = np.argsort(-fractional)[:remainder]
+            floored[indices] += 1
+        elif remainder < 0:
+            fractional = scaled - floored
+            positive_indices = np.where(floored > 0)[0]
+            indices = positive_indices[
+                np.argsort(fractional[positive_indices])[:(-remainder)]
+            ]
+            floored[indices] -= 1
+
+        return floored
+
+    @staticmethod
+    def _pairwise_cosine_error(value_matrix: np.ndarray, target_alpha: float) -> float:
+        """Compute total pairwise cosine-similarity error for integer valuation vectors."""
+        n_agents = value_matrix.shape[0]
+        total_error = 0.0
+
+        for i in range(n_agents):
+            norm_i = np.linalg.norm(value_matrix[i])
+            if norm_i < 1e-12:
+                return float("inf")
+
+            for j in range(i + 1, n_agents):
+                norm_j = np.linalg.norm(value_matrix[j])
+                if norm_j < 1e-12:
+                    return float("inf")
+                cosine = np.dot(value_matrix[i], value_matrix[j]) / (norm_i * norm_j)
+                total_error += (cosine - target_alpha) ** 2
+
+        return total_error
+
+    @classmethod
+    def _refine_integer_valuations_for_target_cosine(
+        cls,
+        value_matrix: np.ndarray,
+        target_alpha: float,
+        max_iterations: int = 200,
+    ) -> np.ndarray:
+        """
+        Improve integer-rounded valuations with local search while preserving per-agent sum=100.
+
+        Starting from largest-remainder rounding, move one utility point at a time
+        within a single agent's vector if doing so reduces total pairwise cosine error.
+        """
+        current = np.asarray(value_matrix, dtype=int).copy()
+        current_error = cls._pairwise_cosine_error(current, target_alpha)
+
+        for _ in range(max_iterations):
+            best_move = None
+            best_error = current_error
+
+            for agent_idx in range(current.shape[0]):
+                for src_idx in range(current.shape[1]):
+                    if current[agent_idx, src_idx] <= 0:
+                        continue
+
+                    for dst_idx in range(current.shape[1]):
+                        if src_idx == dst_idx:
+                            continue
+
+                        candidate = current.copy()
+                        candidate[agent_idx, src_idx] -= 1
+                        candidate[agent_idx, dst_idx] += 1
+                        candidate_error = cls._pairwise_cosine_error(
+                            candidate,
+                            target_alpha,
+                        )
+
+                        if candidate_error + 1e-12 < best_error:
+                            best_error = candidate_error
+                            best_move = (agent_idx, src_idx, dst_idx)
+
+            if best_move is None:
+                break
+
+            agent_idx, src_idx, dst_idx = best_move
+            current[agent_idx, src_idx] -= 1
+            current[agent_idx, dst_idx] += 1
+            current_error = best_error
+
+            if current_error < 1e-12:
+                break
+
+        return current
+
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:
         """
         Create projects, generate valuations and budgets.
@@ -102,7 +225,9 @@ class CoFundingGame(GameEnvironment):
         # sigma interpolates from "can fund ~half the total cost" to "can fund all."
         budget_ratio = self.config.sigma
         total_budget = budget_ratio * total_cost
-        per_agent_budget = total_budget / n
+        # Keep budgets symmetric across agents after integerization.
+        per_agent_budget = self._round_to_nearest_int(total_budget / n)
+        total_budget = per_agent_budget * n
 
         # Generate valuation vectors with target cosine similarity alpha
         valuations = self._generate_valuations(n, m)
@@ -121,7 +246,7 @@ class CoFundingGame(GameEnvironment):
             aid = agent.agent_id if hasattr(agent, 'agent_id') else str(agent)
             agent_ids.append(aid)
             agent_valuations[aid] = valuations[i].tolist()
-            agent_budgets[aid] = round(per_agent_budget, 2)
+            agent_budgets[aid] = per_agent_budget
 
         return {
             "projects": projects,
@@ -129,7 +254,7 @@ class CoFundingGame(GameEnvironment):
             "project_costs": [round(c, 2) for c in project_costs],
             "total_cost": round(total_cost, 2),
             "agent_budgets": agent_budgets,
-            "total_budget": round(total_budget, 2),
+            "total_budget": total_budget,
             "agent_valuations": agent_valuations,
             "parameters": {
                 "alpha": self.config.alpha,
@@ -163,7 +288,7 @@ class CoFundingGame(GameEnvironment):
             m_projects: Number of projects
 
         Returns:
-            valuations: Shape (n_agents, m_projects), each row sums to 100
+            valuations: Shape (n_agents, m_projects), integer-valued rows that each sum to 100
         """
         alpha = self.config.alpha
         M = m_projects
@@ -172,12 +297,22 @@ class CoFundingGame(GameEnvironment):
         if alpha == 1.0:
             # Special case: identical valuations
             v0 = self._rng.dirichlet(np.full(M, dir_alpha)) * 100.0
+            v0 = self._round_to_integer_values(v0, total=100)
             return np.tile(v0, (n_agents, 1))
 
         if n_agents == 2:
-            return self._generate_valuations_2agents(M, alpha, dir_alpha)
+            valuations = self._generate_valuations_2agents(M, alpha, dir_alpha)
         else:
-            return self._generate_valuations_nagents(n_agents, M, alpha, dir_alpha)
+            valuations = self._generate_valuations_nagents(n_agents, M, alpha, dir_alpha)
+
+        integer_valuations = np.vstack([
+            self._round_to_integer_values(row, total=100)
+            for row in valuations
+        ])
+        return self._refine_integer_valuations_for_target_cosine(
+            integer_valuations,
+            alpha,
+        )
 
     def _generate_valuations_2agents(self, M: int, alpha: float, dir_alpha: float) -> np.ndarray:
         """Generate valuations for exactly 2 agents with target cosine similarity."""
@@ -385,6 +520,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
         valuations = game_state["agent_valuations"][agent_id]
         budget = game_state["agent_budgets"][agent_id]
         costs = game_state["project_costs"]
+        budget_text = self._format_display_number(budget)
 
         lines = ["LOCKED PRIVATE PREFERENCES", ""]
         lines.append(
@@ -392,19 +528,20 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
         )
         lines.append("")
         lines.append(
-            f"**YOUR PRIVATE BUDGET:** {budget:.2f} (maximum total you can contribute across all projects)"
+            f"**YOUR PRIVATE BUDGET:** {budget_text} (maximum total you can contribute across all projects)"
         )
         lines.append("")
         lines.append("**PROJECT DETAILS AND YOUR VALUATIONS:**")
 
         for j, (proj, val, cost) in enumerate(zip(projects, valuations, costs)):
             priority = "HIGH" if val > 30 else "Medium" if val > 15 else "Low"
-            lines.append(f"  {proj['name']} (cost: {cost:.2f}): Your valuation = {val:.2f} ({priority} priority)")
+            val_text = self._format_display_number(val)
+            lines.append(f"  {proj['name']} (cost: {cost:.2f}): Your valuation = {val_text} ({priority} priority)")
 
         lines.append("")
-        lines.append(f"**TOTAL VALUATIONS:** {sum(valuations):.2f}")
-        lines.append(f"**TOTAL PROJECT COSTS:** {game_state['total_cost']:.2f}")
-        lines.append(f"**TOTAL BUDGET (all participants):** {game_state['total_budget']:.2f}")
+        lines.append(f"**TOTAL VALUATIONS:** {self._format_display_number(sum(valuations))}")
+        lines.append(f"**TOTAL PROJECT COSTS:** {self._format_display_number(game_state['total_cost'])}")
+        lines.append(f"**TOTAL BUDGET (all participants):** {self._format_display_number(game_state['total_budget'])}")
         _coverage = round(game_state['total_budget'] / game_state['total_cost'] * 100) if game_state['total_cost'] > 0 else 0
         lines.append(f"**COLLECTIVE COVERAGE:** {_coverage}% of total project costs — you cannot fund all projects; coordinate on a subset")
         lines.append("")
@@ -475,6 +612,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
         aggregates = game_state["aggregate_totals"]
         funded = game_state["funded_projects"]
         pledge_mode = game_state.get("pledge_mode", "individual")
+        budget_text = self._format_display_number(budget)
 
         # Own contributions from last round (so agent sees their own prior pledge at submission time)
         own_prev = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * m)
@@ -484,8 +622,9 @@ In your response, just acknowledge the setup, summarize the game structure and r
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
             status = "FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
+            val_text = self._format_display_number(val)
             project_lines.append(
-                f"  {j}: {proj['name']} (cost={cost:.2f}, your_val={val:.2f}, "
+                f"  {j}: {proj['name']} (cost={cost:.2f}, your_val={val_text}, "
                 f"aggregate={agg:.2f}, your_prev={own_prev[j]:.2f}, {status})"
             )
 
@@ -508,7 +647,8 @@ In your response, just acknowledge the setup, summarize the game structure and r
             example_contributions = ",\n".join(agent_example_entries)
 
             budget_lines = "\n".join(
-                f"  - {aid}: {b:.2f}" for aid, b in sorted(all_budgets.items())
+                f"  - {aid}: {self._format_display_number(b)}"
+                for aid, b in sorted(all_budgets.items())
             )
 
             format_section = f"""**Instructions:**
@@ -547,12 +687,12 @@ Respond with ONLY a JSON object in this exact format:
 **Rules:**
 - The "contributions" array must have exactly {m} values (one per project)
 - Each value must be non-negative (>= 0)
-- The sum of all contributions must not exceed your budget ({budget:.2f})
+- The sum of all contributions must not exceed your budget ({budget_text})
 - Contributions to unfunded projects will not reduce your utility"""
 
         return f"""Please submit your proposal for Round {round_num}/{self.config.t_rounds}.
 
-**YOUR BUDGET:** {budget:.2f}
+**YOUR BUDGET:** {budget_text}
 
 **PROJECT STATUS:**
 {projects_text}
@@ -812,7 +952,7 @@ Respond with ONLY a JSON object in this exact format:
                 remaining_prev = max(0.0, all_budgets[aid] - spent_prev)
                 label = " (you)" if aid == agent_id else ""
                 budget_lines.append(
-                    f"  {aid}{label}: budget={all_budgets[aid]:.2f}, "
+                    f"  {aid}{label}: budget={self._format_display_number(all_budgets[aid])}, "
                     f"last_round_pledged={spent_prev:.2f}, last_round_unallocated={remaining_prev:.2f}"
                 )
             budget_section = "\n".join(budget_lines)
@@ -994,13 +1134,14 @@ Respond with ONLY JSON:
         budget = game_state["agent_budgets"][agent_id]
         costs = game_state["project_costs"]
         aggregates = game_state["aggregate_totals"]
+        budget_text = self._format_display_number(budget)
 
         # Own contributions if available
         own_contribs = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * len(projects))
 
         priority_indices = np.argsort(valuations)[::-1][:3]
         top_priorities = [
-            f"{projects[i]['name']} (val={valuations[i]:.2f}, cost={costs[i]:.2f})"
+            f"{projects[i]['name']} (val={self._format_display_number(valuations[i])}, cost={costs[i]:.2f})"
             for i in priority_indices
         ]
 
@@ -1027,7 +1168,7 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 {urgency}
 {discussion_section}
 **YOUR SITUATION:**
-- Budget: {budget:.2f}
+- Budget: {budget_text}
 - Your current contributions: {[round(c, 2) for c in own_contribs]}
 - Aggregate totals: {[round(a, 2) for a in aggregates]}
 
