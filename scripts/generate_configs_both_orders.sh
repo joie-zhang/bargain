@@ -73,49 +73,41 @@ WEAK_MODELS=(
     # "gemini-1-5-pro"
 )
 
-# Strong models - newer/more capable models that may exploit weak models
-# From Chatbot Arena Leaderboard (as of March 31, 2026)
+# Strong models - exact smooth-coverage roster from
+# docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md
 STRONG_MODELS=(
-    "claude-opus-4-6"  # Rank 2, Elo: 1499, Closed-source, Reasoning
-    # STRONG TIER - Elo ≥ 1415 (12 models)
-    "gemini-3-pro"  # Rank 5, Elo: 1486, Closed-source
-    # "grok-4-1-thinking"  # Rank 12, Elo: 1471, Closed-source, Reasoning - NOT AVAILABLE: Not released publicly yet
-    "gemini-3-flash"  # Rank 9, Elo: 1474, Closed-source
-    "claude-opus-4-5-thinking-32k"  # Rank 11, Elo: 1474, Closed-source, Reasoning
-    "claude-opus-4-5"  # Rank 13, Elo: 1468, Closed-source, Non-reasoning
-    "claude-sonnet-4-5"  # Rank 25, Elo: 1453, Closed-source, Non-reasoning
-    "glm-4.7"  # Rank 38, Elo: 1443, Open-source
-    "gpt-5.2-high"  # Rank 39, Elo: 1442, Closed-source, Reasoning
-    "qwen3-max"  # Rank 44, Elo: 1435, Open-source
-    "deepseek-r1-0528"  # Rank 60, Elo: 1422, Open-source, Reasoning
-    "grok-4"  # Rank 78, Elo: 1410, Closed-source
-
-    # MEDIUM TIER - 1290 ≤ Elo < 1415 (15 models)
-    "claude-haiku-4-5"  # Rank 80, Elo: 1407, Closed-source, Non-reasoning
-    "deepseek-r1"  # Rank 95, Elo: 1398, Open-source, Reasoning
-    "claude-sonnet-4"  # Rank 105, Elo: 1389, Closed-source, Non-reasoning
-    "claude-3.5-sonnet"  # Rank 123, Elo: 1372, Closed-source, Non-reasoning
-    "gemma-3-27b-it"  # Rank 128, Elo: 1365, Open-source
-    "o3-mini-high"  # Rank 130, Elo: 1363, Closed-source, Reasoning
-    "deepseek-v3"  # Rank 134, Elo: 1358, Open-source
-    "gpt-4o"  # Rank 154, Elo: 1345, Closed-source, Non-reasoning
-    "QwQ-32B"  # Rank 163, Elo: 1336, Open-source
-    "llama-3.3-70b-instruct"  # Rank 187, Elo: 1318, Open-source, Non-reasoning
-    "Qwen2.5-72B-Instruct"  # Rank 209, Elo: 1302, Open-source, Non-reasoning
-    "amazon-nova-pro-v1.0"  # Rank 213, Elo: 1290, Closed-source, 300K context
-    "command-r-plus-08-2024"  # Rank 226, Elo: 1276, 128K context
-    "claude-3-haiku"  # Rank 238, Elo: 1260, Closed-source, Non-reasoning
-    "phi-4"  # Rank 241, Elo: 1256, Open-source
-
-    # WEAK TIER - Elo < 1290 (8 models in this roster)
-    "amazon-nova-micro"  # Rank 245, Elo: 1240, Closed-source
-    "gpt-3.5-turbo-0125"  # Rank 256, Elo: 1223, Closed-source, Non-reasoning
-    "llama-3.1-8b-instruct"  # Rank 264, Elo: 1211, Open-source, Non-reasoning
-    "mixtral-8x7b-instruct-v0.1"  # Rank 270, Elo: 1196, Open-source
-    "Llama-3.2-3B-Instruct"  # Rank 290, Elo: 1166, Open-source, Non-reasoning
-    "Mistral-7B-Instruct-v0.2"  # Rank 298, Elo: 1149, Open-source
-    "Phi-3-mini-128k-instruct"  # Rank 310, Elo: 1128, Open-source
-    "Llama-3.2-1B-Instruct"  # Rank 319, Elo: 1110, Open-source, Non-reasoning
+    "claude-opus-4-6-thinking"
+    "claude-opus-4-6"
+    "gemini-3-pro"
+    "gpt-5.4-high"
+    "gpt-5.2-chat-latest-20260210"
+    "claude-opus-4-5-20251101-thinking-32k"
+    "claude-opus-4-5-20251101"
+    "gemini-2.5-pro"
+    "qwen3-max-preview"
+    "deepseek-r1-0528"
+    "claude-haiku-4-5-20251001"
+    "deepseek-r1"
+    "claude-sonnet-4-20250514"
+    "claude-3-5-sonnet-20241022"
+    "gemma-3-27b-it"
+    "o3-mini-high"
+    "deepseek-v3"
+    "gpt-4o-2024-05-13"
+    "qwq-32b"
+    "gpt-4.1-nano-2025-04-14"
+    "llama-3.3-70b-instruct"
+    "gpt-4o-mini-2024-07-18"
+    "qwen2.5-72b-instruct"
+    "amazon-nova-pro-v1.0"
+    "command-r-plus-08-2024"
+    "claude-3-haiku-20240307"
+    "amazon-nova-micro-v1.0"
+    "llama-3.1-8b-instruct"
+    "llama-3.2-3b-instruct"
+    "qwq-32b-preview"
+    "phi-3-mini-128k-instruct"
+    "llama-3.2-1b-instruct"
 )
 
 # Competition levels
@@ -329,25 +321,10 @@ mkdir -p "${SLURM_DIR}"
 echo ""
 echo "Generating SLURM scripts..."
 
-# Models that require GPUs (local inference)
-# Large models (70B+): 4 GPUs (320GB)
-#   - llama-3.3-70b-instruct, Qwen2.5-72B-Instruct
-# Medium models (27B-32B): 2 GPUs (160GB)
-#   - gemma-3-27b-it, QwQ-32B, phi-4, Phi-3-mini-128k-instruct
-# Small models (<27B): 1 GPU (80GB)
-#   - llama-3.1-8b-instruct, Llama-3.2-3B-Instruct, Mistral-7B-Instruct-v0.2,
-#     Llama-3.2-1B-Instruct
+# Models that require GPUs (local inference) in the exact smooth-32 roster.
+# All other models in this roster are API-routed.
 LOCAL_MODELS=(
-    "gemma-3-27b-it"
-    "QwQ-32B"
-    "llama-3.3-70b-instruct"
-    "Qwen2.5-72B-Instruct"
-    "phi-4"
-    "llama-3.1-8b-instruct"
-    "Llama-3.2-3B-Instruct"
-    "Mistral-7B-Instruct-v0.2"
-    "Phi-3-mini-128k-instruct"
-    "Llama-3.2-1B-Instruct"
+    "phi-3-mini-128k-instruct"
 )
 
 # Function to check if a model is local (needs GPU)
@@ -365,19 +342,8 @@ is_local_model() {
 get_gpu_count() {
     local model="$1"
     case "$model" in
-        # Large models (70B+): 4 GPUs
-        "llama-3.3-70b-instruct") echo 4 ;;
-        "Qwen2.5-72B-Instruct") echo 4 ;;
-        # Medium models (27B-32B): 2 GPUs
-        "gemma-3-27b-it") echo 2 ;;
-        "QwQ-32B") echo 2 ;;
-        "phi-4") echo 2 ;;
-        "Phi-3-mini-128k-instruct") echo 2 ;;
-        # Small models (<27B): 1 GPU
-        "llama-3.1-8b-instruct") echo 1 ;;
-        "Llama-3.2-3B-Instruct") echo 1 ;;
-        "Mistral-7B-Instruct-v0.2") echo 1 ;;
-        "Llama-3.2-1B-Instruct") echo 1 ;;
+        # Local smooth-32 model: 2 GPUs
+        "phi-3-mini-128k-instruct") echo 2 ;;
         *) echo 0 ;;
     esac
 }
@@ -845,6 +811,66 @@ fi
 # Calculate padding width for config file names (same as used during generation)
 CONFIG_PADDING_WIDTH=${#TOTAL_CONFIGS}
 
+validate_exported_env_for_configs() {
+    local config_ids=$1
+
+    if [[ -z "$config_ids" ]]; then
+        return 0
+    fi
+
+    local missing_envs
+    missing_envs=$(CONFIG_DIR="$CONFIG_DIR" CONFIG_IDS="$config_ids" CONFIG_PADDING_WIDTH="$CONFIG_PADDING_WIDTH" python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+from strong_models_experiment.configs import STRONG_MODELS_CONFIG
+
+provider_env = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "xai": "XAI_API_KEY",
+}
+
+config_dir = Path(os.environ["CONFIG_DIR"])
+config_ids = [int(part) for part in os.environ["CONFIG_IDS"].split(",") if part]
+padding = int(os.environ["CONFIG_PADDING_WIDTH"])
+required = set()
+
+for config_id in config_ids:
+    config_file = config_dir / f"config_{config_id:0{padding}d}.json"
+    if not config_file.exists():
+        continue
+    data = json.loads(config_file.read_text())
+    for model_name in (data["weak_model"], data["strong_model"]):
+        model_config = STRONG_MODELS_CONFIG.get(model_name)
+        if not model_config:
+            continue
+        env_name = provider_env.get(model_config.get("api_type", "openrouter"))
+        if env_name:
+            required.add(env_name)
+
+missing = [env_name for env_name in sorted(required) if not os.getenv(env_name)]
+for env_name in missing:
+    print(env_name)
+PY
+)
+
+    if [[ -n "$missing_envs" ]]; then
+        echo "Error: missing exported environment variables required by the selected configs:"
+        while IFS= read -r env_name; do
+            [[ -n "$env_name" ]] && echo "  - ${env_name}"
+        done <<< "$missing_envs"
+        echo "Tip: re-source your shell init and verify child-process visibility before submitting."
+        echo "  python - <<'PY'"
+        echo "  import os; print(bool(os.getenv(\"GOOGLE_API_KEY\")))"
+        echo "  PY"
+        exit 1
+    fi
+}
+
 # Function to submit a single job (for staggered mode)
 submit_single_job() {
     local config_id=$1
@@ -868,7 +894,7 @@ submit_single_job() {
     
     # Submit with --export to set SLURM_ARRAY_TASK_ID
     # Note: %A in output/error will be replaced by SLURM with actual job ID
-    local sbatch_cmd="sbatch --export=SLURM_ARRAY_TASK_ID=${config_id}"
+    local sbatch_cmd="sbatch --export=ALL,SLURM_ARRAY_TASK_ID=${config_id}"
     
     if [[ -n "$output_file" ]]; then
         sbatch_cmd="${sbatch_cmd} --output=${output_file}"
@@ -922,7 +948,7 @@ submit_jobs() {
         else
             echo "Submitting ${job_type_name} job array: $array_spec"
         fi
-        sbatch --array="$array_spec" "$sbatch_script"
+        sbatch --export=ALL --array="$array_spec" "$sbatch_script"
     fi
 }
 
@@ -941,7 +967,7 @@ submit_api_jobs() {
             STRONG=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['strong_model'])")
 
             # Check if both models are API-based (not local)
-            LOCAL_MODELS="gemma-3-27b-it QwQ-32B llama-3.3-70b-instruct Qwen2.5-72B-Instruct phi-4 llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Phi-3-mini-128k-instruct Llama-3.2-1B-Instruct"
+            LOCAL_MODELS="phi-3-mini-128k-instruct"
             IS_LOCAL=false
             for lm in $LOCAL_MODELS; do
                 if [[ "$WEAK" == "$lm" ]] || [[ "$STRONG" == "$lm" ]]; then
@@ -960,6 +986,7 @@ submit_api_jobs() {
         fi
     done
 
+    validate_exported_env_for_configs "$API_IDS"
     submit_jobs "$API_IDS" "${SCRIPT_DIR}/run_api_experiments.sbatch" "API"
 }
 
@@ -967,12 +994,10 @@ submit_gpu_jobs() {
     echo "Submitting GPU-based experiment jobs..."
     echo "Total configs: ${TOTAL_CONFIGS}"
 
-    # Large models (70B+): 4 GPUs, 320GB
-    LARGE_GPU_MODELS="llama-3.3-70b-instruct Qwen2.5-72B-Instruct"
-    # Medium models (27B-32B): 2 GPUs, 160GB
-    MEDIUM_GPU_MODELS="gemma-3-27b-it QwQ-32B phi-4 Phi-3-mini-128k-instruct"
-    # Small models (<27B): 1 GPU, 80GB
-    SMALL_GPU_MODELS="llama-3.1-8b-instruct Llama-3.2-3B-Instruct Mistral-7B-Instruct-v0.2 Llama-3.2-1B-Instruct"
+    # Exact smooth-32 local model routing
+    LARGE_GPU_MODELS=""
+    MEDIUM_GPU_MODELS="phi-3-mini-128k-instruct"
+    SMALL_GPU_MODELS=""
 
     GPU_LARGE_IDS=""
     GPU_MEDIUM_IDS=""
@@ -1028,7 +1053,7 @@ submit_gpu_jobs() {
         submit_jobs "$GPU_SMALL_IDS" "${SCRIPT_DIR}/run_gpu_small.sbatch" "SMALL GPU"
     fi
 
-    if [[ -z "$GPU_LARGE_IDS" ]] && [[ -z "$GPU_SMALL_IDS" ]]; then
+    if [[ -z "$GPU_LARGE_IDS" ]] && [[ -z "$GPU_MEDIUM_IDS" ]] && [[ -z "$GPU_SMALL_IDS" ]]; then
         echo "No GPU-based experiments to submit"
     fi
 }

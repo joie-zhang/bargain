@@ -342,24 +342,43 @@ async def main():
 
     args = parser.parse_args()
     
-    # Check for at least one API key
     has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
     has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
-    
-    if not (has_openrouter or has_anthropic or has_openai):
-        print("ERROR: At least one API key is required")
-        print("Please set one or more of:")
-        print("  export OPENROUTER_API_KEY='your-key-here'")
-        print("  export ANTHROPIC_API_KEY='your-key-here'")
-        print("  export OPENAI_API_KEY='your-key-here'")
+    has_google = bool(os.getenv("GOOGLE_API_KEY"))
+    has_xai = bool(os.getenv("XAI_API_KEY"))
+
+    provider_env_vars = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "google": "GOOGLE_API_KEY",
+        "xai": "XAI_API_KEY",
+    }
+
+    missing_provider_env = []
+    for model_name in args.models:
+        model_config = STRONG_MODELS_CONFIG.get(model_name, {})
+        api_type = model_config.get("api_type", "openrouter")
+        env_var = provider_env_vars.get(api_type)
+        if env_var and not os.getenv(env_var):
+            missing_provider_env.append((model_name, api_type, env_var))
+
+    if missing_provider_env:
+        print("ERROR: Missing provider credentials for requested models:")
+        for model_name, api_type, env_var in missing_provider_env:
+            print(f"  - {model_name} (api_type={api_type}) requires {env_var}")
         return 1
-    
+
     print("API Keys detected:")
     if has_anthropic:
         print("  ✓ Anthropic API (Claude models)")
     if has_openai:
         print("  ✓ OpenAI API (GPT-4o, O3)")
+    if has_google:
+        print("  ✓ Google API (Gemini models)")
+    if has_xai:
+        print("  ✓ xAI API (Grok models)")
     if has_openrouter:
         print("  ✓ OpenRouter API (Gemini, Llama, etc.)")
     

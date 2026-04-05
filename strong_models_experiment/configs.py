@@ -717,6 +717,17 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
+    "phi-3-mini-128k-instruct": {
+        "name": "Phi 3 Mini 128k Instruct",
+        "model_id": "microsoft/phi-3-mini-128k-instruct",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct",
+        "description": "Exact Arena-name alias for the local Princeton cluster Phi-3 Mini 128K weights (GPU job required)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
     "Llama-3.2-1B-Instruct": {
         "name": "Llama 3.2 1B Instruct",
         "model_id": "meta-llama/llama-3.2-1b-instruct",
