@@ -1265,6 +1265,7 @@ Remember: This analysis is completely private."""
                 }
 
         self.update_game_state_with_pledges(game_state, current_pledges)
+        current_pledges = game_state["current_pledges"]
 
         return [{
             "contributions_by_agent": {
@@ -1286,14 +1287,39 @@ Remember: This analysis is completely private."""
         if "contributions_by_agent" not in proposal:
             return
 
+        m = game_state["m_projects"]
+        budgets = game_state["agent_budgets"]
+        costs = game_state["project_costs"]
+        raw_contributions_by_agent = proposal.get("contributions_by_agent", {})
+        contributions_by_agent = {}
+        accepted_adjustments = {}
+
+        for aid in sorted(budgets.keys()):
+            result = self._sanitize_contribution_vector(
+                raw_contributions_by_agent.get(aid, [0.0] * m),
+                budgets.get(aid, 0.0),
+                m,
+            )
+            contributions_by_agent[aid] = result["contributions"]
+            if result["adjustment"] is not None:
+                accepted_adjustments[aid] = result["adjustment"]
+
+        aggregate_totals = [0.0] * m
+        for contribs in contributions_by_agent.values():
+            for j in range(m):
+                aggregate_totals[j] += contribs[j]
+
+        funded_projects = [
+            j for j in range(m) if aggregate_totals[j] >= costs[j] - 1e-6
+        ]
+
         game_state["accepted_proposal"] = {
-            "contributions_by_agent": {
-                aid: [float(x) for x in contribs]
-                for aid, contribs in proposal.get("contributions_by_agent", {}).items()
-            },
-            "aggregate_totals": [float(x) for x in proposal.get("aggregate_totals", [])],
-            "funded_projects": list(proposal.get("funded_projects", [])),
+            "contributions_by_agent": contributions_by_agent,
+            "aggregate_totals": aggregate_totals,
+            "funded_projects": funded_projects,
         }
+        if accepted_adjustments:
+            game_state["accepted_proposal"]["auto_corrected"] = accepted_adjustments
 
     def get_agent_preferences_summary(
         self,
@@ -1362,6 +1388,45 @@ Consider what adjustments to your contributions might improve the outcome.
 
     # ---- Co-funding specific helper methods ----
 
+    def _sanitize_contribution_vector(
+        self,
+        raw_contributions: Any,
+        budget: float,
+        m: int,
+    ) -> Dict[str, Any]:
+        """Clamp a contribution vector to valid game constraints without failing the round."""
+        if not isinstance(raw_contributions, list):
+            raw_contributions = []
+
+        try:
+            budget_value = max(0.0, float(budget))
+        except (TypeError, ValueError):
+            budget_value = 0.0
+
+        contributions = []
+        for j in range(m):
+            value = raw_contributions[j] if j < len(raw_contributions) else 0.0
+            try:
+                contributions.append(max(0.0, float(value)))
+            except (TypeError, ValueError):
+                contributions.append(0.0)
+
+        total = sum(contributions)
+        if total <= budget_value + 1e-6 or total <= 1e-12:
+            return {"contributions": contributions, "adjustment": None}
+
+        scale = budget_value / total if budget_value > 0 else 0.0
+        scaled = [v * scale for v in contributions]
+        return {
+            "contributions": scaled,
+            "adjustment": {
+                "reason": "scaled_to_budget",
+                "original_total": total,
+                "budget": budget_value,
+                "scale_factor": scale,
+            },
+        }
+
     def update_game_state_with_pledges(
         self,
         game_state: Dict[str, Any],
@@ -1378,26 +1443,60 @@ Consider what adjustments to your contributions might improve the outcome.
         """
         m = game_state["m_projects"]
         costs = game_state["project_costs"]
+        budgets = game_state["agent_budgets"]
+
+        sanitized_pledges = {}
+        joint_plans = {}
+        for aid, pledge in pledges.items():
+            clean = dict(pledge)
+            own_result = self._sanitize_contribution_vector(
+                clean.get("contributions", []),
+                budgets.get(aid, 0.0),
+                m,
+            )
+            clean["contributions"] = own_result["contributions"]
+            if own_result["adjustment"] is not None:
+                clean["auto_corrected"] = own_result["adjustment"]
+
+            if "joint_plan" in clean and isinstance(clean["joint_plan"], dict):
+                sanitized_joint_plan = {}
+                joint_adjustments = {}
+                for plan_aid, plan_contribs in clean["joint_plan"].items():
+                    plan_result = self._sanitize_contribution_vector(
+                        plan_contribs,
+                        budgets.get(plan_aid, 0.0),
+                        m,
+                    )
+                    sanitized_joint_plan[plan_aid] = plan_result["contributions"]
+                    if plan_result["adjustment"] is not None:
+                        joint_adjustments[plan_aid] = plan_result["adjustment"]
+
+                clean["joint_plan"] = sanitized_joint_plan
+                joint_plans[aid] = sanitized_joint_plan
+
+                if aid in sanitized_joint_plan:
+                    clean["contributions"] = sanitized_joint_plan[aid]
+                    if aid in joint_adjustments:
+                        clean["auto_corrected"] = joint_adjustments[aid]
+
+                if joint_adjustments:
+                    clean["joint_plan_auto_corrected"] = joint_adjustments
+
+            sanitized_pledges[aid] = clean
 
         # Store current pledges
-        game_state["current_pledges"] = pledges
+        game_state["current_pledges"] = sanitized_pledges
         game_state["accepted_proposal"] = None
-
-        # Store joint plans (for early termination checking in joint mode)
-        joint_plans = {}
-        for aid, p in pledges.items():
-            if "joint_plan" in p:
-                joint_plans[aid] = p["joint_plan"]
         game_state["joint_plans"] = joint_plans
 
         # Append to round history
         game_state["round_pledges"].append(
-            {aid: p.get("contributions", [0.0] * m) for aid, p in pledges.items()}
+            {aid: p.get("contributions", [0.0] * m) for aid, p in sanitized_pledges.items()}
         )
 
         # Compute aggregate totals
         aggregates = [0.0] * m
-        for aid, pledge in pledges.items():
+        for aid, pledge in sanitized_pledges.items():
             contribs = pledge.get("contributions", [0.0] * m)
             for j in range(m):
                 aggregates[j] += contribs[j]

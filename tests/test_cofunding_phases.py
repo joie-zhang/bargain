@@ -124,6 +124,7 @@ class TestJointProposalPreparation:
         """Joint proposal preparation should compute aggregate totals."""
         game, agents, state = make_game_and_state(m_projects=3)
         state["project_costs"] = [10.0, 20.0, 30.0]
+        state["agent_budgets"] = {"Agent_1": 100.0, "Agent_2": 100.0}
 
         proposals = [
             {"contributions": [5.0, 10.0, 0.0], "proposed_by": "Agent_1"},

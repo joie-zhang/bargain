@@ -486,6 +486,7 @@ class TestUpdateGameState:
 
         # Set known costs
         state["project_costs"] = [10.0, 20.0, 30.0]
+        state["agent_budgets"] = {"Agent_1": 100.0, "Agent_2": 100.0}
 
         pledges = {
             "Agent_1": {"contributions": [6.0, 5.0, 0.0]},
@@ -499,6 +500,53 @@ class TestUpdateGameState:
         assert 0 in state["funded_projects"]
         assert 1 in state["funded_projects"]
         assert 2 not in state["funded_projects"]
+
+    def test_update_scales_over_budget_individual_pledge(self):
+        """State update should scale an over-budget pledge instead of failing."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        budget = state["agent_budgets"]["Agent_1"]
+
+        pledges = {
+            "Agent_1": {"contributions": [budget, budget, budget]},
+            "Agent_2": {"contributions": [0.0, 0.0, 0.0]},
+        }
+        game.update_game_state_with_pledges(state, pledges)
+
+        corrected = state["current_pledges"]["Agent_1"]
+        assert sum(corrected["contributions"]) == pytest.approx(budget, abs=1e-6)
+        assert corrected["auto_corrected"]["reason"] == "scaled_to_budget"
+        assert corrected["auto_corrected"]["original_total"] == pytest.approx(budget * 3, abs=1e-6)
+        assert state["round_pledges"][-1]["Agent_1"] == corrected["contributions"]
+
+    def test_update_scales_over_budget_joint_plan(self):
+        """State update should sanitize joint-plan rows to each agent's budget."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        budget_1 = state["agent_budgets"]["Agent_1"]
+        budget_2 = state["agent_budgets"]["Agent_2"]
+
+        pledges = {
+            "Agent_1": {
+                "contributions": [1.0, 1.0, 1.0],
+                "joint_plan": {
+                    "Agent_1": [budget_1, budget_1, budget_1],
+                    "Agent_2": [budget_2, budget_2, budget_2],
+                },
+            },
+            "Agent_2": {"contributions": [0.0, 0.0, 0.0]},
+        }
+        game.update_game_state_with_pledges(state, pledges)
+
+        corrected = state["current_pledges"]["Agent_1"]
+        assert sum(corrected["contributions"]) == pytest.approx(budget_1, abs=1e-6)
+        assert corrected["joint_plan"]["Agent_1"] == corrected["contributions"]
+        assert sum(corrected["joint_plan"]["Agent_2"]) == pytest.approx(budget_2, abs=1e-6)
+        assert corrected["joint_plan_auto_corrected"]["Agent_1"]["reason"] == "scaled_to_budget"
+        assert corrected["joint_plan_auto_corrected"]["Agent_2"]["reason"] == "scaled_to_budget"
+        assert state["joint_plans"]["Agent_1"] == corrected["joint_plan"]
 
     def test_compute_final_outcome_utilities(self):
         """Final outcome should compute correct utilities."""
@@ -565,6 +613,53 @@ class TestUpdateGameState:
         assert prepared[0]["contributions_by_agent"]["Agent_1"] == [5.0, 3.0, 2.0]
         assert prepared[0]["contributions_by_agent"]["Agent_2"] == [4.0, 6.0, 1.0]
         assert prepared[0]["aggregate_totals"] == [9.0, 9.0, 3.0]
+
+    def test_prepare_proposals_for_voting_scales_over_budget_vectors(self):
+        """Joint proposal preparation should return sanitized per-agent contributions."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        budget_1 = state["agent_budgets"]["Agent_1"]
+        budget_2 = state["agent_budgets"]["Agent_2"]
+
+        prepared = game.prepare_proposals_for_voting(
+            [
+                {"contributions": [budget_1, budget_1, budget_1], "proposed_by": "Agent_1"},
+                {"contributions": [budget_2, 0.0, 0.0], "proposed_by": "Agent_2"},
+            ],
+            state,
+            1,
+        )
+
+        assert len(prepared) == 1
+        assert sum(prepared[0]["contributions_by_agent"]["Agent_1"]) == pytest.approx(budget_1, abs=1e-6)
+        assert prepared[0]["contributions_by_agent"]["Agent_1"] == state["current_pledges"]["Agent_1"]["contributions"]
+
+    def test_record_accepted_proposal_scales_over_budget_vectors(self):
+        """Accepted proposal storage should sanitize contributions before final outcome."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["project_costs"] = [10.0, 20.0, 30.0]
+        budget_1 = state["agent_budgets"]["Agent_1"]
+        budget_2 = state["agent_budgets"]["Agent_2"]
+
+        proposal = {
+            "contributions_by_agent": {
+                "Agent_1": [budget_1, budget_1, budget_1],
+                "Agent_2": [budget_2, 0.0, 0.0],
+            },
+            "aggregate_totals": [999.0, 999.0, 999.0],
+            "funded_projects": [0, 1, 2],
+        }
+
+        game.record_accepted_proposal(state, proposal)
+
+        accepted = state["accepted_proposal"]
+        assert sum(accepted["contributions_by_agent"]["Agent_1"]) == pytest.approx(budget_1, abs=1e-6)
+        assert sum(accepted["contributions_by_agent"]["Agent_2"]) == pytest.approx(budget_2, abs=1e-6)
+        assert accepted["aggregate_totals"] != [999.0, 999.0, 999.0]
+        assert accepted["auto_corrected"]["Agent_1"]["reason"] == "scaled_to_budget"
 
 
 class TestPrompts:
