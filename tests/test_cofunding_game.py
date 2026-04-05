@@ -163,12 +163,17 @@ class TestGameStateCreation:
         assert sum(int(b) for b in budgets) == state["total_budget"]
 
     def test_project_costs_in_range(self):
-        """Project costs should be within [c_min, c_max]."""
+        """Project costs should be integer-valued and within [c_min, c_max]."""
         game = make_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        for cost in state["project_costs"]:
+        for project, cost in zip(state["projects"], state["project_costs"]):
             assert 10.0 <= cost <= 30.0
+            assert float(cost).is_integer()
+            assert float(project["cost"]).is_integer()
+            assert project["cost"] == cost
+        assert float(state["total_cost"]).is_integer()
+        assert sum(int(cost) for cost in state["project_costs"]) == state["total_cost"]
 
     def test_m_projects_correct(self):
         """Number of projects should match config."""
@@ -469,6 +474,7 @@ class TestUpdateGameState:
         game = make_game(m_projects=3)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
+        state["agent_budgets"] = {"Agent_1": 100.0, "Agent_2": 100.0}
 
         pledges = {
             "Agent_1": {"contributions": [10.0, 5.0, 0.0]},
@@ -559,6 +565,7 @@ class TestUpdateGameState:
             "Agent_2": [20.0, 50.0, 30.0],
         }
         state["project_costs"] = [10.0, 20.0, 30.0]
+        state["agent_budgets"] = {"Agent_1": 100.0, "Agent_2": 100.0}
 
         pledges = {
             "Agent_1": {"contributions": [6.0, 12.0, 0.0]},
@@ -673,6 +680,23 @@ class TestPrompts:
         assert "Participatory Budgeting" in prompt
         assert "Propose-and-Vote" in prompt
 
+    def test_game_rules_prompt_omits_trailing_point_zero_zero_for_integer_project_costs(self):
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        state["project_costs"] = [10, 20, 30]
+        for project, cost in zip(state["projects"], state["project_costs"]):
+            project["cost"] = cost
+
+        prompt = game.get_game_rules_prompt(state)
+
+        assert "cost = 10" in prompt
+        assert "cost = 20" in prompt
+        assert "cost = 30" in prompt
+        assert "cost = 10.00" not in prompt
+        assert "cost = 20.00" not in prompt
+        assert "cost = 30.00" not in prompt
+
     def test_preference_assignment_prompt(self):
         game = make_game()
         agents = create_test_agents(2)
@@ -710,22 +734,30 @@ class TestPrompts:
         for val in state["agent_valuations"]["Agent_1"]:
             assert f"Your valuation = {game._format_display_number(val)} (" in prompt
 
-    def test_preference_assignment_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+    def test_preference_assignment_prompt_omits_trailing_point_zero_zero_for_integer_budget_valuations_and_costs(self):
         game = make_game()
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         state["agent_budgets"]["Agent_1"] = 27
         state["total_budget"] = 54
         state["agent_valuations"]["Agent_1"] = [40, 30, 20, 10, 0]
+        state["project_costs"] = [10, 20, 30, 40, 50]
+        for project, cost in zip(state["projects"], state["project_costs"]):
+            project["cost"] = cost
+        state["total_cost"] = 150
 
         prompt = game.get_preference_assignment_prompt("Agent_1", state)
 
         assert "**YOUR PRIVATE BUDGET:** 27 " in prompt
+        assert "(cost: 10): Your valuation = 40" in prompt
         assert "Your valuation = 40 (" in prompt
         assert "**TOTAL VALUATIONS:** 100" in prompt
+        assert "**TOTAL PROJECT COSTS:** 150" in prompt
         assert "**YOUR PRIVATE BUDGET:** 27.00" not in prompt
+        assert "(cost: 10.00):" not in prompt
         assert "Your valuation = 40.00" not in prompt
         assert "**TOTAL VALUATIONS:** 100.00" not in prompt
+        assert "**TOTAL PROJECT COSTS:** 150.00" not in prompt
 
     def test_proposal_prompt(self):
         game = make_game()
@@ -734,19 +766,24 @@ class TestPrompts:
         prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
         assert "contributions" in prompt
 
-    def test_proposal_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+    def test_proposal_prompt_omits_trailing_point_zero_zero_for_integer_budget_valuations_and_costs(self):
         game = make_game(m_projects=3)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         state["agent_budgets"]["Agent_1"] = 27
         state["agent_valuations"]["Agent_1"] = [40, 30, 30]
+        state["project_costs"] = [10, 20, 30]
+        for project, cost in zip(state["projects"], state["project_costs"]):
+            project["cost"] = cost
 
         prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
 
         assert "**YOUR BUDGET:** 27" in prompt
+        assert "cost=10, your_val=40" in prompt
         assert "your_val=40" in prompt
         assert "your budget (27)" in prompt
         assert "**YOUR BUDGET:** 27.00" not in prompt
+        assert "cost=10.00, your_val=40" not in prompt
         assert "your_val=40.00" not in prompt
         assert "your budget (27.00)" not in prompt
 
@@ -756,28 +793,33 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
         assert "DISCUSSION" in prompt
-        assert "LAST ROUND BUDGET USAGE" in prompt
+        assert "PREVIOUS ROUND BUDGET USAGE" in prompt
 
-    def test_discussion_prompt_omits_trailing_point_zero_zero_for_integer_budgets(self):
-        game = make_game()
+    def test_discussion_prompt_omits_trailing_point_zero_zero_for_integer_budgets_and_costs(self):
+        game = make_game(m_projects=3)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         state["agent_budgets"]["Agent_1"] = 27
         state["agent_budgets"]["Agent_2"] = 28
+        state["project_costs"] = [10, 20, 30]
+        for project, cost in zip(state["projects"], state["project_costs"]):
+            project["cost"] = cost
 
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
 
         assert "budget=27" in prompt
         assert "budget=28" in prompt
+        assert "/ cost=10" in prompt
         assert "budget=27.00" not in prompt
         assert "budget=28.00" not in prompt
+        assert "/ cost=10.00" not in prompt
 
     def test_discussion_prompt_aggregate_mode(self):
         game = make_game(discussion_transparency="aggregate")
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
-        assert "LAST ROUND BUDGET USAGE" not in prompt
+        assert "PREVIOUS ROUND BUDGET USAGE" not in prompt
 
     def test_discussion_prompt_with_own_transparency(self):
         config = CoFundingConfig(
@@ -796,7 +838,7 @@ class TestPrompts:
         }
         game.update_game_state_with_pledges(state, pledges)
         prompt = game.get_discussion_prompt("Agent_1", state, 2, 5, [])
-        assert "LAST ROUND BUDGET USAGE" in prompt
+        assert "PREVIOUS ROUND BUDGET USAGE" in prompt
         assert "your_prev=" in prompt
         assert "others_prev=" in prompt
 
@@ -817,25 +859,29 @@ class TestPrompts:
         ):
             assert (
                 f"{project['name']} "
-                f"(val={game._format_display_number(valuation)}, cost={project['cost']:.2f})"
+                f"(val={game._format_display_number(valuation)}, cost={game._format_display_number(project['cost'])})"
             ) in prompt
 
-    def test_thinking_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
+    def test_thinking_prompt_omits_trailing_point_zero_zero_for_integer_budget_valuations_and_costs(self):
         game = make_game(m_projects=3)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         state["agent_budgets"]["Agent_1"] = 27
         state["agent_valuations"]["Agent_1"] = [40, 30, 30]
+        state["project_costs"] = [10, 20, 30]
+        for project, cost in zip(state["projects"], state["project_costs"]):
+            project["cost"] = cost
 
         prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
 
         assert "- Budget: 27" in prompt
         assert "**YOUR TOP PRIORITIES:**" not in prompt
         assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
-        assert "Project Alpha (val=40, cost=" in prompt
-        assert "Project Beta (val=30, cost=" in prompt
-        assert "Project Gamma (val=30, cost=" in prompt
+        assert "Project Alpha (val=40, cost=10)" in prompt
+        assert "Project Beta (val=30, cost=20)" in prompt
+        assert "Project Gamma (val=30, cost=30)" in prompt
         assert "- Budget: 27.00" not in prompt
+        assert "cost=10.00" not in prompt
         assert "val=40.00" not in prompt
 
     def test_reflection_prompt(self):

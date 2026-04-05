@@ -201,6 +201,23 @@ class CoFundingGame(GameEnvironment):
 
         return current
 
+    def _generate_integer_project_costs(self, m_projects: int) -> List[int]:
+        """Sample integer project costs uniformly from the feasible cost range."""
+        min_cost = int(np.ceil(self.config.c_min))
+        max_cost = int(np.floor(self.config.c_max))
+
+        if min_cost > max_cost:
+            raise ValueError(
+                "CoFundingGame requires at least one integer project cost in "
+                f"[c_min, c_max], got c_min={self.config.c_min}, c_max={self.config.c_max}"
+            )
+
+        return self._rng.randint(
+            min_cost,
+            max_cost + 1,
+            size=m_projects,
+        ).astype(int).tolist()
+
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:
         """
         Create projects, generate valuations and budgets.
@@ -214,11 +231,9 @@ class CoFundingGame(GameEnvironment):
         m = self.config.m_projects
         n = self.config.n_agents
 
-        # Generate project costs: c_j ~ Uniform(c_min, c_max)
-        project_costs = self._rng.uniform(
-            self.config.c_min, self.config.c_max, size=m
-        ).tolist()
-        total_cost = sum(project_costs)
+        # Generate integer project costs uniformly over the feasible cost range.
+        project_costs = self._generate_integer_project_costs(m)
+        total_cost = int(sum(project_costs))
 
         # Generate budgets proportional to project scale while preventing
         # pathological under-provision at very low sigma.
@@ -236,7 +251,7 @@ class CoFundingGame(GameEnvironment):
         projects = []
         for j in range(m):
             name = self.PROJECT_NAMES[j] if j < len(self.PROJECT_NAMES) else f"Project_{j+1}"
-            projects.append({"name": name, "cost": round(project_costs[j], 2)})
+            projects.append({"name": name, "cost": int(project_costs[j])})
 
         # Map to agent IDs
         agent_ids = []
@@ -251,8 +266,8 @@ class CoFundingGame(GameEnvironment):
         return {
             "projects": projects,
             "m_projects": m,
-            "project_costs": [round(c, 2) for c in project_costs],
-            "total_cost": round(total_cost, 2),
+            "project_costs": [int(c) for c in project_costs],
+            "total_cost": total_cost,
             "agent_budgets": agent_budgets,
             "total_budget": total_budget,
             "agent_valuations": agent_valuations,
@@ -454,7 +469,7 @@ class CoFundingGame(GameEnvironment):
         projects = game_state["projects"]
 
         projects_text = "\n".join([
-            f"  - {p['name']}: cost = {p['cost']:.2f}"
+            f"  - {p['name']}: cost = {self._format_display_number(p['cost'])}"
             for p in projects
         ])
 
@@ -543,8 +558,9 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 
         for j, (proj, val, cost) in enumerate(zip(projects, valuations, costs)):
             priority = "HIGH" if val > 30 else "Medium" if val > 15 else "Low"
+            cost_text = self._format_display_number(cost)
             val_text = self._format_display_number(val)
-            lines.append(f"  {proj['name']} (cost: {cost:.2f}): Your valuation = {val_text} ({priority} priority)")
+            lines.append(f"  {proj['name']} (cost: {cost_text}): Your valuation = {val_text} ({priority} priority)")
 
         lines.append("")
         lines.append(f"**TOTAL VALUATIONS:** {self._format_display_number(sum(valuations))}")
@@ -630,9 +646,10 @@ In your response, just acknowledge the setup, summarize the game structure and r
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
             status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
+            cost_text = self._format_display_number(cost)
             val_text = self._format_display_number(val)
             project_lines.append(
-                f"  {j}: {proj['name']} (cost={cost:.2f}, your_val={val_text}, "
+                f"  {j}: {proj['name']} (cost={cost_text}, your_val={val_text}, "
                 f"aggregate={agg:.2f}, your_prev={own_prev[j]:.2f}, {status})"
             )
 
@@ -906,24 +923,25 @@ Respond with ONLY a JSON object in this exact format:
         # Project status
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
+            cost_text = self._format_display_number(cost)
             if transparency_mode == "aggregate":
                 if j in funded:
-                    status_lines.append(f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost:.2f})")
+                    status_lines.append(f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost_text})")
                 else:
                     gap = cost - agg
                     status_lines.append(
-                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f})"
+                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost_text})"
                     )
             else:
                 if j in funded:
                     line = (
-                        f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost:.2f}); "
+                        f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost_text}); "
                         f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
                     )
                 else:
                     gap = cost - agg
                     line = (
-                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost:.2f}); "
+                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost_text}); "
                         f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
                     )
                 status_lines.append(line)
@@ -938,6 +956,7 @@ Respond with ONLY a JSON object in this exact format:
                     attribution_lines.append("- No prior pledges yet (round 1).")
                 else:
                     for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
+                        cost_text = self._format_display_number(cost)
                         per_agent = []
                         for aid in sorted(all_budgets.keys()):
                             contribs = current_pledges.get(aid, {}).get("contributions", [0.0] * m)
@@ -947,7 +966,7 @@ Respond with ONLY a JSON object in this exact format:
                         funded_tag = "PROVISIONALLY FUNDED" if j in funded else "UNFUNDED"
                         attribution_lines.append(
                             f"- {proj['name']}: {', '.join(per_agent)} | "
-                            f"aggregate={agg:.2f}/{cost:.2f} ({funded_tag})"
+                            f"aggregate={agg:.2f}/{cost_text} ({funded_tag})"
                         )
                 attribution_section = "\n\n" + "\n".join(attribution_lines)
 
@@ -1041,8 +1060,9 @@ Share your updated strategy for this round."""
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            cost_text = self._format_display_number(cost)
             status_lines.append(
-                f"  {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
+                f"  {proj['name']}: aggregate={agg:.2f} / cost={cost_text} ({status})"
             )
 
         reasoning_instruction = ""
@@ -1084,8 +1104,9 @@ Vote must be either "accept" or "reject"."""
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            cost_text = self._format_display_number(cost)
             status_lines.append(
-                f"  {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
+                f"  {proj['name']}: aggregate={agg:.2f} / cost={cost_text} ({status})"
             )
 
         return f"""POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}
@@ -1129,7 +1150,7 @@ Respond with ONLY JSON:
         preference_lines = [
             (
                 f"  {projects[i]['name']} "
-                f"(val={self._format_display_number(valuations[i])}, cost={costs[i]:.2f})"
+                f"(val={self._format_display_number(valuations[i])}, cost={self._format_display_number(costs[i])})"
             )
             for i in range(len(projects))
         ]
@@ -1201,8 +1222,9 @@ Remember: This analysis is completely private."""
                 agg = aggregates[j] if j < len(aggregates) else 0.0
                 cost = game_state["project_costs"][j]
                 status = "FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+                cost_text = self._format_display_number(cost)
                 lines.append(
-                    f"    {proj['name']}: aggregate={agg:.2f} / cost={cost:.2f} ({status})"
+                    f"    {proj['name']}: aggregate={agg:.2f} / cost={cost_text} ({status})"
                 )
             lines.append(f"  Reasoning: {proposal.get('reasoning', 'None')}")
             return "\n".join(lines)
@@ -1353,7 +1375,8 @@ Remember: This analysis is completely private."""
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
             status = "PROVISIONALLY FUNDED" if j in funded else f"gap={cost - agg:.2f}"
-            status_lines.append(f"  {proj['name']}: aggregate={agg:.2f}, cost={cost:.2f} ({status})")
+            cost_text = self._format_display_number(cost)
+            status_lines.append(f"  {proj['name']}: aggregate={agg:.2f}, cost={cost_text} ({status})")
 
         reasoning_instruction = ""
         if reasoning_token_budget:
@@ -1654,12 +1677,13 @@ Consider what adjustments to your contributions might improve the outcome.
 
         lines = ["ROUND RESULTS - Aggregate Contributions:", ""]
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
+            cost_text = self._format_display_number(cost)
             if j in funded:
-                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} -- PROVISIONALLY FUNDED (your_prev={own_prev[j]:.2f})")
+                lines.append(f"  {proj['name']}: {agg:.2f} / {cost_text} -- PROVISIONALLY FUNDED (your_prev={own_prev[j]:.2f})")
             else:
                 gap = cost - agg
                 pct = (agg / cost * 100) if cost > 0 else 0
-                lines.append(f"  {proj['name']}: {agg:.2f} / {cost:.2f} ({pct:.0f}%) -- needs {gap:.2f} more (your_prev={own_prev[j]:.2f})")
+                lines.append(f"  {proj['name']}: {agg:.2f} / {cost_text} ({pct:.0f}%) -- needs {gap:.2f} more (your_prev={own_prev[j]:.2f})")
 
         lines.append("")
         funded_names = [projects[j]["name"] for j in funded]
