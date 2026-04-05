@@ -778,11 +778,11 @@ class TestPrompts:
 
         prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
 
-        assert "**YOUR BUDGET:** 27" in prompt
+        assert "**YOUR FIXED TOTAL BUDGET:** 27" in prompt
         assert "cost=10, your_val=40" in prompt
         assert "your_val=40" in prompt
         assert "your budget (27)" in prompt
-        assert "**YOUR BUDGET:** 27.00" not in prompt
+        assert "**YOUR FIXED TOTAL BUDGET:** 27.00" not in prompt
         assert "cost=10.00, your_val=40" not in prompt
         assert "your_val=40.00" not in prompt
         assert "your budget (27.00)" not in prompt
@@ -793,7 +793,7 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
         assert "DISCUSSION" in prompt
-        assert "PREVIOUS ROUND BUDGET USAGE" in prompt
+        assert "PREVIOUS ROUND PROPOSAL SNAPSHOT" in prompt
 
     def test_discussion_prompt_omits_trailing_point_zero_zero_for_integer_budgets_and_costs(self):
         game = make_game(m_projects=3)
@@ -819,7 +819,7 @@ class TestPrompts:
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
         prompt = game.get_discussion_prompt("Agent_1", state, 1, 5, [])
-        assert "PREVIOUS ROUND BUDGET USAGE" not in prompt
+        assert "PREVIOUS ROUND PROPOSAL SNAPSHOT" not in prompt
 
     def test_discussion_prompt_with_own_transparency(self):
         config = CoFundingConfig(
@@ -838,9 +838,9 @@ class TestPrompts:
         }
         game.update_game_state_with_pledges(state, pledges)
         prompt = game.get_discussion_prompt("Agent_1", state, 2, 5, [])
-        assert "PREVIOUS ROUND BUDGET USAGE" in prompt
-        assert "your_prev=" in prompt
-        assert "others_prev=" in prompt
+        assert "PREVIOUS ROUND PROPOSAL SNAPSHOT" in prompt
+        assert "your_prev_proposed=" in prompt
+        assert "others_prev_proposed=" in prompt
 
     def test_thinking_prompt(self):
         game = make_game()
@@ -874,13 +874,16 @@ class TestPrompts:
 
         prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
 
-        assert "- Budget: 27" in prompt
+        assert "- Fixed total budget for the whole game: 27" in prompt
         assert "**YOUR TOP PRIORITIES:**" not in prompt
         assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
-        assert "Project Alpha (val=40, cost=10)" in prompt
-        assert "Project Beta (val=30, cost=20)" in prompt
-        assert "Project Gamma (val=30, cost=30)" in prompt
-        assert "- Budget: 27.00" not in prompt
+        for project, valuation, cost in zip(
+            state["projects"],
+            state["agent_valuations"]["Agent_1"],
+            state["project_costs"],
+        ):
+            assert f"{project['name']} (val={valuation}, cost={cost})" in prompt
+        assert "- Fixed total budget for the whole game: 27.00" not in prompt
         assert "cost=10.00" not in prompt
         assert "val=40.00" not in prompt
 

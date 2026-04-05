@@ -493,6 +493,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - There are {self.config.n_agents} participants (including you)
 - The game lasts up to {self.config.t_rounds} rounds
 - This message is the one-time setup phase
+- Your contribution budget is a fixed TOTAL budget for the entire game; it does not refresh each round
 - Each round follows a Propose-and-Vote cycle:
   Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
 
@@ -502,12 +503,17 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - These budget and valuation details are PRIVATE and specific to you
 
 **HOW IT WORKS:**
-- Each participant has a PRIVATE BUDGET they can allocate across projects
+- Each participant has a PRIVATE BUDGET for the entire game
+- Each new round is a fresh re-proposal of how to use that same fixed total budget
+- Previous-round proposals do NOT carry over, do NOT accumulate, and do NOT spend money unless unanimously accepted
 - In the PROPOSAL phase, each participant submits a contribution vector — how much they propose contributing to each project
 - Those submitted vectors are combined into ONE JOINT PROPOSAL for the round
 - In the VOTING phase, every participant votes accept/reject on that joint proposal
+- If that joint proposal is unanimously accepted, the game ends immediately and that exact proposal becomes the final outcome
+- If that joint proposal is not unanimously accepted, nothing from it takes effect and the next round starts over from scratch
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
+- In an accepted proposal, any project below its full cost is simply UNFUNDED: it gives zero value and is not partially funded
 - Contributions to UNFUNDED projects do not reduce your utility
 
 **WHAT YOU CAN SEE:**
@@ -538,6 +544,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 **BUDGET CONSTRAINT:**
 - The combined budgets of all participants may NOT be sufficient to fund all projects
 - You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
+- Different participants may value different projects, which makes coordination harder because the same fixed budgets cannot fully support everyone's favorite projects at once
 """
 
     def _get_private_preferences_block(
@@ -645,19 +652,23 @@ In your response, just acknowledge the setup, summarize the game structure and r
         pledge_mode = game_state.get("pledge_mode", "individual")
         budget_text = self._format_display_number(budget)
 
-        # Own contributions from last round (so agent sees their own prior pledge at submission time)
+        # Own proposed contributions from last round (historical only; not committed)
         own_prev = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * m)
         if len(own_prev) != m:
             own_prev = [0.0] * m
 
         project_lines = []
         for j, (proj, cost, val, agg) in enumerate(zip(projects, costs, valuations, aggregates)):
-            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0, cost - agg):.2f} more"
+            status = (
+                "crossed threshold last round (historical only)"
+                if j in funded
+                else f"was short by {max(0, cost - agg):.2f} last round"
+            )
             cost_text = self._format_display_number(cost)
             val_text = self._format_display_number(val)
             project_lines.append(
                 f"  {j}: {proj['name']} (cost={cost_text}, your_val={val_text}, "
-                f"aggregate={agg:.2f}, your_prev={own_prev[j]:.2f}, {status})"
+                f"aggregate_last_round={agg:.2f}, your_prev_proposed={own_prev[j]:.2f}, {status})"
             )
 
         projects_text = "\n".join(project_lines)
@@ -685,8 +696,10 @@ In your response, just acknowledge the setup, summarize the game structure and r
 
             format_section = f"""**Instructions:**
 Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
-Your plan proposes how every participant (including yourself) should allocate their budget.
+Your plan proposes how every participant (including yourself) should allocate their budget in THIS ROUND'S candidate final outcome.
 The round's JOINT PROPOSAL will be constructed from the self-assignment that each participant submits.
+If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
+If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 **Participant budgets:**
 {budget_lines}
@@ -703,12 +716,15 @@ Respond with ONLY a JSON object in this exact format:
 - "contributions" must be a dictionary with one entry per participant
 - Each entry must be an array of exactly {m} non-negative values (one per project)
 - Each participant's total contributions must not exceed their budget
+- Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
 - Contributions to unfunded projects will be refunded"""
         else:
             # Individual mode (default): each agent submits only their own contribution vector
             format_section = f"""**Instructions:**
-Submit a contribution vector specifying how much YOU propose contributing to each project.
+Submit a contribution vector specifying how much YOU propose contributing to each project in THIS ROUND'S candidate final outcome.
 All participants' submitted vectors will be combined into one JOINT PROPOSAL before voting.
+If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
+If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 Respond with ONLY a JSON object in this exact format:
 {{
@@ -720,17 +736,20 @@ Respond with ONLY a JSON object in this exact format:
 - The "contributions" array must have exactly {m} values (one per project)
 - Each value must be non-negative (>= 0)
 - The sum of all contributions must not exceed your budget ({budget_text})
+- Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
 - Contributions to unfunded projects will not reduce your utility"""
 
         return f"""Please submit your proposal for Round {round_num}/{self.config.t_rounds}.
 
-**YOUR BUDGET:** {budget_text}
+**YOUR FIXED TOTAL BUDGET:** {budget_text}
 
 **PROJECT STATUS:**
 {projects_text}
 
-**Provisionally funded projects (PREVIOUS ROUND):** {[projects[j]['name'] for j in funded] if funded else 'None'}
-**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.{reasoning_instruction}
+**Projects that crossed threshold in the PREVIOUS ROUND proposal:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**NOTE:** All status above is historical only. Nothing from the previous round is currently funded or committed.
+This round starts from scratch: re-propose how to use your same fixed total budget.
+Last round's proposal did not carry over or accumulate with this round.{reasoning_instruction}
 
 {format_section}"""
 
@@ -933,23 +952,25 @@ Respond with ONLY a JSON object in this exact format:
             cost_text = self._format_display_number(cost)
             if transparency_mode == "aggregate":
                 if j in funded:
-                    status_lines.append(f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost_text})")
+                    status_lines.append(
+                        f"  {proj['name']}: crossed threshold last round (historical only; aggregate={agg:.2f} >= cost={cost_text})"
+                    )
                 else:
                     gap = cost - agg
                     status_lines.append(
-                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost_text})"
+                        f"  {proj['name']}: was short by {gap:.2f} last round (aggregate={agg:.2f} / cost={cost_text})"
                     )
             else:
                 if j in funded:
                     line = (
-                        f"  {proj['name']}: PROVISIONALLY FUNDED (aggregate={agg:.2f} >= cost={cost_text}); "
-                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
+                        f"  {proj['name']}: crossed threshold last round (historical only; aggregate={agg:.2f} >= cost={cost_text}); "
+                        f"your_prev_proposed={own_prev[j]:.2f}, others_prev_proposed={others_prev[j]:.2f}"
                     )
                 else:
                     gap = cost - agg
                     line = (
-                        f"  {proj['name']}: needs {gap:.2f} more (aggregate={agg:.2f} / cost={cost_text}); "
-                        f"your_prev={own_prev[j]:.2f}, others_prev={others_prev[j]:.2f}"
+                        f"  {proj['name']}: was short by {gap:.2f} last round (aggregate={agg:.2f} / cost={cost_text}); "
+                        f"your_prev_proposed={own_prev[j]:.2f}, others_prev_proposed={others_prev[j]:.2f}"
                     )
                 status_lines.append(line)
         status_text = "\n".join(status_lines)
@@ -958,7 +979,7 @@ Respond with ONLY a JSON object in this exact format:
         if transparency_mode != "aggregate":
             attribution_section = ""
             if transparency_mode == "full":
-                attribution_lines = ["**PREVIOUS ROUND PROJECT ATTRIBUTION (who pledged what):**"]
+                attribution_lines = ["**PREVIOUS ROUND PROJECT ATTRIBUTION (who proposed what; not committed):**"]
                 if not current_pledges:
                     attribution_lines.append("- No prior pledges yet (round 1).")
                 else:
@@ -970,7 +991,7 @@ Respond with ONLY a JSON object in this exact format:
                             if len(contribs) != m:
                                 contribs = [0.0] * m
                             per_agent.append(f"{aid}={contribs[j]:.2f}")
-                        funded_tag = "PROVISIONALLY FUNDED" if j in funded else "UNFUNDED"
+                        funded_tag = "CROSSED THRESHOLD LAST ROUND" if j in funded else "BELOW THRESHOLD LAST ROUND"
                         attribution_lines.append(
                             f"- {proj['name']}: {', '.join(per_agent)} | "
                             f"aggregate={agg:.2f}/{cost_text} ({funded_tag})"
@@ -987,15 +1008,15 @@ Respond with ONLY a JSON object in this exact format:
                 label = " (you)" if aid == agent_id else ""
                 budget_lines.append(
                     f"  {aid}{label}: budget={self._format_display_number(all_budgets[aid])}, "
-                    f"prev_round_pledged={spent_prev:.2f}, prev_round_unallocated={remaining_prev:.2f}"
+                    f"prev_round_proposed={spent_prev:.2f}, not_proposed_last_round={remaining_prev:.2f}"
                 )
             budget_section = "\n".join(budget_lines)
             extra_transparency_block = f"""
 
-**IMPORTANT: any provisionally funded status above reflects the PREVIOUS ROUND only.**
-If contributions change this round, projects that were provisionally funded in the previous round may no longer clear their cost threshold, so any support you still want must be proposed again.
+**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted unanimously. Nothing is currently funded or committed.**
+This round starts from scratch with the same fixed budgets. Previous-round proposals do not carry over, and you are not adding new money on top of last round.
 
-**PREVIOUS ROUND BUDGET USAGE (before this round's revision):**
+**PREVIOUS ROUND PROPOSAL SNAPSHOT (not committed):**
 {budget_section}{attribution_section}"""
 
         # Inject prior turns so each speaker sees what has been said this round
@@ -1012,6 +1033,7 @@ If contributions change this round, projects that were provisionally funded in t
 - Understand other participants' priorities
 - Coordinate to avoid spreading contributions too thin
 - Identify projects with enough collective support to be funded
+- Remember that different priorities can split the same fixed budgets across too many projects
 
 You are the first to speak. Share your initial thoughts on which projects to prioritize."""
         elif discussion_history:
@@ -1021,13 +1043,13 @@ Based on what others have said above, please:
 - Coordinate on which projects to focus collective contributions
 - Signal your own funding intentions
 
-Keep the discussion focused on reaching a funded consensus."""
+            Keep the discussion focused on concentrating the same fixed budgets on a feasible set of projects."""
         else:
             urgency = ""
             if round_num >= max_rounds - 1:
                 urgency = "\n**TIME PRESSURE**: Limited rounds remaining!"
 
-            context = f"""Previous round's joint proposal did not achieve unanimous acceptance.{urgency}
+            context = f"""Previous round's joint proposal did not achieve unanimous acceptance, so nothing from that round took effect.{urgency}
 
 **REFLECTION:**
 - Which projects are close to being funded?
@@ -1045,7 +1067,7 @@ Share your updated strategy for this round."""
 **CURRENT PROJECT STATUS:**
 {status_text}
 
-**Provisionally funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**Projects that crossed threshold in the previous round proposal:** {[projects[j]['name'] for j in funded] if funded else 'None'}
 {extra_transparency_block}
 {history_section}
 {context}{reasoning_instruction}"""
@@ -1066,7 +1088,11 @@ Share your updated strategy for this round."""
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status = (
+                "FUNDED IF ACCEPTED"
+                if j in funded
+                else f"UNFUNDED IF ACCEPTED; short by {max(0.0, cost - agg):.2f}"
+            )
             cost_text = self._format_display_number(cost)
             status_lines.append(
                 f"  {proj['name']}: aggregate={agg:.2f} / cost={cost_text} ({status})"
@@ -1078,13 +1104,16 @@ Share your updated strategy for this round."""
 
         return f"""The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-**Aggregate project status if accepted:**
+**Final project outcome if this proposal is accepted unanimously:**
 {chr(10).join(status_lines)}
 
 Please vote on this proposal. Consider:
-- Which projects would be provisionally funded if this proposal is accepted
+- If this proposal is unanimously accepted, the game ends immediately. There is no later round to add more money.
+- Only the projects marked "FUNDED IF ACCEPTED" would be funded
+- Any project below its cost in this accepted proposal would be UNFUNDED, give zero value, and receive no partial credit
 - How much you would contribute under this proposal
 - Your utility from the resulting funded set after subtracting your own contributions
+- If this proposal is rejected or not unanimous, nothing from it happens and the next round starts from scratch with the same fixed budgets
 - If no joint proposal is unanimously accepted by the final round, your utility is 0{reasoning_instruction}
 
 Respond with ONLY a JSON object in this exact format:
@@ -1110,7 +1139,11 @@ Vote must be either "accept" or "reject"."""
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "PROVISIONALLY FUNDED" if j in funded else f"needs {max(0.0, cost - agg):.2f} more"
+            status = (
+                "FUNDED IF LOCKED IN NOW"
+                if j in funded
+                else f"UNFUNDED IF LOCKED IN NOW; short by {max(0.0, cost - agg):.2f}"
+            )
             cost_text = self._format_display_number(cost)
             status_lines.append(
                 f"  {proj['name']}: aggregate={agg:.2f} / cost={cost_text} ({status})"
@@ -1118,15 +1151,15 @@ Vote must be either "accept" or "reject"."""
 
         return f"""POST-PLEDGE COMMIT VOTE - Round {round_num}/{max_rounds}
 
-You are voting on whether to LOCK IN the current aggregate project status immediately.
+You are voting on whether to LOCK IN this exact round's proposal immediately.
 
 **Current aggregate project status:**
 {chr(10).join(status_lines)}
 
-Vote **yay** if you are satisfied with the current aggregate project status and your own current contribution vector, and want to finalize now.
-Vote **nay** if you want another revision round to improve contributions.
+Vote **yay** if you are satisfied with this exact round's proposal and your own proposed contribution vector for this round, and want to finalize now.
+Vote **nay** if you want to throw away this round's proposal and try again next round from scratch with the same fixed budgets.
 
-**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this round's contributions as the final outcome. If ANY participant votes nay, another revision round occurs.
+**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this exact proposal as the final outcome. Any project still below cost remains unfunded. If ANY participant votes nay, no money is committed and another revision round occurs.
 
 Respond with ONLY JSON:
 {{
@@ -1151,7 +1184,7 @@ Respond with ONLY JSON:
         aggregates = game_state["aggregate_totals"]
         budget_text = self._format_display_number(budget)
 
-        # Own contributions if available
+        # Own previous-round proposed contributions if available
         own_contribs = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * len(projects))
 
         preference_lines = [
@@ -1185,18 +1218,19 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 {urgency}
 {discussion_section}
 **YOUR SITUATION:**
-- Budget: {budget_text}
-- Your current contributions: {[round(c, 2) for c in own_contribs]}
-- Aggregate totals: {[round(a, 2) for a in aggregates]}
+- Fixed total budget for the whole game: {budget_text}
+- Your previous-round proposed contributions (not committed): {[round(c, 2) for c in own_contribs]}
+- Previous-round aggregate totals: {[round(a, 2) for a in aggregates]}
+- Each new round reuses the same fixed budget from scratch; last round's proposal did not carry over
 
 **YOUR FULL PREFERENCE REMINDER:**
 {chr(10).join(preference_lines)}
 
 **STRATEGIC ANALYSIS:**
-1. Which projects are viable to fund given current aggregates?
-2. Where can you shift contributions for maximum impact?
+1. Which projects are viable to fund given the previous-round aggregates?
+2. Where can you shift budget for maximum impact this round?
 3. Based on the discussion above, what are other participants likely to do?
-4. Should you free-ride on projects others are funding?{reasoning_instruction}
+4. Should you free-ride on projects others are likely to fund, or would splitting budget across different favorites leave everything below threshold?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:
@@ -1373,6 +1407,7 @@ Remember: This analysis is completely private."""
         own_pledge = game_state.get("current_pledges", {}).get(agent_id, {})
         own_contribs = own_pledge.get("contributions", [0.0] * len(projects))
         raw_utility = sum(valuations[j] - own_contribs[j] for j in funded) if funded else 0.0
+        consensus_reached = bool(tabulation_result.get("consensus_reached", False))
         if self.config.enable_time_discount:
             discount_factor = self.config.gamma_discount ** max(0, round_num - 1)
         else:
@@ -1381,9 +1416,46 @@ Remember: This analysis is completely private."""
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
-            status = "PROVISIONALLY FUNDED" if j in funded else f"gap={cost - agg:.2f}"
+            if j in funded:
+                status = (
+                    "FUNDED IN ACCEPTED OUTCOME"
+                    if consensus_reached
+                    else "would have been funded if accepted"
+                )
+            else:
+                status = (
+                    f"UNFUNDED IN ACCEPTED OUTCOME; short by {cost - agg:.2f}"
+                    if consensus_reached
+                    else f"would have remained unfunded; short by {cost - agg:.2f}"
+                )
             cost_text = self._format_display_number(cost)
             status_lines.append(f"  {proj['name']}: aggregate={agg:.2f}, cost={cost_text} ({status})")
+
+        status_header = (
+            "**FINAL ACCEPTED OUTCOME:**"
+            if consensus_reached
+            else "**REJECTED ROUND PROPOSAL (counterfactual outcome if it had passed):**"
+        )
+        funded_label = (
+            "Funded projects in the accepted outcome"
+            if consensus_reached
+            else "Projects that would have been funded if this rejected proposal had passed"
+        )
+        utility_label = (
+            "Your realized utility from the accepted outcome"
+            if consensus_reached
+            else "Counterfactual utility if this rejected proposal had been accepted"
+        )
+        raw_utility_label = (
+            "Raw utility before discount"
+            if consensus_reached
+            else "Counterfactual raw utility before discount"
+        )
+        outcome_note = (
+            "Because the proposal was accepted unanimously, the game ends with this exact outcome."
+            if consensus_reached
+            else "Because the proposal was NOT accepted unanimously, no money was committed and no project was funded this round. The next round starts from scratch with the same fixed budgets."
+        )
 
         reasoning_instruction = ""
         if reasoning_token_budget:
@@ -1391,14 +1463,15 @@ Remember: This analysis is completely private."""
 
         return f"""Reflect on the outcome of Round {round_num}.
 
-**CURRENT STATUS:**
+{status_header}
 {chr(10).join(status_lines)}
 
-**Provisionally funded projects:** {[projects[j]['name'] for j in funded] if funded else 'None'}
-**Vote outcome this round:** {"accepted unanimously" if tabulation_result.get("consensus_reached", False) else "not accepted unanimously"}
-**Your utility under this round's joint proposal:** {utility:.2f}
-**Raw utility (before discount):** {raw_utility:.2f}
+**{funded_label}:** {[projects[j]['name'] for j in funded] if funded else 'None'}
+**Vote outcome this round:** {"accepted unanimously" if consensus_reached else "not accepted unanimously"}
+**{utility_label}:** {utility:.2f}
+**{raw_utility_label}:** {raw_utility:.2f}
 **Discount factor this round:** {discount_factor:.2f}
+**Important:** {outcome_note}
 
 Consider what adjustments to your contributions might improve the outcome.
 - Are there projects close to being funded that deserve more support?
