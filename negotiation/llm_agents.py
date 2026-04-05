@@ -344,6 +344,25 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
     
     def _format_preferences(self, preferences: Any, items: List[Any]) -> str:
         """Format preferences for display in prompt."""
+        if (
+            isinstance(preferences, dict)
+            and "positions" in preferences
+            and "weights" in preferences
+            and "issues" in preferences
+        ):
+            pref_str = "Your diplomatic treaty preferences:\n"
+            for issue, position, weight in zip(
+                preferences["issues"],
+                preferences["positions"],
+                preferences["weights"],
+            ):
+                issue_name = issue["name"] if isinstance(issue, dict) else str(issue)
+                pref_str += (
+                    f"- {issue_name}: ideal={int(round(float(position) * 100))}%, "
+                    f"weight={int(round(float(weight) * 100))}%\n"
+                )
+            return pref_str
+
         if isinstance(preferences, list):
             # Vector preferences
             pref_str = "Your item valuations:\n"

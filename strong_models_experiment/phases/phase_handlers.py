@@ -242,6 +242,26 @@ class PhaseHandler:
             "proposals": proposals or [],
         }
 
+    def _get_context_preferences(
+        self,
+        agent_id: str,
+        preferences: Dict[str, Any],
+    ) -> Any:
+        """Return the preference payload replayed in the per-call system prompt."""
+        agent_preferences = preferences["agent_preferences"][agent_id]
+
+        if (
+            self.game_environment is not None
+            and "game_state" in preferences
+            and getattr(self.game_environment.get_game_type(), "value", None) == "diplomacy"
+        ):
+            return self.game_environment.get_agent_preferences_summary(
+                agent_id,
+                preferences["game_state"],
+            )
+
+        return agent_preferences
+
     async def run_game_setup_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                   preferences: Dict, config: Dict) -> None:
         """Phase 1A: Game Setup Phase"""
@@ -431,7 +451,7 @@ class PhaseHandler:
                     items=items,
                     agents=[a.agent_id for a in agents],
                     agent_id=agent.agent_id,
-                    preferences=preferences["agent_preferences"][agent.agent_id],
+                    preferences=self._get_context_preferences(agent.agent_id, preferences),
                     turn_type="discussion",
                     conversation_history=accumulated_public_context,
                     strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
@@ -554,7 +574,7 @@ class PhaseHandler:
                 items=items,
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
-                preferences=preferences["agent_preferences"][agent.agent_id],
+                preferences=self._get_context_preferences(agent.agent_id, preferences),
                 turn_type="thinking",
                 conversation_history=list(public_context or []),
                 strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
@@ -635,7 +655,7 @@ class PhaseHandler:
                 items=items,
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
-                preferences=preferences["agent_preferences"][agent.agent_id],
+                preferences=self._get_context_preferences(agent.agent_id, preferences),
                 turn_type="proposal",
                 conversation_history=list(public_context or []),
                 strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
@@ -916,7 +936,7 @@ class PhaseHandler:
                 items=items,
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
-                preferences=preferences["agent_preferences"][agent.agent_id],
+                preferences=self._get_context_preferences(agent.agent_id, preferences),
                 turn_type="private_voting",
                 current_proposals=proposals,
                 conversation_history=list(public_context or []),
@@ -1320,7 +1340,7 @@ Consider what adjustments might lead to consensus in future rounds."""
                 items=items,
                 agents=[a.agent_id for a in agents],
                 agent_id=agent.agent_id,
-                preferences=preferences["agent_preferences"][agent.agent_id],
+                preferences=self._get_context_preferences(agent.agent_id, preferences),
                 turn_type="reflection",
                 conversation_history=list(public_context or []),
                 strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
