@@ -127,7 +127,7 @@ def create_game_environment(
             sigma=kwargs.get("sigma", 0.5),
             c_min=kwargs.get("c_min", 10.0),
             c_max=kwargs.get("c_max", 30.0),
-            pledge_mode=kwargs.get("pledge_mode", "joint"),
+            pledge_mode=kwargs.get("pledge_mode", "individual"),
             discussion_transparency=kwargs.get("discussion_transparency", "own"),
             enable_commit_vote=kwargs.get("enable_commit_vote", True),
             enable_time_discount=kwargs.get("enable_time_discount", True),

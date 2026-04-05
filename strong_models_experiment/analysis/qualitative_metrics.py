@@ -84,16 +84,23 @@ def extract_pledge_history_from_logs(conversation_logs: List[Dict[str, Any]]) ->
     """Extract pledge history from phase logs as round-indexed contribution maps."""
     by_round: Dict[int, Dict[str, List[float]]] = defaultdict(dict)
     for log in conversation_logs:
-        if log.get("phase") != "pledge_submission":
+        phase = log.get("phase")
+        if phase == "pledge_submission":
+            payload = log.get("pledge", {})
+        elif phase == "proposal":
+            payload = log.get("proposal", {})
+            if not isinstance(payload, dict) or "contributions" not in payload:
+                continue
+        else:
             continue
-        pledge = log.get("pledge", {})
-        contributions = pledge.get("contributions")
+
+        contributions = payload.get("contributions")
         if not isinstance(contributions, list):
             continue
         round_num = int(log.get("round", 0))
         if round_num <= 0:
             continue
-        agent_id = log.get("from") or pledge.get("proposed_by")
+        agent_id = log.get("from") or payload.get("proposed_by")
         if not agent_id:
             continue
         by_round[round_num][agent_id] = [float(x) for x in contributions]

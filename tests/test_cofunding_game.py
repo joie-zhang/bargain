@@ -8,7 +8,7 @@ Tests cover:
 - Utility calculation (funded vs unfunded, edge cases)
 - Proposal parsing and validation
 - Protocol type
-- Voting prompt raises RuntimeError
+- Joint proposal preparation and voting prompt generation
 - Early termination detection
 - Seed reproducibility
 """
@@ -133,16 +133,17 @@ class TestGameStateCreation:
             "agent_budgets", "total_budget", "agent_valuations",
             "parameters", "game_type", "round_pledges",
             "current_pledges", "aggregate_totals", "funded_projects",
+            "accepted_proposal",
         ]
         for key in required_keys:
             assert key in state, f"Missing key: {key}"
 
     def test_budget_scales_between_half_and_full_cost(self):
-        """Total budget should equal (0.5 + 0.5*sigma) * total_cost."""
+        """Total budget should equal sigma * total_cost."""
         game = make_game(sigma=0.6)
         agents = create_test_agents(2)
         state = game.create_game_state(agents)
-        expected_budget = (0.5 + 0.5 * 0.6) * state["total_cost"]
+        expected_budget = 0.6 * state["total_cost"]
         assert abs(state["total_budget"] - expected_budget) < 0.1
 
     def test_per_agent_budget_equal(self):
@@ -338,20 +339,32 @@ class TestProtocolAndGameType:
     """Tests for protocol type, game type, and voting prompt."""
 
     def test_protocol_type(self):
-        """Co-funding should return 'talk_pledge_revise'."""
+        """Co-funding should return 'propose_and_vote'."""
         game = make_game()
-        assert game.get_protocol_type() == "talk_pledge_revise"
+        assert game.get_protocol_type() == "propose_and_vote"
 
     def test_game_type(self):
         """Should return CO_FUNDING enum."""
         game = make_game()
         assert game.get_game_type() == GameType.CO_FUNDING
 
-    def test_voting_prompt_raises(self):
-        """get_voting_prompt should raise RuntimeError."""
-        game = make_game()
-        with pytest.raises(RuntimeError, match="voting"):
-            game.get_voting_prompt("Agent_1", {}, {}, 1)
+    def test_voting_prompt_renders_joint_proposal(self):
+        """Voting prompt should describe the aggregated joint proposal."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        proposal = {
+            "contributions_by_agent": {
+                "Agent_1": [5.0, 3.0, 2.0],
+                "Agent_2": [4.0, 6.0, 1.0],
+            },
+            "aggregate_totals": [9.0, 9.0, 3.0],
+            "funded_projects": [],
+            "proposed_by": "system",
+        }
+        prompt = game.get_voting_prompt("Agent_1", proposal, state, 1)
+        assert "JOINT FUNDING PROPOSAL" in prompt
+        assert '"vote": "accept"' in prompt
 
 
 class TestEarlyTermination:
@@ -496,7 +509,15 @@ class TestUpdateGameState:
             "Agent_1": {"contributions": [6.0, 12.0, 0.0]},
             "Agent_2": {"contributions": [5.0, 8.0, 0.0]},
         }
-        game.update_game_state_with_pledges(state, pledges)
+        prepared = game.prepare_proposals_for_voting(
+            [
+                {"contributions": [6.0, 12.0, 0.0], "proposed_by": "Agent_1"},
+                {"contributions": [5.0, 8.0, 0.0], "proposed_by": "Agent_2"},
+            ],
+            state,
+            1,
+        )
+        game.record_accepted_proposal(state, prepared[0])
 
         outcome = game.compute_final_outcome(state)
 
@@ -505,6 +526,38 @@ class TestUpdateGameState:
         # Agent_2: (20-5) + (50-8) = 15 + 42 = 57
         assert abs(outcome["utilities"]["Agent_1"] - 52.0) < 0.01
         assert abs(outcome["utilities"]["Agent_2"] - 57.0) < 0.01
+
+    def test_compute_final_outcome_without_accepted_proposal_is_zero(self):
+        """No accepted joint proposal should yield zero utility."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        outcome = game.compute_final_outcome(state)
+
+        assert outcome["funded_projects"] == []
+        assert outcome["utilities"]["Agent_1"] == 0.0
+        assert outcome["utilities"]["Agent_2"] == 0.0
+
+    def test_prepare_proposals_for_voting_builds_single_joint_proposal(self):
+        """Raw per-agent proposals should be aggregated into one joint proposal."""
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prepared = game.prepare_proposals_for_voting(
+            [
+                {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+                {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
+            ],
+            state,
+            1,
+        )
+
+        assert len(prepared) == 1
+        assert prepared[0]["contributions_by_agent"]["Agent_1"] == [5.0, 3.0, 2.0]
+        assert prepared[0]["contributions_by_agent"]["Agent_2"] == [4.0, 6.0, 1.0]
+        assert prepared[0]["aggregate_totals"] == [9.0, 9.0, 3.0]
 
 
 class TestPrompts:
@@ -516,7 +569,7 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_game_rules_prompt(state)
         assert "Participatory Budgeting" in prompt
-        assert "Talk-Pledge-Revise" in prompt
+        assert "Propose-and-Vote" in prompt
 
     def test_preference_assignment_prompt(self):
         game = make_game()
@@ -567,7 +620,7 @@ class TestPrompts:
         prompt = game.get_discussion_prompt("Agent_1", state, 2, 5, [])
         assert "LAST ROUND BUDGET USAGE" in prompt
         assert "your_prev=" in prompt
-        assert "min_you_to_" in prompt
+        assert "others_prev=" in prompt
 
     def test_thinking_prompt(self):
         game = make_game()
@@ -583,22 +636,7 @@ class TestPrompts:
         state["funded_projects"] = []
         prompt = game.get_reflection_prompt("Agent_1", state, 1, 5, {})
         assert "Reflect" in prompt
-
-    def test_commit_vote_prompt(self):
-        game = make_game(m_projects=3)
-        agents = create_test_agents(2)
-        state = game.create_game_state(agents)
-        prompt = game.get_commit_vote_prompt("Agent_1", state, 1, 5)
-        assert "POST-PLEDGE COMMIT VOTE" in prompt
-        assert "commit_vote" in prompt
-
-    def test_feedback_prompt(self):
-        game = make_game()
-        agents = create_test_agents(2)
-        state = game.create_game_state(agents)
-        state["funded_projects"] = []
-        prompt = game.get_feedback_prompt("Agent_1", state)
-        assert "Aggregate" in prompt
+        assert "Vote outcome this round" in prompt
 
     def test_format_proposal_display(self):
         game = make_game(m_projects=3)
@@ -606,8 +644,26 @@ class TestPrompts:
         state = game.create_game_state(agents)
         proposal = {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1", "reasoning": "test"}
         display = game.format_proposal_display(proposal, state)
-        assert "PLEDGE" in display
+        assert "PROPOSAL" in display
         assert "Agent_1" in display
+
+    def test_format_joint_proposal_display(self):
+        game = make_game(m_projects=3)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+        proposal = {
+            "contributions_by_agent": {
+                "Agent_1": [5.0, 3.0, 2.0],
+                "Agent_2": [4.0, 6.0, 1.0],
+            },
+            "aggregate_totals": [9.0, 9.0, 3.0],
+            "funded_projects": [],
+            "proposed_by": "system",
+        }
+        display = game.format_proposal_display(proposal, state)
+        assert "JOINT PROPOSAL" in display
+        assert "Agent_1" in display
+        assert "Agent_2" in display
 
     def test_agent_preferences_summary(self):
         game = make_game()
@@ -741,7 +797,7 @@ class TestJointPledgeMode:
         assert "Agent_2" in prompt
 
     def test_legacy_individual_mode(self):
-        """pledge_mode='individual' should preserve old behavior."""
+        """pledge_mode='individual' should preserve per-agent proposal behavior."""
         game = self._make_joint_game(m_projects=3, pledge_mode="individual")
         agents = create_test_agents(2)
         state = game.create_game_state(agents)

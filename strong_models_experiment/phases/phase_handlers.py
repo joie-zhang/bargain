@@ -671,6 +671,35 @@ class PhaseHandler:
                     response.content, agent.agent_id, game_state,
                     [a.agent_id for a in agents]
                 )
+                should_retry_invalid = (
+                    game_state.get("game_type") == "co_funding"
+                    or "contributions" in proposal
+                )
+                if should_retry_invalid and not self.game_environment.validate_proposal(proposal, game_state):
+                    self.logger.warning(
+                        f"  Invalid proposal from {agent.agent_id}, retrying once..."
+                    )
+                    retry_prompt = (
+                        proposal_prompt
+                        + "\n\n**ERROR: Your previous proposal was invalid "
+                        "(negative values, over-budget, or wrong length). "
+                        "Please resubmit a valid proposal.**"
+                    )
+                    response = await agent.generate_response(context, retry_prompt)
+                    token_usage = self._extract_token_usage(response)
+                    proposal = self.game_environment.parse_proposal(
+                        response.content, agent.agent_id, game_state,
+                        [a.agent_id for a in agents]
+                    )
+                    if not self.game_environment.validate_proposal(proposal, game_state):
+                        self.logger.error(
+                            f"  {agent.agent_id} proposal still invalid after retry, using zero vector"
+                        )
+                        proposal = {
+                            "contributions": [0.0] * game_state["m_projects"],
+                            "reasoning": "Fallback: zero contributions after validation failure",
+                            "proposed_by": agent.agent_id,
+                        }
                 proposal["proposed_by"] = agent.agent_id
                 proposal["round"] = round_num
                 if token_usage:
@@ -689,7 +718,12 @@ class PhaseHandler:
                                 proposal_prompt, proposal_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
 
             # Build message content based on proposal format
-            content_key = "agreement" if "agreement" in proposal else "allocation"
+            if "agreement" in proposal:
+                content_key = "agreement"
+            elif "allocation" in proposal:
+                content_key = "allocation"
+            else:
+                content_key = "contributions"
             proposal_content = proposal.get(content_key, {})
             message = {
                 "phase": "proposal",
@@ -724,15 +758,27 @@ class PhaseHandler:
                 "proposal_summary": "No proposals submitted"
             }
         
+        proposals_for_voting = proposals
+        if self.game_environment is not None:
+            game_state = preferences.get("game_state", {
+                "items": items,
+                "agent_preferences": preferences.get("agent_preferences", {}),
+            })
+            proposals_for_voting = self.game_environment.prepare_proposals_for_voting(
+                proposals=proposals,
+                game_state=game_state,
+                round_num=round_num,
+            )
+
         enumerated_proposals = []
         proposal_display_lines = []
         
         proposal_display_lines.append(f"📋 FORMAL PROPOSALS SUBMITTED - Round {round_num}")
         proposal_display_lines.append("=" * 60)
-        proposal_display_lines.append(f"Total Proposals: {len(proposals)}")
+        proposal_display_lines.append(f"Total Proposals: {len(proposals_for_voting)}")
         proposal_display_lines.append("")
         
-        for i, proposal in enumerate(proposals, 1):
+        for i, proposal in enumerate(proposals_for_voting, 1):
             proposal_num = i
             proposer = proposal.get('proposed_by', f'Agent_{i}')
             reasoning = proposal.get('reasoning', 'No reasoning provided')
@@ -749,6 +795,10 @@ class PhaseHandler:
                 enumerated_proposal["allocation"] = proposal["allocation"]
             if "agreement" in proposal:
                 enumerated_proposal["agreement"] = proposal["agreement"]
+            if "contributions_by_agent" in proposal:
+                enumerated_proposal["contributions_by_agent"] = proposal["contributions_by_agent"]
+                enumerated_proposal["funded_projects"] = proposal.get("funded_projects", [])
+                enumerated_proposal["aggregate_totals"] = proposal.get("aggregate_totals", [])
 
             enumerated_proposals.append(enumerated_proposal)
 
@@ -808,7 +858,7 @@ class PhaseHandler:
             "messages": messages,
             "enumerated_proposals": enumerated_proposals,
             "proposal_summary": proposal_summary,
-            "total_proposals": len(proposals)
+            "total_proposals": len(proposals_for_voting)
         }
     
     async def run_private_voting_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
@@ -916,7 +966,12 @@ class PhaseHandler:
 
                         self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
 
-                        proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
+                        if "agreement" in enum_proposal:
+                            proposal_detail_key = "agreement"
+                        elif "allocation" in enum_proposal:
+                            proposal_detail_key = "allocation"
+                        else:
+                            proposal_detail_key = "contributions_by_agent"
                         enhanced_vote_response = {
                             "voter": agent.agent_id,
                             "proposal_number": enum_proposal["proposal_number"],
@@ -1028,7 +1083,12 @@ Vote must be either "accept" or "reject"."""
 
                         # Create enhanced vote response with full context
                         # Use native proposal key (agreement or allocation)
-                        proposal_detail_key = "agreement" if "agreement" in enum_proposal else "allocation"
+                        if "agreement" in enum_proposal:
+                            proposal_detail_key = "agreement"
+                        elif "allocation" in enum_proposal:
+                            proposal_detail_key = "allocation"
+                        else:
+                            proposal_detail_key = "contributions_by_agent"
                         enhanced_vote_response = {
                             "voter": agent.agent_id,
                             "proposal_number": enum_proposal["proposal_number"],
@@ -1146,6 +1206,10 @@ Vote must be either "accept" or "reject"."""
                                 "agent_preferences": preferences.get("agent_preferences", {}),
                             })
                             winning_proposal = enum_prop.get("original_proposal", enum_prop)
+                            self.game_environment.record_accepted_proposal(
+                                game_state,
+                                winning_proposal,
+                            )
                             for agent in agents:
                                 final_utilities[agent.agent_id] = self.game_environment.calculate_utility(
                                     agent.agent_id, winning_proposal, game_state, round_num
@@ -1153,7 +1217,11 @@ Vote must be either "accept" or "reject"."""
                                 agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
                             # Store in native format (agreement vector or allocation dict)
                             final_allocation = winning_proposal.get(
-                                "agreement", winning_proposal.get("allocation", {})
+                                "agreement",
+                                winning_proposal.get(
+                                    "allocation",
+                                    winning_proposal.get("funded_projects", []),
+                                )
                             )
                         else:
                             # Legacy item allocation utility calculation
@@ -1280,7 +1348,7 @@ Consider what adjustments might lead to consensus in future rounds."""
         
         return {"reflections": reflections}
 
-    # ---- Co-funding (Talk-Pledge-Revise) phase handlers ----
+    # ---- Legacy co-funding (Talk-Pledge-Revise) phase handlers ----
 
     async def run_pledge_submission_phase(
         self,

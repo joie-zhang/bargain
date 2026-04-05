@@ -3,10 +3,10 @@
 Tests for co-funding phase handlers and orchestrator integration.
 
 Tests cover:
-- Pledge submission phase returns correct structure
-- Feedback phase computes correct aggregates
-- Early termination triggers after 2 identical rounds
-- Full round loop runs without error with mock agents
+- Proposal aggregation yields a single joint proposal for voting
+- Voting/tabulation records accepted joint proposals
+- Legacy early termination helper still behaves consistently
+- Full round loop state mutations remain valid
 - Game state is correctly mutated across rounds
 """
 
@@ -85,8 +85,8 @@ def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5,
     return game, agents, state
 
 
-class TestPledgeSubmissionPhase:
-    """Tests for the pledge submission flow."""
+class TestProposalValidation:
+    """Tests for co-funding proposal parsing and validation."""
 
     def test_pledge_parse_and_validate(self):
         """Pledges should be parsed and validated correctly."""
@@ -117,43 +117,45 @@ class TestPledgeSubmissionPhase:
         assert game.validate_proposal(parsed, state) is False
 
 
-class TestFeedbackPhase:
-    """Tests for the feedback phase flow."""
+class TestJointProposalPreparation:
+    """Tests for aggregation into the round's joint proposal."""
 
-    def test_feedback_computes_aggregates(self):
-        """Feedback phase should correctly compute aggregate totals."""
+    def test_prepare_proposals_for_voting_computes_aggregates(self):
+        """Joint proposal preparation should compute aggregate totals."""
         game, agents, state = make_game_and_state(m_projects=3)
         state["project_costs"] = [10.0, 20.0, 30.0]
 
-        pledges = {
-            "Agent_1": {"contributions": [5.0, 10.0, 0.0], "proposed_by": "Agent_1"},
-            "Agent_2": {"contributions": [6.0, 10.0, 5.0], "proposed_by": "Agent_2"},
-        }
+        proposals = [
+            {"contributions": [5.0, 10.0, 0.0], "proposed_by": "Agent_1"},
+            {"contributions": [6.0, 10.0, 5.0], "proposed_by": "Agent_2"},
+        ]
 
-        game.update_game_state_with_pledges(state, pledges)
+        prepared = game.prepare_proposals_for_voting(proposals, state, 1)
 
+        assert len(prepared) == 1
         assert state["aggregate_totals"] == [11.0, 20.0, 5.0]
         assert 0 in state["funded_projects"]  # 11 >= 10
         assert 1 in state["funded_projects"]  # 20 >= 20
         assert 2 not in state["funded_projects"]  # 5 < 30
+        assert prepared[0]["contributions_by_agent"]["Agent_1"] == [5.0, 10.0, 0.0]
 
-    def test_feedback_appends_history(self):
-        """Each feedback round should append to round_pledges history."""
+    def test_prepare_proposals_for_voting_appends_history(self):
+        """Each prepared round should append to round_pledges history."""
         game, agents, state = make_game_and_state(m_projects=3)
 
-        pledges_r1 = {
-            "Agent_1": {"contributions": [5.0, 5.0, 0.0]},
-            "Agent_2": {"contributions": [3.0, 3.0, 0.0]},
-        }
-        pledges_r2 = {
-            "Agent_1": {"contributions": [6.0, 4.0, 0.0]},
-            "Agent_2": {"contributions": [4.0, 2.0, 0.0]},
-        }
+        proposals_r1 = [
+            {"contributions": [5.0, 5.0, 0.0], "proposed_by": "Agent_1"},
+            {"contributions": [3.0, 3.0, 0.0], "proposed_by": "Agent_2"},
+        ]
+        proposals_r2 = [
+            {"contributions": [6.0, 4.0, 0.0], "proposed_by": "Agent_1"},
+            {"contributions": [4.0, 2.0, 0.0], "proposed_by": "Agent_2"},
+        ]
 
-        game.update_game_state_with_pledges(state, pledges_r1)
+        game.prepare_proposals_for_voting(proposals_r1, state, 1)
         assert len(state["round_pledges"]) == 1
 
-        game.update_game_state_with_pledges(state, pledges_r2)
+        game.prepare_proposals_for_voting(proposals_r2, state, 2)
         assert len(state["round_pledges"]) == 2
 
 
@@ -195,10 +197,10 @@ class TestEarlyTerminationIntegration:
         assert not game.check_early_termination(state)
 
 
-class TestCommitVotePhase:
-    """Tests for post-pledge unanimous commit vote."""
+class TestVotingPhases:
+    """Tests for the active propose-and-vote flow."""
 
-    def test_unanimous_yay_commit_vote(self):
+    def test_unanimous_accept_records_accepted_joint_proposal(self):
         game, _, state = make_game_and_state(m_projects=3)
         items = state["projects"]
         preferences = {
@@ -206,31 +208,55 @@ class TestCommitVotePhase:
             "game_state": state,
         }
 
-        pledges = {
-            "Agent_1": {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
-            "Agent_2": {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
-        }
-        game.update_game_state_with_pledges(state, pledges)
+        raw_proposals = [
+            {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+            {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
+        ]
+        handler = PhaseHandler(game_environment=game)
+        proposal_agents = [FakeAgent("Agent_1"), FakeAgent("Agent_2")]
+        enumeration = asyncio.run(
+            handler.run_proposal_enumeration_phase(
+                agents=proposal_agents,
+                items=items,
+                preferences=preferences,
+                round_num=2,
+                max_rounds=5,
+                proposals=raw_proposals,
+            )
+        )
 
         agents = [
-            FakeAgent("Agent_1", ['{"commit_vote": "yay", "reasoning": "works"}']),
-            FakeAgent("Agent_2", ['{"commit_vote": "yay", "reasoning": "agree"}']),
+            FakeAgent("Agent_1", ['{"vote": "accept", "reasoning": "works"}']),
+            FakeAgent("Agent_2", ['{"vote": "accept", "reasoning": "agree"}']),
         ]
         handler = PhaseHandler(game_environment=game)
 
+        voting = asyncio.run(
+            handler.run_private_voting_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                proposals=raw_proposals,
+                enumerated_proposals=enumeration["enumerated_proposals"],
+                round_num=2,
+                max_rounds=5,
+            )
+        )
         result = asyncio.run(
-            handler.run_cofunding_commit_vote_phase(
+            handler.run_vote_tabulation_phase(
                 agents=agents,
                 items=items,
                 preferences=preferences,
                 round_num=2,
                 max_rounds=5,
+                private_votes=voting["private_votes"],
+                enumerated_proposals=enumeration["enumerated_proposals"],
             )
         )
-        assert result["unanimous_yay"] is True
-        assert result["yay_count"] == 2
+        assert result["consensus_reached"] is True
+        assert state["accepted_proposal"] is not None
 
-    def test_nay_blocks_unanimous_commit(self):
+    def test_reject_blocks_consensus(self):
         game, _, state = make_game_and_state(m_projects=3)
         items = state["projects"]
         preferences = {
@@ -238,29 +264,53 @@ class TestCommitVotePhase:
             "game_state": state,
         }
 
-        pledges = {
-            "Agent_1": {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
-            "Agent_2": {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
-        }
-        game.update_game_state_with_pledges(state, pledges)
+        raw_proposals = [
+            {"contributions": [5.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+            {"contributions": [4.0, 6.0, 1.0], "proposed_by": "Agent_2"},
+        ]
+        handler = PhaseHandler(game_environment=game)
+        proposal_agents = [FakeAgent("Agent_1"), FakeAgent("Agent_2")]
+        enumeration = asyncio.run(
+            handler.run_proposal_enumeration_phase(
+                agents=proposal_agents,
+                items=items,
+                preferences=preferences,
+                round_num=2,
+                max_rounds=5,
+                proposals=raw_proposals,
+            )
+        )
 
         agents = [
-            FakeAgent("Agent_1", ['{"commit_vote": "yay", "reasoning": "works"}']),
-            FakeAgent("Agent_2", ['{"commit_vote": "nay", "reasoning": "revise"}']),
+            FakeAgent("Agent_1", ['{"vote": "accept", "reasoning": "works"}']),
+            FakeAgent("Agent_2", ['{"vote": "reject", "reasoning": "revise"}']),
         ]
         handler = PhaseHandler(game_environment=game)
 
+        voting = asyncio.run(
+            handler.run_private_voting_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                proposals=raw_proposals,
+                enumerated_proposals=enumeration["enumerated_proposals"],
+                round_num=2,
+                max_rounds=5,
+            )
+        )
         result = asyncio.run(
-            handler.run_cofunding_commit_vote_phase(
+            handler.run_vote_tabulation_phase(
                 agents=agents,
                 items=items,
                 preferences=preferences,
                 round_num=2,
                 max_rounds=5,
+                private_votes=voting["private_votes"],
+                enumerated_proposals=enumeration["enumerated_proposals"],
             )
         )
-        assert result["unanimous_yay"] is False
-        assert result["yay_count"] == 1
+        assert result["consensus_reached"] is False
+        assert state["accepted_proposal"] is None
 
 
 class TestFullRoundLoop:
@@ -286,6 +336,16 @@ class TestFullRoundLoop:
             # Check state is mutated
             assert len(state["round_pledges"]) == round_num
             assert len(state["aggregate_totals"]) == 3
+
+        accepted = game.prepare_proposals_for_voting(
+            [
+                {"contributions": [8.0, 3.0, 2.0], "proposed_by": "Agent_1"},
+                {"contributions": [5.0, 6.0, 2.0], "proposed_by": "Agent_2"},
+            ],
+            state,
+            3,
+        )[0]
+        game.record_accepted_proposal(state, accepted)
 
         # Compute final outcome
         outcome = game.compute_final_outcome(state)
@@ -335,7 +395,7 @@ class TestFactoryIntegration:
             alpha=0.7,
             sigma=0.6,
         )
-        assert game.get_protocol_type() == "talk_pledge_revise"
+        assert game.get_protocol_type() == "propose_and_vote"
         assert game.get_game_type().value == "co_funding"
 
     def test_create_via_config(self):
@@ -351,4 +411,4 @@ class TestFactoryIntegration:
             random_seed=42,
         )
         game = create_game_from_config(config)
-        assert game.get_protocol_type() == "talk_pledge_revise"
+        assert game.get_protocol_type() == "propose_and_vote"

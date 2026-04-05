@@ -38,6 +38,10 @@ class ExperimentAnalyzer:
                 behaviors["discussion_message_count"] += 1
             elif phase == "pledge_submission":
                 behaviors["pledge_submission_count"] += 1
+            elif phase == "proposal":
+                proposal = log.get("proposal", {})
+                if isinstance(proposal, dict) and "contributions" in proposal:
+                    behaviors["pledge_submission_count"] += 1
             elif phase == "feedback":
                 behaviors["feedback_message_count"] += 1
             elif phase == "cofunding_commit_vote":

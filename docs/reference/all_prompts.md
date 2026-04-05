@@ -947,8 +947,8 @@ Each vote must be either "accept" or "reject".
 
 ## Game 3: Co-Funding / Participatory Budgeting
 
-Protocol: **Talk-Pledge-Revise** (with optional post-pledge commit vote)
-Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Pledge Submission → Feedback → [Commit Vote] → Reflection
+Protocol: **Propose-and-Vote** (with a single joint proposal assembled from per-agent submissions)
+Phases per round: Setup → Preference Assignment → Discussion → Private Thinking → Proposal → Voting → Reflection
 
 Control parameters: α (valuation alignment), σ (budget scarcity)
 `budget_ratio = σ`, so σ=0.2 → 20% of total cost, σ=1.0 → 100% of total cost
@@ -969,9 +969,7 @@ Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
 | `{t_rounds}` | Maximum rounds | `5` |
 | `{enable_time_discount}` | Boolean flag | `False` |
 | `{gamma_discount}` | Per-round discount factor | `0.9` |
-| `{enable_commit_vote}` | Boolean flag | `True` |
-
-**Rendered prompt (example: 2 agents, 5 projects, commit vote on, no time discount)**
+**Rendered prompt (example: 2 agents, 5 projects, no time discount)**
 
 ```
 Welcome to the Participatory Budgeting (Co-Funding) Game!
@@ -988,31 +986,33 @@ You are participating in a co-funding exercise with one other participant to fun
 **GAME STRUCTURE:**
 - There are 2 participants (including you)
 - The game lasts up to 5 rounds
-- Each round follows a Talk-Pledge-Revise cycle
+- Each round follows a Propose-and-Vote cycle:
+  Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
 
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET they can allocate across projects
-- Each round, you submit your own contribution vector — how much YOU pledge to each project
+- In the PROPOSAL phase, each participant submits a contribution vector — how much they propose contributing to each project
+- Those submitted vectors are combined into ONE JOINT PROPOSAL for the round
+- In the VOTING phase, every participant votes accept/reject on that joint proposal
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
-- Contributions to UNFUNDED projects are REFUNDED (you don't lose that money)
+- Contributions to UNFUNDED projects do not reduce your utility
 
 **WHAT YOU CAN SEE:**
-- After each round, you see the AGGREGATE total contributions per project
-- You do NOT see individual contributions from other participants
+- During discussion, you may see previous-round aggregate project status
+- During voting, you see the full JOINT PROPOSAL for the current round and the aggregate status it would create
+- You do NOT see other participants' private preferences
 
 **YOUR UTILITY:**
 - Utility = (sum of your valuations for funded projects) - (your contributions to funded projects)
 - You gain value from funded projects but pay for your contributions to them
 - **IMPORTANT**: If your contribution to a funded project exceeds your valuation, your net utility from that project is NEGATIVE
-- Contributions to unfunded projects cost you nothing (refunded)
+- Contributions to unfunded projects cost you nothing
+- If no joint proposal is unanimously accepted by the final round, everyone gets zero utility
 
 **IMPORTANT RULES:**
 - Time discounting: disabled
 - Discount factor (if enabled): gamma = 0.9
-- Post-pledge commit vote: enabled
-- The game may end early if participants reach unanimous commit vote (yay) on current pledges
-- The game also ends early if all participants submit identical pledges for 2 consecutive rounds (legacy convergence)
 - Your goal: maximize your utility by strategically choosing contributions
 
 **BUDGET CONSTRAINT:**
@@ -1063,7 +1063,7 @@ o3-mini-high, you have been assigned the following:
 
 **HOW YOUR UTILITY IS COMPUTED:**
 - For each FUNDED project: your_utility = your_valuation − your_contribution (negative if you over-contribute)
-- For UNFUNDED projects: your contribution is refunded at end of game, but within a round money pledged to one project cannot be reallocated to another — choose carefully and coordinate to ensure your highest-value projects get funded
+- For UNFUNDED projects: your contribution does not reduce your utility
 - Total utility = sum of (valuation − contribution) across ALL funded projects, including projects funded entirely by others (where your contribution = 0, giving you full valuation as free utility)
 
 **STRATEGIC INSIGHT:**
@@ -1197,7 +1197,7 @@ DISCUSSION PHASE - Round 3/5
 
 [extra_transparency_block if applicable]
 
-Previous pledges did not fully fund all viable projects.
+Previous round's joint proposal did not achieve unanimous acceptance.
 
 **REFLECTION:**
 - Which projects are close to being funded?
@@ -1265,7 +1265,7 @@ Remember: This analysis is completely private.
 
 ---
 
-### 3.5 Pledge Submission Prompt
+### 3.5 Proposal Prompt
 
 #### Individual mode (default)
 
@@ -1286,7 +1286,7 @@ Remember: This analysis is completely private.
 **Rendered prompt**
 
 ```
-Please submit your contribution pledge for Round 2/5.
+Please submit your proposal for Round 2/5.
 
 **YOUR BUDGET:** 73.11
 
@@ -1301,7 +1301,8 @@ Please submit your contribution pledge for Round 2/5.
 **NOTE:** All status above reflects LAST ROUND's results. This round starts fresh — reaffirm your contributions or previously funded projects will become unfunded.
 
 **Instructions:**
-Submit a contribution vector specifying how much YOU pledge to each project.
+Submit a contribution vector specifying how much YOU propose contributing to each project.
+All participants' submitted vectors will be combined into ONE JOINT PROPOSAL before voting.
 
 Respond with ONLY a JSON object in this exact format:
 {
@@ -1313,7 +1314,7 @@ Respond with ONLY a JSON object in this exact format:
 - The "contributions" array must have exactly 5 values (one per project)
 - Each value must be non-negative (>= 0)
 - The sum of all contributions must not exceed your budget (73.11)
-- Contributions to unfunded projects will be refunded
+- Contributions to unfunded projects will not reduce your utility
 ```
 
 ---
@@ -1336,7 +1337,7 @@ Respond with ONLY a JSON object in this exact format:
 **Rendered prompt**
 
 ```
-Please submit your contribution pledge for Round 2/5.
+Please submit your proposal for Round 2/5.
 
 **YOUR BUDGET:** 73.11
 
@@ -1352,7 +1353,7 @@ Please submit your contribution pledge for Round 2/5.
 **Instructions:**
 Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
 Your plan proposes how every participant (including yourself) should allocate their budget.
-The contributions actually used will be each participant's self-assignment from their own plan.
+The round's JOINT PROPOSAL will be constructed from the self-assignment that each participant submits.
 
 **Participant budgets:**
   - gpt-4o-mini: 73.11
@@ -1371,84 +1372,54 @@ Respond with ONLY a JSON object in this exact format:
 - "contributions" must be a dictionary with one entry per participant
 - Each entry must be an array of exactly 5 non-negative values (one per project)
 - Each participant's total contributions must not exceed their budget
-- Contributions to unfunded projects will be refunded
+- Contributions to unfunded projects will not reduce your utility
 ```
 
 ---
 
-### 3.6 Feedback Prompt
-
-Sent to each agent after all pledges are collected and aggregates are computed. Shows round results before the commit vote or next discussion.
+### 3.6 Voting Prompt
 
 **Variables**
 
 | Variable | Description | Example value |
 |----------|-------------|---------------|
-| per-project lines | Name, aggregate, cost, funded status + gap/percentage | `Project Alpha: 30.00 / 28.50 -- FUNDED` |
-| `{funded_names}` | List of funded project names | `['Project Alpha']` |
-
-**Rendered prompt**
-
-```
-ROUND RESULTS - Aggregate Contributions:
-
-  Project Alpha: 30.00 / 28.50 -- FUNDED
-  Project Beta: 33.00 / 35.20 (94%) -- needs 2.20 more
-  Project Gamma: 0.00 / 22.10 (0%) -- needs 22.10 more
-  Project Delta: 0.00 / 40.80 (0%) -- needs 40.80 more
-  Project Epsilon: 16.00 / 19.60 (82%) -- needs 3.60 more
-
-Funded projects: ['Project Alpha']
-
-Consider adjusting your contributions based on these aggregate results.
-```
-
----
-
-### 3.7 Commit Vote Prompt (optional)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{max_rounds}` | Maximum rounds | `5` |
-| `{profile_text}` | Per-agent pledge vectors | `- gpt-4o-mini: [20.0, 18.0, 0.0, 0.0, 10.0]` |
+| per-agent lines | Per-agent contribution vectors | `- gpt-4o-mini: [20.0, 18.0, 0.0, 0.0, 10.0]` |
 | project status lines | Per-project aggregate vs cost + funded status | `Project Alpha: aggregate=30.00 / cost=28.50 (FUNDED)` |
 
 **Rendered prompt**
 
 ```
-POST-PLEDGE COMMIT VOTE - Round 2/5
+The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-You are voting on whether to LOCK IN the current pledge profile immediately.
-
-**Current pledge profile:**
+**Per-participant contributions:**
 - gpt-4o-mini: [10.0, 15.0, 0.0, 0.0, 6.0]
 - o3-mini-high: [20.0, 18.0, 0.0, 0.0, 10.0]
 
-**Current aggregate project status:**
+**Aggregate project status if accepted:**
   Project Alpha: aggregate=30.00 / cost=28.50 (FUNDED)
   Project Beta: aggregate=33.00 / cost=35.20 (needs 2.20 more)
   Project Gamma: aggregate=0.00 / cost=22.10 (needs 22.10 more)
   Project Delta: aggregate=0.00 / cost=40.80 (needs 40.80 more)
   Project Epsilon: aggregate=16.00 / cost=19.60 (needs 3.60 more)
 
-Vote **yay** if you are satisfied with the current pledge profile and want to finalize it now.
-Vote **nay** if you want one more revision round to improve contributions.
-
-**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this pledge profile as the final outcome. If ANY participant votes nay, one more revision round occurs.
+Please vote on this proposal. Consider:
+- Which projects would be funded if this proposal is accepted
+- How much you would contribute under this proposal
+- Your utility from the funded set after subtracting your own contributions
+- If no joint proposal is unanimously accepted by the final round, your utility is 0
 
 Respond with ONLY JSON:
 {
-    "commit_vote": "yay",
+    "vote": "accept",
     "reasoning": "brief explanation"
 }
+
+Vote must be either "accept" or "reject".
 ```
 
 ---
 
-### 3.8 Reflection Prompt
+### 3.7 Reflection Prompt
 
 **Variables**
 
@@ -1457,7 +1428,8 @@ Respond with ONLY JSON:
 | `{round_num}` | Current round | `2` |
 | `{status_lines}` | Per-project aggregate, cost, funded/gap status | `Project Alpha: aggregate=30.00, cost=28.50 (FUNDED)` |
 | `{funded_projects}` | Funded project names | `['Project Alpha']` |
-| `{utility:.2f}` | This agent's discounted utility | `14.30` |
+| vote outcome line | Whether the joint proposal was accepted unanimously | `accepted unanimously` |
+| `{utility:.2f}` | This agent's discounted utility under the round's joint proposal | `14.30` |
 | `{raw_utility:.2f}` | Utility before discount | `14.30` |
 | `{discount_factor:.4f}` | Applied discount factor | `1.0000` (or `0.9000` if discounting on) |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
@@ -1475,7 +1447,8 @@ Reflect on the outcome of Round 2.
   Project Epsilon: aggregate=16.00, cost=19.60 (gap=3.60)
 
 **Funded projects:** ['Project Alpha']
-**Your estimated utility:** 14.30
+**Vote outcome this round:** accepted unanimously
+**Your utility under this round's joint proposal:** 14.30
 **Raw utility (before discount):** 14.30
 **Discount factor this round:** 1.0000
 
@@ -1509,4 +1482,4 @@ When `reasoning_token_budget` is configured for a run, this line is appended to 
 |------|----------|-------------------|
 | Game 1: Item Allocation | Propose-and-Vote | Setup → Discussion → Thinking → Proposal → Voting → Reflection |
 | Game 2: Diplomatic Treaty | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 3: Co-Funding | Talk-Pledge-Revise | Rules → Prefs → Discussion → Thinking → Pledge → **Feedback** → [Commit Vote] → Reflection |
+| Game 3: Co-Funding | Propose-and-Vote | Rules → Prefs → Discussion → Thinking → Proposal → Voting → Reflection |

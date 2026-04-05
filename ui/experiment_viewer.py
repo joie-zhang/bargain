@@ -669,11 +669,13 @@ def render_diplomacy_proposal_enumeration(entry: Dict, item_names: List[str]):
 
 def render_cofunding_pledge(entry: Dict, item_names: List[str], item_costs: List[float],
                             agent_budgets: Dict):
-    """Render a cofunding pledge submission with progress bars."""
-    pledge = entry.get("pledge", {})
-    contributions = pledge.get("contributions", [])
-    proposer = pledge.get("proposed_by", entry.get("from", "Unknown"))
-    reasoning = pledge.get("reasoning", "")
+    """Render an individual cofunding contribution proposal with progress bars."""
+    payload = entry.get("proposal") or entry.get("pledge") or {}
+    contributions = payload.get("contributions", [])
+    proposer = payload.get("proposed_by", entry.get("from", "Unknown"))
+    reasoning = payload.get("reasoning", "")
+    phase = classify_phase(entry)
+    label = "Proposal" if phase == "proposal" else "Pledge"
 
     color = AGENT_COLORS.get(proposer, "#6b7280")
     total_pledged = sum(contributions) if contributions else 0
@@ -682,7 +684,7 @@ def render_cofunding_pledge(entry: Dict, item_names: List[str], item_costs: List
     st.markdown(
         f'<div style="border-left: 4px solid {color}; padding: 8px 12px; '
         f'background: {color}11; border-radius: 4px; margin: 8px 0;">'
-        f'<strong style="color: {color};">💰 Pledge by {proposer}</strong> '
+        f'<strong style="color: {color};">💰 {label} by {proposer}</strong> '
         f'<span style="font-size: 12px; color: #6b7280;">'
         f'(${total_pledged:.2f} / ${budget:.2f} budget)</span></div>',
         unsafe_allow_html=True,
@@ -709,6 +711,37 @@ def render_cofunding_pledge(entry: Dict, item_names: List[str], item_costs: List
     if reasoning:
         with st.expander("Reasoning", expanded=False):
             st.markdown(reasoning)
+
+
+def render_cofunding_proposal_enumeration(entry: Dict, item_names: List[str], item_costs: List[float]):
+    """Render the single joint proposal under vote for cofunding."""
+    proposals = entry.get("enumerated_proposals", [])
+    if not proposals:
+        st.info(entry.get("content", "No proposals enumerated."))
+        return
+
+    proposal = proposals[0]
+    contributions_by_agent = proposal.get("contributions_by_agent", {})
+    aggregates = proposal.get("aggregate_totals", [])
+    funded = set(proposal.get("funded_projects", []))
+
+    st.markdown(
+        '<div style="border-left: 4px solid #14b8a6; padding: 8px 12px; '
+        'background: #14b8a611; border-radius: 4px; margin: 8px 0;">'
+        '<strong style="color: #14b8a6;">📋 Joint Proposal Under Vote</strong></div>',
+        unsafe_allow_html=True,
+    )
+
+    for agent, contribs in contributions_by_agent.items():
+        total = sum(contribs) if contribs else 0.0
+        st.markdown(f"**{agent}**: {[round(float(x), 2) for x in contribs]} (total ${total:.2f})")
+
+    st.markdown("**Aggregate project status if accepted:**")
+    for i, name in enumerate(item_names):
+        cost = item_costs[i] if i < len(item_costs) else 0.0
+        agg = aggregates[i] if i < len(aggregates) else 0.0
+        status = "FUNDED" if i in funded else f"needs ${max(0.0, cost - agg):.2f} more"
+        st.markdown(f"- {name}: ${agg:.2f} / ${cost:.2f} ({status})")
 
 
 def render_cofunding_aggregate(entry: Dict, item_names: List[str], item_costs: List[float]):
@@ -1271,8 +1304,14 @@ def _render_cofunding_vote_summary(entry: Dict):
 
 def _render_cofunding_phase(entry, phase, item_names, item_costs, agent_budgets):
     """Dispatch cofunding-specific phase rendering."""
-    if phase == "pledge_submission":
+    if phase in {"proposal", "pledge_submission"}:
         render_cofunding_pledge(entry, item_names, item_costs, agent_budgets)
+    elif phase == "proposal_enumeration":
+        render_cofunding_proposal_enumeration(entry, item_names, item_costs)
+    elif phase == "voting":
+        _render_voting_entry(entry)
+    elif phase == "vote_tabulation":
+        render_diplomacy_vote_tabulation(entry)
     elif phase == "feedback":
         render_feedback(entry)
     elif phase == "aggregate_funding":
@@ -1650,11 +1689,13 @@ def _render_cofunding_analytics(results: Dict, experiment_id: str):
     st.subheader("Funding Progress by Round")
     pledge_data = []
     for entry in logs:
-        if classify_phase(entry) != "pledge_submission":
+        phase = classify_phase(entry)
+        if phase not in {"pledge_submission", "proposal"}:
             continue
-        pledge = entry.get("pledge", {})
-        contributions = pledge.get("contributions", [])
-        proposer = pledge.get("proposed_by", entry.get("from", ""))
+        payload = entry.get("proposal") if phase == "proposal" else entry.get("pledge")
+        payload = payload or {}
+        contributions = payload.get("contributions", [])
+        proposer = payload.get("proposed_by", entry.get("from", ""))
         round_num = entry.get("round", 1)
         for i, amount in enumerate(contributions):
             name = item_names[i] if i < len(item_names) else f"Project {i}"

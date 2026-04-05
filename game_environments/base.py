@@ -382,9 +382,35 @@ class GameEnvironment(ABC):
         Return the negotiation protocol type for this game.
 
         Returns:
-            "propose_and_vote" (default) or "talk_pledge_revise"
+            The protocol identifier for this game. Defaults to "propose_and_vote".
         """
         return "propose_and_vote"
+
+    def prepare_proposals_for_voting(
+        self,
+        proposals: List[Dict[str, Any]],
+        game_state: Dict[str, Any],
+        round_num: int,
+    ) -> List[Dict[str, Any]]:
+        """
+        Transform raw submitted proposals into the set that is actually voted on.
+
+        Most games vote on the submitted proposals directly. Games with custom
+        aggregation logic may override this hook.
+        """
+        return proposals
+
+    def record_accepted_proposal(
+        self,
+        game_state: Dict[str, Any],
+        proposal: Dict[str, Any],
+    ) -> None:
+        """
+        Persist any game-specific accepted-proposal state.
+
+        Games that do not need extra bookkeeping may use the default no-op.
+        """
+        return None
 
     def uses_combined_setup_phase(self) -> bool:
         """

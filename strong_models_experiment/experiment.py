@@ -200,7 +200,7 @@ class StrongModelsExperiment:
                 sigma=config.get("sigma", 0.5),
                 c_min=config.get("c_min", 10.0),
                 c_max=config.get("c_max", 30.0),
-                pledge_mode=config.get("pledge_mode", "joint"),
+                pledge_mode=config.get("pledge_mode", "individual"),
                 discussion_transparency=config.get(
                     "cofunding_discussion_transparency",
                     config.get("discussion_transparency", "own")
@@ -282,7 +282,6 @@ class StrongModelsExperiment:
         qualitative_metrics_v1 = {}
         qualitative_events = []
         conversation_logs = []
-        cofunding_commit_reached = False
         public_context_history: List[Dict[str, Any]] = []
         private_context_by_agent: Dict[str, List[str]] = {
             agent.agent_id: [] for agent in agents
@@ -463,7 +462,7 @@ class StrongModelsExperiment:
                         self.logger.info(f"Skipping individual reflection phase (disabled)")
 
                 elif protocol == "talk_pledge_revise":
-                    # ---- Talk-Pledge-Revise protocol (Game 3: Co-Funding) ----
+                    # ---- Legacy Talk-Pledge-Revise protocol (unused by current Game 3 runs) ----
 
                     # Pledge Submission
                     pledge_result = await self.phase_handler.run_pledge_submission_phase(
@@ -492,7 +491,6 @@ class StrongModelsExperiment:
                             self.logger.info(
                                 f"Unanimous co-funding commit reached in round {round_num}; ending early."
                             )
-                            cofunding_commit_reached = True
                             final_round = round_num
                             break
 
@@ -514,8 +512,8 @@ class StrongModelsExperiment:
                         break
 
             # Post-round-loop processing
-            if protocol == "talk_pledge_revise":
-                # Compute final outcome from last pledges
+            if game_type == "co_funding":
+                # Compute final outcome from the accepted joint proposal, if any.
                 resolved_final_round = final_round if final_round > 0 else round_num
                 final_outcome = game_environment.compute_final_outcome(
                     preferences["game_state"],
@@ -523,7 +521,6 @@ class StrongModelsExperiment:
                 )
                 final_utilities = final_outcome["utilities"]
                 final_allocation = final_outcome["funded_projects"]
-                consensus_reached = cofunding_commit_reached or len(final_outcome["funded_projects"]) > 0
                 final_round = resolved_final_round
                 agent_preferences_data = {
                     aid: preferences["agent_preferences"][aid]
@@ -531,10 +528,10 @@ class StrongModelsExperiment:
                 }
                 if consensus_reached:
                     self.logger.info(
-                        f"Co-funding complete: {len(final_allocation)} projects funded"
+                        f"Co-funding accepted joint proposal: {len(final_allocation)} projects funded"
                     )
                 else:
-                    self.logger.info("Co-funding complete: no projects funded")
+                    self.logger.info("Co-funding complete: no jointly accepted proposal")
 
             # Calculate final utilities if no consensus (propose_and_vote only)
             elif not consensus_reached:
