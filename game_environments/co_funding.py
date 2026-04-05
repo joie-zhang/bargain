@@ -500,6 +500,14 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - Contributions to unfunded projects cost you nothing
 - If no joint proposal is unanimously accepted by the final round, everyone gets zero utility
 
+**REWARD DISCOUNTING:**
+- If time discounting is enabled, your utility from the final funded outcome is multiplied by gamma^(round - 1)
+- Round 1 rewards: 100% of utility
+- Round 2 rewards: {self.config.gamma_discount * 100:.0f}% of utility
+- Round 3 rewards: {self.config.gamma_discount ** 2 * 100:.0f}% of utility
+- The longer it takes to settle on a final funding outcome, the less valuable that outcome becomes
+- If time discounting is disabled for this run, no round-based multiplier is applied
+
 **IMPORTANT RULES:**
 - Time discounting: {"enabled" if self.config.enable_time_discount else "disabled"}
 - Discount factor (if enabled): gamma = {self.config.gamma_discount}
