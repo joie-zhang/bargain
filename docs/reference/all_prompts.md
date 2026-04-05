@@ -1224,7 +1224,7 @@ Share your updated strategy for this round.
 | `{budget:.2f}` | This agent's budget | `73.11` |
 | `{own_contribs}` | This agent's contributions from last round | `[20.0, 18.0, 0.0, 0.0, 10.0]` |
 | `{aggregates}` | Aggregate totals per project | `[30.0, 33.0, 0.0, 0.0, 16.0]` |
-| `{top_priorities}` | Top 3 projects by valuation | `Project Alpha (val=42.30, cost=28.50)` |
+| `{preference_lines}` | One line per project with valuation and cost | `Project Alpha (val=42.30, cost=28.50)` |
 | `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
 
 **Rendered prompt**
@@ -1242,10 +1242,12 @@ gpt-4o-mini: "Let's focus on Alpha and Beta — they're almost funded."
 - Your current contributions: [20.0, 18.0, 0.0, 0.0, 10.0]
 - Aggregate totals: [30.0, 33.0, 0.0, 0.0, 16.0]
 
-**YOUR TOP PRIORITIES:**
-- Project Alpha (val=42.30, cost=28.50)
-- Project Beta (val=28.40, cost=35.20)
-- Project Gamma (val=12.60, cost=22.10)
+**YOUR FULL PREFERENCE REMINDER:**
+  Project Alpha (val=42.30, cost=28.50)
+  Project Beta (val=28.40, cost=35.20)
+  Project Gamma (val=12.60, cost=22.10)
+  Project Delta (val=9.80, cost=40.80)
+  Project Epsilon (val=6.90, cost=19.60)
 
 **STRATEGIC ANALYSIS:**
 1. Which projects are viable to fund given current aggregates?

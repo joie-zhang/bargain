@@ -1147,10 +1147,12 @@ Respond with ONLY JSON:
         # Own contributions if available
         own_contribs = game_state.get("current_pledges", {}).get(agent_id, {}).get("contributions", [0.0] * len(projects))
 
-        priority_indices = np.argsort(valuations)[::-1][:3]
-        top_priorities = [
-            f"{projects[i]['name']} (val={self._format_display_number(valuations[i])}, cost={costs[i]:.2f})"
-            for i in priority_indices
+        preference_lines = [
+            (
+                f"  {projects[i]['name']} "
+                f"(val={self._format_display_number(valuations[i])}, cost={costs[i]:.2f})"
+            )
+            for i in range(len(projects))
         ]
 
         # Include what was said in the discussion this round
@@ -1180,8 +1182,8 @@ Please use approximately {reasoning_token_budget} tokens in your internal reason
 - Your current contributions: {[round(c, 2) for c in own_contribs]}
 - Aggregate totals: {[round(a, 2) for a in aggregates]}
 
-**YOUR TOP PRIORITIES:**
-{chr(10).join(['- ' + p for p in top_priorities])}
+**YOUR FULL PREFERENCE REMINDER:**
+{chr(10).join(preference_lines)}
 
 **STRATEGIC ANALYSIS:**
 1. Which projects are viable to fund given current aggregates?

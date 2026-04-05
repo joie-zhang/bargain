@@ -806,6 +806,19 @@ class TestPrompts:
         state = game.create_game_state(agents)
         prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
         assert "STRATEGIC" in prompt
+        assert "**YOUR TOP PRIORITIES:**" not in prompt
+        assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
+        assert '"key_priorities"' in prompt
+        assert '"potential_concessions"' in prompt
+
+        for project, valuation in zip(
+            state["projects"],
+            state["agent_valuations"]["Agent_1"],
+        ):
+            assert (
+                f"{project['name']} "
+                f"(val={game._format_display_number(valuation)}, cost={project['cost']:.2f})"
+            ) in prompt
 
     def test_thinking_prompt_omits_trailing_point_zero_zero_for_integer_budget_and_valuations(self):
         game = make_game(m_projects=3)
@@ -817,7 +830,11 @@ class TestPrompts:
         prompt = game.get_thinking_prompt("Agent_1", state, 1, 5, [])
 
         assert "- Budget: 27" in prompt
-        assert "val=40" in prompt
+        assert "**YOUR TOP PRIORITIES:**" not in prompt
+        assert "**YOUR FULL PREFERENCE REMINDER:**" in prompt
+        assert "Project Alpha (val=40, cost=" in prompt
+        assert "Project Beta (val=30, cost=" in prompt
+        assert "Project Gamma (val=30, cost=" in prompt
         assert "- Budget: 27.00" not in prompt
         assert "val=40.00" not in prompt
 
