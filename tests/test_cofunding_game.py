@@ -701,7 +701,7 @@ class TestPrompts:
         assert "Please do not initiate the discussion or proposal phase yet." in prompt
         assert "summarize the game structure and rules" in prompt
         assert (
-            "reiterate the private budget and project valuations that were assigned to you"
+            "reiterate the private budget that was assigned to you, along with the project costs and your project valuations"
             in prompt
         )
         budget_text = game._format_display_number(state["agent_budgets"]["Agent_1"])

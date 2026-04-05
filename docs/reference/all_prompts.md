@@ -1061,7 +1061,7 @@ o3-mini-high, you have been assigned the following SECRET co-funding preferences
 - Don't over-contribute to projects others will fund
 
 Please do not initiate the discussion or proposal phase yet.
-In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget and project valuations that were assigned to you.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget that was assigned to you, along with the project costs and your project valuations.
 ```
 
 ---
@@ -1071,7 +1071,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
 For Game 3, this is no longer a separate runtime phase.
 
 Co-Funding now sends one per-agent setup prompt containing both the shared
-rules and that agent's private budget and project valuations, followed by a
+rules and project costs plus that agent's private budget and project valuations, followed by a
 single acknowledgment request. The standalone helper remains in code for
 composition and compatibility, but it is no longer sent as its own phase in the
 actual Game 3 run.

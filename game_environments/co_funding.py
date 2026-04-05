@@ -601,7 +601,7 @@ Please acknowledge that you understand your preferences and budget."""
 {preferences_block}
 
 Please do not initiate the discussion or proposal phase yet.
-In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget and project valuations that were assigned to you."""
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget that was assigned to you, along with the project costs and your project valuations."""
 
     def get_proposal_prompt(
         self,
