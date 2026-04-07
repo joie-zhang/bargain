@@ -31,15 +31,27 @@ import argparse
 import csv
 import json
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean, pstdev
 from typing import Dict, Iterable, List, Tuple
 
 import matplotlib
+import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from strong_models_experiment.analysis.active_model_roster import (
+    canonical_model_name,
+    filter_active_adversary_models,
+    is_active_adversary_model,
+)
 
 
 DEFAULT_ELO_OVERRIDES = {
@@ -67,14 +79,19 @@ def parse_args() -> argparse.Namespace:
 
 def parse_elo_markdown(markdown_path: Path) -> Dict[str, int]:
     elo_by_model: Dict[str, int] = {}
-    table_row = re.compile(
-        r"^\|\s*\d+\s*\|\s*[^|]+\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|"
-    )
+    table_rows = [
+        re.compile(r"^\|\s*\d+\s*\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|"),
+        re.compile(r"^\|\s*\d+\s*\|\s*[^|]+?\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|"),
+    ]
     for line in markdown_path.read_text(encoding="utf-8").splitlines():
-        match = table_row.match(line.strip())
-        if not match:
-            continue
-        elo_by_model[match.group(1).strip()] = int(match.group(2))
+        stripped = line.strip()
+        for table_row in table_rows:
+            match = table_row.match(stripped)
+            if not match:
+                continue
+            model_name = match.group(1).strip().strip("`")
+            elo_by_model[model_name] = int(match.group(2))
+            break
     return elo_by_model
 
 
@@ -127,8 +144,11 @@ def collect_run_rows(results_root: Path) -> List[Dict[str, object]]:
             model_name = agent_to_model.get(agent_id)
             if model_name is None:
                 continue
+            canonical_model = canonical_model_name(model_name)
+            if not is_active_adversary_model(canonical_model):
+                continue
             row: Dict[str, object] = {
-                "model": model_name,
+                "model": canonical_model,
                 "utility": float(utility),
                 "competition_level": competition_level,
             }
@@ -166,6 +186,23 @@ def competition_level_output_stem(spec: Dict[str, str]) -> str:
     if stem.endswith("_vs_elo"):
         return stem[: -len("_vs_elo")]
     return stem
+
+
+def format_competition_level(value: float) -> str:
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def best_fit_line(xs: List[float], ys: List[float]) -> Tuple[np.ndarray, np.ndarray]:
+    if len(xs) < 2:
+        return np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
+    slope, intercept = np.polyfit(xs, ys, deg=1)
+    x_min = min(xs)
+    x_max = max(xs)
+    if x_min == x_max:
+        return np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
+    line_x = np.linspace(x_min, x_max, 200)
+    line_y = slope * line_x + intercept
+    return line_x, line_y
 
 
 def resolve_elo(
@@ -317,8 +354,18 @@ def make_plot(
     xs = [float(row["elo"]) for row in rows]
     ys = [float(row[spec["avg_key"]]) for row in rows]
     labels = [str(row["model"]) for row in rows]
+    line_x, line_y = best_fit_line(xs, ys)
 
-    ax.scatter(xs, ys, s=140, color="#2563eb", edgecolors="#1e3a8a", linewidths=1.2)
+    ax.scatter(
+        xs,
+        ys,
+        s=140,
+        color="#2563eb",
+        edgecolors="#1e3a8a",
+        linewidths=1.2,
+        alpha=0.4,
+    )
+    ax.plot(line_x, line_y, color="#1d4ed8", linewidth=2.8, alpha=0.95)
 
     for row, label in zip(rows, labels):
         ax.annotate(
@@ -364,6 +411,7 @@ def make_plot_by_competition_level(
         comp_rows = sorted(grouped[comp], key=lambda row: int(row["elo"]))
         xs = [float(row["elo"]) for row in comp_rows]
         ys = [float(row[spec["avg_key"]]) for row in comp_rows]
+        line_x, line_y = best_fit_line(xs, ys)
         ax.plot(
             xs,
             ys,
@@ -371,7 +419,15 @@ def make_plot_by_competition_level(
             markersize=7,
             linewidth=2.2,
             color=colors[comp],
-            label=f"competition={comp:.1f}",
+            alpha=0.28,
+            label=f"competition={format_competition_level(comp)}",
+        )
+        ax.plot(
+            line_x,
+            line_y,
+            linewidth=2.8,
+            color=colors[comp],
+            alpha=0.98,
         )
         for row in comp_rows:
             xtick_rows[int(row["elo"])] = str(row["model"])
@@ -447,7 +503,8 @@ def main() -> None:
     spec = metric_spec(args.metric)
     elo_by_model = parse_elo_markdown(args.elo_markdown)
     run_rows = collect_run_rows(args.results_root)
-    rows = summarize_models(run_rows, elo_by_model, args.models, spec)
+    selected_models = filter_active_adversary_models(args.models)
+    rows = summarize_models(run_rows, elo_by_model, selected_models, spec)
 
     if not rows:
         raise SystemExit("No matching model rows were found in the completed results.")
@@ -457,7 +514,7 @@ def main() -> None:
         aggregate_stem = competition_level_output_stem(spec)
         png_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models.png"
         csv_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models.csv"
-        aggregate_rows = summarize_competition_levels_aggregated_over_models(run_rows, args.models, spec)
+        aggregate_rows = summarize_competition_levels_aggregated_over_models(run_rows, selected_models, spec)
         if not aggregate_rows:
             raise SystemExit("No aggregate competition-level rows were found in the completed results.")
         write_summary_csv(aggregate_rows, csv_path, spec)
@@ -466,7 +523,7 @@ def main() -> None:
         print(f"Wrote summary: {csv_path}")
         for row in aggregate_rows:
             print(
-                f"competition={row['competition_level']:.1f}: "
+                f"competition={format_competition_level(float(row['competition_level']))}: "
                 f"{spec['avg_key']}={row[spec['avg_key']]:.4f}, n={row['num_runs']}"
             )
         return
@@ -474,7 +531,7 @@ def main() -> None:
     if args.by_competition_level:
         png_path = analysis_dir / f"{spec['output_stem']}_by_competition_level.png"
         csv_path = analysis_dir / f"{spec['output_stem']}_by_competition_level.csv"
-        by_comp_rows = summarize_models_by_competition_level(run_rows, elo_by_model, args.models, spec)
+        by_comp_rows = summarize_models_by_competition_level(run_rows, elo_by_model, selected_models, spec)
         if not by_comp_rows:
             raise SystemExit("No competition-level rows were found in the completed results.")
         write_summary_csv(by_comp_rows, csv_path, spec)
@@ -486,7 +543,7 @@ def main() -> None:
             if row["model"] != row["elo_model_name"]:
                 inferred = f" (Elo mapped to {row['elo_model_name']})"
             print(
-                f"competition={row['competition_level']:.1f} | {row['model']}: "
+                f"competition={format_competition_level(float(row['competition_level']))} | {row['model']}: "
                 f"elo={row['elo']}, {spec['avg_key']}={row[spec['avg_key']]:.4f}, "
                 f"n={row['num_runs']}{inferred}"
             )

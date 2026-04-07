@@ -23,6 +23,7 @@
 
 import json
 import os
+import sys
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Tuple, Optional
@@ -33,6 +34,16 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from strong_models_experiment.analysis.active_model_roster import (
+    active_model_info_map,
+    canonical_model_name as roster_canonical_model_name,
+    is_active_adversary_model,
+)
 
 # Set style
 plt.style.use('seaborn-v0_8-whitegrid')
@@ -101,6 +112,16 @@ MODEL_INFO = {
     "kimi-k2-thinking": {"tier": "Strong", "elo": 1438, "source": "Open", "reasoning": True},
     "qwen3-235b-a22b-instruct-2507": {"tier": "Strong", "elo": 1418, "source": "Open", "reasoning": False},
 }
+for _model_name, _info in active_model_info_map().items():
+    MODEL_INFO.setdefault(
+        _model_name,
+        {
+            "tier": _info["tier"],
+            "elo": _info["elo"],
+            "source": "Unknown",
+            "reasoning": False,
+        },
+    )
 
 TIER_ORDER = ["Strong", "Medium", "Weak"]
 TIER_COLORS = {"Strong": "#e74c3c", "Medium": "#f39c12", "Weak": "#27ae60"}
@@ -251,7 +272,11 @@ def discover_gpt5_nano_experiments() -> List[Dict]:
                 continue
             
             weak_model, strong_model = parse_model_pair_from_path(model_pair_dir)
+            weak_model = roster_canonical_model_name(weak_model)
+            strong_model = roster_canonical_model_name(strong_model)
             if weak_model != 'gpt-5-nano':
+                continue
+            if not is_active_adversary_model(strong_model):
                 continue
             
             # Find all experiment result files

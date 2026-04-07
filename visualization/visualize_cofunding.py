@@ -66,6 +66,11 @@ from game_environments.cofunding_metrics import (
     social_welfare_cofunding,
     utilitarian_efficiency,
 )
+from strong_models_experiment.analysis.active_model_roster import (
+    active_model_info_map,
+    canonical_model_name as roster_canonical_model_name,
+    is_active_adversary_model,
+)
 
 # =============================================================================
 # Style & Constants
@@ -116,6 +121,7 @@ MODEL_INFO = {
     "gpt-5-nano": {"tier": "Weak", "elo": 1338},
     "llama-3.1-8b-instruct": {"tier": "Weak", "elo": 1180},
 }
+MODEL_INFO.update(active_model_info_map())
 
 TIER_COLORS = {"Strong": "#e74c3c", "Medium": "#f39c12", "Weak": "#27ae60"}
 
@@ -124,7 +130,7 @@ REFERENCE_PATTERNS = ["gpt-5-nano", "gpt-5.2"]
 
 
 def _is_reference_model(name: str) -> bool:
-    s = str(name).lower()
+    s = roster_canonical_model_name(str(name)).lower()
     return any(p in s for p in REFERENCE_PATTERNS)
 
 
@@ -415,8 +421,8 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
 
     # Model info
     path_cfg = result.get("_path_config", {})
-    m1 = path_cfg.get("model1", "")
-    m2 = path_cfg.get("model2", "")
+    m1 = roster_canonical_model_name(path_cfg.get("model1", ""))
+    m2 = roster_canonical_model_name(path_cfg.get("model2", ""))
     if model_order == "weak_first":
         metrics["baseline_model"] = m1
         metrics["adversary_model"] = m2
@@ -1078,6 +1084,7 @@ def main():
 
     df = pd.DataFrame(all_metrics)
     df = _add_focal_reference_columns(df)
+    df = df[df["focal_model"].map(is_active_adversary_model)].copy()
 
     # Summary stats
     print_summary_statistics(df)

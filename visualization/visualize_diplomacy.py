@@ -43,6 +43,17 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from strong_models_experiment.analysis.active_model_roster import (
+    active_model_elo_map,
+    canonical_model_name as roster_canonical_model_name,
+    is_active_adversary_model,
+    short_model_name as roster_short_model_name,
+)
+
 # Style
 plt.style.use("seaborn-v0_8-whitegrid")
 sns.set_palette("husl")
@@ -103,10 +114,15 @@ MODEL_ELO = {
 
 
 MARKER_POOL = ["o", "s", "D", "^", "v", "P", "X", "*", "h", "<", ">"]
+MODEL_ELO.update(active_model_elo_map())
 
 
 def short_name(model_id: str) -> str:
-    return MODEL_SHORT_NAMES.get(model_id, model_id)
+    return roster_short_model_name(model_id)
+
+
+def canonical_model_name(model_id: str) -> str:
+    return roster_canonical_model_name(model_id)
 
 
 def _markers_for(hue_levels):
@@ -149,8 +165,11 @@ def collect_results(experiment_dir: str) -> pd.DataFrame:
 
         # Determine which model is which agent
         models_list = config["models"]
-        model_alpha = models_list[0]
-        model_beta = models_list[1] if len(models_list) > 1 else models_list[0]
+        model_alpha = canonical_model_name(models_list[0])
+        model_beta = canonical_model_name(models_list[1] if len(models_list) > 1 else models_list[0])
+        adversary_raw = canonical_model_name(config.get("model2", model_beta))
+        if not is_active_adversary_model(adversary_raw):
+            continue
 
         row = {
             "experiment_id": config["experiment_id"],
@@ -179,12 +198,11 @@ def collect_results(experiment_dir: str) -> pd.DataFrame:
             row["baseline_model"] = config.get("baseline_model", "")
         else:
             row["token_budget"] = None
-            m1 = config.get("model1", model_alpha)
-            m2 = config.get("model2", model_beta)
+            m1 = canonical_model_name(config.get("model1", model_alpha))
+            m2 = adversary_raw
             row["model_pair"] = f"{short_name(m1)} vs {short_name(m2)}"
 
         # Adversary model info (model2 is always the adversary)
-        adversary_raw = config.get("model2", model_beta)
         row["adversary_model"] = adversary_raw
         row["adversary_short"] = short_name(adversary_raw)
         row["adversary_elo"] = MODEL_ELO.get(adversary_raw, 0)
