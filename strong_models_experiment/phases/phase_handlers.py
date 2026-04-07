@@ -1007,6 +1007,10 @@ class PhaseHandler:
                             "round": round_num,
                             "timestamp": time.time()
                         }
+                        if "raw_response" in vote_result:
+                            enhanced_vote_response["raw_response"] = vote_result["raw_response"]
+                        if "parse_error" in vote_result:
+                            enhanced_vote_response["parse_error"] = vote_result["parse_error"]
 
                         self.save_interaction(
                             agent.agent_id,

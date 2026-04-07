@@ -300,7 +300,7 @@ Respond with ONLY a JSON object in this exact format:
 
             return proposal
 
-        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
             # Fallback: proposer gets all items
             fallback_allocation = {aid: [] for aid in agents}
             fallback_allocation[agent_id] = list(range(n_items))
@@ -308,7 +308,12 @@ Respond with ONLY a JSON object in this exact format:
             return {
                 "allocation": fallback_allocation,
                 "reasoning": "Failed to parse response - defaulting to proposer gets all",
-                "proposed_by": agent_id
+                "proposed_by": agent_id,
+                "raw_response": response,
+                "parse_error": {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                },
             }
 
     def validate_proposal(
@@ -538,6 +543,7 @@ Each vote must be either "accept" or "reject"."""
         round_num: int
     ) -> List[Dict[str, Any]]:
         """Parse a batch voting response into one vote per proposal."""
+        parse_error = None
         try:
             if response.strip().startswith('{'):
                 payload = json.loads(response)
@@ -551,8 +557,12 @@ Each vote must be either "accept" or "reject"."""
             raw_votes = payload.get("votes", [])
             if not isinstance(raw_votes, list):
                 raise ValueError("Batch vote response did not contain a votes list")
-        except (json.JSONDecodeError, ValueError, TypeError, AttributeError):
+        except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
             raw_votes = []
+            parse_error = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+            }
 
         proposal_number_set = set(proposal_numbers)
         parsed_votes = {}
@@ -583,18 +593,18 @@ Each vote must be either "accept" or "reject"."""
 
         vote_results = []
         for proposal_number in proposal_numbers:
-            vote_results.append(
-                parsed_votes.get(
-                    proposal_number,
-                    {
-                        "proposal_number": proposal_number,
-                        "vote": "reject",
-                        "reasoning": "Missing or invalid vote entry",
-                        "voter": agent_id,
-                        "round": round_num,
-                    }
-                )
-            )
+            default_vote = {
+                "proposal_number": proposal_number,
+                "vote": "reject",
+                "reasoning": "Missing or invalid vote entry",
+                "voter": agent_id,
+                "round": round_num,
+            }
+            if parse_error is not None:
+                default_vote["raw_response"] = response
+                default_vote["parse_error"] = parse_error
+
+            vote_results.append(parsed_votes.get(proposal_number, default_vote))
 
         return vote_results
 
