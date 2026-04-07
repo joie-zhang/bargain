@@ -212,8 +212,12 @@ async def handle_request(session: aiohttp.ClientSession, request_path: Path):
         response = {"result": None, "error": f"{type(e).__name__}: {e}", "usage": None}
         log.error(f"Failed {suffix}: {type(e).__name__}: {e}")
 
-    with open(response_path, 'w') as f:
+    temp_response_path = POLL_DIR / f".response_{suffix}.json.tmp"
+    with open(temp_response_path, 'w') as f:
         json.dump(response, f)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temp_response_path, response_path)
 
     # Request may already be moved/removed by another worker/process.
     if request_path.exists():

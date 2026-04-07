@@ -110,6 +110,10 @@ class AgentResponse:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
+class NonRetryableLLMError(Exception):
+    """Fail-fast model/provider error that should not be retried by outer loops."""
+
+
 @dataclass 
 class NegotiationContext:
     """Context information for LLM agents during negotiation."""
@@ -910,6 +914,8 @@ Response format: Provide your analysis as structured strategic thinking."""
                 
                 return response
                 
+            except NonRetryableLLMError:
+                raise
             except Exception as e:
                 self.logger.warning(f"Attempt {attempt + 1}/{self.config.max_retries} failed: {e}")
                 if attempt < self.config.max_retries - 1:

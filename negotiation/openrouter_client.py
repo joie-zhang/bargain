@@ -12,6 +12,7 @@ import aiohttp
 import time
 import uuid
 import random
+import re
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 import logging
@@ -20,7 +21,7 @@ import shutil
 from pathlib import Path
 
 
-from .llm_agents import BaseLLMAgent, LLMConfig, ModelType
+from .llm_agents import BaseLLMAgent, LLMConfig, ModelType, NonRetryableLLMError
 
 
 # OpenRouter model mappings
@@ -101,13 +102,20 @@ class OpenRouterAgent(BaseLLMAgent):
                 f"This might indicate an invalid key format."
             )
         
-        transport = os.getenv("OPENROUTER_TRANSPORT", "auto").strip().lower()
-        if transport not in {"direct", "proxy", "auto"}:
+        requested_transport = os.getenv("OPENROUTER_TRANSPORT", "auto").strip().lower()
+        if requested_transport not in {"direct", "proxy", "auto"}:
             self.logger.warning(
                 "Invalid OPENROUTER_TRANSPORT=%r; defaulting to 'auto'",
-                transport,
+                requested_transport,
             )
-            transport = "auto"
+            requested_transport = "auto"
+
+        self.running_in_slurm = bool(os.getenv("SLURM_JOB_ID"))
+        if requested_transport == "auto":
+            resolved_transport = "proxy" if self.running_in_slurm else "direct"
+        else:
+            resolved_transport = requested_transport
+        self.requested_transport = requested_transport
 
         proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy")
 
@@ -143,7 +151,7 @@ class OpenRouterAgent(BaseLLMAgent):
 
         self.openrouter_config = OpenRouterConfig(
             api_key=api_key.strip(),
-            transport=transport,
+            transport=resolved_transport,
             proxy_poll_dir=proxy_poll_dir,
             proxy_poll_interval=proxy_poll_interval,
             proxy_timeout=proxy_timeout,
@@ -170,8 +178,18 @@ class OpenRouterAgent(BaseLLMAgent):
                     self.model_id = "google/gemma-2-9b-it"
             else:
                 raise ValueError(f"Unknown model type for OpenRouter: {llm_config.model_type}")
+
+        # Keep parity with the other agent classes so downstream analyzers can
+        # recover the configured model name from the live agent object.
+        self.model_name = self.model_id
         
         self.logger = logging.getLogger(f"OpenRouterAgent-{agent_id}")
+        self.logger.debug(
+            "Resolved OpenRouter transport requested=%s resolved=%s slurm=%s",
+            self.requested_transport,
+            self.openrouter_config.transport,
+            self.running_in_slurm,
+        )
     
     async def _ensure_session(self):
         """Ensure aiohttp session exists."""
@@ -191,11 +209,35 @@ class OpenRouterAgent(BaseLLMAgent):
 
     def _validate_request_result(self, result: Any, error: Any) -> None:
         if error:
+            if self._is_non_retryable_error_message(str(error)):
+                raise NonRetryableLLMError(str(error))
             raise Exception(error)
         if result is None:
             raise Exception("OpenRouter API returned None result")
         if not isinstance(result, str) or len(result.strip()) == 0:
             raise Exception("OpenRouter API returned empty response content")
+
+    @staticmethod
+    def _is_non_retryable_http_status(status: int) -> bool:
+        return 400 <= status < 500 and status not in {408, 409, 429}
+
+    @classmethod
+    def _is_non_retryable_error_message(cls, message: str) -> bool:
+        lowered = message.lower()
+        match = re.search(r"http\s+(\d{3})", lowered)
+        if match:
+            status = int(match.group(1))
+            if cls._is_non_retryable_http_status(status):
+                return True
+        return any(
+            marker in lowered
+            for marker in (
+                "invalid model identifier",
+                "no endpoints found",
+                "not_found_error",
+                "provider returned error",
+            )
+        )
     
     def _extract_content_from_openrouter_response(self, data: Dict[str, Any]) -> str:
         """Extract message content from OpenRouter response payload."""
@@ -259,7 +301,10 @@ class OpenRouterAgent(BaseLLMAgent):
         ) as response:
             if response.status != 200:
                 error_text = await response.text()
-                raise Exception(f"HTTP {response.status}: {error_text[:500]}")
+                error_message = f"HTTP {response.status}: {error_text[:500]}"
+                if self._is_non_retryable_http_status(response.status):
+                    raise NonRetryableLLMError(error_message)
+                raise Exception(error_message)
 
             data = await response.json(encoding="utf-8")
             result = self._extract_content_from_openrouter_response(data)
@@ -278,11 +323,6 @@ class OpenRouterAgent(BaseLLMAgent):
         processed_dir.mkdir(parents=True, exist_ok=True)
 
         effective_timeout = client_timeout
-        if self.openrouter_config.transport == "auto":
-            effective_timeout = min(
-                client_timeout,
-                self.openrouter_config.proxy_probe_timeout,
-            )
 
         # Use nanoseconds + uuid to avoid filename collisions across many workers.
         timestamp = f"{time.time_ns()}_{uuid.uuid4().hex}"
@@ -300,17 +340,25 @@ class OpenRouterAgent(BaseLLMAgent):
         self.logger.debug(f"[client] Wrote {request_path.name}")
 
         start = time.time()
-        while not response_path.exists():
+        response_data = None
+        while response_data is None:
             if time.time() - start > effective_timeout:
                 if request_path.exists():
                     request_path.unlink()
                 raise ProxyMonitorUnavailableError(
                     f"No proxy response after {effective_timeout}s for request {timestamp}. {proxy_hint}"
                 )
-            await asyncio.sleep(poll_interval)
-
-        with open(response_path, "r") as f:
-            response_data = json.load(f)
+            if not response_path.exists():
+                await asyncio.sleep(poll_interval)
+                continue
+            try:
+                with open(response_path, "r") as f:
+                    response_data = json.load(f)
+            except json.JSONDecodeError:
+                # The proxy monitor writes response files from another process.
+                # If we observe the file before the JSON payload is fully visible
+                # on the shared filesystem, keep polling instead of failing.
+                await asyncio.sleep(poll_interval)
 
         result, error = response_data["result"], response_data["error"]
         usage = response_data.get("usage", {}) or {}
@@ -356,23 +404,12 @@ class OpenRouterAgent(BaseLLMAgent):
                     )
                     self._validate_request_result(result, error)
                 else:
-                    try:
-                        result, error, usage = await self._send_request_via_proxy(
-                            url, headers, payload, self.openrouter_config.timeout
-                        )
-                        self._validate_request_result(result, error)
-                    except Exception as proxy_exc:
-                        self.logger.warning(
-                            "OpenRouter proxy path failed in auto mode (%s); "
-                            "falling back to direct access to %s",
-                            proxy_exc,
-                            url,
-                        )
-                        result, error, usage = await self._send_request_direct(
-                            url, headers, payload, self.openrouter_config.timeout
-                        )
-                        self._validate_request_result(result, error)
+                    raise RuntimeError(
+                        f"Unsupported OpenRouter transport: {self.openrouter_config.transport}"
+                    )
                 return result, usage
+            except NonRetryableLLMError:
+                raise
             except asyncio.TimeoutError:
                 self.logger.warning(
                     f"Request timeout (attempt {attempt + 1}/{max_retries})"

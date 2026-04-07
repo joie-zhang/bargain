@@ -388,8 +388,9 @@ module load proxy/default
 
 # Activate virtual environment
 source "\${BASE_DIR}/.venv/bin/activate"
-# OpenRouter routing: proxy monitor first, then direct fallback.
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
+# On Slurm compute nodes, force OpenRouter through the shared proxy queue.
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-proxy}"
+export OPENROUTER_PROXY_CLIENT_TIMEOUT="\${OPENROUTER_PROXY_CLIENT_TIMEOUT:-6000}"
 echo "Activated virtual environment: \${BASE_DIR}/.venv"
 echo "Python version: \$(python3 --version)"
 echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
@@ -514,7 +515,8 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-proxy}"
+export OPENROUTER_PROXY_CLIENT_TIMEOUT="\${OPENROUTER_PROXY_CLIENT_TIMEOUT:-6000}"
 echo "Python version: \$(python3 --version)"
 echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
@@ -600,7 +602,8 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-proxy}"
+export OPENROUTER_PROXY_CLIENT_TIMEOUT="\${OPENROUTER_PROXY_CLIENT_TIMEOUT:-6000}"
 echo "Python version: \$(python3 --version)"
 echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"
@@ -686,7 +689,8 @@ echo "============================================================"
 
 module load proxy/default
 source "\${BASE_DIR}/.venv/bin/activate"
-export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-auto}"
+export OPENROUTER_TRANSPORT="\${OPENROUTER_TRANSPORT:-proxy}"
+export OPENROUTER_PROXY_CLIENT_TIMEOUT="\${OPENROUTER_PROXY_CLIENT_TIMEOUT:-6000}"
 echo "Python version: \$(python3 --version)"
 echo "OpenRouter transport: \$OPENROUTER_TRANSPORT"
 echo "CUDA available: \$(python3 -c 'import torch; print(torch.cuda.is_available())')"

@@ -73,8 +73,23 @@ class ExperimentAnalyzer:
     @staticmethod
     def get_model_name_from_agent(agent: Any) -> str:
         """Get model name from agent object."""
+        candidate_names = []
         if hasattr(agent, "model_name") and agent.model_name:
-            model_name = agent.model_name
+            candidate_names.append(agent.model_name)
+        if hasattr(agent, "model_id") and agent.model_id:
+            candidate_names.append(agent.model_id)
+        model_info = getattr(agent, "get_model_info", None)
+        if callable(model_info):
+            try:
+                info = model_info() or {}
+            except Exception:
+                info = {}
+            for key in ("model_name", "model_id"):
+                value = info.get(key)
+                if value:
+                    candidate_names.append(value)
+
+        for model_name in candidate_names:
             if model_name in STRONG_MODELS_CONFIG:
                 return model_name
             for config_key, config_data in STRONG_MODELS_CONFIG.items():
@@ -85,7 +100,8 @@ class ExperimentAnalyzer:
                     return config_key
                 if config_model_id and (config_key in model_name or model_name in config_model_id):
                     return config_key
-            return model_name
+            if model_name:
+                return model_name
         return ExperimentAnalyzer.get_model_name(agent.agent_id)
 
     @staticmethod
