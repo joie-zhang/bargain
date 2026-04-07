@@ -826,12 +826,17 @@ Last round's proposal did not carry over or accumulate with this round.{reasonin
                     "proposed_by": agent_id,
                 }
 
-        except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+        except (json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
             # Fallback: zero contributions
             return {
                 "contributions": [0.0] * m,
                 "reasoning": "Failed to parse response - defaulting to zero contributions",
                 "proposed_by": agent_id,
+                "raw_response": response,
+                "parse_error": {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                },
             }
 
     def validate_proposal(

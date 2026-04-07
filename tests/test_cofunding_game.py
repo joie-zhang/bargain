@@ -295,6 +295,9 @@ class TestProposalParsing:
         response = "this is not JSON at all"
         parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
         assert parsed["contributions"] == [0.0, 0.0, 0.0]
+        assert parsed["raw_response"] == response
+        assert parsed["parse_error"]["type"] == "ValueError"
+        assert parsed["parse_error"]["message"] == "No JSON found in response"
 
     def test_validate_valid_proposal(self):
         """Valid proposal should pass validation."""

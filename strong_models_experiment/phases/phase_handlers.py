@@ -719,6 +719,8 @@ class PhaseHandler:
                             "contributions": [0.0] * game_state["m_projects"],
                             "reasoning": "Fallback: zero contributions after validation failure",
                             "proposed_by": agent.agent_id,
+                            "raw_response": response.content,
+                            "validation_error": "Proposal invalid after retry",
                         }
                 proposal["proposed_by"] = agent.agent_id
                 proposal["round"] = round_num
@@ -1470,6 +1472,8 @@ Consider what adjustments might lead to consensus in future rounds."""
                         "contributions": [0.0] * m,
                         "reasoning": "Fallback: zero contributions after validation failure",
                         "proposed_by": agent.agent_id,
+                        "raw_response": response_content,
+                        "validation_error": "Pledge invalid after retry",
                     }
 
             pledges[agent.agent_id] = parsed

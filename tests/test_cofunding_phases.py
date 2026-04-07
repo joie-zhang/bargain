@@ -116,6 +116,100 @@ class TestProposalValidation:
         parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
         assert game.validate_proposal(parsed, state) is False
 
+    def test_parse_failure_preserves_raw_response(self):
+        """Parse failures should retain the raw response for later inspection."""
+        game, agents, state = make_game_and_state(m_projects=3)
+
+        response = "definitely not valid JSON"
+        parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+
+        assert parsed["contributions"] == [0.0, 0.0, 0.0]
+        assert parsed["raw_response"] == response
+        assert parsed["parse_error"]["type"] == "ValueError"
+
+    def test_run_proposal_phase_saves_parse_failure_diagnostics(self):
+        """Saved proposal interactions should include raw responses on parse failure."""
+        game, _, state = make_game_and_state(m_projects=3)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        bad_response = "not json"
+        agents = [
+            FakeAgent("Agent_1", [bad_response]),
+            FakeAgent("Agent_2", [json.dumps({"contributions": [0.0, 0.0, 0.0], "reasoning": "ok"})]),
+        ]
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(
+            save_interaction_callback=save_interaction,
+            game_environment=game,
+        )
+
+        asyncio.run(
+            handler.run_proposal_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=game.config.t_rounds,
+            )
+        )
+
+        saved_response = json.loads(saved[0][0][3])
+        assert saved_response["raw_response"] == bad_response
+        assert saved_response["parse_error"]["type"] == "ValueError"
+
+    def test_run_proposal_phase_saves_validation_failure_diagnostics(self):
+        """Saved proposal interactions should keep the last invalid raw response."""
+        game, _, state = make_game_and_state(m_projects=3)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        budget = state["agent_budgets"]["Agent_1"]
+        invalid_first = json.dumps({
+            "contributions": [budget * 10, budget * 10, budget * 10],
+            "reasoning": "too much",
+        })
+        invalid_retry = json.dumps({
+            "contributions": [budget * 20, budget * 20, budget * 20],
+            "reasoning": "still too much",
+        })
+        agents = [
+            FakeAgent("Agent_1", [invalid_first, invalid_retry]),
+            FakeAgent("Agent_2", [json.dumps({"contributions": [0.0, 0.0, 0.0], "reasoning": "ok"})]),
+        ]
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(
+            save_interaction_callback=save_interaction,
+            game_environment=game,
+        )
+
+        asyncio.run(
+            handler.run_proposal_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=game.config.t_rounds,
+            )
+        )
+
+        saved_response = json.loads(saved[0][0][3])
+        assert saved_response["contributions"] == [0.0, 0.0, 0.0]
+        assert saved_response["raw_response"] == invalid_retry
+        assert saved_response["validation_error"] == "Proposal invalid after retry"
+
 
 class TestJointProposalPreparation:
     """Tests for aggregation into the round's joint proposal."""
