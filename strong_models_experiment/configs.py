@@ -198,6 +198,17 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "gpt-5-nano-high": {
+        "name": "GPT-5 Nano (High Reasoning Effort)",
+        "model_id": "gpt-5-nano-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "Strong tier, Closed-source, Reasoning",
+        "temperature": 1.0,
+        "reasoning_effort": "high",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "o3": {
         "name": "O3",
         "model_id": "o3-2025-04-16",
@@ -661,7 +672,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "meta-llama/llama-3.1-8b-instruct",
         "provider": "OpenRouter",
         "api_type": "openrouter",
-        "description": "Rank 31, Elo: 1212, Open-source, Non-reasoning",
+        "description": "Rank 31, Elo: 1212, Open-source, Non-reasoning (OpenRouter API)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
@@ -672,6 +683,17 @@ STRONG_MODELS_CONFIG = {
         "provider": "OpenRouter",
         "api_type": "openrouter",
         "description": "Rank 31 equivalent, Open-source, Non-reasoning (OpenRouter API)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.1-8b-instruct-cluster": {
+        "name": "Llama 3.1 8B Instruct (Cluster)",
+        "model_id": "meta-llama/llama-3.1-8b-instruct",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct",
+        "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
@@ -847,10 +869,12 @@ STRONG_MODELS_CONFIG = {
         "model_id": "anthropic/claude-3.5-sonnet",
         "provider": "OpenRouter",
         "api_type": "openrouter",
-        "description": "Best-effort Arena-name alias. Anthropic retired the dated snapshot; this routes to OpenRouter's current Claude 3.5 Sonnet endpoint instead.",
+        "description": "Retired Arena-name alias kept only for backward compatibility.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
-        "model_category": "medium"
+        "model_category": "medium",
+        "deprecated": True,
+        "deprecation_message": "claude-3-5-sonnet-20241022 was retired on October 28, 2025 and should not be used for new experiments."
     },
     "gpt-4o-2024-05-13": {
         "name": "GPT-4o 2024-05-13",
@@ -902,6 +926,17 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
+    "qwen2.5-72b-instruct-cluster": {
+        "name": "Qwen2.5 72B Instruct (Cluster)",
+        "model_id": "qwen/qwen-2.5-72b-instruct",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct",
+        "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "medium"
+    },
     "llama-3-70b-instruct": {
         "name": "Llama 3 70B Instruct",
         "model_id": "meta-llama/llama-3-70b-instruct",
@@ -938,6 +973,17 @@ STRONG_MODELS_CONFIG = {
         "provider": "OpenRouter",
         "api_type": "openrouter",
         "description": "Exact Arena-name alias.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.2-1b-instruct-cluster": {
+        "name": "Llama 3.2 1B Instruct (Cluster)",
+        "model_id": "meta-llama/llama-3.2-1b-instruct",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.2-1B-Instruct",
+        "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"

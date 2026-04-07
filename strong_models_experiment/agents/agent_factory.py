@@ -364,6 +364,12 @@ class StrongModelAgentFactory:
     def _create_openrouter_agent(self, model_name: str, model_config: Dict,
                                 agent_id: str, api_key: Optional[str], max_tokens: int = 999999) -> Optional[OpenRouterAgent]:
         """Create an OpenRouter agent."""
+        if model_config.get("deprecated", False):
+            deprecation_msg = model_config.get("deprecation_message", f"{model_name} is deprecated")
+            error_msg = f"ERROR: {deprecation_msg}"
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+
         if not api_key:
             self.logger.warning(f"OPENROUTER_API_KEY not set, skipping {model_name}")
             return None

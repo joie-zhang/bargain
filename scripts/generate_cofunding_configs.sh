@@ -139,7 +139,7 @@ MAX_ROUNDS=10
 DISCUSSION_TURNS=2
 MAX_TOKENS_PER_PHASE=10500
 BASE_SEED=42
-NUM_RUNS=1
+NUM_RUNS=2
 MS_PARAM_PAIRS=()  # explicit "alpha:sigma" pairs; if non-empty, overrides MS_ALPHA_VALUES × MS_SIGMA_VALUES grid
 C_MIN=10.0
 C_MAX=30.0
@@ -196,19 +196,72 @@ PROMPT_ONLY="true"
 #   - gpt-5.2-chat-latest-20260210 (OpenAI API)
 # Local cluster models:
 #   - qwen3-32b (4x A100 80GB)
-#   - llama-3.1-8b-instruct (2x A100 80GB)
-BASELINE_MODEL="gpt-5.2-chat-latest-20260210"
+# OpenRouter-routed models:
+#   - llama-3.1-8b-instruct (CPU/API path; no GPU required)
+BASELINE_MODEL="gpt-5-nano"
 ADVERSARY_MODELS=(
+    "claude-opus-4-6-thinking"
     "claude-opus-4-6"
-    "claude-haiku-4-5"
-    "qwen3-32b"
+    "gemini-3-pro"
+    "gpt-5.4-high"
+    "gpt-5.2-chat-latest-20260210"
+    "claude-opus-4-5-20251101-thinking-32k"
+    "claude-opus-4-5-20251101"
+    "gemini-2.5-pro"
+    "qwen3-max-preview"
+    "deepseek-r1-0528"
+    "claude-haiku-4-5-20251001"
+    "deepseek-r1"
+    "claude-sonnet-4-20250514"
+    "gemma-3-27b-it"
+    "o3-mini-high"
+    "deepseek-v3"
+    "gpt-4o-2024-05-13"
+    "gpt-5-nano-high"
+    "qwq-32b"
+    "gpt-4.1-nano-2025-04-14"
+    "llama-3.3-70b-instruct"
+    "gpt-4o-mini-2024-07-18"
+    "qwen2.5-72b-instruct"
+    "amazon-nova-pro-v1.0"
+    "command-r-plus-08-2024"
+    "claude-3-haiku-20240307"
+    "amazon-nova-micro-v1.0"
     "llama-3.1-8b-instruct"
+    "llama-3.2-3b-instruct"
+    "llama-3.2-1b-instruct"
 )
 PRIMARY_MODEL_PAIRS=(
     "${BASELINE_MODEL},${ADVERSARY_MODELS[0]}"
     "${BASELINE_MODEL},${ADVERSARY_MODELS[1]}"
     "${BASELINE_MODEL},${ADVERSARY_MODELS[2]}"
     "${BASELINE_MODEL},${ADVERSARY_MODELS[3]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[4]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[5]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[6]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[7]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[8]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[9]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[10]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[11]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[12]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[13]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[14]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[15]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[16]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[17]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[18]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[19]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[20]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[21]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[22]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[23]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[24]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[25]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[26]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[27]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[28]}"
+    "${BASELINE_MODEL},${ADVERSARY_MODELS[29]}"
 )
 
 # --- MODEL-SCALE EXPERIMENTS ---
@@ -945,7 +998,6 @@ with open(sys.argv[1], "r", encoding="utf-8") as f:
 models = cfg.get("models", [])
 gpu_map = {
     "qwen3-32b": 4,
-    "llama-3.1-8b-instruct": 2,
 }
 
 required = sum(gpu_map.get(m, 0) for m in models)

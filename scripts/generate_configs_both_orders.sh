@@ -89,7 +89,6 @@ STRONG_MODELS=(
     "claude-haiku-4-5-20251001"
     "deepseek-r1"
     "claude-sonnet-4-20250514"
-    "claude-3-5-sonnet-20241022"
     "gemma-3-27b-it"
     "o3-mini-high"
     "deepseek-v3"
@@ -105,9 +104,8 @@ STRONG_MODELS=(
     "amazon-nova-micro-v1.0"
     "llama-3.1-8b-instruct"
     "llama-3.2-3b-instruct"
-    "qwq-32b-preview"
-    "phi-3-mini-128k-instruct"
     "llama-3.2-1b-instruct"
+    "gpt-5-nano-high"
 )
 
 # Competition levels
