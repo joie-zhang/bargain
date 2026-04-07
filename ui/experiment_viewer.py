@@ -80,6 +80,36 @@ PHASE_CONFIG = {
     "cofunding_commit_vote_summary": {"icon": "📊", "color": "#ef4444", "label": "Vote Summary"},
 }
 
+TIMELINE_PHASE_ORDER = {
+    "game_setup": 0,
+    "preference_assignment": 1,
+    "discussion": 2,
+    "private_thinking": 3,
+    "proposal": 4,
+    "proposal_enumeration": 5,
+    "voting": 6,
+    "vote_tabulation": 7,
+    "reflection": 8,
+    "pledge_submission": 4,
+    "feedback": 5,
+    "aggregate_funding": 6,
+    "cofunding_commit_vote": 7,
+    "cofunding_commit_vote_summary": 8,
+}
+
+INTERACTION_ONLY_TIMELINE_PHASES = {
+    "game_setup",
+    "preference_assignment",
+    "private_thinking",
+    "voting",
+    "reflection",
+    "pledge_submission",
+    "feedback",
+    "aggregate_funding",
+    "cofunding_commit_vote",
+    "cofunding_commit_vote_summary",
+}
+
 AGENT_COLORS = {
     "Agent_Alpha": "#3b82f6",
     "Agent_Beta":  "#ef4444",
@@ -367,6 +397,8 @@ def classify_phase(entry: Dict) -> str:
     # Handle discussion_round_X_turn_Y from all_interactions
     if "discussion" in phase:
         return "discussion"
+    if phase.startswith("voting_round_") or phase.startswith("voting_"):
+        return "voting"
     if phase in PHASE_CONFIG:
         return phase
     # Handle all_interactions naming: pledge_round_N → pledge_submission
@@ -391,6 +423,69 @@ def group_by_round(logs: List[Dict]) -> Dict[int, List[Dict]]:
         r = entry.get("round", 0)
         rounds[r].append(entry)
     return dict(sorted(rounds.items()))
+
+
+def _interaction_to_timeline_entry(entry: Dict) -> Dict:
+    """Convert an all_interactions entry to the timeline-friendly log schema."""
+    return {
+        "phase": entry.get("phase", "unknown"),
+        "round": entry.get("round", 0),
+        "from": entry.get("agent_id", "system"),
+        "content": entry.get("response", ""),
+        "prompt": entry.get("prompt", ""),
+        "timestamp": entry.get("timestamp"),
+        "_source": "all_interactions",
+    }
+
+
+def _timeline_identity(entry: Dict) -> Tuple[int, str, str, str]:
+    """Build a stable identity for deduping merged timeline entries."""
+    round_num = int(entry.get("round", 0) or 0)
+    speaker = str(entry.get("from", "system"))
+    phase = classify_phase(entry)
+    content = str(entry.get("content", ""))
+    return (round_num, speaker, phase, content)
+
+
+def _timeline_sort_key(entry: Dict) -> Tuple[int, float, int, str]:
+    """Sort merged timeline entries in a natural within-round phase order."""
+    phase = classify_phase(entry)
+    phase_order = TIMELINE_PHASE_ORDER.get(phase, 999)
+    timestamp = entry.get("timestamp")
+    try:
+        ts_value = float(timestamp)
+    except (TypeError, ValueError):
+        ts_value = float("inf")
+    speaker = str(entry.get("from", "system"))
+    return (phase_order, ts_value, 0 if entry.get("_source") != "all_interactions" else 1, speaker)
+
+
+def merge_interactions_into_rounds(rounds: Dict[int, List[Dict]], interactions: List[Dict]) -> Dict[int, List[Dict]]:
+    """Merge interaction-only phases into the timeline rounds.
+
+    Conversation logs omit some phases for Game 2, especially private thinking,
+    voting, and reflection. Those phases do exist in all_interactions, so merge
+    them here without duplicating phases already represented in conversation_logs.
+    """
+    merged = {round_num: list(entries) for round_num, entries in rounds.items()}
+    seen = {_timeline_identity(entry) for entries in merged.values() for entry in entries}
+
+    for interaction in interactions:
+        canonical_phase = classify_phase(interaction)
+        if canonical_phase not in INTERACTION_ONLY_TIMELINE_PHASES:
+            continue
+        converted = _interaction_to_timeline_entry(interaction)
+        identity = _timeline_identity(converted)
+        if identity in seen:
+            continue
+        round_num = int(converted.get("round", 0) or 0)
+        merged.setdefault(round_num, []).append(converted)
+        seen.add(identity)
+
+    for round_num, entries in merged.items():
+        entries.sort(key=_timeline_sort_key)
+
+    return dict(sorted(merged.items()))
 
 
 def get_item_names(config: Dict) -> List[str]:
@@ -1153,24 +1248,8 @@ def render_timeline_tab(results: Dict, game_type: str, show_prompts: bool,
                 phase_key = classify_phase({"phase": phase_raw})
                 prompt_lookup[(r, agent, phase_key)].append(prompt_text)
 
-    # Merge round 0 (setup phases) from all_interactions if available
-    if interactions and 0 not in rounds:
-        round_0_entries = [
-            e for e in interactions if e.get("round", -1) == 0
-        ]
-        if round_0_entries:
-            # Convert all_interactions format to conversation_log format
-            converted = []
-            for e in round_0_entries:
-                converted.append({
-                    "phase": e.get("phase", "unknown"),
-                    "round": 0,
-                    "from": e.get("agent_id", "system"),
-                    "content": e.get("response", ""),
-                    "prompt": e.get("prompt", ""),
-                    "timestamp": e.get("timestamp"),
-                })
-            rounds[0] = converted
+    if interactions:
+        rounds = merge_interactions_into_rounds(rounds, interactions)
 
     # Inject prompts from all_interactions into conversation_log entries
     if show_prompts and prompt_lookup:
@@ -1782,14 +1861,30 @@ def _render_cofunding_analytics(results: Dict, experiment_id: str):
 
 def render_raw_data_tab(results: Dict, interactions: List[Dict], experiment_id: str):
     """Render JSON viewer + download."""
+    logs = results.get("conversation_logs", [])
+    private_thinking = [
+        entry for entry in interactions if classify_phase(entry) == "private_thinking"
+    ]
+    options = [
+        "Conversation Logs",
+        "Experiment Results",
+        "All Interactions",
+        "Config",
+        "Preferences",
+    ]
+    if private_thinking:
+        options.insert(2, "Private Thinking")
+
     data_choice = st.selectbox(
         "Select data",
-        ["Conversation Logs", "Experiment Results", "All Interactions", "Config", "Preferences"],
+        options,
+        index=options.index("Private Thinking") if private_thinking and not any(
+            classify_phase(entry) == "private_thinking" for entry in logs
+        ) else 0,
         key=f"raw_data_select_{experiment_id}",
     )
 
     if data_choice == "Conversation Logs":
-        logs = results.get("conversation_logs", [])
         st.caption(f"{len(logs)} total entries")
         page_size = 50
         if len(logs) > page_size:
@@ -1805,6 +1900,22 @@ def render_raw_data_tab(results: Dict, interactions: List[Dict], experiment_id: 
         # Show everything except conversation_logs (too large)
         summary = {k: v for k, v in results.items() if k != "conversation_logs"}
         st.json(summary)
+    elif data_choice == "Private Thinking":
+        st.caption(f"{len(private_thinking)} total entries")
+        page_size = 20
+        if len(private_thinking) > page_size:
+            page = st.number_input(
+                "Page",
+                min_value=1,
+                max_value=(len(private_thinking) - 1) // page_size + 1,
+                value=1,
+                key=f"private_page_{experiment_id}",
+            )
+            chunk = private_thinking[(page - 1) * page_size: page * page_size]
+            st.caption(f"Showing entries {(page-1)*page_size+1}–{(page-1)*page_size+len(chunk)}")
+            st.json(chunk)
+        else:
+            st.json(private_thinking)
     elif data_choice == "All Interactions":
         st.caption(f"{len(interactions)} total entries")
         page_size = 20
