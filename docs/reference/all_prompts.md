@@ -1,20 +1,19 @@
-# All Negotiation Game Prompts — Reference
+# All Negotiation Game Prompts - Reference
 
-> Complete reference of every prompt used in Games 1, 2, and 3.
-> Source files: `game_environments/item_allocation.py`, `game_environments/diplomatic_treaty.py`, `game_environments/co_funding.py`
->
-> Each prompt is preceded by a **Variables** block showing what every placeholder is and an example value it could take.
+> Current rendered prompt reference for Games 1, 2, and 3.
+> Prompt source files: `game_environments/item_allocation.py`, `game_environments/diplomatic_treaty.py`, `game_environments/co_funding.py`, `game_environments/base.py`
+> This file is generated from the live prompt methods plus fixed sample game states so the examples stay readable and stable.
 
 ---
 
 ## Full Asset Lists
 
-### Game 1 — All Possible Items (ITEM_NAMES)
+### Game 1 - All Possible Items (`ITEM_NAMES`)
 
 Up to 10 items; the game uses the first `m_items` from this list.
 
 | Index | Name |
-|-------|------|
+| ----- | ---- |
 | 0 | Apple |
 | 1 | Jewel |
 | 2 | Stone |
@@ -28,14 +27,14 @@ Up to 10 items; the game uses the first `m_items` from this list.
 
 ---
 
-### Game 2 — All Possible Issues (ISSUE_NAMES + ISSUE_PROPOSITIONS + ISSUE_INTERP_TEMPLATES)
+### Game 2 - All Possible Issues (`ISSUE_NAMES`, `ISSUE_PROPOSITIONS`, `ISSUE_INTERP_TEMPLATES`)
 
 Up to 10 issues; the game uses the first `n_issues` from this list.
 
-Each issue is a **continuous policy rate** shown to agents as an integer percentage from 0% to 100%. Positions are meaningful at every intermediate value — there is no "neutral"; 35 literally means "35% of that measure."
+Each issue is a continuous policy rate shown to agents as an integer percentage from 0% to 100%.
 
-| # | Issue Name | Scale: 0% = … \| 100% = … | Plain-English interpretation template |
-|---|------------|---------------------------|---------------------------------------|
+| # | Issue Name | Scale | Plain-English interpretation template |
+| - | ---------- | ----- | ------------------------------------- |
 | 1 | AI chip export quota | 0% = total ban on H200-class AI chip exports \| 100% = unrestricted export of all advanced AI chips | {pct}% of advanced AI chip production cleared for export |
 | 2 | Critical mineral emergency stockpile contribution | 0% = no designated critical minerals contributed to the accord's emergency stockpile \| 100% = each party contributes its full target amount of designated critical minerals to the accord's emergency stockpile | {pct}% of each party's target contribution committed to the accord's emergency critical mineral stockpile |
 | 3 | Nuclear warhead reduction | 0% = no warheads eliminated \| 100% = complete multilateral nuclear disarmament | {pct}% of multilateral nuclear warheads eliminated |
@@ -49,12 +48,12 @@ Each issue is a **continuous policy rate** shown to agents as an integer percent
 
 ---
 
-### Game 3 — All Possible Projects (PROJECT_NAMES)
+### Game 3 - All Possible Projects (`PROJECT_NAMES`)
 
-Up to 10 projects; the game uses the first `m_projects` from this list. Project costs are sampled from `Uniform(c_min, c_max)` at runtime (default range roughly 10–40 per project).
+Up to 10 projects; the game uses the first `m_projects` from this list.
 
 | Index | Name |
-|-------|------|
+| ----- | ---- |
 | 0 | Market Street Protected Bike Lane |
 | 1 | Parkside Adventure Playground |
 | 2 | Oak Avenue Crosswalk Beacons |
@@ -67,34 +66,16 @@ Up to 10 projects; the game uses the first `m_projects` from this list. Project 
 | 9 | Community Wi-Fi Plaza Hubs |
 
 ---
----
 
 ## Game 1: Item Allocation
 
-Protocol: **Propose-and-Vote**
-Phases: Setup → Discussion → Private Thinking → Proposal → Voting → Reflection
+Protocol: `propose_and_vote`
+Runtime structure: one-time setup (`rules + private preferences`), then each round:
+`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
----
+### 1.1 Setup Prompt (combined rules + private preferences)
 
-### 1.1 Setup Prompt (merged rules + private preferences)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{agent_phrase}` | "another agent" (n=2) or "N-1 other agents" (n>2) | `another agent` |
-| `{len(items)}` | Number of items in this game | `5` |
-| `{items_text}` | Numbered list of item names | `0: Apple`, `1: Jewel`, … |
-| `{n_agents}` | Total number of agents including self | `2` |
-| `{t_rounds}` | Maximum number of negotiation rounds | `3` |
-| `{gamma_discount}` | Per-round discount factor | `0.9` |
-| `{gamma_discount * 100:.0f}` | Round 2 payoff percentage | `90` |
-| `{gamma_discount**2 * 100:.0f}` | Round 3 payoff percentage | `81` |
-| `{agent_id}` | This agent's model/role identifier | `gpt-4o` |
-| `{pref_lines}` | One line per item: index, name, value, priority label | `0: Apple -> 8.34 (HIGH PRIORITY)` |
-| `{max_utility:.2f}` | Sum of all item preferences (theoretical max if agent gets everything) | `28.71` |
-
-**Rendered prompt (example: 2 agents, 5 items, γ=0.9, 3 rounds)**
+Source: `ItemAllocationGame.get_combined_setup_prompt()`
 
 ```
 Welcome to the Multi-Agent Negotiation Game!
@@ -123,6 +104,7 @@ You are participating in a strategic negotiation with another agent over 5 valua
 - You vote "accept" or "reject" on each proposal independently
 - A proposal needs UNANIMOUS acceptance from all agents to pass
 - If no proposal gets unanimous support, we continue to the next round
+- If no agreement is reached by the final round, then all agents walk away with zero utility.
 
 **REWARD DISCOUNTING:**
 - Rewards are discounted by a factor of 0.9 per round
@@ -132,6 +114,7 @@ You are participating in a strategic negotiation with another agent over 5 valua
 - The longer negotiations take, the less valuable the final allocation becomes
 
 **WINNING CONDITIONS:**
+- The goal is to maximize your utility, which is the sum of the utility from each of the objects that you receive.
 - Your goal is to maximize your total utility (after discounting)
 - No deal means everyone gets zero utility
 - Consider both immediate gains and the likelihood of proposals being accepted
@@ -139,17 +122,17 @@ You are participating in a strategic negotiation with another agent over 5 valua
 
 LOCKED PRIVATE PREFERENCES
 
-gpt-4o, you have been assigned the following SECRET preference values for each item:
+Agent_1, you have been assigned the following SECRET preference values for each item:
 
 **YOUR PRIVATE ITEM PREFERENCES:**
-  0: Apple -> 8.34 (HIGH PRIORITY)
-  1: Jewel -> 5.12 (Medium Priority)
-  2: Stone -> 2.81 (Low Priority)
-  3: Quill -> 7.22 (HIGH PRIORITY)
-  4: Pencil -> 5.22 (Medium Priority)
+  0: Apple -> 9
+  1: Jewel -> 5
+  2: Stone -> 3
+  3: Quill -> 7
+  4: Pencil -> 6
 
 **STRATEGIC ANALYSIS:**
-- Your theoretical maximum utility: 28.71 points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
+- Your theoretical maximum utility: 30 points (if you received ALL items — unrealistic in negotiation; use this only as an upper bound)
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other agents don't know your exact preferences
@@ -157,46 +140,24 @@ gpt-4o, you have been assigned the following SECRET preference values for each i
 3. Consider which agents might have complementary preferences
 4. Remember: you need ALL agents to accept a proposal
 
-Please acknowledge that you understand all of the following:
-- The game rules
-- The game structure, including the order of phases after setup
-- How reward discounting changes payoffs across rounds
-- The winning conditions, including that no deal yields zero utility
-- Your assigned private item preferences, including that they are secret and specific to you
+Please do not initiate the discussion or proposal phase yet.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private preferences that were assigned to you.
 ```
-
----
 
 ### 1.2 Preference Assignment Prompt (merged into 1.1)
 
-For Game 1, this is no longer a separate runtime phase.
-
-Item Allocation now sends one per-agent setup prompt containing both the shared
-rules and that agent's private item preferences, followed by a single
-acknowledgment request. The standalone helper remains in code for composition
-and compatibility, but it is no longer sent as its own phase in the actual
-Game 1 run.
-
----
+Game 1 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
+but the runtime uses `uses_combined_setup_phase() == True`, so the setup prompt above is the
+actual live prompt path.
 
 ### 1.3 Discussion Prompt
 
-#### Case A — Round 1, first speaker (no prior history)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round number | `1` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{items_text}` | Numbered list of item names | `0: Apple`, `1: Jewel`, … |
-
-**Rendered prompt**
+#### Case A - Round 1, first speaker
 
 ```
 🗣️ PUBLIC DISCUSSION PHASE - Round 1/3
 
-This is the open discussion phase where all agents can share information about their preferences.
+This is the open discussion phase where agents can discuss and strategize publicly.
 
 **ITEMS AVAILABLE:**
   0: Apple
@@ -214,26 +175,12 @@ This is the open discussion phase where all agents can share information about t
 You are the first to speak. Please share your thoughts on the items and any initial ideas for how a deal might be reached.
 ```
 
----
-
-#### Case B — Subsequent speaker (history present)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` or `2` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{items_text}` | Numbered list of items | `0: Apple`, … |
-| `{discussion_history}` | Prior messages this round, one per line | `gpt-4o: "I value Apple and Quill most highly…"` |
-| urgency line | Only present if `round_num > 1` and `round_num >= max_rounds - 1` | `⏰ **URGENT**: This is one of the final rounds!` |
-
-**Rendered prompt (Round 1 example)**
+#### Case B - Round 1, responding after another agent has spoken
 
 ```
 🗣️ PUBLIC DISCUSSION PHASE - Round 1/3
 
-This is the open discussion phase where all agents can share information about their preferences.
+This is the open discussion phase where agents can discuss and strategize publicly.
 
 **ITEMS AVAILABLE:**
   0: Apple
@@ -242,11 +189,11 @@ This is the open discussion phase where all agents can share information about t
   3: Quill
   4: Pencil
 
+
 **CONVERSATION SO FAR:**
-gpt-4o: "I value Apple and Quill most highly. I'd be open to giving up Stone and Pencil."
+**Agent_2**: I value Jewel most and can be flexible on Quill.
 
 ---
-
 **YOUR TURN TO RESPOND:**
 Based on what others have said above, please:
 - Respond to specific points raised by other agents
@@ -257,61 +204,12 @@ Based on what others have said above, please:
 Keep the conversation flowing naturally.
 ```
 
----
-
-**Rendered prompt (Later-round example: Round 2/3)**
+#### Case C - Later round, first speaker
 
 ```
 🗣️ PUBLIC DISCUSSION PHASE - Round 2/3
 
-This is the open discussion phase where all agents can share information about their preferences.
-
-**ITEMS AVAILABLE:**
-  0: Apple
-  1: Jewel
-  2: Stone
-  3: Quill
-  4: Pencil
-
-**CONVERSATION SO FAR:**
-gpt-4o: "Apple still matters most to me, but I might be flexible on Pencil if that helps."
-
----
-
-**YOUR TURN TO RESPOND:**
-Based on what others have said above, please:
-- Respond to specific points raised by other agents
-- Share your own perspective on the items
-- Propose potential trade-offs or areas of agreement
-- Ask clarifying questions if needed
-
-Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
-Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
-You do not need to reveal your full private strategy.
-⏰ **URGENT**: This is one of the final rounds!
-
-Keep the conversation flowing naturally.
-```
-
----
-
-#### Case C — Round ≥ 2, first speaker of the round (no current-round history yet)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{items_text}` | Numbered list of items | `0: Apple`, … |
-| urgency line | Only present if `round_num >= max_rounds - 1` | `⏰ **URGENT**: This is one of the final rounds!` |
-
-**Rendered prompt**
-
-```
-🗣️ PUBLIC DISCUSSION PHASE - Round 2/3
-
-This is the open discussion phase where all agents can share information about their preferences.
+This is the open discussion phase where agents can discuss and strategize publicly.
 
 **ITEMS AVAILABLE:**
   0: Apple
@@ -331,31 +229,46 @@ Previous proposals didn't reach consensus. Use what you learned from earlier dis
 You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy.
 ```
 
+#### Case D - Later round, responding after another agent has spoken
+
+```
+🗣️ PUBLIC DISCUSSION PHASE - Round 2/3
+
+This is the open discussion phase where agents can discuss and strategize publicly.
+
+**ITEMS AVAILABLE:**
+  0: Apple
+  1: Jewel
+  2: Stone
+  3: Quill
+  4: Pencil
+
+
+**CONVERSATION SO FAR:**
+**Agent_2**: I still want Jewel most, but I might compromise on Pencil.
+
 ---
+**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to specific points raised by other agents
+- Share your own perspective on the items
+- Propose potential trade-offs or areas of agreement
+- Ask clarifying questions if needed
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.
+⏰ **URGENT**: This is one of the final rounds!
+
+Keep the conversation flowing naturally.
+```
 
 ### 1.4 Private Thinking Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{items_text}` | Numbered list of items | `0: Apple`, … |
-| `{discussion_history}` | Prior messages this round | `**Agent_Beta**: I care most about Jewel.` |
-| `{top_priorities}` | Top 3 items by private value | `0: Apple (value=9.20)` |
-| urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: This is one of your final opportunities!` |
-| `{reasoning_token_budget}` | Optional: target reasoning tokens | `2000` |
-
-**Rendered prompt**
+Source: `ItemAllocationGame.get_thinking_prompt()`
 
 ```
 🧠 PRIVATE STRATEGIC ANALYSIS - Round 1/3
-
-**DISCUSSION THIS ROUND:**
-**Agent_Beta**: I care most about Jewel, but I can be flexible on Pencil.
-
----
 
 This is your private strategic planning time.
 
@@ -366,10 +279,12 @@ This is your private strategic planning time.
   3: Quill
   4: Pencil
 
-**YOUR TOP PRIORITIES:**
-- 0: Apple (value=9.20)
-- 2: Stone (value=7.80)
-- 4: Pencil (value=4.10)
+**YOUR FULL PREFERENCE REMINDER:**
+  0: Apple -> 9
+  1: Jewel -> 5
+  2: Stone -> 3
+  3: Quill -> 7
+  4: Pencil -> 6
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other agents' priorities from the discussion so far?
@@ -389,41 +304,24 @@ Respond with a JSON object:
 Remember: This analysis is completely private.
 ```
 
----
-
 ### 1.5 Proposal Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{item_names}` | Python list of item name strings | `['Apple', 'Jewel', 'Stone', 'Quill', 'Pencil']` |
-| `{len(items)-1}` | Last valid item index | `4` |
-| `{agents}` | Python list of all agent ID strings | `['gpt-4o', 'claude-3-7-sonnet']` |
-| `{agents[0]}` | First agent ID (shown in example JSON key) | `gpt-4o` |
-| `{agents[1]}` | Second agent ID (shown in example JSON key) | `claude-3-7-sonnet` |
-| `{round_num}` | Current round | `1` |
-| `{t_rounds}` | Maximum rounds | `3` |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-> **Fallback on parse failure:** proposer receives all items.
-
-**Rendered prompt**
+Source: `ItemAllocationGame.get_proposal_prompt()`
 
 ```
 Please propose an allocation of items among all agents.
 
 **Current Context:**
 - Items: ['Apple', 'Jewel', 'Stone', 'Quill', 'Pencil'] (indices 0-4)
-- Agents: ['gpt-4o', 'claude-3-7-sonnet']
+- Agents: ['Agent_1', 'Agent_2']
 - Round: 1/3
 
 **Instructions:**
 Respond with ONLY a JSON object in this exact format:
 {
     "allocation": {
-        "gpt-4o": [0, 2],
-        "claude-3-7-sonnet": [1, 3, 4]
+"Agent_1": [0, 2],
+"Agent_2": [1, 3, 4]
     },
     "reasoning": "Brief explanation of your proposed allocation"
 }
@@ -435,37 +333,40 @@ Respond with ONLY a JSON object in this exact format:
 - An agent can receive zero or multiple items
 ```
 
----
-
 ### 1.6 Voting Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{proposals_text}` | Formatted numbered list of all proposals shown together | see rendered prompt |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-**Rendered prompt**
+Source: `ItemAllocationGame.get_batch_voting_prompt()`
 
 ```
 The following proposals have been made for item allocation this round:
 
 PROPOSAL #1:
 ALLOCATION: {
-  "gpt-4o": [0, 2],
-  "claude-3-7-sonnet": [1, 3, 4]
+  "Agent_1": [
+    0,
+    3
+  ],
+  "Agent_2": [
+    1,
+    2,
+    4
+  ]
 }
-REASONING: I take Apple and Stone; you get the rest.
-PROPOSED BY: gpt-4o
+PROPOSED BY: Agent_1
 
 PROPOSAL #2:
 ALLOCATION: {
-  "gpt-4o": [1, 4],
-  "claude-3-7-sonnet": [0, 2, 3]
+  "Agent_1": [
+    1,
+    4
+  ],
+  "Agent_2": [
+    0,
+    2,
+    3
+  ]
 }
-REASONING: I get Jewel and Pencil; you get Apple, Stone, and Quill.
-PROPOSED BY: claude-3-7-sonnet
+PROPOSED BY: Agent_2
 
 **REMINDER — YOUR UTILITY:**
 - Your utility = sum of preference values for items you receive, multiplied by the round discount
@@ -483,16 +384,16 @@ Vote on EACH proposal independently. Consider:
 Respond with ONLY a JSON object in this exact format:
 {
     "votes": [
-        {
-            "proposal_number": 1,
-            "vote": "accept",
-            "reasoning": "Brief explanation of your vote on Proposal #1"
-        },
-        {
-            "proposal_number": 2,
-            "vote": "reject",
-            "reasoning": "Brief explanation of your vote on Proposal #2"
-        }
+{
+    "proposal_number": 1,
+    "vote": "accept",
+    "reasoning": "Brief explanation of your vote on Proposal #1"
+},
+{
+    "proposal_number": 2,
+    "vote": "reject",
+    "reasoning": "Brief explanation of your vote on Proposal #2"
+}
     ]
 }
 
@@ -500,36 +401,38 @@ Include exactly one vote entry for each proposal shown above.
 Each vote must be either "accept" or "reject".
 ```
 
----
+### 1.7 Reflection Prompt
+
+Source: default `GameEnvironment.get_reflection_prompt()` in `game_environments/base.py`
+
+```
+Reflect on the outcome of round 2.
+No proposal achieved unanimous acceptance.
+
+**VOTING OUTCOME THIS ROUND:**
+- Proposal #1: 1 accept, 1 reject
+- Proposal #2: 0 accept, 2 reject
+
+Take stock of what this round revealed before the next round begins.
+- What did you learn from the proposals and voting outcome?
+- Which participants seem to have compatible vs. conflicting priorities?
+- What seems to be blocking consensus?
+- How should you adjust your communication, concessions, or proposal strategy to improve the chances of agreement?
+
+Focus on concrete adjustments that could move the negotiation closer to consensus while still protecting your most important interests.
+```
+
 ---
 
 ## Game 2: Diplomatic Treaty
 
-Protocol: **Propose-and-Vote**
-Runtime structure: one-time Setup (**Rules + Private Preferences**), then each round: Discussion → Private Thinking → Proposal → Voting → Reflection
+Protocol: `propose_and_vote`
+Runtime structure: one-time setup (`rules + private preferences`), then each round:
+`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
-Position scale: integer percentages from 0% to 100% — every intermediate value is semantically meaningful
-Control parameters: ρ (position correlation across agents), θ (weight overlap across agents)
+### 2.1 Setup Prompt (combined rules + private preferences)
 
----
-
-### 2.1 Game Rules Prompt (combined setup prompt)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{delegations_phrase}` | "another delegation" (n=2) or "N-1 other delegations" | `another delegation` |
-| `{len(issues)}` | Number of issues in this game | `5` |
-| `{issues_text}` | Numbered list of issue names with scale endpoints | see rendered prompt |
-| `{n_agents}` | Total number of negotiating delegations | `2` |
-| `{t_rounds}` | Maximum rounds | `3` |
-| `{round_2_pct}` | Round 2 payoff percentage | `90` |
-| `{round_3_pct}` | Round 3 payoff percentage | `81` |
-| positions per issue | Private ideal percentages plus plain-English interpretation | `AI chip export quota: 82% -> 82% of advanced AI chip production cleared for export` |
-| weights per issue | Private importance percentages summing to 100% | `AI chip export quota: 31%` |
-
-**Rendered prompt (example: 2 parties, 5 issues, γ=0.9, 3 rounds)**
+Source: `DiplomaticTreatyGame.get_combined_setup_prompt()`
 
 ```
 Welcome to the Diplomatic Treaty Negotiation!
@@ -546,7 +449,9 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
   - **100%** = the maximum level of that policy (see scale below)
   - **50%** = the exact midpoint between minimum and maximum
 
-**Your position IS your preferred rate.** A position of 35 means you want 35% of that policy measure. Intermediate values are meaningful — there is no "neutral"; every number reflects a specific policy level.
+**Your position is your preferred rate.** A position of 35 means you want a 35% policy setting on that issue.
+A higher position does NOT mean the issue is more important; importance is tracked separately by your weights.
+Percentages here are policy settings, not generic resources, unless the issue text itself says so.
 
   1. **AI chip export quota**
      Scale: 0% = total ban on H200-class AI chip exports | 100% = unrestricted export of all advanced AI chips
@@ -610,7 +515,7 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 
 LOCKED PRIVATE PREFERENCES
 
-claude-3-7-sonnet, you have been assigned the following SECRET treaty preferences:
+Agent_1, you have been assigned the following SECRET treaty preferences:
 
 **YOUR PRIVATE IDEAL POSITIONS (PREFERRED RATES):**
   Each position is your ideal policy rate on that issue's 0% to 100% scale.
@@ -625,15 +530,16 @@ claude-3-7-sonnet, you have been assigned the following SECRET treaty preference
 
 **YOUR PRIVATE IMPORTANCE WEIGHTS:**
   These weights sum to 100% and determine how much each issue contributes to your utility.
-  AI chip export quota: 31%
-  Critical mineral emergency stockpile contribution: 4%
-  Nuclear warhead reduction: 23%
-  Fentanyl precursor control breadth: 20%
-  Carbon cost on imports: 22%
+  Higher weight = more important to you. Weight is NOT the policy rate.
+  AI chip export quota: importance weight = 31%
+  Critical mineral emergency stockpile contribution: importance weight = 4%
+  Nuclear warhead reduction: importance weight = 23%
+  Fentanyl precursor control breadth: importance weight = 20%
+  Carbon cost on imports: importance weight = 22%
 
 **STRATEGIC ANALYSIS:**
 - Your maximum possible utility is 100 points if every issue is resolved exactly at your ideal position
-- Focus more on issues with higher weights, since they generally matter more for your utility
+- Higher weights matter more for your utility; higher preferred rates do NOT mean higher importance
 
 **STRATEGIC CONSIDERATIONS:**
 1. Other parties don't know your exact ideal positions or weights
@@ -642,36 +548,18 @@ claude-3-7-sonnet, you have been assigned the following SECRET treaty preference
 4. Remember: you need ALL parties to accept a proposal
 
 Please do not initiate the discussion or proposal phase yet.
-In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private ideal positions and importance weights that were assigned to you.
+In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private preferred rates and importance weights that were assigned to you.
 ```
-
----
 
 ### 2.2 Preference Assignment Prompt (merged into 2.1)
 
-For Game 2, this is no longer a separate runtime phase.
-
-Diplomatic Treaty now sends one per-agent setup prompt containing both the shared
-rules and that agent's private issue positions and importance weights, followed
-by a single acknowledgment request. The standalone helper remains in code for
-composition and compatibility, but it is no longer sent as its own phase in the
-actual Game 2 run.
-
----
+Game 2 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
+but the runtime uses `uses_combined_setup_phase() == True`, so the combined setup prompt above
+is the actual live prompt path.
 
 ### 2.3 Discussion Prompt
 
-#### Case A — Round 1, first speaker (no prior history)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | First 5 issue names joined by comma (truncated if >5) | `AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports` |
-
-**Rendered prompt**
+#### Case A - Round 1, first speaker
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
@@ -689,21 +577,7 @@ Each issue is a continuous rate (0%–100%), so you may communicate as precisely
 You are the first to speak. Share your diplomatic position and opening thoughts.
 ```
 
----
-
-#### Case B — Subsequent speaker (history present)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` or `2` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | Issues summary | `AI chip export quota, Critical mineral emergency stockpile contribution, …` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chips and warhead reduction are my core concerns…"` |
-| urgency line | Only present if `round_num > 1` and `round_num >= max_rounds - 1` | `⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!` |
-
-**Rendered prompt (Round 1 example)**
+#### Case B - Round 1, responding after another delegation has spoken
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 1/3
@@ -711,7 +585,7 @@ You are the first to speak. Share your diplomatic position and opening thoughts.
 Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
 
 **DISCUSSION SO FAR THIS ROUND:**
-gpt-4o: "AI chip export controls and warhead reduction are my core concerns. I'm more flexible on the emergency stockpile."
+**Agent_2**: AI chip export controls and warhead reduction are my core concerns. I can be flexible on the emergency stockpile.
 
 ---
 
@@ -724,48 +598,7 @@ Based on what others have said above, please:
 How precisely you communicate your preferred rates is a strategic choice.
 ```
 
----
-
-**Rendered prompt (Later-round example: Round 2/3)**
-
-```
-🗣️ DIPLOMATIC DISCUSSION - Round 2/3
-
-Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
-
-**DISCUSSION SO FAR THIS ROUND:**
-gpt-4o: "AI chip export controls still matter most to me, but I may have some flexibility on the emergency stockpile."
-
----
-
-**YOUR TURN TO RESPOND:**
-Based on what others have said above, please:
-- Respond to points raised and share your own position as you see fit
-- Propose trade-offs or areas of potential agreement
-- Move the conversation toward a concrete proposal
-
-Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
-Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
-You do not need to reveal your full private strategy.
-⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
-
-How precisely you communicate your preferred rates is a strategic choice.
-```
-
----
-
-#### Case C — Round ≥ 2, first speaker (no current-round history yet)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| `{issues_text}` | Issues summary | `AI chip export quota, …` |
-| urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!` |
-
-**Rendered prompt**
+#### Case C - Later round, first speaker
 
 ```
 🗣️ DIPLOMATIC DISCUSSION - Round 2/3
@@ -783,37 +616,56 @@ Previous proposals didn't achieve consensus. Use what you learned from earlier d
 You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy.
 ```
 
+#### Case D - Later round, responding after another delegation has spoken
+
+```
+🗣️ DIPLOMATIC DISCUSSION - Round 2/3
+
+Issues under negotiation: AI chip export quota, Critical mineral emergency stockpile contribution, Nuclear warhead reduction, Fentanyl precursor control breadth, Carbon cost on imports
+
+**DISCUSSION SO FAR THIS ROUND:**
+**Agent_2**: AI chip export controls still matter most to me, but I may have some flexibility on the emergency stockpile.
+
 ---
+
+**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- Respond to points raised and share your own position as you see fit
+- Propose trade-offs or areas of potential agreement
+- Move the conversation toward a concrete proposal
+
+Since this is not the first round, also draw on what you learned from earlier discussion, proposals, and votes.
+Use lessons from failed proposals to decide what to emphasize, clarify, or revise in your public response.
+You do not need to reveal your full private strategy.
+⚠️ **TIME PRESSURE**: Limited rounds remaining for agreement!
+
+How precisely you communicate your preferred rates is a strategic choice.
+```
 
 ### 2.4 Private Thinking Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
-| `{max_rounds}` | Maximum rounds | `3` |
-| urgency line | Only if `round_num >= max_rounds - 1` | `⚠️ **CRITICAL**: Final rounds - agreement urgency is high!` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o: "AI chip controls are non-negotiable for me…"` |
-| `{preference_lines}` | One line per issue with integer weight and ideal position | `AI chip export quota: weight=31%, ideal=82%` |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-**Rendered prompt**
+Source: `DiplomaticTreatyGame.get_thinking_prompt()`
 
 ```
 🧠 PRIVATE STRATEGIC ANALYSIS - Round 1/3
 
+
 **DISCUSSION THIS ROUND:**
-gpt-4o: "AI chip export controls are non-negotiable for me. I can be flexible on the emergency stockpile."
+**Agent_2**: AI chip export controls are non-negotiable for me.
 
 ---
 
 **YOUR FULL PREFERENCE REMINDER:**
-  AI chip export quota: weight=31%, ideal=82%
-  Critical mineral emergency stockpile contribution: weight=4%, ideal=14%
-  Nuclear warhead reduction: weight=23%, ideal=65%
-  Fentanyl precursor control breadth: weight=20%, ideal=49%
-  Carbon cost on imports: weight=22%, ideal=77%
+  AI chip export quota: importance=31%, preferred_rate=82%
+  Critical mineral emergency stockpile contribution: importance=4%, preferred_rate=14%
+  Nuclear warhead reduction: importance=23%, preferred_rate=65%
+  Fentanyl precursor control breadth: importance=20%, preferred_rate=49%
+  Carbon cost on imports: importance=22%, preferred_rate=77%
+
+**INTERPRETATION REMINDER:**
+- `importance` = how much that issue affects your utility
+- `preferred_rate` = which policy setting you want on that issue
+- A higher preferred rate does NOT mean higher importance
 
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other parties' priorities from the discussion above?
@@ -833,23 +685,9 @@ Respond with a JSON object:
 Remember: This analysis is completely private.
 ```
 
----
-
 ### 2.5 Proposal Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{issues_list}` | Indexed list of issue names | `0: AI chip export quota`, `1: Critical mineral emergency stockpile contribution`, … |
-| `{round_num}` | Current round | `1` |
-| `{t_rounds}` | Maximum rounds | `3` |
-| `{n_issues}` | Number of issues | `5` |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-> **Fallback on parse failure:** all issues set to 50%.
-
-**Rendered prompt**
+Source: `DiplomaticTreatyGame.get_proposal_prompt()`
 
 ```
 Please propose a treaty.
@@ -875,23 +713,13 @@ Respond with ONLY a JSON object in this exact format:
 **Rules:**
 - The "agreement" array must have exactly 5 values (one per issue)
 - Each value must be an integer between 0 and 100
+- Each value is a policy rate on that issue's scale, not an importance weight
 - Consider what would be acceptable to all parties
 ```
 
----
-
 ### 2.6 Voting Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{proposals_text}` | Formatted numbered list of all treaty proposals shown together | see rendered prompt |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-`_describe_position(value)` now returns `{round(value * 100)}%` with no decimal display.
-
-**Rendered prompt**
+Source: `DiplomaticTreatyGame.get_batch_voting_prompt()`
 
 ```
 The following treaty proposals have been submitted this round:
@@ -903,7 +731,7 @@ PROPOSAL:
   Nuclear warhead reduction: 55%
   Fentanyl precursor control breadth: 50%
   Carbon cost on imports: 70%
-PROPOSED BY: gpt-4o
+PROPOSED BY: Agent_1
 
 PROPOSAL #2:
 PROPOSAL:
@@ -912,11 +740,14 @@ PROPOSAL:
   Nuclear warhead reduction: 35%
   Fentanyl precursor control breadth: 40%
   Carbon cost on imports: 50%
-PROPOSED BY: claude-3-7-sonnet
+PROPOSED BY: Agent_2
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
-- Your utility = weighted sum of how close each resolved rate is to your ideal position
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
+- Your utility is the weighted sum of how close each proposal is to your ideal rates
+- `weight_k` = how important issue k is to you; your weights sum to 100%
+- `ideal_rate_k` and `agreement_rate_k` = policy rates on that issue's 0% to 100% scale
+- Formula, using the displayed percentages: Σ (weight_k × (1 - |ideal_rate_k - agreement_rate_k| / 100))
+- Higher rate does NOT mean more important; closeness to YOUR ideal is what matters
 - A rate of 0 means 0% (minimum policy level); 100 means 100% (maximum policy level) on each issue
 - Maximum utility = 100 (every issue resolved at your exact ideal rate)
 - Each additional round multiplies utility by 90% — delaying costs you
@@ -932,16 +763,16 @@ Vote on EACH proposal independently. Consider:
 Respond with ONLY a JSON object in this exact format:
 {
     "votes": [
-        {
-            "proposal_number": 1,
-            "vote": "accept",
-            "reasoning": "Brief explanation of your vote on Proposal #1, referencing specific issues and rates"
-        },
-        {
-            "proposal_number": 2,
-            "vote": "reject",
-            "reasoning": "Brief explanation of your vote on Proposal #2, referencing specific issues and rates"
-        }
+{
+    "proposal_number": 1,
+    "vote": "accept",
+    "reasoning": "Brief explanation of your vote on Proposal #1, referencing specific issues and rates"
+},
+{
+    "proposal_number": 2,
+    "vote": "reject",
+    "reasoning": "Brief explanation of your vote on Proposal #2, referencing specific issues and rates"
+}
     ]
 }
 
@@ -949,41 +780,41 @@ Include exactly one vote entry for each proposal shown above.
 Each vote must be either "accept" or "reject".
 ```
 
----
+### 2.7 Reflection Prompt
+
+Source: default `GameEnvironment.get_reflection_prompt()` in `game_environments/base.py`
+
+```
+Reflect on the outcome of round 2.
+No proposal achieved unanimous acceptance.
+
+**VOTING OUTCOME THIS ROUND:**
+- Proposal #1: 1 accept, 1 reject
+- Proposal #2: 0 accept, 2 reject
+
+Take stock of what this round revealed before the next round begins.
+- What did you learn from the proposals and voting outcome?
+- Which participants seem to have compatible vs. conflicting priorities?
+- What seems to be blocking consensus?
+- How should you adjust your communication, concessions, or proposal strategy to improve the chances of agreement?
+
+Focus on concrete adjustments that could move the negotiation closer to consensus while still protecting your most important interests.
+```
+
 ---
 
 ## Game 3: Co-Funding / Participatory Budgeting
 
-Protocol: **Propose-and-Vote** (with a single joint proposal assembled from per-agent submissions)
-Runtime structure: one-time Setup (**Rules + Private Preferences**), then each round: Discussion → Private Thinking → Proposal → Voting → Reflection
+Protocol: `propose_and_vote`
+Runtime structure: one-time setup (`rules + private preferences`), then each round:
+`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
-Control parameters: α (valuation alignment), σ (budget scarcity)
-`budget_ratio = σ`, so σ=0.2 → 20% of total cost, σ=1.0 → 100% of total cost
-Pledge modes: `"individual"` (default) or `"joint"` (legacy)
-Transparency modes: `"aggregate"`, `"own"` (default), `"full"`
+Current runtime note: `CoFundingGame.get_protocol_type()` returns `propose_and_vote`.
+The legacy feedback / commit-vote helper prompts still exist in `co_funding.py`; those are included in an appendix below.
 
----
+### 3.1 Setup Prompt (combined rules + private preferences)
 
-### 3.1 Game Rules Prompt (combined setup prompt)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{parties_phrase}` | "one other participant" (n=2) or "N-1 other participants" | `one other participant` |
-| `{projects_text}` | List of project names with costs | `  - Market Street Protected Bike Lane: cost = 28.50` |
-| `{n_agents}` | Total number of participants | `2` |
-| `{t_rounds}` | Maximum rounds | `5` |
-| `{enable_time_discount}` | Boolean flag | `False` |
-| `{gamma_discount}` | Per-round discount factor | `0.9` |
-| `{budget:.2f}` | This agent's total contribution budget | `36.55` |
-| per-project lines | Name, cost, valuation, priority label | `Market Street Protected Bike Lane (cost: 28.50): Your valuation = 42.30 (HIGH priority)` |
-| `{sum(valuations):.2f}` | Sum of all valuations (always 100.00) | `100.00` |
-| `{total_cost:.2f}` | Sum of all project costs | `146.20` |
-| `{total_budget:.2f}` | Sum of budgets across all agents | `73.11` |
-| `{_coverage}` | `round(total_budget / total_cost * 100)` — collective % of costs covered | `50` |
-
-**Rendered prompt (example: 2 agents, 5 projects, no time discount)**
+Source: `CoFundingGame.get_combined_setup_prompt()`
 
 ```
 Welcome to the Participatory Budgeting (Co-Funding) Game!
@@ -991,16 +822,17 @@ Welcome to the Participatory Budgeting (Co-Funding) Game!
 You are participating in a co-funding exercise with one other participant to fund public projects. Here is your full setup information:
 
 **PROJECTS AVAILABLE FOR FUNDING:**
-  - Market Street Protected Bike Lane: cost = 28.50
-  - Parkside Adventure Playground: cost = 35.20
-  - Oak Avenue Crosswalk Beacons: cost = 22.10
-  - Cedar Pool Access Lift: cost = 40.80
-  - Harborview Bus Shelter Canopies: cost = 19.60
+  - Market Street Protected Bike Lane: cost = 28
+  - Parkside Adventure Playground: cost = 35
+  - Oak Avenue Crosswalk Beacons: cost = 22
+  - Cedar Pool Access Lift: cost = 41
+  - Harborview Bus Shelter Canopies: cost = 20
 
 **GAME STRUCTURE:**
 - There are 2 participants (including you)
 - The game lasts up to 5 rounds
 - This message is the one-time setup phase
+- Your contribution budget is a fixed TOTAL budget for the entire game; it does not refresh each round
 - Each round follows a Propose-and-Vote cycle:
   Discussion -> Private Thinking -> Proposal -> Voting -> Reflection
 
@@ -1010,12 +842,17 @@ You are participating in a co-funding exercise with one other participant to fun
 - These budget and valuation details are PRIVATE and specific to you
 
 **HOW IT WORKS:**
-- Each participant has a PRIVATE BUDGET they can allocate across projects
+- Each participant has a PRIVATE BUDGET for the entire game
+- Each new round is a fresh re-proposal of how to use that same fixed total budget
+- Previous-round proposals do NOT carry over, do NOT accumulate, and do NOT spend money unless unanimously accepted
 - In the PROPOSAL phase, each participant submits a contribution vector — how much they propose contributing to each project
 - Those submitted vectors are combined into ONE JOINT PROPOSAL for the round
 - In the VOTING phase, every participant votes accept/reject on that joint proposal
+- If that joint proposal is unanimously accepted, the game ends immediately and that exact proposal becomes the final outcome
+- If that joint proposal is not unanimously accepted, nothing from it takes effect and the next round starts over from scratch
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
+- In an accepted proposal, any project below its full cost is simply UNFUNDED: it gives zero value and is not partially funded
 - Contributions to UNFUNDED projects do not reduce your utility
 
 **WHAT YOU CAN SEE:**
@@ -1030,6 +867,14 @@ You are participating in a co-funding exercise with one other participant to fun
 - Contributions to unfunded projects cost you nothing
 - If no joint proposal is unanimously accepted by the final round, everyone gets zero utility
 
+**REWARD DISCOUNTING:**
+- If time discounting is enabled, your utility from the final funded outcome is multiplied by gamma^(round - 1)
+- Round 1 rewards: 100% of utility
+- Round 2 rewards: 90% of utility
+- Round 3 rewards: 81% of utility
+- The longer it takes to settle on a final funding outcome, the less valuable that outcome becomes
+- If time discounting is disabled for this run, no round-based multiplier is applied
+
 **IMPORTANT RULES:**
 - Time discounting: disabled
 - Discount factor (if enabled): gamma = 0.9
@@ -1038,24 +883,26 @@ You are participating in a co-funding exercise with one other participant to fun
 **BUDGET CONSTRAINT:**
 - The combined budgets of all participants may NOT be sufficient to fund all projects
 - You MUST prioritize — coordinate on a subset of projects you can collectively afford to fully fund
+- Different participants may value different projects, which makes coordination harder because the same fixed budgets cannot fully support everyone's favorite projects at once
+
 
 LOCKED PRIVATE PREFERENCES
 
-o3-mini-high, you have been assigned the following SECRET co-funding preferences:
+Agent_1, you have been assigned the following SECRET co-funding preferences:
 
-**YOUR PRIVATE BUDGET:** 36.55 (maximum total you can contribute across all projects)
+**YOUR PRIVATE BUDGET:** 37 (maximum total you can contribute across all projects)
 
 **PROJECT DETAILS AND YOUR VALUATIONS:**
-  Market Street Protected Bike Lane (cost: 28.50): Your valuation = 42.30 (HIGH priority)
-  Parkside Adventure Playground (cost: 35.20): Your valuation = 28.40 (Medium priority)
-  Oak Avenue Crosswalk Beacons (cost: 22.10): Your valuation = 12.60 (Low priority)
-  Cedar Pool Access Lift (cost: 40.80): Your valuation = 9.80 (Low priority)
-  Harborview Bus Shelter Canopies (cost: 19.60): Your valuation = 6.90 (Low priority)
+  Market Street Protected Bike Lane (cost: 28): Your valuation = 42 (HIGH priority)
+  Parkside Adventure Playground (cost: 35): Your valuation = 28 (Medium priority)
+  Oak Avenue Crosswalk Beacons (cost: 22): Your valuation = 13 (Low priority)
+  Cedar Pool Access Lift (cost: 41): Your valuation = 10 (Low priority)
+  Harborview Bus Shelter Canopies (cost: 20): Your valuation = 7 (Low priority)
 
-**TOTAL VALUATIONS:** 100.00
-**TOTAL PROJECT COSTS:** 146.20
-**TOTAL BUDGET (all participants):** 73.11
-**COLLECTIVE COVERAGE:** 50% of total project costs — you cannot fund all projects; coordinate on a subset
+**TOTAL VALUATIONS:** 100
+**TOTAL PROJECT COSTS:** 146
+**TOTAL BUDGET (all participants):** 74
+**COLLECTIVE COVERAGE:** 51% of total project costs — you cannot fund all projects; coordinate on a subset
 
 **HOW YOUR UTILITY IS COMPUTED:**
 - For each FUNDED project: your_utility = your_valuation − your_contribution (negative if you over-contribute)
@@ -1071,94 +918,63 @@ Please do not initiate the discussion or proposal phase yet.
 In your response, just acknowledge the setup, summarize the game structure and rules, and reiterate the private budget that was assigned to you, along with the project costs and your project valuations.
 ```
 
----
-
 ### 3.2 Preference Assignment Prompt (merged into 3.1)
 
-For Game 3, this is no longer a separate runtime phase.
-
-Co-Funding now sends one per-agent setup prompt containing both the shared
-rules and project costs plus that agent's private budget and project valuations, followed by a
-single acknowledgment request. The standalone helper remains in code for
-composition and compatibility, but it is no longer sent as its own phase in the
-actual Game 3 run.
-
----
+Game 3 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
+but the runtime uses `uses_combined_setup_phase() == True`, so the combined setup prompt above
+is the actual live prompt path.
 
 ### 3.3 Discussion Prompt
 
-#### Case A — Round 1, first speaker (no prior history)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `1` |
-| `{max_rounds}` | Maximum rounds | `5` |
-| `{status_text}` | Per-project status lines (varies by transparency mode — see below) | `Market Street Protected Bike Lane: needs 28.50 more (aggregate=0.00 / cost=28.50)` |
-| `{funded_projects}` | List of funded project names or "None" | `None` |
-
-**Rendered prompt (aggregate transparency mode, round 1)**
+#### Case A - Round 1, first speaker (`discussion_transparency="aggregate"`)
 
 ```
 DISCUSSION PHASE - Round 1/5
 
 **CURRENT PROJECT STATUS:**
-  Market Street Protected Bike Lane: needs 28.50 more (aggregate=0.00 / cost=28.50)
-  Parkside Adventure Playground: needs 35.20 more (aggregate=0.00 / cost=35.20)
-  Oak Avenue Crosswalk Beacons: needs 22.10 more (aggregate=0.00 / cost=22.10)
-  Cedar Pool Access Lift: needs 40.80 more (aggregate=0.00 / cost=40.80)
-  Harborview Bus Shelter Canopies: needs 19.60 more (aggregate=0.00 / cost=19.60)
+  Market Street Protected Bike Lane: was short by 28.00 last round (aggregate=0.00 / cost=28)
+  Parkside Adventure Playground: was short by 35.00 last round (aggregate=0.00 / cost=35)
+  Oak Avenue Crosswalk Beacons: was short by 22.00 last round (aggregate=0.00 / cost=22)
+  Cedar Pool Access Lift: was short by 41.00 last round (aggregate=0.00 / cost=41)
+  Harborview Bus Shelter Canopies: was short by 20.00 last round (aggregate=0.00 / cost=20)
 
-**Provisionally funded projects:** None
+**Projects that crossed threshold in the previous round proposal:** None
+
 
 **DISCUSSION OBJECTIVES:**
 - Signal which projects you believe are most valuable to fund
 - Understand other participants' priorities
 - Coordinate to avoid spreading contributions too thin
 - Identify projects with enough collective support to be funded
+- Remember that different priorities can split the same fixed budgets across too many projects
 
 You are the first to speak. Share your initial thoughts on which projects to prioritize.
 ```
 
----
-
-#### Case B — Any round, with history present
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{max_rounds}` | Maximum rounds | `5` |
-| `{status_text}` | Per-project status | `Market Street Protected Bike Lane: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50)` |
-| `{funded_projects}` | Provisionally funded project names | `['Market Street Protected Bike Lane']` |
-| `{extra_transparency_block}` | Extra budget/attribution info (non-aggregate modes) | see below |
-| `{discussion_history}` | Prior messages this round | `o3-mini-high: "I want to focus on Market Street Protected Bike Lane and Parkside Adventure Playground."` |
-
-**Rendered prompt (own transparency, round 2)**
+#### Case B - Round 2, responding after another participant has spoken (`discussion_transparency="own"`)
 
 ```
 DISCUSSION PHASE - Round 2/5
 
 **CURRENT PROJECT STATUS:**
-  Market Street Protected Bike Lane: PROVISIONALLY FUNDED (aggregate=30.00 >= cost=28.50); your_prev=20.00, others_prev=10.00, min_you_to_keep_if_others_same=18.50
-  Parkside Adventure Playground: needs 2.20 more (aggregate=33.00 / cost=35.20); your_prev=18.00, others_prev=15.00, min_you_to_fund_if_others_same=20.20
-  Oak Avenue Crosswalk Beacons: needs 22.10 more (aggregate=0.00 / cost=22.10); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=22.10
-  Cedar Pool Access Lift: needs 40.80 more (aggregate=0.00 / cost=40.80); your_prev=0.00, others_prev=0.00, min_you_to_fund_if_others_same=40.80
-  Harborview Bus Shelter Canopies: needs 3.60 more (aggregate=16.00 / cost=19.60); your_prev=10.00, others_prev=6.00, min_you_to_fund_if_others_same=13.60
+  Market Street Protected Bike Lane: crossed threshold last round (historical only; aggregate=28.00 >= cost=28); your_prev_proposed=18.00, others_prev_proposed=10.00
+  Parkside Adventure Playground: was short by 11.00 last round (aggregate=24.00 / cost=35); your_prev_proposed=9.00, others_prev_proposed=15.00
+  Oak Avenue Crosswalk Beacons: was short by 22.00 last round (aggregate=0.00 / cost=22); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Cedar Pool Access Lift: was short by 41.00 last round (aggregate=0.00 / cost=41); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Harborview Bus Shelter Canopies: was short by 4.00 last round (aggregate=16.00 / cost=20); your_prev_proposed=10.00, others_prev_proposed=6.00
 
-**Provisionally funded projects:** ['Market Street Protected Bike Lane']
+**Projects that crossed threshold in the previous round proposal:** ['Market Street Protected Bike Lane']
 
-**IMPORTANT: any provisionally funded status above reflects the PREVIOUS ROUND only.**
-If contributions change this round, projects that were provisionally funded in the previous round may no longer clear their cost threshold, so any support you still want must be proposed again.
 
-**PREVIOUS ROUND BUDGET USAGE (before this round's revision):**
-  gpt-4o-mini: budget=73.11, prev_round_pledged=48.00, prev_round_unallocated=25.11
-  o3-mini-high (you): budget=73.11, prev_round_pledged=48.00, prev_round_unallocated=25.11
+**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted unanimously. Nothing is currently funded or committed.**
+This round starts from scratch with the same fixed budgets. Previous-round proposals do not carry over, and you are not adding new money on top of last round.
+
+**PREVIOUS ROUND PROPOSAL SNAPSHOT (not committed):**
+  Agent_1 (you): budget=37, prev_round_proposed=37.00, not_proposed_last_round=0.00
+  Agent_2: budget=37, prev_round_proposed=31.00, not_proposed_last_round=6.00
 
 **DISCUSSION SO FAR THIS ROUND:**
-o3-mini-high: "I want to focus on Market Street Protected Bike Lane and Parkside Adventure Playground — they're close to funded."
+**Agent_2**: Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground.
 
 ---
 
@@ -1168,44 +984,32 @@ Based on what others have said above, please:
 - Coordinate on which projects to focus collective contributions
 - Signal your own funding intentions
 
-Keep the discussion focused on reaching a funded consensus.
+    Keep the discussion focused on concentrating the same fixed budgets on a feasible set of projects.
 ```
 
-**Full transparency extra block (replaces own-mode block above):**
-```
-**PREVIOUS ROUND PROJECT ATTRIBUTION (who pledged what):**
-- Market Street Protected Bike Lane: gpt-4o-mini=10.00, o3-mini-high=20.00 | aggregate=30.00/28.50 (PROVISIONALLY FUNDED)
-- Parkside Adventure Playground: gpt-4o-mini=15.00, o3-mini-high=18.00 | aggregate=33.00/35.20 (UNFUNDED)
-- Oak Avenue Crosswalk Beacons: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/22.10 (UNFUNDED)
-- Cedar Pool Access Lift: gpt-4o-mini=0.00, o3-mini-high=0.00 | aggregate=0.00/40.80 (UNFUNDED)
-- Harborview Bus Shelter Canopies: gpt-4o-mini=6.00, o3-mini-high=10.00 | aggregate=16.00/19.60 (UNFUNDED)
-```
-
----
-
-#### Case C — Round ≥ 2, first speaker (no current-round history)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `3` |
-| `{max_rounds}` | Maximum rounds | `5` |
-| urgency line | Only if `round_num >= max_rounds - 1` | `**TIME PRESSURE**: Limited rounds remaining!` |
-
-**Rendered prompt**
+#### Case C - Later round, first speaker (`discussion_transparency="own"`)
 
 ```
 DISCUSSION PHASE - Round 3/5
 
 **CURRENT PROJECT STATUS:**
-  [as above...]
+  Market Street Protected Bike Lane: crossed threshold last round (historical only; aggregate=28.00 >= cost=28); your_prev_proposed=18.00, others_prev_proposed=10.00
+  Parkside Adventure Playground: was short by 11.00 last round (aggregate=24.00 / cost=35); your_prev_proposed=9.00, others_prev_proposed=15.00
+  Oak Avenue Crosswalk Beacons: was short by 22.00 last round (aggregate=0.00 / cost=22); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Cedar Pool Access Lift: was short by 41.00 last round (aggregate=0.00 / cost=41); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Harborview Bus Shelter Canopies: was short by 4.00 last round (aggregate=16.00 / cost=20); your_prev_proposed=10.00, others_prev_proposed=6.00
 
-**Provisionally funded projects:** ['Market Street Protected Bike Lane']
+**Projects that crossed threshold in the previous round proposal:** ['Market Street Protected Bike Lane']
 
-[extra_transparency_block if applicable]
 
-Previous round's joint proposal did not achieve unanimous acceptance.
+**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted unanimously. Nothing is currently funded or committed.**
+This round starts from scratch with the same fixed budgets. Previous-round proposals do not carry over, and you are not adding new money on top of last round.
+
+**PREVIOUS ROUND PROPOSAL SNAPSHOT (not committed):**
+  Agent_1 (you): budget=37, prev_round_proposed=37.00, not_proposed_last_round=0.00
+  Agent_2: budget=37, prev_round_proposed=31.00, not_proposed_last_round=6.00
+
+Previous round's joint proposal did not achieve unanimous acceptance, so nothing from that round took effect.
 
 **REFLECTION:**
 - Which projects are close to being funded?
@@ -1215,51 +1019,80 @@ Previous round's joint proposal did not achieve unanimous acceptance.
 Share your updated strategy for this round.
 ```
 
+#### Full transparency addendum (`discussion_transparency="full"`)
+
+```
+DISCUSSION PHASE - Round 2/5
+
+**CURRENT PROJECT STATUS:**
+  Market Street Protected Bike Lane: crossed threshold last round (historical only; aggregate=28.00 >= cost=28); your_prev_proposed=18.00, others_prev_proposed=10.00
+  Parkside Adventure Playground: was short by 11.00 last round (aggregate=24.00 / cost=35); your_prev_proposed=9.00, others_prev_proposed=15.00
+  Oak Avenue Crosswalk Beacons: was short by 22.00 last round (aggregate=0.00 / cost=22); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Cedar Pool Access Lift: was short by 41.00 last round (aggregate=0.00 / cost=41); your_prev_proposed=0.00, others_prev_proposed=0.00
+  Harborview Bus Shelter Canopies: was short by 4.00 last round (aggregate=16.00 / cost=20); your_prev_proposed=10.00, others_prev_proposed=6.00
+
+**Projects that crossed threshold in the previous round proposal:** ['Market Street Protected Bike Lane']
+
+
+**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted unanimously. Nothing is currently funded or committed.**
+This round starts from scratch with the same fixed budgets. Previous-round proposals do not carry over, and you are not adding new money on top of last round.
+
+**PREVIOUS ROUND PROPOSAL SNAPSHOT (not committed):**
+  Agent_1 (you): budget=37, prev_round_proposed=37.00, not_proposed_last_round=0.00
+  Agent_2: budget=37, prev_round_proposed=31.00, not_proposed_last_round=6.00
+
+**PREVIOUS ROUND PROJECT ATTRIBUTION (who proposed what; not committed):**
+- Market Street Protected Bike Lane: Agent_1=18.00, Agent_2=10.00 | aggregate=28.00/28 (CROSSED THRESHOLD LAST ROUND)
+- Parkside Adventure Playground: Agent_1=9.00, Agent_2=15.00 | aggregate=24.00/35 (BELOW THRESHOLD LAST ROUND)
+- Oak Avenue Crosswalk Beacons: Agent_1=0.00, Agent_2=0.00 | aggregate=0.00/22 (BELOW THRESHOLD LAST ROUND)
+- Cedar Pool Access Lift: Agent_1=0.00, Agent_2=0.00 | aggregate=0.00/41 (BELOW THRESHOLD LAST ROUND)
+- Harborview Bus Shelter Canopies: Agent_1=10.00, Agent_2=6.00 | aggregate=16.00/20 (BELOW THRESHOLD LAST ROUND)
+
+**DISCUSSION SO FAR THIS ROUND:**
+**Agent_2**: Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground.
+
 ---
+
+**YOUR TURN TO RESPOND:**
+Based on what others have said above, please:
+- React to other participants' stated priorities
+- Coordinate on which projects to focus collective contributions
+- Signal your own funding intentions
+
+    Keep the discussion focused on concentrating the same fixed budgets on a feasible set of projects.
+```
 
 ### 3.4 Private Thinking Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{max_rounds}` | Maximum rounds | `5` |
-| urgency line | Only if `round_num >= max_rounds - 1` | `**CRITICAL**: Final rounds -- decide on your strategy now!` |
-| `{discussion_history}` | Prior messages this round | `gpt-4o-mini: "Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground."` |
-| `{budget:.2f}` | This agent's budget | `73.11` |
-| `{own_contribs}` | This agent's contributions from last round | `[20.0, 18.0, 0.0, 0.0, 10.0]` |
-| `{aggregates}` | Aggregate totals per project | `[30.0, 33.0, 0.0, 0.0, 16.0]` |
-| `{preference_lines}` | One line per project with valuation and cost | `Market Street Protected Bike Lane (val=42.30, cost=28.50)` |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-**Rendered prompt**
+Source: `CoFundingGame.get_thinking_prompt()`
 
 ```
 PRIVATE STRATEGIC ANALYSIS - Round 2/5
 
+
 **DISCUSSION THIS ROUND:**
-gpt-4o-mini: "Let's focus on Market Street Protected Bike Lane and Parkside Adventure Playground — they're almost funded."
+**Agent_2**: Let's concentrate on the projects that are already close.
 
 ---
 
 **YOUR SITUATION:**
-- Budget: 73.11
-- Your current contributions: [20.0, 18.0, 0.0, 0.0, 10.0]
-- Aggregate totals: [30.0, 33.0, 0.0, 0.0, 16.0]
+- Fixed total budget for the whole game: 37
+- Your previous-round proposed contributions (not committed): [18.0, 9.0, 0.0, 0.0, 10.0]
+- Previous-round aggregate totals: [28.0, 24.0, 0.0, 0.0, 16.0]
+- Each new round reuses the same fixed budget from scratch; last round's proposal did not carry over
 
 **YOUR FULL PREFERENCE REMINDER:**
-  Market Street Protected Bike Lane (val=42.30, cost=28.50)
-  Parkside Adventure Playground (val=28.40, cost=35.20)
-  Oak Avenue Crosswalk Beacons (val=12.60, cost=22.10)
-  Cedar Pool Access Lift (val=9.80, cost=40.80)
-  Harborview Bus Shelter Canopies (val=6.90, cost=19.60)
+  Market Street Protected Bike Lane (val=42, cost=28)
+  Parkside Adventure Playground (val=28, cost=35)
+  Oak Avenue Crosswalk Beacons (val=13, cost=22)
+  Cedar Pool Access Lift (val=10, cost=41)
+  Harborview Bus Shelter Canopies (val=7, cost=20)
 
 **STRATEGIC ANALYSIS:**
-1. Which projects are viable to fund given current aggregates?
-2. Where can you shift contributions for maximum impact?
+1. Which projects are viable to fund given the previous-round aggregates?
+2. Where can you shift budget for maximum impact this round?
 3. Based on the discussion above, what are other participants likely to do?
-4. Should you free-ride on projects others are funding?
+4. Should you free-ride on projects others are likely to fund, or would splitting budget across different favorites leave everything below threshold?
 
 **OUTPUT REQUIRED:**
 Respond with a JSON object:
@@ -1273,46 +1106,32 @@ Respond with a JSON object:
 Remember: This analysis is completely private.
 ```
 
----
-
 ### 3.5 Proposal Prompt
 
-#### Individual mode (default)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{t_rounds}` | Maximum rounds | `5` |
-| `{budget:.2f}` | This agent's budget | `73.11` |
-| `{projects_text}` | Per-project status lines (index, name, cost, valuation, aggregate, provisional funded status) | `0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)` |
-| `{funded_projects}` | Provisionally funded project names or empty list | `['Market Street Protected Bike Lane']` |
-| `{m}` | Number of projects | `5` |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-> **Fallback on parse failure:** zero contributions for all projects.
-
-**Rendered prompt**
+#### Individual mode (current default)
 
 ```
 Please submit your proposal for Round 2/5.
 
-**YOUR BUDGET:** 73.11
+**YOUR FIXED TOTAL BUDGET:** 37
 
 **PROJECT STATUS:**
-  0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
-  1: Parkside Adventure Playground (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
-  2: Oak Avenue Crosswalk Beacons (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
-  3: Cedar Pool Access Lift (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
-  4: Harborview Bus Shelter Canopies (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+  0: Market Street Protected Bike Lane (cost=28, your_val=42, aggregate_last_round=28.00, your_prev_proposed=18.00, crossed threshold last round (historical only))
+  1: Parkside Adventure Playground (cost=35, your_val=28, aggregate_last_round=24.00, your_prev_proposed=9.00, was short by 11.00 last round)
+  2: Oak Avenue Crosswalk Beacons (cost=22, your_val=13, aggregate_last_round=0.00, your_prev_proposed=0.00, was short by 22.00 last round)
+  3: Cedar Pool Access Lift (cost=41, your_val=10, aggregate_last_round=0.00, your_prev_proposed=0.00, was short by 41.00 last round)
+  4: Harborview Bus Shelter Canopies (cost=20, your_val=7, aggregate_last_round=16.00, your_prev_proposed=10.00, was short by 4.00 last round)
 
-**Provisionally funded projects (PREVIOUS ROUND):** ['Market Street Protected Bike Lane']
-**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
+**Projects that crossed threshold in the PREVIOUS ROUND proposal:** ['Market Street Protected Bike Lane']
+**NOTE:** All status above is historical only. Nothing from the previous round is currently funded or committed.
+This round starts from scratch: re-propose how to use your same fixed total budget.
+Last round's proposal did not carry over or accumulate with this round.
 
 **Instructions:**
-Submit a contribution vector specifying how much YOU propose contributing to each project.
-All participants' submitted vectors will be combined into ONE JOINT PROPOSAL before voting.
+Submit a contribution vector specifying how much YOU propose contributing to each project in THIS ROUND'S candidate final outcome.
+All participants' submitted vectors will be combined into one JOINT PROPOSAL before voting.
+If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
+If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 Respond with ONLY a JSON object in this exact format:
 {
@@ -1323,59 +1142,46 @@ Respond with ONLY a JSON object in this exact format:
 **Rules:**
 - The "contributions" array must have exactly 5 values (one per project)
 - Each value must be non-negative (>= 0)
-- The sum of all contributions must not exceed your budget (73.11)
+- The sum of all contributions must not exceed your budget (37)
+- Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
 - Contributions to unfunded projects will not reduce your utility
 ```
 
----
-
-#### Joint mode (legacy)
-
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{t_rounds}` | Maximum rounds | `5` |
-| `{budget:.2f}` | This agent's budget | `73.11` |
-| `{projects_text}` | Per-project status lines | same as individual mode |
-| `{funded_projects}` | Funded names | `['Market Street Protected Bike Lane']` |
-| `{budget_lines}` | Per-agent budget table | `  - gpt-4o-mini: 73.11` |
-| `{example_contributions}` | Example JSON entries for all agents | `"gpt-4o-mini": [5.0, 10.0, 0.0, 8.0, 2.0]` |
-| `{m}` | Number of projects | `5` |
-
-**Rendered prompt**
+#### Joint mode (legacy helper retained in code)
 
 ```
 Please submit your proposal for Round 2/5.
 
-**YOUR BUDGET:** 73.11
+**YOUR FIXED TOTAL BUDGET:** 37
 
 **PROJECT STATUS:**
-  0: Market Street Protected Bike Lane (cost=28.50, your_val=42.30, aggregate=30.00, PROVISIONALLY FUNDED)
-  1: Parkside Adventure Playground (cost=35.20, your_val=28.40, aggregate=33.00, needs 2.20 more)
-  2: Oak Avenue Crosswalk Beacons (cost=22.10, your_val=12.60, aggregate=0.00, needs 22.10 more)
-  3: Cedar Pool Access Lift (cost=40.80, your_val=9.80, aggregate=0.00, needs 40.80 more)
-  4: Harborview Bus Shelter Canopies (cost=19.60, your_val=6.90, aggregate=16.00, needs 3.60 more)
+  0: Market Street Protected Bike Lane (cost=28, your_val=42, aggregate_last_round=28.00, your_prev_proposed=18.00, crossed threshold last round (historical only))
+  1: Parkside Adventure Playground (cost=35, your_val=28, aggregate_last_round=24.00, your_prev_proposed=9.00, was short by 11.00 last round)
+  2: Oak Avenue Crosswalk Beacons (cost=22, your_val=13, aggregate_last_round=0.00, your_prev_proposed=0.00, was short by 22.00 last round)
+  3: Cedar Pool Access Lift (cost=41, your_val=10, aggregate_last_round=0.00, your_prev_proposed=0.00, was short by 41.00 last round)
+  4: Harborview Bus Shelter Canopies (cost=20, your_val=7, aggregate_last_round=16.00, your_prev_proposed=10.00, was short by 4.00 last round)
 
-**Provisionally funded projects (PREVIOUS ROUND):** ['Market Street Protected Bike Lane']
-
-**NOTE:** All status above reflects the PREVIOUS ROUND only; projects that were provisionally funded then are not automatically funded this round unless enough contributions are proposed again.
+**Projects that crossed threshold in the PREVIOUS ROUND proposal:** ['Market Street Protected Bike Lane']
+**NOTE:** All status above is historical only. Nothing from the previous round is currently funded or committed.
+This round starts from scratch: re-propose how to use your same fixed total budget.
+Last round's proposal did not carry over or accumulate with this round.
 
 **Instructions:**
 Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
-Your plan proposes how every participant (including yourself) should allocate their budget.
+Your plan proposes how every participant (including yourself) should allocate their budget in THIS ROUND'S candidate final outcome.
 The round's JOINT PROPOSAL will be constructed from the self-assignment that each participant submits.
+If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
+If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 **Participant budgets:**
-  - gpt-4o-mini: 73.11
-  - o3-mini-high: 73.11
+  - Agent_1: 37
+  - Agent_2: 37
 
 Respond with ONLY a JSON object in this exact format:
 {
     "contributions": {
-        "gpt-4o-mini": [5.0, 10.0, 0.0, 8.0, 2.0],
-        "o3-mini-high": [5.0, 10.0, 0.0, 8.0, 2.0]
+"Agent_1": [5.0, 10.0, 0.0, 8.0, 2.0],
+"Agent_2": [5.0, 10.0, 0.0, 8.0, 2.0]
     },
     "reasoning": "Brief explanation of your joint funding plan"
 }
@@ -1384,80 +1190,62 @@ Respond with ONLY a JSON object in this exact format:
 - "contributions" must be a dictionary with one entry per participant
 - Each entry must be an array of exactly 5 non-negative values (one per project)
 - Each participant's total contributions must not exceed their budget
-- Contributions to unfunded projects will not reduce your utility
+- Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
+- Contributions to unfunded projects will be refunded
 ```
-
----
 
 ### 3.6 Voting Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| project status lines | Per-project aggregate vs cost + provisional funded status | `Market Street Protected Bike Lane: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)` |
-
-**Rendered prompt**
+Source: `CoFundingGame.get_voting_prompt()`
 
 ```
 The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-**Aggregate project status if accepted:**
-  Market Street Protected Bike Lane: aggregate=30.00 / cost=28.50 (PROVISIONALLY FUNDED)
-  Parkside Adventure Playground: aggregate=33.00 / cost=35.20 (needs 2.20 more)
-  Oak Avenue Crosswalk Beacons: aggregate=0.00 / cost=22.10 (needs 22.10 more)
-  Cedar Pool Access Lift: aggregate=0.00 / cost=40.80 (needs 40.80 more)
-  Harborview Bus Shelter Canopies: aggregate=16.00 / cost=19.60 (needs 3.60 more)
+**Final project outcome if this proposal is accepted unanimously:**
+  Market Street Protected Bike Lane: aggregate=28.00 / cost=28 (FUNDED IF ACCEPTED)
+  Parkside Adventure Playground: aggregate=24.00 / cost=35 (UNFUNDED IF ACCEPTED; short by 11.00)
+  Oak Avenue Crosswalk Beacons: aggregate=0.00 / cost=22 (UNFUNDED IF ACCEPTED; short by 22.00)
+  Cedar Pool Access Lift: aggregate=0.00 / cost=41 (UNFUNDED IF ACCEPTED; short by 41.00)
+  Harborview Bus Shelter Canopies: aggregate=16.00 / cost=20 (UNFUNDED IF ACCEPTED; short by 4.00)
 
 Please vote on this proposal. Consider:
-- Which projects would be provisionally funded if this proposal is accepted
+- If this proposal is unanimously accepted, the game ends immediately. There is no later round to add more money.
+- Only the projects marked "FUNDED IF ACCEPTED" would be funded
+- Any project below its cost in this accepted proposal would be UNFUNDED, give zero value, and receive no partial credit
 - How much you would contribute under this proposal
 - Your utility from the resulting funded set after subtracting your own contributions
+- If this proposal is rejected or not unanimous, nothing from it happens and the next round starts from scratch with the same fixed budgets
 - If no joint proposal is unanimously accepted by the final round, your utility is 0
 
-Respond with ONLY JSON:
+Respond with ONLY a JSON object in this exact format:
 {
     "vote": "accept",
-    "reasoning": "brief explanation"
+    "reasoning": "Brief explanation of your vote"
 }
 
 Vote must be either "accept" or "reject".
 ```
 
----
-
 ### 3.7 Reflection Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{round_num}` | Current round | `2` |
-| `{status_lines}` | Per-project aggregate, cost, provisional-funded/gap status | `Market Street Protected Bike Lane: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)` |
-| `{funded_projects}` | Provisionally funded project names | `['Market Street Protected Bike Lane']` |
-| vote outcome line | Whether the joint proposal was accepted unanimously | `accepted unanimously` |
-| `{utility:.2f}` | This agent's discounted utility under the round's joint proposal | `14.30` |
-| `{raw_utility:.2f}` | Utility before discount | `14.30` |
-| `{discount_factor:.2f}` | Applied discount factor | `1.00` (or `0.90` if discounting on) |
-| `{reasoning_token_budget}` | Optional reasoning depth hint | `2000` |
-
-**Rendered prompt**
+Source: `CoFundingGame.get_reflection_prompt()`
 
 ```
 Reflect on the outcome of Round 2.
 
-**CURRENT STATUS:**
-  Market Street Protected Bike Lane: aggregate=30.00, cost=28.50 (PROVISIONALLY FUNDED)
-  Parkside Adventure Playground: aggregate=33.00, cost=35.20 (gap=2.20)
-  Oak Avenue Crosswalk Beacons: aggregate=0.00, cost=22.10 (gap=22.10)
-  Cedar Pool Access Lift: aggregate=0.00, cost=40.80 (gap=40.80)
-  Harborview Bus Shelter Canopies: aggregate=16.00, cost=19.60 (gap=3.60)
+**REJECTED ROUND PROPOSAL (counterfactual outcome if it had passed):**
+  Market Street Protected Bike Lane: aggregate=28.00, cost=28 (would have been funded if accepted)
+  Parkside Adventure Playground: aggregate=24.00, cost=35 (would have remained unfunded; short by 11.00)
+  Oak Avenue Crosswalk Beacons: aggregate=0.00, cost=22 (would have remained unfunded; short by 22.00)
+  Cedar Pool Access Lift: aggregate=0.00, cost=41 (would have remained unfunded; short by 41.00)
+  Harborview Bus Shelter Canopies: aggregate=16.00, cost=20 (would have remained unfunded; short by 4.00)
 
-**Provisionally funded projects:** ['Market Street Protected Bike Lane']
-**Vote outcome this round:** accepted unanimously
-**Your utility under this round's joint proposal:** 14.30
-**Raw utility (before discount):** 14.30
+**Projects that would have been funded if this rejected proposal had passed:** ['Market Street Protected Bike Lane']
+**Vote outcome this round:** not accepted unanimously
+**Counterfactual utility if this rejected proposal had been accepted:** 24.00
+**Counterfactual raw utility before discount:** 24.00
 **Discount factor this round:** 1.00
+**Important:** Because the proposal was NOT accepted unanimously, no money was committed and no project was funded this round. The next round starts from scratch with the same fixed budgets.
 
 Consider what adjustments to your contributions might improve the outcome.
 - Are there projects close to being funded that deserve more support?
@@ -1465,28 +1253,84 @@ Consider what adjustments to your contributions might improve the outcome.
 - Should you shift focus to different projects?
 ```
 
----
+## Appendix: Legacy Co-Funding Helper Prompts
 
-## Reasoning Token Budget Addendum (all games, all phases)
+These helpers remain in `game_environments/co_funding.py` for the legacy `talk_pledge_revise`
+flow wired in `strong_models_experiment/experiment.py`, but they are not used by the current
+`propose_and_vote` Game 3 runtime.
 
-When `reasoning_token_budget` is configured for a run, this line is appended to proposal, voting, discussion, thinking, and reflection prompts:
+### A.1 Feedback Prompt
 
-**Variables**
-
-| Variable | Description | Example value |
-|----------|-------------|---------------|
-| `{reasoning_token_budget}` | Target reasoning token count | `4000` |
+Source: `CoFundingGame.get_feedback_prompt()`
 
 ```
-**REASONING DEPTH:** Please use approximately 4000 tokens in your internal reasoning before outputting your response for this stage.
+ROUND RESULTS - Aggregate Contributions:
+
+  Market Street Protected Bike Lane: 28.00 / 28 -- PROVISIONALLY FUNDED (your_prev=18.00)
+  Parkside Adventure Playground: 24.00 / 35 (69%) -- needs 11.00 more (your_prev=9.00)
+  Oak Avenue Crosswalk Beacons: 0.00 / 22 (0%) -- needs 22.00 more (your_prev=0.00)
+  Cedar Pool Access Lift: 0.00 / 41 (0%) -- needs 41.00 more (your_prev=0.00)
+  Harborview Bus Shelter Canopies: 16.00 / 20 (80%) -- needs 4.00 more (your_prev=10.00)
+
+Provisionally funded projects: ['Market Street Protected Bike Lane']
+
+Consider adjusting your contributions based on these aggregate results.
+```
+
+### A.2 Commit Vote Prompt
+
+Source: `CoFundingGame.get_commit_vote_prompt()`
+
+```
+POST-PLEDGE COMMIT VOTE - Round 2/5
+
+You are voting on whether to LOCK IN this exact round's proposal immediately.
+
+**Current aggregate project status:**
+  Market Street Protected Bike Lane: aggregate=28.00 / cost=28 (FUNDED IF LOCKED IN NOW)
+  Parkside Adventure Playground: aggregate=24.00 / cost=35 (UNFUNDED IF LOCKED IN NOW; short by 11.00)
+  Oak Avenue Crosswalk Beacons: aggregate=0.00 / cost=22 (UNFUNDED IF LOCKED IN NOW; short by 22.00)
+  Cedar Pool Access Lift: aggregate=0.00 / cost=41 (UNFUNDED IF LOCKED IN NOW; short by 41.00)
+  Harborview Bus Shelter Canopies: aggregate=16.00 / cost=20 (UNFUNDED IF LOCKED IN NOW; short by 4.00)
+
+Vote **yay** if you are satisfied with this exact round's proposal and your own proposed contribution vector for this round, and want to finalize now.
+Vote **nay** if you want to throw away this round's proposal and try again next round from scratch with the same fixed budgets.
+
+**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this exact proposal as the final outcome. Any project still below cost remains unfunded. If ANY participant votes nay, no money is committed and another revision round occurs.
+
+Respond with ONLY JSON:
+{
+    "commit_vote": "yay",
+    "reasoning": "brief explanation"
+}
+```
+
+---
+
+## Reasoning Token Budget Addendum
+
+Many prompt methods accept an optional `reasoning_token_budget`.
+When that argument is provided, the current code appends one of these two suffix styles:
+
+Generic inline style (discussion / proposal / voting / most reflection prompts):
+
+```
+**REASONING DEPTH:** Please use approximately 2000 tokens in your internal reasoning before outputting your response for this stage.
+```
+
+Thinking-prompt style:
+
+```
+**REASONING DEPTH:**
+Please use approximately 2000 tokens in your internal reasoning before outputting your response for this stage.
 ```
 
 ---
 
 ## Summary Table
 
-| Game | Protocol | Phases (in order) |
-|------|----------|-------------------|
-| Game 1: Item Allocation | Propose-and-Vote | Setup → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 2: Diplomatic Treaty | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
-| Game 3: Co-Funding | Propose-and-Vote | Rules + Prefs → Discussion → Thinking → Proposal → Voting → Reflection |
+| Game | Setup path | Round phases | Reflection source | Notes |
+| ---- | ---------- | ------------ | ----------------- | ----- |
+| Game 1: Item Allocation | `get_combined_setup_prompt()` | `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection` | `base.py` default | Separate setup / preference helpers remain in code but are not used at runtime. |
+| Game 2: Diplomatic Treaty | `get_combined_setup_prompt()` | `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection` | `base.py` default | Percent displays are integer percentages throughout the prompt-facing interface. |
+| Game 3: Co-Funding | `get_combined_setup_prompt()` | `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection` | `co_funding.py` custom | Current runtime uses `propose_and_vote`; legacy feedback / commit-vote helpers are documented in the appendix. |
