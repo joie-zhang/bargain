@@ -67,6 +67,7 @@ MODEL_ALIASES: Dict[str, str] = {
     "gpt-4o": "gpt-4o-2024-05-13",
     "Llama-3.2-1B-Instruct": "llama-3.2-1b-instruct",
     "Llama-3.2-3B-Instruct": "llama-3.2-3b-instruct",
+    "o3": "o3-mini-high",
     "QwQ-32B": "qwq-32b",
     "Qwen2.5-72B-Instruct": "qwen2.5-72b-instruct",
     "qwen3-max": "qwen3-max-preview",
