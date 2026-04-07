@@ -32,6 +32,7 @@ import csv
 import json
 import re
 import sys
+from textwrap import fill
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean, pstdev
@@ -42,6 +43,7 @@ import numpy as np
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -73,6 +75,24 @@ def parse_args() -> argparse.Namespace:
         "--metric",
         choices=["utility", "rounds"],
         default="utility",
+    )
+    parser.add_argument(
+        "--competition-smoothing-method",
+        choices=["none", "ewm", "moving_average"],
+        default="ewm",
+        help="Trend overlay used for --by-competition-level plots.",
+    )
+    parser.add_argument(
+        "--competition-smoothing-alpha",
+        type=float,
+        default=0.35,
+        help="EWM alpha for --by-competition-level plots when smoothing method is ewm.",
+    )
+    parser.add_argument(
+        "--competition-smoothing-window",
+        type=int,
+        default=3,
+        help="Moving-average window for --by-competition-level plots when smoothing method is moving_average.",
     )
     return parser.parse_args()
 
@@ -159,29 +179,39 @@ def collect_run_rows(results_root: Path) -> List[Dict[str, object]]:
     return rows
 
 
-def metric_spec(metric: str) -> Dict[str, str]:
+def metric_spec(metric: str) -> Dict[str, object]:
     if metric == "rounds":
         return {
             "value_key": "rounds_to_consensus",
             "avg_key": "avg_rounds_to_consensus",
             "std_key": "std_rounds_to_consensus",
-            "title": "Average Rounds To Consensus vs Chatbot Arena Elo",
-            "title_by_comp": "Average Rounds To Consensus vs Chatbot Arena Elo, Stratified by Competition Level",
-            "y_label": "Average Rounds To Consensus",
+            "title": "Game 1: Mean Rounds to Consensus vs Chatbot Arena Elo",
+            "title_by_comp": "Game 1: Mean Rounds to Consensus vs Chatbot Arena Elo",
+            "aggregate_title": "Game 1: Mean Rounds to Consensus vs Competition Level",
+            "subtitle": "Averages include competition level, speaking order, and discussion-turn setting.",
+            "title_by_comp_subtitle": "Each curve fixes one competition level; averages include speaking order and discussion-turn setting.",
+            "aggregate_subtitle": "Aggregated over all active adversary models, speaking orders, and discussion-turn settings.",
+            "y_label": "Mean Rounds to Consensus",
             "output_stem": "average_rounds_to_consensus_vs_elo",
+            "reference_line": None,
         }
     return {
         "value_key": "utility",
         "avg_key": "avg_utility",
         "std_key": "std_utility",
-        "title": "Average Utility vs Chatbot Arena Elo",
-        "title_by_comp": "Average Utility vs Chatbot Arena Elo, Stratified by Competition Level",
-        "y_label": "Average Realized Utility",
+        "title": "Game 1: Mean Adversary Utility vs Chatbot Arena Elo",
+        "title_by_comp": "Game 1: Mean Adversary Utility vs Chatbot Arena Elo",
+        "aggregate_title": "Game 1: Mean Adversary Utility vs Competition Level",
+        "subtitle": "Averages include competition level, speaking order, and discussion-turn setting.",
+        "title_by_comp_subtitle": "Each curve fixes one competition level; averages include speaking order and discussion-turn setting.",
+        "aggregate_subtitle": "Aggregated over all active adversary models, speaking orders, and discussion-turn settings.",
+        "y_label": "Mean Adversary Utility",
         "output_stem": "average_utility_vs_elo",
+        "reference_line": 50.0,
     }
 
 
-def competition_level_output_stem(spec: Dict[str, str]) -> str:
+def competition_level_output_stem(spec: Dict[str, object]) -> str:
     stem = spec["output_stem"]
     if stem.endswith("_vs_elo"):
         return stem[: -len("_vs_elo")]
@@ -205,6 +235,49 @@ def best_fit_line(xs: List[float], ys: List[float]) -> Tuple[np.ndarray, np.ndar
     return line_x, line_y
 
 
+def smooth_series(
+    values: List[float],
+    method: str,
+    alpha: float,
+    window: int,
+) -> np.ndarray:
+    smoothed = np.asarray(values, dtype=float)
+    if smoothed.size < 2 or method == "none":
+        return smoothed.copy()
+    if method == "moving_average":
+        averaged = np.empty_like(smoothed)
+        for idx in range(smoothed.size):
+            start = max(0, idx - window + 1)
+            averaged[idx] = smoothed[start : idx + 1].mean()
+        return averaged
+    if method == "ewm":
+        averaged = np.empty_like(smoothed)
+        averaged[0] = smoothed[0]
+        for idx in range(1, smoothed.size):
+            averaged[idx] = alpha * smoothed[idx] + (1.0 - alpha) * averaged[idx - 1]
+        return averaged
+    raise ValueError(f"Unsupported smoothing method: {method}")
+
+
+def competition_level_plot_subtitle(
+    smoothing_method: str,
+    smoothing_alpha: float,
+    smoothing_window: int,
+) -> str:
+    averaging_note = "Averages include speaking order and discussion-turn setting."
+    if smoothing_method == "ewm":
+        return (
+            f"Faint lines show raw per-Elo means; bold lines show Elo-ordered EWM trends "
+            f"(alpha={smoothing_alpha:.2f}). {averaging_note}"
+        )
+    if smoothing_method == "moving_average":
+        return (
+            f"Faint lines show raw per-Elo means; bold lines show trailing moving-average "
+            f"trends (window={smoothing_window}). {averaging_note}"
+        )
+    return f"Curves show raw per-Elo means for each competition level. {averaging_note}"
+
+
 def resolve_elo(
     model_name: str,
     elo_by_model: Dict[str, int],
@@ -220,7 +293,7 @@ def summarize_models(
     run_rows: List[Dict[str, object]],
     elo_by_model: Dict[str, int],
     selected_models: Iterable[str],
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> List[Dict[str, object]]:
     rows: List[Dict[str, object]] = []
     grouped_values: Dict[str, List[float]] = defaultdict(list)
@@ -252,7 +325,7 @@ def summarize_models_by_competition_level(
     run_rows: List[Dict[str, object]],
     elo_by_model: Dict[str, int],
     selected_models: Iterable[str],
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> List[Dict[str, object]]:
     grouped: Dict[Tuple[float, str], List[float]] = defaultdict(list)
     for run_row in run_rows:
@@ -286,7 +359,7 @@ def summarize_models_by_competition_level(
 def summarize_competition_levels_aggregated_over_models(
     run_rows: List[Dict[str, object]],
     selected_models: Iterable[str],
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> List[Dict[str, object]]:
     selected = set(selected_models)
     grouped: Dict[float, List[float]] = defaultdict(list)
@@ -316,7 +389,7 @@ def summarize_competition_levels_aggregated_over_models(
 def write_summary_csv(
     rows: List[Dict[str, object]],
     output_path: Path,
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if rows and "model" not in rows[0]:
@@ -346,7 +419,7 @@ def write_summary_csv(
 def make_plot(
     rows: List[Dict[str, object]],
     output_path: Path,
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -376,13 +449,13 @@ def make_plot(
             fontsize=9,
         )
 
-    ax.set_title(spec["title"])
+    ax.set_title(f"{spec['title']}\n{spec['subtitle']}")
     ax.set_xlabel("Chatbot Arena Elo")
     ax.set_ylabel(spec["y_label"])
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -390,11 +463,16 @@ def make_plot(
 def make_plot_by_competition_level(
     rows: List[Dict[str, object]],
     output_path: Path,
-    spec: Dict[str, str],
+    spec: Dict[str, object],
+    smoothing_method: str,
+    smoothing_alpha: float,
+    smoothing_window: int,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(10, 6.5))
+    fig.patch.set_facecolor("white")
+    ax.set_facecolor("#fbfdff")
     competition_levels = sorted({float(row["competition_level"]) for row in rows})
     color_map = plt.get_cmap("viridis")
     colors = {
@@ -407,51 +485,83 @@ def make_plot_by_competition_level(
         grouped[float(row["competition_level"])].append(row)
 
     xtick_rows: Dict[int, str] = {}
+    show_smoothed_overlay = smoothing_method != "none"
     for comp in competition_levels:
         comp_rows = sorted(grouped[comp], key=lambda row: int(row["elo"]))
         xs = [float(row["elo"]) for row in comp_rows]
-        ys = [float(row[spec["avg_key"]]) for row in comp_rows]
-        line_x, line_y = best_fit_line(xs, ys)
+        y_raw = [float(row[spec["avg_key"]]) for row in comp_rows]
+        y_smooth = smooth_series(
+            y_raw,
+            method=smoothing_method,
+            alpha=smoothing_alpha,
+            window=smoothing_window,
+        )
         ax.plot(
             xs,
-            ys,
+            y_raw,
             marker="o",
-            markersize=7,
-            linewidth=2.2,
+            markersize=4.5,
+            linewidth=1.3 if show_smoothed_overlay else 2.4,
             color=colors[comp],
-            alpha=0.28,
-            label=f"competition={format_competition_level(comp)}",
+            alpha=0.24 if show_smoothed_overlay else 0.92,
+            zorder=2,
+            label="_nolegend_" if show_smoothed_overlay else f"competition={format_competition_level(comp)}",
         )
-        ax.plot(
-            line_x,
-            line_y,
-            linewidth=2.8,
-            color=colors[comp],
-            alpha=0.98,
-        )
+        if show_smoothed_overlay:
+            ax.plot(
+                xs,
+                y_smooth,
+                marker="o",
+                markersize=6.6,
+                linewidth=2.9,
+                color=colors[comp],
+                alpha=0.98,
+                markeredgecolor="white",
+                markeredgewidth=1.1,
+                zorder=3,
+                label=f"competition={format_competition_level(comp)}",
+            )
         for row in comp_rows:
             xtick_rows[int(row["elo"])] = str(row["model"])
-            ax.annotate(
-                f"{row[spec['avg_key']]:.1f}",
-                (float(row["elo"]), float(row[spec["avg_key"]])),
-                xytext=(0, 7),
-                textcoords="offset points",
-                ha="center",
-                fontsize=8,
-                color=colors[comp],
-            )
 
     x_positions = sorted(xtick_rows)
-    ax.set_xticks(x_positions)
-    ax.set_xticklabels([f"{xtick_rows[x]}\n{x}" for x in x_positions])
-    ax.set_title(spec["title_by_comp"])
+    if x_positions:
+        x_padding = max(12, int(round((x_positions[-1] - x_positions[0]) * 0.03)))
+        ax.set_xlim(x_positions[0] - x_padding, x_positions[-1] + x_padding)
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=7, integer=True))
+    if spec["reference_line"] is not None:
+        ax.axhline(
+            float(spec["reference_line"]),
+            color="#94a3b8",
+            linestyle="--",
+            linewidth=1.1,
+            alpha=0.7,
+            zorder=1,
+        )
+    ax.set_title(
+        f"{spec['title_by_comp']}\n"
+        f"{fill(competition_level_plot_subtitle(smoothing_method, smoothing_alpha, smoothing_window), width=120)}"
+    )
     ax.set_xlabel("Chatbot Arena Elo")
     ax.set_ylabel(spec["y_label"])
-    ax.grid(True, alpha=0.25)
+    ax.grid(True, color="#cbd5e1", alpha=0.35, linewidth=0.9)
     ax.set_axisbelow(True)
-    ax.legend(title="Curve", frameon=True)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(title="Competition", frameon=True, facecolor="white", framealpha=0.95)
 
-    fig.tight_layout()
+    ordered_models = ", ".join(f"{xtick_rows[x]} ({x})" for x in x_positions)
+    fig.text(
+        0.5,
+        0.01,
+        fill(f"Models by Elo: {ordered_models}", width=95),
+        ha="center",
+        va="bottom",
+        fontsize=8.7,
+        color="#475569",
+    )
+
+    fig.tight_layout(rect=(0, 0.06, 1, 0.95))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -459,7 +569,7 @@ def make_plot_by_competition_level(
 def make_plot_over_competition_levels(
     rows: List[Dict[str, object]],
     output_path: Path,
-    spec: Dict[str, str],
+    spec: Dict[str, object],
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -486,20 +596,24 @@ def make_plot_over_competition_levels(
             fontsize=9,
         )
 
-    ax.set_title(f"{spec['y_label']} vs Competition Level, Aggregated Over Models")
+    ax.set_title(f"{spec['aggregate_title']}\n{spec['aggregate_subtitle']}")
     ax.set_xlabel("Competition Level")
     ax.set_ylabel(spec["y_label"])
     ax.set_xticks(xs)
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
 
 def main() -> None:
     args = parse_args()
+    if args.competition_smoothing_method == "ewm" and not 0.0 < args.competition_smoothing_alpha <= 1.0:
+        raise SystemExit("--competition-smoothing-alpha must be in the interval (0, 1].")
+    if args.competition_smoothing_method == "moving_average" and args.competition_smoothing_window < 1:
+        raise SystemExit("--competition-smoothing-window must be at least 1.")
     spec = metric_spec(args.metric)
     elo_by_model = parse_elo_markdown(args.elo_markdown)
     run_rows = collect_run_rows(args.results_root)
@@ -535,7 +649,14 @@ def main() -> None:
         if not by_comp_rows:
             raise SystemExit("No competition-level rows were found in the completed results.")
         write_summary_csv(by_comp_rows, csv_path, spec)
-        make_plot_by_competition_level(by_comp_rows, png_path, spec)
+        make_plot_by_competition_level(
+            by_comp_rows,
+            png_path,
+            spec,
+            smoothing_method=args.competition_smoothing_method,
+            smoothing_alpha=args.competition_smoothing_alpha,
+            smoothing_window=args.competition_smoothing_window,
+        )
         print(f"Wrote plot: {png_path}")
         print(f"Wrote summary: {csv_path}")
         for row in by_comp_rows:
