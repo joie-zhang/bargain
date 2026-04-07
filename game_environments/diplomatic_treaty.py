@@ -575,6 +575,7 @@ Percentages here are policy settings, not generic resources, unless the issue te
 - Example: weight=30%, ideal rate=80%, agreement=70% -> 27 utility points
 - Example: weight=40%, ideal rate=20%, agreement=30% -> 36 utility points
 - The second issue matters more even though its preferred rate is lower, because 40% > 30%
+- On each issue, utility is highest exactly at your ideal rate and falls equally in either direction as you move away from it
 - Maximum utility = 100 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
@@ -616,6 +617,9 @@ Percentages here are policy settings, not generic resources, unless the issue te
         lines.append("**YOUR PRIVATE IDEAL POSITIONS (PREFERRED RATES):**")
         lines.append("  Each position is your ideal policy rate on that issue's 0% to 100% scale.")
         lines.append("  Higher position = higher preferred policy setting on that issue, NOT higher importance.")
+        lines.append(
+            "  Example: if your ideal is 50%, then 55% is better for you than 70%, even though 70% is a larger number, because 55% is closer to your ideal."
+        )
         lines.append("")
 
         for i, (issue, pos) in enumerate(zip(issues, positions)):

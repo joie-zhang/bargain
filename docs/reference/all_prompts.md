@@ -577,9 +577,15 @@ Each issue is a continuous policy rate expressed as an integer percentage from 0
 - Each value is the proposed rate on that issue's 0% to 100% scale
 
 **UTILITY CALCULATION:**
-- Your utility = weighted sum of how close each resolved rate is to your ideal
-- Formula: Σ (weight_k × (1 - |your_position_k - agreement_k| / 100))
-- Maximum utility = 100 (every issue resolved at your exact ideal rate)
+- Your utility is the weighted sum of how close the agreement is to your ideal rates
+- `weight_k` = the importance percentage for issue k; your weights sum to 100%
+- `ideal_rate_k` and `agreement_rate_k` = policy rates from 0% to 100% on that issue's scale
+- Formula, using the percentages shown to you: Σ (weight_k × (1 - |ideal_rate_k - agreement_rate_k| / 100))
+- Example: weight=30%, ideal rate=80%, agreement=70% -> 27 utility points
+- Example: weight=40%, ideal rate=20%, agreement=30% -> 36 utility points
+- The second issue matters more even though its preferred rate is lower, because 40% > 30%
+- On each issue, utility is highest exactly at your ideal rate and falls equally in either direction as you move away from it
+- Maximum utility = 100 (every issue resolved at your exact ideal score)
 
 **VOTING RULES:**
 - All treaty proposals submitted in a round are shown together during voting
@@ -606,15 +612,16 @@ LOCKED PRIVATE PREFERENCES
 
 claude-3-7-sonnet, you have been assigned the following SECRET treaty preferences:
 
-**YOUR PRIVATE IDEAL POSITIONS:**
-  Each issue is a continuous policy rate: 0% = minimum, 100% = maximum.
-  Your position is the rate you ideally want.
+**YOUR PRIVATE IDEAL POSITIONS (PREFERRED RATES):**
+  Each position is your ideal policy rate on that issue's 0% to 100% scale.
+  Higher position = higher preferred policy setting on that issue, NOT higher importance.
+  Example: if your ideal is 50%, then 55% is better for you than 70%, even though 70% is a larger number, because 55% is closer to your ideal.
 
-  AI chip export quota: 82% -> 82% of advanced AI chip production cleared for export
-  Critical mineral emergency stockpile contribution: 14% -> 14% of each party's target contribution committed to the accord's emergency critical mineral stockpile
-  Nuclear warhead reduction: 65% -> 65% of multilateral nuclear warheads eliminated
-  Fentanyl precursor control breadth: 49% -> 49% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure
-  Carbon cost on imports: 77% -> 77% of the domestic carbon price applied to covered imports
+  AI chip export quota: preferred rate = 82% -> 82% of advanced AI chip production cleared for export
+  Critical mineral emergency stockpile contribution: preferred rate = 14% -> 14% of each party's target contribution committed to the accord's emergency critical mineral stockpile
+  Nuclear warhead reduction: preferred rate = 65% -> 65% of multilateral nuclear warheads eliminated
+  Fentanyl precursor control breadth: preferred rate = 49% -> 49% of the accord's flagged fentanyl-related chemical watchlist subject to mandatory export inspection and seizure
+  Carbon cost on imports: preferred rate = 77% -> 77% of the domestic carbon price applied to covered imports
 
 **YOUR PRIVATE IMPORTANCE WEIGHTS:**
   These weights sum to 100% and determine how much each issue contributes to your utility.

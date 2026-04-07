@@ -694,6 +694,10 @@ class TestPromptGeneration:
             in prompt
         )
         assert "Higher weights matter more for your utility" in prompt
+        assert (
+            "if your ideal is 50%, then 55% is better for you than 70%, even though 70% is a larger number, because 55% is closer to your ideal"
+            in prompt
+        )
         assert "0.0" not in prompt
         assert "1.0" not in prompt
         assert "[0.3, 0.7, 0.5" not in prompt
