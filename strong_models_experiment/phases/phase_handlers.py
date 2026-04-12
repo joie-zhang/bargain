@@ -117,6 +117,48 @@ class PhaseHandler:
 
         return budget
 
+    def _resolve_agent_phase_max_tokens(
+        self,
+        agent: BaseLLMAgent,
+        phase: str,
+        fallback_phase: Optional[str] = None,
+    ) -> Optional[int]:
+        """Resolve the effective max_tokens for one agent in one phase.
+
+        Combines experiment-level phase limits with optional per-agent limits stored in
+        agent.config.custom_parameters["phase_token_caps"]. If both are present, the
+        smaller value wins. When neither a phase limit nor a fallback/default limit is
+        present for this agent, returns None to indicate no update should be applied.
+        """
+        config_limit = self.token_config.get(phase)
+        custom_parameters = getattr(getattr(agent, "config", None), "custom_parameters", {}) or {}
+        phase_caps = custom_parameters.get("phase_token_caps", {}) or {}
+        agent_limit = phase_caps.get(phase)
+
+        if config_limit is None and agent_limit is None and fallback_phase is not None:
+            config_limit = self.token_config.get(fallback_phase)
+            agent_limit = phase_caps.get(fallback_phase)
+
+        if config_limit is None and agent_limit is None:
+            return None
+        if config_limit is None:
+            return agent_limit
+        if agent_limit is None:
+            return config_limit
+        return min(config_limit, agent_limit)
+
+    def _apply_phase_token_limits(
+        self,
+        agents: List[BaseLLMAgent],
+        phase: str,
+        fallback_phase: Optional[str] = None,
+    ) -> None:
+        """Apply per-phase token limits to each agent if any relevant limit exists."""
+        for agent in agents:
+            resolved_limit = self._resolve_agent_phase_max_tokens(agent, phase, fallback_phase=fallback_phase)
+            if resolved_limit is not None:
+                agent.update_max_tokens(resolved_limit)
+
     def _parse_vote_response(self, content: str, agent_id: str, round_num: int) -> Dict:
         """Parse a vote response from raw LLM output.
 
@@ -267,10 +309,8 @@ class PhaseHandler:
         """Phase 1A: Game Setup Phase"""
         self.logger.info("=== GAME SETUP PHASE ===")
 
-        # Set token limit for setup phase if specified
-        if self.token_config["default"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["default"])
+        # Apply token limits for setup/default phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "default")
 
         if self.game_environment is not None:
             if "game_state" in preferences:
@@ -356,10 +396,8 @@ class PhaseHandler:
         """Phase 1B: Private Preference Assignment"""
         self.logger.info("=== PRIVATE PREFERENCE ASSIGNMENT ===")
 
-        # Set token limit for preference assignment if specified
-        if self.token_config["default"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["default"])
+        # Apply token limits for preference assignment if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "default")
 
         if self.game_environment is not None and self.game_environment.uses_combined_setup_phase():
             self.logger.info(
@@ -434,10 +472,8 @@ class PhaseHandler:
         self.logger.info(f"=== PUBLIC DISCUSSION PHASE - Round {round_num} ===")
         self.logger.info(f"  Discussion turns: {discussion_turns}")
 
-        # Set token limit for discussion phase if specified
-        if self.token_config["discussion"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["discussion"])
+        # Apply token limits for discussion phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "discussion")
 
         # Outer loop: go around the circle discussion_turns times
         for turn in range(discussion_turns):
@@ -537,10 +573,8 @@ class PhaseHandler:
         
         self.logger.info(f"=== PRIVATE THINKING PHASE - Round {round_num} ===")
         
-        # Set token limit for thinking phase if specified
-        if self.token_config["thinking"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["thinking"])
+        # Apply token limits for thinking phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "thinking")
 
         for agent in agents:
             # Get reasoning budget for this specific agent
@@ -640,10 +674,8 @@ class PhaseHandler:
 
         self.logger.info(f"=== PROPOSAL SUBMISSION PHASE - Round {round_num} ===")
 
-        # Set token limit for proposal phase if specified
-        if self.token_config["proposal"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["proposal"])
+        # Apply token limits for proposal phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "proposal")
 
         for agent in agents:
             # Get reasoning budget for this specific agent
@@ -904,10 +936,8 @@ class PhaseHandler:
                 "voting_summary": "No proposals to vote on"
             }
 
-        # Set token limit for voting phase if specified
-        if self.token_config["voting"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["voting"])
+        # Apply token limits for voting phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "voting")
 
         batch_voting_supported = (
             self.game_environment is not None
@@ -1307,10 +1337,8 @@ Vote must be either "accept" or "reject"."""
 
         self.logger.info(f"=== INDIVIDUAL REFLECTION PHASE - Round {round_num} ===")
 
-        # Set token limit for reflection phase if specified
-        if self.token_config["reflection"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["reflection"])
+        # Apply token limits for reflection phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "reflection")
 
         for agent in agents:
             # Get reasoning budget for this specific agent
@@ -1405,10 +1433,8 @@ Consider what adjustments might lead to consensus in future rounds."""
 
         self.logger.info(f"=== PLEDGE SUBMISSION PHASE - Round {round_num} ===")
 
-        # Set token limit for proposal/pledge phase if specified
-        if self.token_config["proposal"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["proposal"])
+        # Apply token limits for pledge/proposal phase if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "proposal")
 
         game_state = preferences["game_state"]
 
@@ -1549,10 +1575,8 @@ Consider what adjustments might lead to consensus in future rounds."""
         self.logger.info(f"  Aggregate totals: {[round(a, 2) for a in aggregates]}")
         self.logger.info(f"  Funded projects: {[projects[j]['name'] for j in funded] if funded else 'None'}")
 
-        # Set token limit
-        if self.token_config["default"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["default"])
+        # Apply default-phase token limits if configured for this experiment or agent.
+        self._apply_phase_token_limits(agents, "default")
 
         # Send feedback to each agent
         for agent in agents:
@@ -1627,12 +1651,7 @@ Consider what adjustments might lead to consensus in future rounds."""
         funded = game_state.get("funded_projects", [])
         current_pledges = game_state.get("current_pledges", {})
 
-        if self.token_config["voting"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["voting"])
-        elif self.token_config["default"] is not None:
-            for agent in agents:
-                agent.update_max_tokens(self.token_config["default"])
+        self._apply_phase_token_limits(agents, "voting", fallback_phase="default")
 
         # Shared fallback prompt if the game environment does not provide one.
         fallback_lines = [

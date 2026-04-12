@@ -343,13 +343,29 @@ class StrongModelAgentFactory:
             self.logger.warning(f"Model path does not exist: {local_path}, skipping {model_name}")
             return None
         
+        custom_params = dict(model_config.get("custom_parameters", {}))
+        phase_token_caps = {
+            phase_name: model_config[field_name]
+            for phase_name, field_name in {
+                "discussion": "max_tokens_discussion",
+                "thinking": "max_tokens_thinking",
+                "proposal": "max_tokens_proposal",
+                "voting": "max_tokens_voting",
+                "reflection": "max_tokens_reflection",
+                "default": "max_tokens_default",
+            }.items()
+            if model_config.get(field_name) is not None
+        }
+        if phase_token_caps:
+            custom_params["phase_token_caps"] = phase_token_caps
+
         # Use GEMMA_2_27B as base type (just for config compatibility, won't be used)
         llm_config = LLMConfig(
             model_type=ModelType.GEMMA_2_27B,  # Base type for compatibility
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={}
+            custom_parameters=custom_params
         )
         
         # Store the actual model_id for reference

@@ -1,5 +1,13 @@
 """Configuration for strong language models via OpenRouter and direct APIs."""
 
+_GPU_LLAMA_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": 2048,
+    "max_tokens_thinking": 1280,
+    "max_tokens_proposal": 512,
+    "max_tokens_voting": 384,
+    "max_tokens_reflection": 1536,
+}
+
 STRONG_MODELS_CONFIG = {
     # WEAK MODELS - Used as baseline/exploitable models in experiments
     # These models represent the "weaker" side in exploitation experiments
@@ -695,6 +703,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
+        **_GPU_LLAMA_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
@@ -767,6 +776,18 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Exact Arena-name alias.",
         "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "weak"
+    },
+    "llama-3.2-3b-instruct-cluster": {
+        "name": "Llama 3.2 3B Instruct (Cluster)",
+        "model_id": "meta-llama/llama-3.2-3b-instruct",
+        "provider": "Princeton Cluster",
+        "api_type": "princeton_cluster",
+        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.2-3B-Instruct",
+        "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
+        "temperature": 0.7,
+        **_GPU_LLAMA_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
@@ -985,6 +1006,7 @@ STRONG_MODELS_CONFIG = {
         "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.2-1B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
+        **_GPU_LLAMA_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
