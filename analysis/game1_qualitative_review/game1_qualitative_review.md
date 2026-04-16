@@ -2,22 +2,22 @@
 
 ## Coverage
 
-- Runs analyzed: 890
+- Runs analyzed: 840
 - Unique adversary models: 30
 - No-consensus runs: 21
-- LLM-labeled runs: 137
+- LLM-labeled runs: 127
 
 ## Deterministic Signals
 
 Lowest consensus-rate adversaries at competition 1.0:
 - `llama-3.2-1b-instruct`: consensus rate 0.50
-- `o3-mini-high`: consensus rate 0.75
-- `gpt-4o-2024-05-13`: consensus rate 0.75
 - `llama-3.2-3b-instruct`: consensus rate 0.75
+- `gpt-4o-2024-05-13`: consensus rate 0.75
+- `o3-mini-high`: consensus rate 0.75
 - `qwen2.5-72b-instruct`: consensus rate 0.75
-- `Phi-3-mini-128k-instruct`: consensus rate 1.00
-- `amazon-nova-pro-v1.0`: consensus rate 1.00
 - `amazon-nova-micro-v1.0`: consensus rate 1.00
+- `claude-3-haiku-20240307`: consensus rate 1.00
+- `amazon-nova-pro-v1.0`: consensus rate 1.00
 
 Highest adversary stubbornness proxy at competition 1.0:
 - `llama-3.2-3b-instruct`: proxy 0.81
@@ -47,38 +47,37 @@ Highest adversary stubbornness proxy at competition 1.0:
 These counts come from the labeled subset, not the full 890-run batch.
 
 opening_style:
-- `targeted_anchor`: 44
-- `balanced_tradeoff`: 43
-- `cooperative_exploration`: 33
-- `maximalist_anchor`: 14
-- `parser_or_degenerate`: 3
+- `balanced_tradeoff`: 49
+- `targeted_anchor`: 41
+- `cooperative_exploration`: 19
+- `maximalist_anchor`: 13
+- `parser_or_degenerate`: 5
 
 adaptation_style:
-- `responsive_tradeoff`: 63
-- `minimal_evidence`: 39
-- `rigid_repetition`: 33
-- `incremental_concession`: 1
+- `responsive_tradeoff`: 56
+- `minimal_evidence`: 40
+- `rigid_repetition`: 30
 - `oscillating_or_incoherent`: 1
 
 failure_mode:
-- `none`: 96
-- `repetitive_deadlock`: 21
-- `parser_failure`: 12
-- `top_item_conflict`: 6
+- `none`: 78
+- `parser_failure`: 24
+- `repetitive_deadlock`: 19
+- `top_item_conflict`: 3
+- `late_round_brinkmanship`: 2
 - `incompatible_fairness_frame`: 1
-- `late_round_brinkmanship`: 1
 
 resolution_driver:
-- `hybrid_compromise`: 73
-- `baseline_frame_accepted`: 23
-- `adversary_frame_accepted`: 21
+- `hybrid_compromise`: 65
+- `baseline_frame_accepted`: 26
 - `no_resolution`: 20
+- `adversary_frame_accepted`: 16
 
 relative_stubbornness:
-- `neither`: 79
-- `adversary_more_stubborn`: 32
-- `baseline_more_stubborn`: 14
-- `both_stubborn`: 12
+- `neither`: 65
+- `adversary_more_stubborn`: 43
+- `both_stubborn`: 10
+- `baseline_more_stubborn`: 9
 
 ## Companion Docs
 

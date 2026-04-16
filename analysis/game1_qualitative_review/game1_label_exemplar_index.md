@@ -4,7 +4,7 @@ This file is for auditing the current Claude Haiku labels. Repeated transcripts 
 
 ## Curated Audit Pack
 
-These 11 transcripts collectively cover every label value currently present in `labeled_runs.csv`.
+These 10 transcripts collectively cover every label value currently present in `labeled_runs.csv`.
 
 ### llama-3.2-3b-instruct | Elo 1166 | comp 0.9
 
@@ -19,6 +19,13 @@ Evidence: Adversary parse failure rate: 1.0 (100% of rounds); baseline parse fai
 
 Covered labels: `targeted_anchor`, `rigid_repetition`, `repetitive_deadlock`, `adversary_frame_accepted`, `both_stubborn`
 Evidence: Baseline repeats [4,2] vs [0,1,3] allocation identically in rounds 1–8 with near-identical reasoning ('preserving Agent_1's top assets'). / Adversary repeats [1,2,3] vs [0,4] identically in rounds 1–8, claiming 'top priorities' (Pencil, Apple).
+
+### llama-3.2-3b-instruct | Elo 1166 | comp 1.0
+
+[llama-3.2-3b-instruct transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_llama-3.2-3b-instruct/weak_first/comp_1.0/turns_2/run_1/experiment_results.json:1)
+
+Covered labels: `parser_or_degenerate`, `rigid_repetition`, `parser_failure`, `baseline_frame_accepted`, `adversary_more_stubborn`
+Evidence: Adversary parse failure rate: 1.0 (100% of rounds); every adversary proposal defaults to 'proposer gets all' with 100/0 split / Baseline repeat rate: 0.625; adversary repeat rate: 1.0 — adversary rigidly repeats identical degenerate proposal while baseline varies (51/49, 55/45, etc.)
 
 ### claude-opus-4-5-20251101 | Elo 1468 | comp 1.0
 
@@ -41,20 +48,6 @@ Evidence: Baseline: 'My top priorities are Jewel (value 59) and Quill (value 41)
 Covered labels: `balanced_tradeoff`, `oscillating_or_incoherent`, `parser_failure`, `no_resolution`, `adversary_more_stubborn`
 Evidence: Adversary parse failures in rounds 1, 2, 3, 4, 7, 8 default to 'Agent_1 gets all'; adversary_parse_failure_rate: 0.6 / Adversary repeats identical allocation [0,2] to Agent_1 and [1,3,4] to Agent_2 in rounds 5, 6, 9, 10 with identical reasoning text
 
-### amazon-nova-micro-v1.0 | Elo 1240 | comp 0.25
-
-[amazon-nova-micro-v1.0 transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_amazon-nova-micro-v1.0/weak_first/comp_0.25/turns_2/run_1/experiment_results.json:1)
-
-Covered labels: `targeted_anchor`, `incremental_concession`, `none`, `adversary_frame_accepted`, `baseline_more_stubborn`
-Evidence: Baseline proposes {Agent_1: [0,4], Agent_2: [1,2,3]} in rounds 1, 2, and 3 with identical utility (81/89), showing rigid repetition despite discussion. / Adversary modifies proposal in round 3 to {Agent_1: [0,1,4], Agent_2: [2,3]}, giving baseline Jewel and improving baseline utility to 95, demonstrating incremental concession.
-
-### llama-3.1-8b-instruct | Elo 1211 | comp 0.5
-
-[llama-3.1-8b-instruct transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_llama-3.1-8b-instruct/weak_first/comp_0.5/turns_1/run_1/experiment_results.json:1)
-
-Covered labels: `targeted_anchor`, `rigid_repetition`, `parser_failure`, `baseline_frame_accepted`, `baseline_more_stubborn`
-Evidence: Baseline proposes identical allocation (Agent_1: [0,3], Agent_2: [1,2,4]) in rounds 1, 2, and 3 with utility 64/86. / Round 2 adversary proposal shows parse failure: 'Failed to parse response - defaulting to proposer gets all' (utility 100/0).
-
 ### gpt-5.4-high | Elo 1484 | comp 0.95
 
 [gpt-5.4-high transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_gpt-5.4-high/strong_first/comp_0.95/turns_2/run_2/experiment_results.json:1)
@@ -62,9 +55,9 @@ Evidence: Baseline proposes identical allocation (Agent_1: [0,3], Agent_2: [1,2,
 Covered labels: `targeted_anchor`, `responsive_tradeoff`, `none`, `adversary_frame_accepted`, `adversary_more_stubborn`
 Evidence: Baseline Round 1: 'Equal total value' fair split (50-50). Adversary Round 1: 'strongest overlap' split (67-47 favoring adversary). / Baseline Round 2 accepts adversary's identical proposal from Round 1, reasoning 'preserves Agent_2's top item Quill'—the adversary's top item, not baseline's.
 
-### claude-opus-4-6 | Elo 1499 | comp 0.5
+### claude-opus-4-6-thinking | Elo 1504 | comp 0.5
 
-[claude-opus-4-6 transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_claude-opus-4-6-thinking/weak_first/comp_0.5/turns_2/run_1/experiment_results.json:1)
+[claude-opus-4-6-thinking transcript](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_claude-opus-4-6-thinking/weak_first/comp_0.5/turns_2/run_1/experiment_results.json:1)
 
 Covered labels: `targeted_anchor`, `responsive_tradeoff`, `late_round_brinkmanship`, `hybrid_compromise`, `baseline_more_stubborn`
 Evidence: Agent_1 (baseline): 'My top priority is Stone (value 46 to me). I'm open to constructive, multi-step trades, but I'm not going to give Stone away without a very solid payoff.' / Agent_2 (adversary): 'I'm focused on accumulating total value rather than fixating on any single item. Stone has some appeal, but it's not a must-have.'
@@ -139,14 +132,6 @@ Context: consensus=True, final_round=10, model_order=`weak_first`.
 Other labels on this run: `targeted_anchor`, `repetitive_deadlock`, `adversary_frame_accepted`, `both_stubborn`
 Evidence: Baseline repeats [4,2] vs [0,1,3] allocation identically in rounds 1–8 with near-identical reasoning ('preserving Agent_1's top assets'). / Adversary repeats [1,2,3] vs [0,4] identically in rounds 1–8, claiming 'top priorities' (Pencil, Apple).
 
-### incremental_concession
-
-[amazon-nova-micro-v1.0 | Elo 1240 | comp 0.25](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_amazon-nova-micro-v1.0/weak_first/comp_0.25/turns_2/run_1/experiment_results.json:1)
-
-Context: consensus=True, final_round=3, model_order=`weak_first`.
-Other labels on this run: `targeted_anchor`, `none`, `adversary_frame_accepted`, `baseline_more_stubborn`
-Evidence: Baseline proposes {Agent_1: [0,4], Agent_2: [1,2,3]} in rounds 1, 2, and 3 with identical utility (81/89), showing rigid repetition despite discussion. / Adversary modifies proposal in round 3 to {Agent_1: [0,1,4], Agent_2: [2,3]}, giving baseline Jewel and improving baseline utility to 95, demonstrating incremental concession.
-
 ### responsive_tradeoff
 
 [gpt-5.4-high | Elo 1484 | comp 0.95](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_gpt-5.4-high/strong_first/comp_0.95/turns_2/run_2/experiment_results.json:1)
@@ -215,7 +200,7 @@ Evidence: Baseline proposes [Pencil, Jewel] to Agent_1 and [Stone, Apple, Quill]
 
 ### late_round_brinkmanship
 
-[claude-opus-4-6 | Elo 1499 | comp 0.5](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_claude-opus-4-6-thinking/weak_first/comp_0.5/turns_2/run_1/experiment_results.json:1)
+[claude-opus-4-6-thinking | Elo 1504 | comp 0.5](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_claude-opus-4-6-thinking/weak_first/comp_0.5/turns_2/run_1/experiment_results.json:1)
 
 Context: consensus=True, final_round=1, model_order=`weak_first`.
 Other labels on this run: `targeted_anchor`, `responsive_tradeoff`, `hybrid_compromise`, `baseline_more_stubborn`
@@ -233,11 +218,11 @@ Evidence: Baseline Round 1: 'Equal total value' fair split (50-50). Adversary Ro
 
 ### baseline_frame_accepted
 
-[llama-3.1-8b-instruct | Elo 1211 | comp 0.5](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_llama-3.1-8b-instruct/weak_first/comp_0.5/turns_1/run_1/experiment_results.json:1)
+[llama-3.2-3b-instruct | Elo 1166 | comp 1.0](/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/gpt-5-nano_vs_llama-3.2-3b-instruct/weak_first/comp_1.0/turns_2/run_1/experiment_results.json:1)
 
-Context: consensus=True, final_round=3, model_order=`weak_first`.
-Other labels on this run: `targeted_anchor`, `rigid_repetition`, `parser_failure`, `baseline_more_stubborn`
-Evidence: Baseline proposes identical allocation (Agent_1: [0,3], Agent_2: [1,2,4]) in rounds 1, 2, and 3 with utility 64/86. / Round 2 adversary proposal shows parse failure: 'Failed to parse response - defaulting to proposer gets all' (utility 100/0).
+Context: consensus=True, final_round=9, model_order=`weak_first`.
+Other labels on this run: `parser_or_degenerate`, `rigid_repetition`, `parser_failure`, `adversary_more_stubborn`
+Evidence: Adversary parse failure rate: 1.0 (100% of rounds); every adversary proposal defaults to 'proposer gets all' with 100/0 split / Baseline repeat rate: 0.625; adversary repeat rate: 1.0 — adversary rigidly repeats identical degenerate proposal while baseline varies (51/49, 55/45, etc.)
 
 ### hybrid_compromise
 

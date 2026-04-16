@@ -65,6 +65,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from strong_models_experiment.analysis.active_model_roster import (  # noqa: E402
+    LEGACY_EXCLUDED_MODELS,
     active_model_info_map,
     canonical_model_name,
     short_model_name,
@@ -290,6 +291,16 @@ def model_elo(model_name: str) -> float:
     return float(value) if value is not None else float("nan")
 
 
+def _adversary_from_pair_dir(path: Path) -> Optional[str]:
+    for part in path.parts:
+        if "_vs_" in part:
+            left, right = part.split("_vs_", 1)
+            if canonical_model_name(left) == BASELINE_MODEL:
+                return canonical_model_name(right)
+            return canonical_model_name(left)
+    return None
+
+
 def load_results(results_dir: Path) -> List[Dict[str, Any]]:
     records: List[Dict[str, Any]] = []
     seen_dirs = set()
@@ -306,6 +317,9 @@ def load_results(results_dir: Path) -> List[Dict[str, Any]]:
         if config.get("game_type") != "item_allocation":
             continue
         if "gpt-5-nano_vs_" not in str(result_file):
+            continue
+        adversary_from_dir = _adversary_from_pair_dir(result_file)
+        if adversary_from_dir in LEGACY_EXCLUDED_MODELS:
             continue
         data["_file_path"] = str(result_file)
         records.append(data)
@@ -328,11 +342,20 @@ def parse_path_metadata(result_path: str) -> Dict[str, Any]:
 
 
 def identify_agents(result: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, str]:
+    # The pair directory is the ground-truth adversary model: the experiment
+    # runner occasionally strips the `-thinking` or `-thinking-32k` suffix in
+    # `agent_performance[*].model`, which would silently merge thinking variants
+    # with their non-thinking counterparts. The directory name never does that.
+    pair_dir = meta.get("pair_dir") or ""
+    model_a, model_b = pair_dir.split("_vs_")
+    model_a = canonical_model_name(model_a)
+    model_b = canonical_model_name(model_b)
+    inferred_adversary_model = model_b if model_a == BASELINE_MODEL else model_a
+
     perf = result.get("agent_performance", {}) or {}
     baseline_agent = None
     adversary_agent = None
     baseline_model = BASELINE_MODEL
-    adversary_model = None
 
     for agent_id, info in perf.items():
         model_name = canonical_model_name(str((info or {}).get("model", "")))
@@ -341,22 +364,13 @@ def identify_agents(result: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, s
             baseline_model = model_name
         else:
             adversary_agent = agent_id
-            adversary_model = model_name
-
-    pair_dir = meta.get("pair_dir") or ""
-    model_a, model_b = pair_dir.split("_vs_")
-    model_a = canonical_model_name(model_a)
-    model_b = canonical_model_name(model_b)
-    inferred_adversary_model = model_b if model_a == BASELINE_MODEL else model_a
 
     if baseline_agent and adversary_agent:
-        if not adversary_model or adversary_model == "unknown":
-            adversary_model = inferred_adversary_model
         return {
             "baseline_agent": baseline_agent,
             "adversary_agent": adversary_agent,
             "baseline_model": baseline_model,
-            "adversary_model": adversary_model or "unknown",
+            "adversary_model": inferred_adversary_model,
         }
 
     order = meta.get("model_order")
