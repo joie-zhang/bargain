@@ -137,7 +137,7 @@ async def main():
         "--sigma",
         type=float,
         default=0.5,
-        help="Budget abundance scale (0,1]: total budget ratio = 0.5 + 0.5*sigma (co_funding only, default: 0.5)"
+        help="Budget scarcity ratio (0,1]: sigma = total_budget / total_project_cost (co_funding only, default: 0.5)"
     )
 
     parser.add_argument(
