@@ -47,6 +47,56 @@ Competition changes the level of payoffs for everyone. \Cref{fig:game1_utility_v
 
 Stronger models also finish faster. In \Cref{fig:game1_rounds_vs_elo}, the correlation between Elo and mean rounds to consensus is $-0.47$. The fastest models in the batch are Claude Opus 4.5 Thinking at 1.14 rounds, DeepSeek R1-0528 at 1.32, and Claude Opus 4.5 at 1.32. The slowest are Command R+ at 2.64, Nova Micro at 2.39, and Llama 3.2 1B at 2.35. In Game 1, capability buys both better deals and shorter negotiations.
 
+\subsubsection{Qualitative Mechanisms in Item Allocation}
+\label{sec:game1_qualitative}
+
+To understand what is driving the aggregate Elo-utility relationship, we reviewed a stratified sample of Game 1 transcripts, selecting runs at competition level 1.0 from four adversary tiers. The four case studies below are each grounded in a single transcript; we flag sample sizes explicitly and present them as illustrative mechanisms rather than tested hypotheses.
+
+\paragraph{Protocol collapse at the floor.}
+Weak adversary runs against GPT-5-nano frequently fail before strategic bargaining begins. In one Llama 3.2 1B run, the model writes both sides of the dialogue inside a single discussion turn:
+\begin{quote}
+\ldots we can establish a clear path to Stone and create a solid foundation for our coalition.\\[2pt]
+\textbf{Agent\_2:} I appreciate your willingness to adapt and adjust the plan. I think the Apple $\leftrightarrow$ Jewel swap is a great idea, and I'm willing to commit to the plan\ldots
+\end{quote}
+This is a single message from Agent\_1; the ``Agent\_2'' paragraph is a hallucinated self-continuation that the real Agent\_2 never wrote. In every round of that ten-round run, Llama's formal proposal also fails to parse and defaults to the environment's proposer-gets-all fallback allocation; GPT-5-nano votes against every such proposal and the run terminates with zero utility on both sides. A distinct floor-level failure appears in an Amazon Nova Micro run with identical preferences on both sides (Apple = 42, Pencil = 29, Jewel = 22, Quill = 5, Stone = 2): Nova Micro's first-round formal proposal assigns itself only Quill (worth 5) and gives GPT-5-nano Apple + Jewel + Pencil (worth 93), reaching consensus in a single round at a 5-vs-93 final split. The weak model emits a syntactically legal proposal whose semantic content contradicts its own preference vector.
+
+\paragraph{Fairness-frame exploitation at the lower-mid tier.}
+A GPT-4o-2024-05-13 run at the same competition level against GPT-5-nano with identical preferences (Apple = 51, Quill = 19, Jewel = 16, Pencil = 12, Stone = 2) closes at a 69-vs-31 utility split in a single round. The mechanism is visible in GPT-4o's opening turn:
+\begin{quote}
+For me, the Apple is the most important item, and it's something I highly value. The Quill and Pencil are also items of interest to me, though to a lesser extent. The Jewel and Stone are lower on my priority list.
+\end{quote}
+Jewel is in fact GPT-4o's third-highest-valued item, ranked above Pencil. By grouping ``Jewel and Stone'' as low, the opening misrepresents the preference ordering. GPT-5-nano proposes an ``each side keeps its top item, alternate picks on the rest'' structure, GPT-4o accepts the frame, insists on picking first, and takes Jewel and Stone, leaving Pencil for the baseline.
+
+\paragraph{Symmetric anchoring at the upper-mid tier.}
+A Claude Haiku 4.5 run at the same settings with identical preferences (Jewel = 44, Apple = 28, Stone = 15, Pencil = 8, Quill = 5) closes at 33.5-vs-32.2 after five rounds. Both agents open with mirror-image ``give me the top item plus a filler, you take the rest'' proposals, and neither concedes the top item. The raw five-round agreement is 51-vs-49, approximately balanced, but the time discount at $\gamma = 0.9$ per round erodes both payoffs by roughly 35\%. At this capability band the characteristic pattern is absence of strategic asymmetry: the two models anchor symmetrically, and the payoff level is determined mostly by delay rather than by allocation quality.
+
+\paragraph{Anchor-and-drift at the high tier.}
+A Claude Opus 4.5 run with heavily skewed identical preferences (Pencil = 72, Quill = 12, Jewel = 8, Apple = 7, Stone = 1) closes at 57.6-vs-15.3 after four rounds. Opus's round-by-round proposals in self / other form are:
+
+\begin{center}
+\begin{tabular}{cll}
+\toprule
+Round & Opus (self) & Nano (other's self) \\
+\midrule
+1 & \{Quill, Pencil\} & \{Pencil\} \\
+2 & \{Stone, Quill, Pencil\} & \{Apple, Pencil\} \\
+3 & \{Jewel, Stone, Pencil\} & \{Apple, Pencil\} \\
+4 & \textbf{\{Apple, Pencil\}} & \textbf{\{Apple, Pencil\}} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Pencil, the sole high-value item, stays in Opus's own bundle in every round. Opus expands its peripheral demands in round 2, then drops them back over rounds 3 and 4, finally matching GPT-5-nano's round-3 proposal exactly. The anchor on the top item is immovable while peripheral items drift, producing the appearance of concession. Because GPT-5-nano's time discount penalizes delay more than it penalizes an asymmetric split, the baseline converges to Opus's anchor rather than holding out for a balanced share.
+
+\subsubsection{Multi-Agent Extension (N = 3)}
+\label{sec:game1_n3}
+
+A preliminary three-agent extension of the item allocation game (one replicate per condition) suggests the Game 1 capability advantage scales up rather than down. With Claude Opus 4.6 as focal agent against two GPT-5-nano agents at competition level 1.0, the focal utility averages 44.0 while the two baselines average 22.2 each. An all-nano control at the same parameters averages 19.7 per agent and takes six rounds to reach consensus rather than the two rounds the focal run needs. In a representative focal run, Opus opens round 1 with a meta-strategic reframing:
+\begin{quote}
+The core issue: All three of us want Stone as our top priority. That means whoever gets Stone is getting a massive share of value, so the remaining items need to be distributed fairly to the other two.
+\end{quote}
+Opus then rejects each baseline's ``Stone to me'' proposal as ``extremely lopsided,'' and locks in a round-2 allocation that assigns itself Stone and splits the remainder symmetrically between the two baselines. The nanos, each wanting Stone but unable to block Opus alone under unanimity, have no stable coordination point against Opus; the focal-plus-balanced-residual allocation is the unique mutual-second-best for the baselines. In the all-nano control, no agent articulates the meta-argument that one of them will end up with Stone and the other two should split the rest; the baselines cycle through competing Stone-to-me proposals for five rounds before attrition settles the allocation, and the time discount erodes all utilities. With only one replicate per condition, these numbers should be read as a preliminary signal rather than a tested effect.
+
 \subsection{Game 2: Diplomatic Treaty}
 \label{sec:game2_results}
 
@@ -76,6 +126,19 @@ Game 2 shows the same basic scaling pattern as Game 1, but at a much higher util
 \end{figure}
 
 The competition effect is visible, but it is milder than in Games 1 and 3. Mean adversary utility is 94.2 at $CI_2 = 0$ and 65.3 at $CI_2 = 1$. Mean rounds increase from 1.17 to 2.08 over the same range. The native parameter view in \Cref{fig:game2_rho_theta} shows that preference correlation $\rho$ does more work than issue overlap $\theta$. When $\rho = 1$, adversary utility averages 97.6. When $\rho = -1$, it falls to 74.7. The effect of $\theta$ is smaller: mean adversary utility declines from 92.1 at $\theta = 0$ to 80.0 at $\theta = 1$. Even in the hardest $CI_2 = 1$ condition, strong models still hold up well. DeepSeek R1-0528 averages 96.1 utility there, while Llama 3.2 1B drops to 23.1. Treaty bargaining therefore preserves a wide capability spread without creating the coordination failures seen in Game 3.
+
+\subsubsection{Qualitative Pattern: Concession-Narration Ratchet}
+\label{sec:game2_qualitative}
+
+The aggregate Elo-utility relationship in Game 2 is monotone, but a closer look at individual high-adversity runs reveals that some high-Elo models lose to GPT-5-nano in ways that do not appear in Game 1. A Claude Opus 4.6 run at the hardest corner $(\rho, \theta) = (-1, 1)$ closes at 47.9 utility for Opus against 65.8 for GPT-5-nano, reaching consensus in three rounds. The proximate mechanism is legible in the transcript as a one-way concession ratchet. In round 2 Opus announces a unilateral concession on its own second-highest-priority issue:
+\begin{quote}
+I'm willing to make a major move on nuclear warhead reduction --- pushing it up to 65--70\%. \ldots That's me moving nearly 50 points from my ideal of 16\%.
+\end{quote}
+In round 3 Opus narrates the cumulative history of its concessions on its single highest-priority issue (fentanyl precursor control):
+\begin{quote}
+I've moved fentanyl from 78\% $\to$ 50\% $\to$ 40\%. That's a 38-point concession on my most important issue. You've moved fentanyl from 6\% $\to$ 6\% $\to$ 6\%. Zero movement.
+\end{quote}
+GPT-5-nano's own messages contain no symmetrical narration of its own positions. Because Opus has publicly recorded the size of its own concessions in the transcript, rolling back any of them in the next round would create a legibility problem: its own stated commitments become a ratchet against it. This single run is consistent with a batch-level pattern visible in the $\rho = -1$ column of \Cref{fig:game2_rho_theta}: Claude Opus 4.6 averages 59.9 adversary utility at $\rho = -1$, while Claude Opus 4.6 Thinking averages 90.8 and DeepSeek R1-0528 averages 96.1. Reasoning-chain variants that narrate internal deliberation rather than concessions do not appear to be vulnerable to the same pattern. We present the individual transcript as an illustration of a plausible mechanism; the aggregate column separation is the more tested claim.
 
 \subsection{Game 3: Participatory Budgeting}
 \label{sec:game3_results}
@@ -108,6 +171,41 @@ Game 3 still rewards capability, but the slope is weaker than in the first two g
 The competition effect is much sharper here than in the other two games. Mean adversary utility is 34.2 at $CI_3 = 0$, 32.9 at 0.2, 23.9 at 0.4, and 0.93 at 0.8. The $\alpha$-$\sigma$ breakdown shows that scarcity is doing most of the damage. At fixed $\alpha = 0$, increasing $\sigma$ from 0.2 to 1.0 raises mean utility from 0.93 to 41.25. At fixed $\sigma = 0.2$, increasing $\alpha$ from 0 to 1 raises it only to 16.10. Preference alignment helps, but abundant budgets help much more.
 
 The hardest cell also reveals a failure mode that does not appear in the first two games. At $(\alpha, \sigma) = (0, 0.2)$, GPT-5.4 High still averages 22.3 utility, but several models go negative, including Llama 3.1 8B at $-4.46$. A negative utility means the agent funded projects whose value did not cover its own contributions. In this environment, the key capability difference is whether a model can keep contribution planning from collapsing under scarcity.
+
+\subsubsection{Qualitative Mechanisms in Cofunding}
+\label{sec:game3_qualitative}
+
+The aggregate Elo-vs-utility relationship in Game 3 is weaker than in Games 1 and 2 (correlation $0.72$ versus $0.85$ and $0.82$), and the game's payoff structure collapses to near zero in a specific parameter region. To understand what is driving these two observations, we reviewed a stratified sample of cofunding transcripts. The five mechanisms below are each grounded in at least one round-by-round transcript trace; we state sample sizes explicitly because most are illustrative case studies rather than tested hypotheses.
+
+\paragraph{Structural deadlock at $(\alpha, \sigma) = (0, 0.2)$.} When preferences are orthogonal and per-agent budgets are tight, even the strongest models fail to reach agreement. We examined three transcripts at this cell against GPT-5-nano --- DeepSeek R1-0528, GPT-5.4 High, and Claude Opus 4.6; each of the three runs ends with zero utility on both sides and no consensus. In all three runs each pair pledges only to its own-valued projects for every round and the aggregate never crosses a project cost. The proximate reasoning is visible in DeepSeek R1-0528's first-round discussion reply:
+\begin{quote}
+I accept your proposal\ldots This secures Market Street (58 utility for me) with no risk of underfunding. \ldots Parkside (14 cost) is technically fundable this round, but I assign it \textbf{zero value}, so prioritizing it would waste my budget.
+\end{quote}
+The partner (GPT-5-nano) values Parkside at 53 and values Market Street at 0; the symmetric logic applies to both agents, so every round sees one agent pledging to Market Street and the other to Parkside without either crossing threshold. The joint budget in this cell is approximately the cost of the cheapest project, and unanimity means either agent can veto the other's projects. Combined with the batch-level consensus rate of approximately 10\% in this cell, the pattern suggests a genuine game-theoretic floor rather than a capability failure: Game 3's Elo signal is essentially absent at $(\alpha, \sigma) = (0, 0.2)$ because all models, weak or strong, collapse to zero utility.
+
+\paragraph{Cognitive floor: pledging to zero-value projects ($n = 1$).} At the opposite extreme, a single Nova Micro run at $(\alpha, \sigma) = (0, 1.0)$ illustrates a distinctively cofunding-specific low-capability failure. Nova Micro's preference vector placed 91 out of 100 utility on a single project (Cedar Pool Access Lift), yet in round one it accepted GPT-5-nano's ``Plan A'' proposal to fund Market Street Bike Lane and Oak Avenue Crosswalk Beacons, both worth zero to Nova, and pledged 40 of its 43-unit budget toward them. Nova's own discussion reasoning for accepting Plan A reads:
+\begin{quote}
+For me, it's more valuable to secure some utility from the Parkside Adventure Playground even if it's low. \ldots Let's proceed with Plan A for now and adjust as necessary in following rounds.
+\end{quote}
+Plan A funds neither Parkside nor Cedar; Parkside is worth only 9 to Nova and is not included in the accepted proposal at all. The reasoning text references a project that is not on the table, and the resulting pledge vector is inconsistent with Nova's own preference vector. Consensus passed in round one and Nova locked in a final utility of $-40$. Unlike Game 1's low-Elo failures, which are syntactic (malformed proposals falling back to proposer-gets-all), this Game 3 failure is semantic: Nova emitted a well-formed pledge vector whose content it could not utility-evaluate. This mechanism rests on a single deep transcript and is consistent with Nova Micro's batch-mean utility of 0.26 being the lowest in the roster, but one run is not enough to establish it as a general pattern.
+
+\paragraph{Noise-as-free-riding at $(\alpha, \sigma) = (1, 1.0)$ ($n = 1$).} A Llama 3.2 1B run with identical preferences to GPT-5-nano (Oak = 28 the largest, Parkside = 22, Harborview = 21, Market Street = 16, Cedar = 13) converged to a 40.5 versus 4.05 utility split after three rounds. The weak model extracted ten times the surplus. The mechanism is not strategic free-riding. Llama's pledge vectors across the three rounds are $[10, 0, 0, 0, 5]$, $[0, 0, 0, 0, 0]$, and $[10, 0, 0, 0, 5]$; GPT-5-nano's round-three pledge is $[0, 21, 24, 0, 0]$, which alone covers Parkside (cost 21) and Oak (cost 17). In the accepted round-three allocation Parkside and Oak are funded; Market Street and Harborview are not. Because the cofunding protocol charges agents only for contributions to successfully funded projects, Llama's 15 units pledged to unfunded projects cost it nothing, while GPT-5-nano's 45 units pledged to funded projects are charged in full. The utility split that follows is $50 - 0 = 50$ for Llama and $50 - 45 = 5$ for GPT-5-nano, each discounted once more by $\gamma = 0.9$ for the third-round agreement. The Elo-utility relationship at this condition is locally non-monotone as a result. We did not verify whether this pattern reproduces in other low-Elo adversaries (Llama 3.2 3B, Llama 3.1 8B, Command R+) at the same parameters, so the claim stands as a case study rather than a tested generalization.
+
+\paragraph{Coordination repair at the high tier ($n = 1$).} A Gemini 2.5 Pro run at $(\alpha, \sigma) = (0, 1.0)$ exhibited a strategic pattern absent from weaker adversaries. Both agents agreed during round 1 discussion to fund their respective top projects (Market Street for Gemini, worth 100; Harborview for GPT-5-nano, worth 41), but their submitted pledges diverged and the aggregate overfunded Market Street by a factor of two while leaving the rest under threshold. Round 1 failed. Gemini opened round 2 with an explicit diagnosis and prescription:
+\begin{quote}
+It looks like we were on the same page last round with our main goals, but our individual proposals didn't align, leading to a very inefficient and overfunded aggregate proposal. I believe that's why it was rejected. \ldots I propose we make our contributions precise. For example: I will contribute exactly 15 to the Market Street Bike Lane. You contribute exactly 21 to the Harborview Bus Shelter Canopies.
+\end{quote}
+Round-2 pledges matched the prescription, a third project (Cedar) was added from GPT-5-nano's remaining budget, and consensus followed at 76.5 utility for Gemini against 32.4 for GPT-5-nano. We did not observe this meta-strategic language --- explicitly naming the coordination failure and prescribing exact per-project contributions --- in any of the weaker transcripts we reviewed, but with only one positive example we do not yet have a calibrated frequency estimate.
+
+\paragraph{Burden asymmetry under identical preferences at $(\alpha, \sigma) = (1, 1.0)$.} A Qwen 2.5 72B transcript with identical preferences to GPT-5-nano (Oak = 41 as top item, Harborview = 22, Cedar = 17, Market Street = 18, Parkside = 2) reached consensus in round one with final utilities of 76.0 for Qwen and 35.0 for GPT-5-nano, despite both agents valuing the funded bundle equally. GPT-5-nano's first discussion turn volunteered the split unprompted:
+\begin{quote}
+Proposed funding plan (Agent\_2 contributions):
+Oak Avenue Crosswalk Beacons: 18 (fully funded by me). Harborview Bus Shelter Canopies: 21 (fully funded by me). Cedar Pool Access Lift: 6 (my share). Total from me: 45. What I'm asking from you: Please contribute 4 to Cedar Pool Access Lift.
+\end{quote}
+Qwen replied that these were its priorities too, submitted pledge $[0,0,0,4,0]$, and consensus followed. Contribution asymmetry accounts for the entire utility gap: Qwen paid 4 units, GPT-5-nano paid 45. Comparing across four adversaries at the same parameter cell, the two non-reasoning strong models (Qwen 2.5 72B, Gemini 2.5 Pro) extracted roughly a 2:1 utility ratio over the baseline, while both Opus 4.6 variants split 50--50 (30.8 each, and 36.9 each for the thinking variant). Only one of these four outcomes rests on a deep transcript reading; the other three are drawn from final utilities and are consistent with, but do not establish, a reasoning-versus-non-reasoning split in how strong models respond to a baseline's over-generosity.
+
+\medskip
+Together, these five observations sketch a qualitative picture: Game 3's lower aggregate Elo correlation reflects both a structural floor that nullifies the Elo signal in a specific parameter cell and a set of condition-specific mechanisms --- cognitive miscalculation, accidental free-riding from incoherence, coordination repair, burden asymmetry --- whose net effect on the full batch partially cancels. Four of the five mechanisms rest on single deep transcripts; a systematic follow-up using feature extractors over the full run batch is needed before any of them should be read as an established claim.
 
 \subsection{Cross-Game Comparison}
 \label{sec:cross_game_results}
