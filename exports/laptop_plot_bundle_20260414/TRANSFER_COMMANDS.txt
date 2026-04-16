@@ -1,0 +1,17 @@
+From your laptop (replace NETID and HOST):
+
+scp NETID@HOST:/scratch/gpfs/DANQIC/jz4391/bargain/exports/laptop_plot_bundle_20260414.tar.gz .
+
+tar -xzf laptop_plot_bundle_20260414.tar.gz
+cd laptop_plot_bundle_20260414
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+mkdir -p outputs
+python scripts/plot_game1_from_csv.py --input-dir data/n2/game_1 --output-dir outputs/game_1
+python scripts/plot_game2_from_csv.py --input-dir data/n2/game_2 --output-dir outputs/game_2
+python scripts/plot_game3_from_csv.py --input-dir data/n2/game_3 --output-dir outputs/game_3
+python scripts/plot_game1_multiagent_from_csv.py \
+  --summary-csv data/n_gt_2/game1_multiagent_full_20260413_045538/summary_by_model.csv \
+  --output-dir outputs/n_gt_2

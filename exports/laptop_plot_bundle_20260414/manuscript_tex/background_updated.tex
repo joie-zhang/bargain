@@ -1,0 +1,46 @@
+% \jz{add the Big 5 Personalities paper, LLM economicus paper, and the Game-theoretic LLMs paper?}
+% \lh{If I was thinking about what to add here, I'd try to think about key themes and ideas rather than a random assortment of papers that seem somewhat related. Probably the key themes in this regard are cooperative capabilities and dispositions? Maybe also general stuff on strategic reasoning in LLMs.
+
+% Some ideas of relevant papers (not exhaustive):
+% \begin{itemize}
+% \item Cooperation and Control in Delegation Games
+% \item Quantifying Misalignment Between Agents
+% \item Quantifying Differences in Reward Functions
+% \item On Measuring Social Intelligence: Experiments on Competition and Cooperation
+% \item Beyond the high score: Prosocial ability profiles of multi-agent populations
+% \item  Rating the skill of synthetic agents
+% in competitive multi-agent environment
+% \item Towards the Scalable Evaluation of Cooperativeness in Language Models
+% \item  Strategic Reasoning with Language Models
+% \item  Decoupling Strategy and Generation
+% in Negotiation Dialogues
+% \end{itemize}
+% I didn't add many papers on the dispositions of LLMs here, but would recommend citing a few on that. Maybe some of Dan Hendrycks' work (such as the ETHICS or MACHIAVELLI datasets)?
+
+% Probably also good to briefly mention earlier work on automated negotiation in AI (i.e., not necessarily using LLMs). That keyword (`automated negotiation') should pull up a bunch of relevant papers, and there is also a bunch of relevant MARL work in that domain.
+% }
+
+LLM negotiation has quickly become a useful testbed for studying strategic reasoning in natural language.
+Early work introduced benchmark frameworks and capability decompositions for negotiation \citep{bianchi_how_2024,kwon-etal-2024-llms}, and subsequent papers have explored bargaining in a range of simulated settings, including buyer--seller exchange, resource trade, and multi-issue stakeholder negotiation \citep{abdelnabi_cooperation_2024,davidson_evaluating_2024,chatterjee_agreemate_2024,noh_llms_2024}.
+However, more capable models do not necessarily become rational or unbiased negotiators.
+A recent frontier-model re-evaluation of NegotiationArena finds that stronger models still diverge into model-specific strategic signatures rather than converging to a common bargaining policy, while also exhibiting persistent numerical and semantic anchoring effects and clear dominance patterns in which some models systematically extract higher payoffs than others \citep{rios_illusion_2025}.
+These findings are closely related to our own concern that general-purpose capability does not map monotonically onto strategic performance.
+
+A complementary line of work studies exploitability under adaptive strategic pressure rather than average performance against a fixed pool of opponents.
+\citet{wang_profit_2026} introduce \emph{profit-driven red teaming}, in which an opponent is optimized directly for profit using only scalar outcome feedback in four auditable economic games: ultimatum bargaining, first-price auctions, bilateral trade, and a provision-point public goods game.
+They show that agents which appear strong against static baselines can become reliably exploitable under adaptive pressure, with the learned opponent discovering tactics such as probing, anchoring, and deceptive commitments.
+This is complementary to our setting: instead of red-teaming a fixed target, we study how bargaining outcomes vary across model capabilities and across systematically controlled cooperation--competition regimes.
+
+Our work also connects to research on scaling and adaptation in strategic interaction.
+Prior scaling-law work on strategic behavior has mostly focused on \emph{multi-agent reinforcement learning} (MARL) settings such as Hex, Connect Four, and Pentago, rather than natural-language bargaining between LLM agents \citep{jones_scaling_2021,neumann_scaling_2022}.
+More recently, \citet{liu_scaling_2026} show that repeated negotiation performance can be improved at inference time by allocating additional computation to opponent modeling and simulated best-response search, without updating model parameters.
+Their results suggest that strategic performance depends not only on base model capability, but also on how test-time computation is spent.
+More broadly, scaling laws have been studied for single-agent RL \citep{hilton_scaling_2023}, vision \citep{Zhai2022}, LLMs \citep{hoffmann_training_2022,kaplan_scaling_2020}, and scalable oversight \citep{engels_scaling_2025}; our paper brings this perspective to negotiation environments with tunable strategic structure.
+
+Finally, recent work has begun to push beyond bilateral outcome bargaining toward richer multi-party negotiation settings.
+\citet{benac_benchmark_2026} introduce a benchmark for multi-party, sequential action-level negotiation with binding commitments and terminal-only rewards, together with a configurable generator and document-grounded climate negotiation instances derived from real negotiation artifacts.
+Their results emphasize that performance is strongly regime-dependent and that simple zero-shot LLM negotiation remains uncompetitive in these large, path-dependent settings.
+This is especially relevant to our planned extensions beyond two-agent bargaining.
+Whereas their emphasis is on benchmark design and value-function approximations for long-horizon commitment games, our present paper focuses on autonomous LLM negotiation in controlled environments with tunable cooperation--competition structure and broad capability sweeps.
+
+% \lh{As a heuristic, the related work section for a paper this long should be at least half a page.}

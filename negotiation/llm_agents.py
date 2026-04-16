@@ -17,6 +17,13 @@ import random
 from pathlib import Path
 import logging
 
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+    httpx = None
+
 # API client imports (will be conditionally imported)
 try:
     import anthropic
@@ -1516,8 +1523,26 @@ class OpenAIAgent(BaseLLMAgent):
         
         if not OPENAI_AVAILABLE:
             raise ImportError("openai package not available. Install with: pip install openai")
-        
-        self.client = openai.AsyncOpenAI(api_key=api_key)
+
+        # Keep connection failures bounded and let the base agent layer own
+        # retry policy. Without this, OpenAI SDK retries stack on top of the
+        # agent retries and can stretch a single failed request into many
+        # minutes.
+        if HTTPX_AVAILABLE:
+            client_timeout = httpx.Timeout(
+                connect=min(self.config.timeout, 10.0),
+                read=max(self.config.timeout, 180.0),
+                write=max(self.config.timeout, 30.0),
+                pool=max(self.config.timeout, 30.0),
+            )
+        else:
+            client_timeout = max(self.config.timeout, 180.0)
+
+        self.client = openai.AsyncOpenAI(
+            api_key=api_key,
+            timeout=client_timeout,
+            max_retries=0,
+        )
         
         # Check if we have an actual model ID stored (for newer models)
         if hasattr(config, '_actual_model_id'):
@@ -1540,7 +1565,7 @@ class OpenAIAgent(BaseLLMAgent):
                 raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
-        """Call OpenAI API with explicit rate limit handling."""
+        """Call OpenAI API once; outer agent layers handle retries."""
         start_time = time.time()
         
         # O3 models have specific parameter requirements
@@ -1561,76 +1586,39 @@ class OpenAIAgent(BaseLLMAgent):
         # Add custom parameters but exclude any max_tokens variants
         custom_params = {k: v for k, v in self.config.custom_parameters.items() 
                         if k not in ['max_tokens', 'max_completion_tokens']}
+
+        response = await self.client.chat.completions.create(
+            **api_params,
+            **custom_params,
+            **kwargs
+        )
         
-        # Retry logic with explicit rate limit handling
-        max_retries = self.config.max_retries
-        for attempt in range(max_retries):
-            try:
-                response = await self.client.chat.completions.create(
-                    **api_params,
-                    **custom_params,
-                    **kwargs
-                )
-                
-                response_time = time.time() - start_time
+        response_time = time.time() - start_time
 
-                # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
-                reasoning_tokens = None
-                if response.usage:
-                    # Direct field on usage
-                    if hasattr(response.usage, 'reasoning_tokens') and response.usage.reasoning_tokens:
-                        reasoning_tokens = response.usage.reasoning_tokens
-                    # Or in completion_tokens_details
-                    elif hasattr(response.usage, 'completion_tokens_details'):
-                        details = response.usage.completion_tokens_details
-                        if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
-                            reasoning_tokens = details.reasoning_tokens
+        # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
+        reasoning_tokens = None
+        if response.usage:
+            # Direct field on usage
+            if hasattr(response.usage, 'reasoning_tokens') and response.usage.reasoning_tokens:
+                reasoning_tokens = response.usage.reasoning_tokens
+            # Or in completion_tokens_details
+            elif hasattr(response.usage, 'completion_tokens_details'):
+                details = response.usage.completion_tokens_details
+                if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
+                    reasoning_tokens = details.reasoning_tokens
 
-                return AgentResponse(
-                    content=response.choices[0].message.content,  # Keep original - no masking
-                    model_used=self.model_name,
-                    response_time=response_time,
-                    tokens_used=response.usage.total_tokens if response.usage else None,
-                    cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
-                    metadata={
-                        "finish_reason": response.choices[0].finish_reason,
-                        "usage": response.usage.dict() if response.usage else None,
-                        "reasoning_tokens": reasoning_tokens
-                    }
-                )
-                
-            except openai.RateLimitError as e:
-                # Explicit handling of rate limit errors
-                self.logger.warning(
-                    f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
-                    f"Waiting before retry..."
-                )
-
-                if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    wait_time = min(wait_time, 300.0)
-                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
-                    raise
-
-            except openai.APIError as e:
-                # Handle other API errors (500s, etc.)
-                self.logger.warning(
-                    f"API error (attempt {attempt + 1}/{max_retries}): {e}"
-                )
-                if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    wait_time = min(wait_time, 300.0)
-                    await asyncio.sleep(wait_time)
-                else:
-                    raise
-
-            except Exception as e:
-                # Re-raise non-API exceptions immediately
-                self.logger.error(f"Unexpected error in OpenAI API call: {e}")
-                raise
+        return AgentResponse(
+            content=response.choices[0].message.content,  # Keep original - no masking
+            model_used=self.model_name,
+            response_time=response_time,
+            tokens_used=response.usage.total_tokens if response.usage else None,
+            cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
+            metadata={
+                "finish_reason": response.choices[0].finish_reason,
+                "usage": response.usage.dict() if response.usage else None,
+                "reasoning_tokens": reasoning_tokens
+            }
+        )
     
     def _estimate_cost(self, usage) -> float:
         """Estimate cost based on OpenAI pricing."""

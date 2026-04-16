@@ -113,6 +113,8 @@ INTERACTION_ONLY_TIMELINE_PHASES = {
 AGENT_COLORS = {
     "Agent_Alpha": "#3b82f6",
     "Agent_Beta":  "#ef4444",
+    "Agent_1":     "#3b82f6",
+    "Agent_2":     "#ef4444",
     "system":      "#64748b",
 }
 
@@ -952,11 +954,11 @@ def _parse_cofunding_budgets(interactions: List[Dict]) -> Dict[str, float]:
     """Extract per-agent budgets from preference_assignment prompts."""
     budgets: Dict[str, float] = {}
     for entry in interactions:
-        if entry.get("phase") != "preference_assignment":
+        if entry.get("phase") not in {"preference_assignment", "game_setup"}:
             continue
         agent = entry.get("agent_id", "")
         prompt = entry.get("prompt", "")
-        m = re.search(r"\*\*YOUR BUDGET:\*\*\s+([\d.]+)", prompt)
+        m = re.search(r"\*\*YOUR(?: PRIVATE)? BUDGET:\*\*\s+([\d.]+)", prompt)
         if m:
             budgets[agent] = float(m.group(1))
     return budgets
@@ -966,6 +968,8 @@ def render_results_summary(results: Dict, game_type: str, experiment_id: str,
                            interactions: Optional[List[Dict]] = None):
     """Render a graphical summary of agent preferences and final outcomes."""
     if not PLOTLY_AVAILABLE:
+        return
+    if results.get("partial_interactions_only"):
         return
 
     config = results.get("config", {})
