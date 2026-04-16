@@ -1,63 +1,117 @@
-In \Cref{sec:scaling_laws}, we present results for the baseline model's utility when negotiating against adversarial agents spanning the full capability spectrum, using Chatbot Arena Elo scores as our capability metric. \Cref{sec:negotiation_rounds_analysis} analyzes how negotiation dynamics vary with opponent capability and competition level.
+\section{Results}
+\label{sec:results}
 
-\section{Scaling Laws for Strategic Interactions}
+We organize the empirical results around three questions. First, does higher model capability, measured by LMArena Elo, translate into better bargaining outcomes against a fixed GPT-5-nano baseline? Second, how much of the variation comes from the game's competition parameters rather than Elo alone? Third, what changes across the three mechanisms: bargaining over rivalrous goods, bargaining over continuous treaty terms, and coordinating contributions to threshold public goods?
+
+\subsection{Game 1: Item Allocation}
 \label{sec:scaling_laws}
 
-% How does baseline model performance (expected utility) change as a function of opponent capability and competition level?
+The current Game 1 batch contains 890 completed runs out of 896 planned configurations. The four updated plots summarize 30 active adversary models against a fixed GPT-5-nano baseline. The small differences in per-model sample size come from the six missing runs, which are concentrated in a few cells at the lower end of the model roster.
 
-\begin{figure}[h!]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{Figures/jan_23_results/gpt5_nano_utility_vs_elo.png}
-    \caption{\textbf{Baseline Model Utility vs.\ Adversary Elo Rating.} Each point represents the mean payoff earned by the baseline model (GPT-5-nano, Elo $\approx 1338$) when negotiating against a given adversary, aggregated across all competition levels and orderings. Points are colored by adversary tier (Strong: Elo $\geq 1415$; Medium: $1290 \leq$ Elo $< 1415$; Weak: Elo $< 1290$). The dashed trend line reveals a weak and non-monotonic relationship: the baseline does not suffer a clean, monotone decline in utility as adversary capability increases.}
-    \label{fig:utility_vs_elo}
+    \includegraphics[width=\linewidth]{Figures/game_1/average_utility_vs_elo.png}
+    \caption{\textbf{Game 1 mean adversary utility versus Elo.} Each point is the adversary model's mean realized utility against GPT-5-nano, averaged over completed competition levels, speaking orders, and discussion-turn settings.}
+    \label{fig:game1_utility_vs_elo}
 \end{figure}
 
-We evaluate GPT-5-nano (Elo $\approx 1338$) as a fixed baseline agent against 35 opponents drawn from three tiers spanning an Elo range of 1112 to 1490. All 35 matchups achieved a \textbf{100\% consensus rate}: every negotiation terminated in a mutually agreed-upon allocation. The baseline's mean utility across all matchups is $68.3\%$, with a range of $45.1\%$ (vs.\ Llama-3.1-8B) to $78.6\%$ (vs.\ DeepSeek-R1).
+The item-allocation data show a clear scaling pattern. Across the 30 adversary models in \Cref{fig:game1_utility_vs_elo}, the correlation between Elo and mean adversary utility is 0.85. The strongest average performers are Claude Opus 4.5 at 72.6 utility, Claude Opus 4.5 Thinking at 72.2, and Gemini 3 Pro at 71.2. At the other end, Llama 3.2 1B averages 49.4, Llama 3.2 3B 54.5, and Gemma 3 27B 55.1. The relationship is not perfectly smooth, but stronger models usually extract more of the available surplus from the same baseline.
 
-\paragraph{Non-Monotonic Relationship Between Capability and Exploitation.} Contrary to the intuition that stronger adversaries exploit weaker baselines more aggressively, we find only a weak negative correlation between adversary Elo and the baseline's utility (see \Cref{fig:utility_vs_elo}). Several medium- and weak-tier models produce lower baseline utilities than many strong-tier models. For example, Claude-3-Haiku (Elo 1262) yields the worst mean utility to the baseline at $47.4\%$—worse than any strong-tier model, the best of which (DeepSeek-R1-0528, Elo 1418) grants the baseline $75.9\%$. This suggests that raw capability as measured by Elo does not straightforwardly predict negotiation exploitability.
-
-\begin{figure}[h!]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{Figures/jan_23_results/gpt5_nano_utility_by_opponent.png}
-    \caption{\textbf{Baseline Payoff Distribution by Adversary Model.} Box plots of GPT-5-nano's utility across all runs against each adversary, sorted by decreasing Elo and colored by tier. Individual run outcomes are overlaid as scatter points. The dashed horizontal line at 50 denotes an equal split. The baseline consistently exceeds the equal-split threshold against most opponents, including several strong-tier models.}
-    \label{fig:utility_by_opponent}
+    \includegraphics[width=\linewidth]{Figures/game_1/average_utility_vs_competition_level_aggregated_over_models.png}
+    \caption{\textbf{Game 1 mean adversary utility versus competition level.} The plot aggregates over all adversary models, speaking orders, and discussion-turn settings.}
+    \label{fig:game1_utility_vs_competition}
 \end{figure}
 
-\paragraph{Reasoning Models Are More Cooperative.} A consistent pattern emerges when separating adversaries by model type. \Cref{fig:reasoning_effect} shows that reasoning models (DeepSeek-R1, DeepSeek-R1-0528, GPT-5.2-High, Claude-Opus-4.5-Thinking-32K, O3-Mini-High) yield a mean baseline utility of approximately $73.5\%$, whereas non-reasoning models yield approximately $66.8\%$. This gap is not explained by Elo alone: reasoning-capable models at similar Elo ratings consistently produce more balanced allocations. One possible explanation is that reasoning models, given more computational budget, converge rapidly to efficient and fair outcomes rather than engaging in prolonged positional bargaining.
+Competition changes the level of payoffs for everyone. \Cref{fig:game1_utility_vs_competition} shows a steady decline in mean adversary utility from 95.1 at competition level 0.0 to 39.4 at 1.0. The drop is already visible by the midpoint of the grid: the batch mean is 70.4 at competition level 0.5. Item allocation therefore answers the second research question in a straightforward way. Capability matters, but rivalry pushes the entire payoff distribution downward.
 
-\begin{figure}[h!]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=0.6\linewidth]{Figures/jan_23_results/gpt5_nano_vs_reasoning.png}
-    \caption{\textbf{Baseline Utility Against Reasoning vs.\ Non-Reasoning Adversaries.} GPT-5-nano earns substantially higher mean utility when negotiating against reasoning-capable models ($\approx 73.5\%$) compared to non-reasoning models ($\approx 66.8\%$), despite reasoning models having higher average Elo ratings.}
-    \label{fig:reasoning_effect}
+    \includegraphics[width=\linewidth]{Figures/game_1/average_utility_vs_elo_by_competition_level.png}
+    \caption{\textbf{Game 1 mean adversary utility versus Elo within each competition band.} Each curve fixes one competition level and averages over speaking order and discussion-turn settings.}
+    \label{fig:game1_utility_vs_elo_by_competition}
 \end{figure}
 
-\paragraph{Effect of Competition Level.} \Cref{fig:competition_effects} shows the baseline's utility and total joint efficiency as a function of competition level $\gamma \in \{0.0, 0.25, 0.5, 0.75, 1.0\}$. At $\gamma = 0.0$, agents share cooperative preferences and most negotiations conclude in one to two rounds with high efficiency. As competition increases, the baseline's utility decreases and joint efficiency declines, reflecting a growing tension between individual incentives and collective welfare.
+\Cref{fig:game1_utility_vs_elo_by_competition} shows that the Elo ranking survives inside individual competition bands as well. In the hardest condition, Claude Opus 4.5 Thinking still averages 56.3 utility, while Claude 3 Haiku falls to 19.8 and Llama 3.1 8B to 22.1. The same competition shock does not affect all models equally. Stronger models preserve more of their bargaining leverage when the environment becomes fully adversarial.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=\linewidth]{Figures/jan_23_results/gpt5_nano_competition_effects.png}
-    \caption{\textbf{Baseline Utility and Joint Efficiency vs.\ Competition Level.} Left: Mean baseline utility as a function of competition level $\gamma$, averaged across all adversaries. Right: Total joint utility (sum of both agents' payoffs) by competition level, with the theoretical maximum of 200 shown as a dashed reference. Both metrics decline as competition rises, indicating that agents leave more surplus on the table in high-competition settings.}
-    \label{fig:competition_effects}
-\end{figure}
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=\linewidth]{Figures/jan_23_results/gpt5_nano_utility_heatmap.png}
-    \caption{\textbf{Baseline Utility Heatmap by Adversary and Competition Level.} Each cell shows the mean payoff earned by GPT-5-nano against a given adversary (rows, sorted by decreasing Elo) at a given competition level (columns). Green indicates higher utility; red indicates lower utility. The heatmap reveals substantial heterogeneity that is not captured by either dimension alone.}
-    \label{fig:utility_heatmap}
-\end{figure}
-
-\section{Negotiation Rounds Analysis}
+\subsubsection{Negotiation Speed}
 \label{sec:negotiation_rounds_analysis}
 
-\begin{figure}[h!]
+\begin{figure}[t]
     \centering
-    \includegraphics[width=\linewidth]{Figures/jan_23_results/gpt5_nano_rounds_analysis.png}
-    \caption{\textbf{Negotiation Length by Adversary Tier.} Left: Distribution of rounds to consensus across all experiments. Right: Mean rounds to consensus broken down by adversary tier (Strong, Medium, Weak), with 95\% confidence intervals. Strong-tier models converge significantly faster than medium- or weak-tier models.}
-    \label{fig:rounds_analysis}
+    \includegraphics[width=\linewidth]{Figures/game_1/average_rounds_to_consensus_vs_elo.png}
+    \caption{\textbf{Game 1 mean rounds to consensus versus Elo.} Lower values indicate faster agreement. Averages are taken over completed competition levels, speaking orders, and discussion-turn settings.}
+    \label{fig:game1_rounds_vs_elo}
 \end{figure}
 
-\paragraph{Negotiation Length vs.\ Adversary Capability.} \Cref{fig:rounds_analysis} reveals a striking inverse relationship between adversary capability and negotiation length. Strong-tier models reach consensus in an average of $1$–$2$ rounds—with QwQ-32B (1.59), DeepSeek-R1 (1.15), and Qwen3-Max (1.05) converging particularly fast—while several medium- and weak-tier models require far more rounds. Claude-3-Haiku averages $6.95$ rounds, and GPT-3.5-Turbo averages $5.91$. This pattern holds despite 100\% consensus being reached in all cases, and suggests that less capable models are less efficient proposal generators: they make more incremental offers before landing on mutually acceptable terms.
+Stronger models also finish faster. In \Cref{fig:game1_rounds_vs_elo}, the correlation between Elo and mean rounds to consensus is $-0.47$. The fastest models in the batch are Claude Opus 4.5 Thinking at 1.14 rounds, DeepSeek R1-0528 at 1.32, and Claude Opus 4.5 at 1.32. The slowest are Command R+ at 2.64, Nova Micro at 2.39, and Llama 3.2 1B at 2.35. In Game 1, capability buys both better deals and shorter negotiations.
 
-\paragraph{Negotiation Length vs.\ Competition Level.} As competition level increases from 0.0 to 1.0, the number of rounds required to reach consensus increases substantially. At $\gamma = 0.0$, most negotiations conclude in one to two rounds. At $\gamma = 1.0$, negotiations regularly extend to the maximum allowed rounds, consistent with agents holding out longer to maximize their own share. This is reflected in the declining consensus efficiency observed in \Cref{fig:competition_effects}.
+\subsection{Game 2: Diplomatic Treaty}
+\label{sec:game2_results}
+
+The current treaty batch is fully complete: 540 completed configurations out of 540 planned.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_2/utility_vs_elo_overall.png}
+    \caption{\textbf{Game 2 mean adversary utility versus Elo.} Each point is the adversary model's mean treaty utility against GPT-5-nano, averaged over completed $(\rho, \theta, \text{order})$ settings.}
+    \label{fig:game2_utility_vs_elo}
+\end{figure}
+
+Game 2 shows the same basic scaling pattern as Game 1, but at a much higher utility level. Across the full treaty batch, the correlation between Elo and mean adversary utility is 0.82. The strongest average performers are Claude Opus 4.6 Thinking at 94.4 utility, GPT-5.4 High at 92.0, DeepSeek R1-0528 at 91.1, and Gemini 2.5 Pro at 90.3. The weakest completed model is Llama 3.2 1B at 61.8. Every treaty run reaches agreement, and the mean negotiation length is only 1.5 rounds. This is the cleanest environment of the three in terms of reliable convergence.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_2/utility_vs_elo_by_competition_index.png}
+    \caption{\textbf{Game 2 mean adversary utility versus Elo by derived competition index.} The derived index is $CI_2 = \theta(1-\rho)/2$.}
+    \label{fig:game2_ci}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_2/utility_vs_elo_by_rho_theta.png}
+    \caption{\textbf{Game 2 mean adversary utility versus Elo by native treaty parameters.} Panels fix $\theta$ and the curves trace different values of $\rho$.}
+    \label{fig:game2_rho_theta}
+\end{figure}
+
+The competition effect is visible, but it is milder than in Games 1 and 3. Mean adversary utility is 94.2 at $CI_2 = 0$ and 65.3 at $CI_2 = 1$. Mean rounds increase from 1.17 to 2.08 over the same range. The native parameter view in \Cref{fig:game2_rho_theta} shows that preference correlation $\rho$ does more work than issue overlap $\theta$. When $\rho = 1$, adversary utility averages 97.6. When $\rho = -1$, it falls to 74.7. The effect of $\theta$ is smaller: mean adversary utility declines from 92.1 at $\theta = 0$ to 80.0 at $\theta = 1$. Even in the hardest $CI_2 = 1$ condition, strong models still hold up well. DeepSeek R1-0528 averages 96.1 utility there, while Llama 3.2 1B drops to 23.1. Treaty bargaining therefore preserves a wide capability spread without creating the coordination failures seen in Game 3.
+
+\subsection{Game 3: Participatory Budgeting}
+\label{sec:game3_results}
+
+The cofunding batch is fully complete. All 540 configurations finished, and 29 adversary models have the full 18 runs needed for the Elo plots.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_3/utility_vs_elo_all_models.png}
+    \caption{\textbf{Game 3 mean adversary utility versus Elo.} Each point is the adversary model's mean realized utility against GPT-5-nano, averaged over all completed $(\alpha, \sigma, \text{order})$ settings.}
+    \label{fig:game3_utility_vs_elo}
+\end{figure}
+
+Game 3 still rewards capability, but the slope is weaker than in the first two games. Across the 29 fully finished adversary models in \Cref{fig:game3_utility_vs_elo}, the correlation between Elo and mean adversary utility is 0.72. GPT-5.4 High leads at 40.5 utility, followed by Gemini 2.5 Pro at 38.4, Claude Opus 4.5 at 36.8, and DeepSeek R1-0528 at 36.7. At the bottom, Nova Micro averages 0.26 and GPT-4.1 nano 6.78. The lower absolute payoffs already suggest that this game is harder for everyone, not just for the weakest models.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_3/utility_vs_elo_by_competition_index.png}
+    \caption{\textbf{Game 3 mean adversary utility versus Elo by derived competition index.} The derived index is $CI_3 = (1-\alpha)(1-\sigma)$.}
+    \label{fig:game3_ci}
+\end{figure}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{Figures/game_3/utility_vs_elo_by_alpha_sigma.png}
+    \caption{\textbf{Game 3 mean adversary utility versus Elo by alignment and scarcity.} Panels fix $\alpha$ and the curves trace different values of $\sigma$.}
+    \label{fig:game3_alpha_sigma}
+\end{figure}
+
+The competition effect is much sharper here than in the other two games. Mean adversary utility is 34.2 at $CI_3 = 0$, 32.9 at 0.2, 23.9 at 0.4, and 0.93 at 0.8. The $\alpha$-$\sigma$ breakdown shows that scarcity is doing most of the damage. At fixed $\alpha = 0$, increasing $\sigma$ from 0.2 to 1.0 raises mean utility from 0.93 to 41.25. At fixed $\sigma = 0.2$, increasing $\alpha$ from 0 to 1 raises it only to 16.10. Preference alignment helps, but abundant budgets help much more.
+
+The hardest cell also reveals a failure mode that does not appear in the first two games. At $(\alpha, \sigma) = (0, 0.2)$, GPT-5.4 High still averages 22.3 utility, but several models go negative, including Llama 3.1 8B at $-4.46$. A negative utility means the agent funded projects whose value did not cover its own contributions. In this environment, the key capability difference is whether a model can keep contribution planning from collapsing under scarcity.
+
+\subsection{Cross-Game Comparison}
+\label{sec:cross_game_results}
+
+Taken together, the three games give consistent answers to the research questions. Higher Elo helps in every environment. The relationship between Elo and payoff is strongest in Game 1, very similar in Game 2, and still substantial in Game 3. Competition lowers utility in all three games, but the mechanism determines how severe that loss becomes. Item allocation shows a steady decline as rivalry rises. Treaty bargaining is more forgiving: even the hardest treaty condition leaves mean adversary utility above 65. Cofunding is the least forgiving: the hardest $CI_3$ condition drives the batch mean to about 1.
+
+The three mechanisms also differ in how stronger models use their advantage. In Game 1, stronger models get better splits and reach consensus faster. In Game 2, they again get better terms, but most of the batch already settles in one or two rounds, so the margin shows up mainly in payoff rather than in delay. In Game 3, the central issue is coordination. The models at the top of the Elo ladder are better at finding viable funding patterns when budgets are tight, while weaker models often end up near zero or below zero. That difference matters more in the public-goods setting than in the two bargaining games.
