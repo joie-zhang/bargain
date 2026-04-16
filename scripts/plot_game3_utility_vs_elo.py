@@ -432,6 +432,42 @@ def summarize_models_by_competition_index(
     return sorted(rows, key=lambda row: (float(row["competition_index"]), int(row["elo"])))
 
 
+def summarize_models_by_alpha_sigma(
+    run_rows: List[Dict[str, Any]],
+    selected_models: Iterable[str],
+) -> List[Dict[str, Any]]:
+    grouped: Dict[Tuple[float, float, str], List[float]] = defaultdict(list)
+    model_meta: Dict[str, Dict[str, Any]] = {}
+    for row in run_rows:
+        model_name = str(row["model"])
+        grouped[(float(row["alpha"]), float(row["sigma"]), model_name)].append(float(row["utility"]))
+        model_meta[model_name] = row
+
+    rows: List[Dict[str, Any]] = []
+    alpha_sigma_pairs = sorted({(float(row["alpha"]), float(row["sigma"])) for row in run_rows})
+    for alpha, sigma in alpha_sigma_pairs:
+        for model_name in selected_models:
+            values = grouped.get((alpha, sigma, model_name), [])
+            if not values:
+                continue
+            meta = model_meta[model_name]
+            rows.append(
+                {
+                    "alpha": alpha,
+                    "sigma": sigma,
+                    "model": model_name,
+                    "model_short": meta["model_short"],
+                    "elo_model_name": meta["elo_model_name"],
+                    "elo": meta["elo"],
+                    "num_runs": len(values),
+                    "avg_utility": mean(values),
+                    "std_utility": pstdev(values) if len(values) > 1 else 0.0,
+                }
+            )
+
+    return sorted(rows, key=lambda row: (float(row["alpha"]), float(row["sigma"]), int(row["elo"])))
+
+
 def write_csv(output_path: Path, rows: List[Dict[str, Any]], fieldnames: List[str]) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", newline="", encoding="utf-8") as handle:
@@ -445,43 +481,37 @@ def make_overall_plot(
     output_path: Path,
     title: str,
     point_color: str,
-    edge_color: str,
-    line_color: str,
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(10, 6.8))
-    xs = [float(row["elo"]) for row in rows]
-    ys = [float(row["avg_utility"]) for row in rows]
-    line_x, line_y = best_fit_line(xs, ys)
-
-    ax.scatter(
-        xs,
-        ys,
-        s=150,
-        color=point_color,
-        edgecolors=edge_color,
-        linewidths=1.2,
-        alpha=0.45,
-    )
-    ax.plot(line_x, line_y, color=line_color, linewidth=2.8, alpha=0.98)
+    fig, ax = plt.subplots(figsize=(11, 7))
 
     for row in rows:
+        x_value = float(row["elo"])
+        y_value = float(row["avg_utility"])
+        ax.scatter(
+            x_value,
+            y_value,
+            s=110,
+            color=point_color,
+            alpha=0.9,
+        )
         ax.annotate(
-            f"{row['model_short']}\nmean={row['avg_utility']:.2f}",
-            (float(row["elo"]), float(row["avg_utility"])),
-            xytext=(8, 8),
+            str(row["model_short"]),
+            (x_value, y_value),
+            xytext=(0, 10),
             textcoords="offset points",
-            fontsize=9,
+            ha="center",
+            fontsize=10,
         )
 
     ax.set_title(title)
-    ax.set_xlabel("Chatbot Arena Elo")
-    ax.set_ylabel("Average Realized Utility")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
+    ax.set_ylabel("Mean Adversary Utility")
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -539,14 +569,74 @@ def make_competition_index_plot(rows: List[Dict[str, Any]], output_path: Path) -
     x_positions = sorted(xtick_rows)
     ax.set_xticks(x_positions)
     ax.set_xticklabels([f"{xtick_rows[x]}\n{x}" for x in x_positions], rotation=25, ha="right")
-    ax.set_title("Game 3 Batch: Average Utility vs Chatbot Arena Elo, Stratified by Competition Level")
-    ax.set_xlabel("Chatbot Arena Elo")
-    ax.set_ylabel("Average Realized Utility")
+    ax.set_title(
+        "Game 3: Mean Adversary Utility vs Chatbot Arena Elo\n"
+        "Stratified by derived CI3 = (1 - alpha) * (1 - sigma); averages include both model orders."
+    )
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
+    ax.set_ylabel("Mean Adversary Utility")
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
-    ax.legend(title="Competition level", frameon=True)
+    ax.legend(title="Derived CI3", frameon=True)
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(output_path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def make_alpha_sigma_plot(rows: List[Dict[str, Any]], output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    alpha_vals = sorted({float(row["alpha"]) for row in rows})
+    sigma_vals = sorted({float(row["sigma"]) for row in rows})
+    fig, axes = plt.subplots(1, len(alpha_vals), figsize=(6 * len(alpha_vals), 5.8), sharey=True)
+    if len(alpha_vals) == 1:
+        axes = [axes]
+
+    color_map = plt.get_cmap("viridis")
+    sigma_colors = {
+        sigma: color_map(idx / max(len(sigma_vals) - 1, 1))
+        for idx, sigma in enumerate(sigma_vals)
+    }
+    legend_handles = []
+    legend_labels = []
+
+    for ax, alpha in zip(axes, alpha_vals):
+        alpha_rows = [row for row in rows if float(row["alpha"]) == alpha]
+        for sigma in sigma_vals:
+            sigma_rows = sorted(
+                [row for row in alpha_rows if float(row["sigma"]) == sigma],
+                key=lambda row: int(row["elo"]),
+            )
+            if not sigma_rows:
+                continue
+            xs = [float(row["elo"]) for row in sigma_rows]
+            ys = [float(row["avg_utility"]) for row in sigma_rows]
+            line, = ax.plot(
+                xs,
+                ys,
+                marker="o",
+                markersize=6,
+                linewidth=2.1,
+                color=sigma_colors[sigma],
+                alpha=0.95,
+                label=rf"$\sigma={sigma:.1f}$",
+            )
+            if len(legend_handles) < len(sigma_vals):
+                legend_handles.append(line)
+                legend_labels.append(rf"$\sigma={sigma:.1f}$")
+        ax.set_title(rf"$\alpha={alpha:.1f}$")
+        ax.set_xlabel("Chatbot Arena Elo")
+        ax.grid(True, alpha=0.25)
+        ax.set_axisbelow(True)
+
+    axes[0].set_ylabel("Mean Adversary Utility")
+    fig.suptitle(
+        "Game 3: Mean Adversary Utility vs Elo by alpha and sigma\n"
+        "Panels fix alpha; curves fix sigma; averages include both model orders.",
+        y=1.03,
+    )
+    fig.legend(legend_handles, legend_labels, title=r"$\sigma$", loc="upper center", ncol=len(sigma_vals))
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -558,6 +648,7 @@ def write_report(
     all_rows: List[Dict[str, Any]],
     complete_only_rows: List[Dict[str, Any]],
     by_ci_rows: List[Dict[str, Any]],
+    by_alpha_sigma_rows: List[Dict[str, Any]],
     total_completed: int,
     total_unfinished: int,
     started_only: int,
@@ -585,6 +676,8 @@ def write_report(
         "- `utility_vs_elo_complete_models_only.png`",
         "- `utility_vs_elo_by_competition_index.csv`",
         "- `utility_vs_elo_by_competition_index.png`",
+        "- `utility_vs_elo_by_alpha_sigma.csv`",
+        "- `utility_vs_elo_by_alpha_sigma.png`",
         "",
         "## Partial Models",
         "",
@@ -603,10 +696,11 @@ def write_report(
             "",
             "## Notes",
             "",
-            "- Competition level is the combined Game 3 index `CI3 = (1 - alpha) * (1 - sigma)`.",
-            "- The overall plots aggregate each model's realized utility over its finished runs only.",
+            "- The Elo plots use adversary-model utility, averaged over completed Game 3 runs only.",
+            "- The overall plots aggregate each adversary model's realized utility over its finished `(alpha, sigma, model_order)` configs.",
             "- The complete-only plot restricts to models with all 18 expected Game 3 configs finished.",
-            "- The stratified plot uses all currently finished runs, grouped by `CI3`.",
+            "- `utility_vs_elo_by_alpha_sigma.png` uses the native Game 3 parameters directly: panels fix `alpha`, and curves fix `sigma`.",
+            "- `utility_vs_elo_by_competition_index.png` remains as a derived 1D summary using `CI3 = (1 - alpha) * (1 - sigma)`.",
         ]
     )
 
@@ -634,6 +728,7 @@ def main() -> None:
     all_rows = summarize_models(run_rows, all_models)
     complete_only_rows = summarize_models(run_rows, complete_models)
     by_ci_rows = summarize_models_by_competition_index(run_rows, all_models)
+    by_alpha_sigma_rows = summarize_models_by_alpha_sigma(run_rows, all_models)
 
     write_csv(
         output_dir / "completion_summary.csv",
@@ -675,26 +770,41 @@ def main() -> None:
             "std_utility",
         ],
     )
+    write_csv(
+        output_dir / "utility_vs_elo_by_alpha_sigma.csv",
+        by_alpha_sigma_rows,
+        [
+            "alpha",
+            "sigma",
+            "model",
+            "model_short",
+            "elo_model_name",
+            "elo",
+            "num_runs",
+            "avg_utility",
+            "std_utility",
+        ],
+    )
 
     make_overall_plot(
         all_rows,
         output_dir / "utility_vs_elo_all_models.png",
-        "Game 3 Batch: Average Utility vs Chatbot Arena Elo (All Models With Finished Runs)",
+        "Game 3: Mean Adversary Utility vs Chatbot Arena Elo\nAll models with any finished runs; averages span completed alpha/sigma settings and both model orders.",
         point_color="#2563eb",
-        edge_color="#1e3a8a",
-        line_color="#1d4ed8",
     )
     make_overall_plot(
         complete_only_rows,
         output_dir / "utility_vs_elo_complete_models_only.png",
-        "Game 3 Batch: Average Utility vs Chatbot Arena Elo (Fully Finished Models Only)",
+        "Game 3: Mean Adversary Utility vs Chatbot Arena Elo\nRestricted to adversary models with all expected Game 3 configs finished.",
         point_color="#059669",
-        edge_color="#065f46",
-        line_color="#047857",
     )
     make_competition_index_plot(
         by_ci_rows,
         output_dir / "utility_vs_elo_by_competition_index.png",
+    )
+    make_alpha_sigma_plot(
+        by_alpha_sigma_rows,
+        output_dir / "utility_vs_elo_by_alpha_sigma.png",
     )
 
     write_report(
@@ -704,6 +814,7 @@ def main() -> None:
         all_rows=all_rows,
         complete_only_rows=complete_only_rows,
         by_ci_rows=by_ci_rows,
+        by_alpha_sigma_rows=by_alpha_sigma_rows,
         total_completed=total_completed,
         total_unfinished=total_unfinished,
         started_only=started_only,

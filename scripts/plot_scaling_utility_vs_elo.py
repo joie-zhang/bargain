@@ -53,6 +53,7 @@ from strong_models_experiment.analysis.active_model_roster import (
     canonical_model_name,
     filter_active_adversary_models,
     is_active_adversary_model,
+    short_model_name,
 )
 
 
@@ -69,6 +70,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--elo-markdown", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--models", nargs="+", required=True)
+    parser.add_argument(
+        "--discussion-turns",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Optional discussion-turn settings to include, e.g. --discussion-turns 1.",
+    )
     parser.add_argument("--by-competition-level", action="store_true")
     parser.add_argument("--aggregate-over-models", action="store_true")
     parser.add_argument(
@@ -157,6 +165,7 @@ def collect_run_rows(results_root: Path) -> List[Dict[str, object]]:
         weak_model, strong_model, order_dir = parse_pair_and_order(results_root, result_path)
         agent_to_model = map_agents_to_models(payload, weak_model, strong_model, order_dir)
         competition_level = float(config.get("competition_level", 0.0))
+        discussion_turns = int(config.get("discussion_turns", 0))
         consensus_reached = bool(payload.get("consensus_reached"))
         final_round = payload.get("final_round")
 
@@ -171,6 +180,7 @@ def collect_run_rows(results_root: Path) -> List[Dict[str, object]]:
                 "model": canonical_model,
                 "utility": float(utility),
                 "competition_level": competition_level,
+                "discussion_turns": discussion_turns,
             }
             if consensus_reached and final_round is not None:
                 row["rounds_to_consensus"] = float(final_round)
@@ -222,6 +232,46 @@ def format_competition_level(value: float) -> str:
     return f"{value:.2f}".rstrip("0").rstrip(".")
 
 
+def normalize_discussion_turns_filter(values: List[int] | None) -> List[int]:
+    if not values:
+        return []
+    normalized = sorted({int(value) for value in values})
+    for value in normalized:
+        if value < 0:
+            raise SystemExit("--discussion-turns values must be non-negative integers.")
+    return normalized
+
+
+def filter_run_rows(
+    run_rows: List[Dict[str, object]],
+    discussion_turns: List[int],
+) -> List[Dict[str, object]]:
+    if not discussion_turns:
+        return run_rows
+    selected_turns = set(discussion_turns)
+    return [
+        run_row
+        for run_row in run_rows
+        if int(run_row.get("discussion_turns", -1)) in selected_turns
+    ]
+
+
+def discussion_turns_suffix(discussion_turns: List[int]) -> str:
+    if not discussion_turns:
+        return ""
+    joined = "-".join(str(value) for value in discussion_turns)
+    return f"_turns_{joined}"
+
+
+def discussion_turns_note(discussion_turns: List[int]) -> str:
+    if not discussion_turns:
+        return ""
+    if len(discussion_turns) == 1:
+        return f"Filtered to discussion_turns={discussion_turns[0]}."
+    joined = ", ".join(str(value) for value in discussion_turns)
+    return f"Filtered to discussion_turns in {{{joined}}}."
+
+
 def best_fit_line(xs: List[float], ys: List[float]) -> Tuple[np.ndarray, np.ndarray]:
     if len(xs) < 2:
         return np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
@@ -263,8 +313,11 @@ def competition_level_plot_subtitle(
     smoothing_method: str,
     smoothing_alpha: float,
     smoothing_window: int,
+    filter_note: str = "",
 ) -> str:
     averaging_note = "Averages include speaking order and discussion-turn setting."
+    if filter_note:
+        averaging_note = f"{averaging_note} {filter_note}"
     if smoothing_method == "ewm":
         return (
             f"Faint lines show raw per-Elo means; bold lines show Elo-ordered EWM trends "
@@ -420,37 +473,36 @@ def make_plot(
     rows: List[Dict[str, object]],
     output_path: Path,
     spec: Dict[str, object],
+    filter_note: str = "",
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(9, 6))
-    xs = [float(row["elo"]) for row in rows]
-    ys = [float(row[spec["avg_key"]]) for row in rows]
-    labels = [str(row["model"]) for row in rows]
-    line_x, line_y = best_fit_line(xs, ys)
+    fig, ax = plt.subplots(figsize=(11, 7))
 
-    ax.scatter(
-        xs,
-        ys,
-        s=140,
-        color="#2563eb",
-        edgecolors="#1e3a8a",
-        linewidths=1.2,
-        alpha=0.4,
-    )
-    ax.plot(line_x, line_y, color="#1d4ed8", linewidth=2.8, alpha=0.95)
-
-    for row, label in zip(rows, labels):
+    for row in rows:
+        x_value = float(row["elo"])
+        y_value = float(row[spec["avg_key"]])
+        ax.scatter(
+            x_value,
+            y_value,
+            s=110,
+            color="#2563eb",
+            alpha=0.9,
+        )
         ax.annotate(
-            f"{label}\nmean={row[spec['avg_key']]:.2f}",
-            (float(row["elo"]), float(row[spec["avg_key"]])),
-            xytext=(8, 8),
+            short_model_name(str(row["model"])),
+            (x_value, y_value),
+            xytext=(0, 10),
             textcoords="offset points",
-            fontsize=9,
+            ha="center",
+            fontsize=10,
         )
 
-    ax.set_title(f"{spec['title']}\n{spec['subtitle']}")
-    ax.set_xlabel("Chatbot Arena Elo")
+    subtitle = spec["subtitle"]
+    if filter_note:
+        subtitle = f"{subtitle} {filter_note}"
+    ax.set_title(f"{spec['title']}\n{subtitle}")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
     ax.set_ylabel(spec["y_label"])
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
@@ -467,6 +519,7 @@ def make_plot_by_competition_level(
     smoothing_method: str,
     smoothing_alpha: float,
     smoothing_window: int,
+    filter_note: str = "",
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -540,7 +593,7 @@ def make_plot_by_competition_level(
         )
     ax.set_title(
         f"{spec['title_by_comp']}\n"
-        f"{fill(competition_level_plot_subtitle(smoothing_method, smoothing_alpha, smoothing_window), width=120)}"
+        f"{fill(competition_level_plot_subtitle(smoothing_method, smoothing_alpha, smoothing_window, filter_note), width=120)}"
     )
     ax.set_xlabel("Chatbot Arena Elo")
     ax.set_ylabel(spec["y_label"])
@@ -570,6 +623,7 @@ def make_plot_over_competition_levels(
     rows: List[Dict[str, object]],
     output_path: Path,
     spec: Dict[str, object],
+    filter_note: str = "",
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -596,7 +650,10 @@ def make_plot_over_competition_levels(
             fontsize=9,
         )
 
-    ax.set_title(f"{spec['aggregate_title']}\n{spec['aggregate_subtitle']}")
+    subtitle = spec["aggregate_subtitle"]
+    if filter_note:
+        subtitle = f"{subtitle} {filter_note}"
+    ax.set_title(f"{spec['aggregate_title']}\n{subtitle}")
     ax.set_xlabel("Competition Level")
     ax.set_ylabel(spec["y_label"])
     ax.set_xticks(xs)
@@ -616,7 +673,10 @@ def main() -> None:
         raise SystemExit("--competition-smoothing-window must be at least 1.")
     spec = metric_spec(args.metric)
     elo_by_model = parse_elo_markdown(args.elo_markdown)
-    run_rows = collect_run_rows(args.results_root)
+    discussion_turns = normalize_discussion_turns_filter(args.discussion_turns)
+    filter_note = discussion_turns_note(discussion_turns)
+    output_suffix = discussion_turns_suffix(discussion_turns)
+    run_rows = filter_run_rows(collect_run_rows(args.results_root), discussion_turns)
     selected_models = filter_active_adversary_models(args.models)
     rows = summarize_models(run_rows, elo_by_model, selected_models, spec)
 
@@ -626,13 +686,13 @@ def main() -> None:
     analysis_dir = args.output_dir
     if args.aggregate_over_models:
         aggregate_stem = competition_level_output_stem(spec)
-        png_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models.png"
-        csv_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models.csv"
+        png_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models{output_suffix}.png"
+        csv_path = analysis_dir / f"{aggregate_stem}_vs_competition_level_aggregated_over_models{output_suffix}.csv"
         aggregate_rows = summarize_competition_levels_aggregated_over_models(run_rows, selected_models, spec)
         if not aggregate_rows:
             raise SystemExit("No aggregate competition-level rows were found in the completed results.")
         write_summary_csv(aggregate_rows, csv_path, spec)
-        make_plot_over_competition_levels(aggregate_rows, png_path, spec)
+        make_plot_over_competition_levels(aggregate_rows, png_path, spec, filter_note=filter_note)
         print(f"Wrote plot: {png_path}")
         print(f"Wrote summary: {csv_path}")
         for row in aggregate_rows:
@@ -643,8 +703,8 @@ def main() -> None:
         return
 
     if args.by_competition_level:
-        png_path = analysis_dir / f"{spec['output_stem']}_by_competition_level.png"
-        csv_path = analysis_dir / f"{spec['output_stem']}_by_competition_level.csv"
+        png_path = analysis_dir / f"{spec['output_stem']}_by_competition_level{output_suffix}.png"
+        csv_path = analysis_dir / f"{spec['output_stem']}_by_competition_level{output_suffix}.csv"
         by_comp_rows = summarize_models_by_competition_level(run_rows, elo_by_model, selected_models, spec)
         if not by_comp_rows:
             raise SystemExit("No competition-level rows were found in the completed results.")
@@ -656,6 +716,7 @@ def main() -> None:
             smoothing_method=args.competition_smoothing_method,
             smoothing_alpha=args.competition_smoothing_alpha,
             smoothing_window=args.competition_smoothing_window,
+            filter_note=filter_note,
         )
         print(f"Wrote plot: {png_path}")
         print(f"Wrote summary: {csv_path}")
@@ -670,11 +731,11 @@ def main() -> None:
             )
         return
 
-    png_path = analysis_dir / f"{spec['output_stem']}.png"
-    csv_path = analysis_dir / f"{spec['output_stem']}.csv"
+    png_path = analysis_dir / f"{spec['output_stem']}{output_suffix}.png"
+    csv_path = analysis_dir / f"{spec['output_stem']}{output_suffix}.csv"
 
     write_summary_csv(rows, csv_path, spec)
-    make_plot(rows, png_path, spec)
+    make_plot(rows, png_path, spec, filter_note=filter_note)
 
     print(f"Wrote plot: {png_path}")
     print(f"Wrote summary: {csv_path}")
