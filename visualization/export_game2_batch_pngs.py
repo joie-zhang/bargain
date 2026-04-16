@@ -314,16 +314,19 @@ def load_batch_frames(
     return pd.DataFrame(index_rows), pd.DataFrame(experiment_rows), pd.DataFrame(long_rows)
 
 
+def _adversary_only(long_df: pd.DataFrame) -> pd.DataFrame:
+    return long_df[long_df["role"] == "adversary"].copy()
+
+
 def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> None:
     overall = (
-        long_df.groupby(["model", "model_short", "role", "elo"], as_index=False)
+        long_df.groupby(["model", "model_short", "elo"], as_index=False)
         .agg(avg_utility=("utility", "mean"), num_runs=("utility", "size"))
         .sort_values("elo")
     )
     fig, ax = plt.subplots(figsize=(11, 7))
-    colors = {"baseline": "#0f766e", "adversary": "#2563eb"}
     for _, row in overall.iterrows():
-        ax.scatter(row["elo"], row["avg_utility"], s=110, color=colors[row["role"]], alpha=0.9)
+        ax.scatter(row["elo"], row["avg_utility"], s=110, color="#2563eb", alpha=0.9)
         ax.annotate(
             row["model_short"],
             (row["elo"], row["avg_utility"]),
@@ -332,12 +335,15 @@ def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> Non
             ha="center",
             fontsize=10,
         )
-    ax.set_title("Game 2 Batch: Average Utility vs Model Elo")
-    ax.set_xlabel("Model Elo")
-    ax.set_ylabel("Average Utility")
+    ax.set_title(
+        "Game 2: Mean Adversary Utility vs Chatbot Arena Elo\n"
+        "Averages include all completed (rho, theta, model_order) settings."
+    )
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
+    ax.set_ylabel("Mean Adversary Utility")
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_dir / "utility_vs_elo_overall.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -361,13 +367,16 @@ def _save_utility_vs_elo_by_ci(long_df: pd.DataFrame, output_dir: Path) -> None:
             color=color,
             label=f"CI={ci:.2f}",
         )
-    ax.set_title("Game 2 Batch: Average Utility vs Elo by Competition Index")
-    ax.set_xlabel("Model Elo")
-    ax.set_ylabel("Average Utility")
-    ax.legend(title="", fontsize=9)
+    ax.set_title(
+        "Game 2: Mean Adversary Utility vs Chatbot Arena Elo\n"
+        "Stratified by derived CI2 = theta * (1 - rho) / 2; averages include both model orders."
+    )
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
+    ax.set_ylabel("Mean Adversary Utility")
+    ax.legend(title="Derived CI2", fontsize=9)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_dir / "utility_vs_elo_by_competition_index.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -382,33 +391,45 @@ def _save_utility_vs_elo_by_rho_theta(long_df: pd.DataFrame, output_dir: Path) -
         .agg(avg_utility=("utility", "mean"))
         .sort_values(["rho", "theta", "elo", "model_short"])
     )
-    settings = (
-        grouped[["rho", "theta"]]
-        .drop_duplicates()
-        .sort_values(["rho", "theta"])
-        .itertuples(index=False, name=None)
-    )
-    settings = list(settings)
+    theta_vals = sorted(grouped["theta"].unique().tolist())
+    rho_vals = sorted(grouped["rho"].unique().tolist())
+    fig, axes = plt.subplots(1, len(theta_vals), figsize=(6 * len(theta_vals), 5.8), sharey=True)
+    if len(theta_vals) == 1:
+        axes = [axes]
+    cmap = plt.cm.viridis(np.linspace(0, 1, len(rho_vals)))
+    legend_handles = []
+    legend_labels = []
 
-    fig, ax = plt.subplots(figsize=(12, 8))
-    cmap = plt.cm.tab10(np.linspace(0, 1, len(settings)))
-    for color, (rho, theta) in zip(cmap, settings):
-        setting_df = grouped[(grouped["rho"] == rho) & (grouped["theta"] == theta)]
-        ax.plot(
-            setting_df["elo"],
-            setting_df["avg_utility"],
-            marker="o",
-            linewidth=2.0,
-            color=color,
-            label=_rho_theta_label(float(rho), float(theta)),
-        )
-    ax.set_title("Game 2 Batch: Average Utility vs Elo by rho/theta Setting")
-    ax.set_xlabel("Model Elo")
-    ax.set_ylabel("Average Utility")
-    ax.legend(title="", fontsize=9, ncol=3)
-    ax.grid(alpha=0.25)
-    ax.set_axisbelow(True)
-    fig.tight_layout()
+    for ax, theta in zip(axes, theta_vals):
+        theta_df = grouped[grouped["theta"] == theta]
+        for color, rho in zip(cmap, rho_vals):
+            rho_df = theta_df[theta_df["rho"] == rho].sort_values("elo")
+            if rho_df.empty:
+                continue
+            line, = ax.plot(
+                rho_df["elo"],
+                rho_df["avg_utility"],
+                marker="o",
+                linewidth=2.0,
+                color=color,
+                label=rf"$\rho={float(rho):.1f}$",
+            )
+            if len(legend_handles) < len(rho_vals):
+                legend_handles.append(line)
+                legend_labels.append(rf"$\rho={float(rho):.1f}$")
+        ax.set_title(rf"$\theta={float(theta):.1f}$")
+        ax.set_xlabel("Chatbot Arena Elo")
+        ax.grid(alpha=0.25)
+        ax.set_axisbelow(True)
+
+    axes[0].set_ylabel("Mean Adversary Utility")
+    fig.suptitle(
+        "Game 2: Mean Adversary Utility vs Elo by rho and theta\n"
+        "Panels fix theta; curves fix rho; averages include both model orders.",
+        y=1.03,
+    )
+    fig.legend(legend_handles, legend_labels, title=r"$\rho$", loc="upper center", ncol=len(rho_vals))
+    fig.tight_layout(rect=(0, 0, 1, 0.92))
     fig.savefig(output_dir / "utility_vs_elo_by_rho_theta.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -417,6 +438,7 @@ def _save_param_line_plot(
     long_df: pd.DataFrame,
     param_col: str,
     title: str,
+    x_label: str,
     output_name: str,
     output_dir: Path,
 ) -> None:
@@ -435,12 +457,12 @@ def _save_param_line_plot(
             label=model_short,
         )
     ax.set_title(title)
-    ax.set_xlabel(param_col)
-    ax.set_ylabel("Average Utility")
+    ax.set_xlabel(x_label)
+    ax.set_ylabel("Mean Adversary Utility")
     ax.legend(title="", fontsize=9)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_dir / output_name, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -461,7 +483,10 @@ def _save_utility_heatmap(long_df: pd.DataFrame, output_dir: Path) -> None:
     ax.set_yticklabels([f"{float(v):.1f}" for v in heatmap.index])
     ax.set_xlabel("theta")
     ax.set_ylabel("rho")
-    ax.set_title("Game 2 Batch: Mean Utility Across rho x theta")
+    ax.set_title(
+        "Game 2: Mean Adversary Utility Across rho x theta\n"
+        "Averaged over adversary models and both model orders."
+    )
     for row_idx, rho in enumerate(heatmap.index):
         for col_idx, theta in enumerate(heatmap.columns):
             value = heatmap.loc[rho, theta]
@@ -475,7 +500,7 @@ def _save_utility_heatmap(long_df: pd.DataFrame, output_dir: Path) -> None:
                 fontsize=10,
             )
     fig.colorbar(image, ax=ax, label="Mean Utility")
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
     fig.savefig(output_dir / "utility_rho_theta_heatmap.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -560,6 +585,13 @@ def _write_report(index_df: pd.DataFrame, output_dir: Path, results_root: Path) 
             "- `utility_vs_competition_index.png`",
             "- `utility_rho_theta_heatmap.png`",
             "- `social_welfare_rho_theta_heatmap.png`",
+            "",
+            "## Notes",
+            "",
+            "- The Elo plots use adversary-model utility, not GPT-5-nano baseline utility.",
+            "- `utility_vs_elo_overall.png` averages over all completed `(rho, theta, model_order)` configs for each adversary model.",
+            "- `utility_vs_elo_by_rho_theta.png` uses the native Game 2 parameters directly: panels fix `theta`, and curves fix `rho`.",
+            "- `utility_vs_elo_by_competition_index.png` remains as a derived 1D summary using `CI2 = theta * (1 - rho) / 2`.",
         ]
     )
     (output_dir / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -590,31 +622,36 @@ def main() -> None:
             + f". Checked {elo_markdown}."
         )
 
-    _save_overall_utility_vs_elo(long_df, output_dir)
-    _save_utility_vs_elo_by_ci(long_df, output_dir)
-    _save_utility_vs_elo_by_rho_theta(long_df, output_dir)
+    adversary_df = _adversary_only(long_df)
+
+    _save_overall_utility_vs_elo(adversary_df, output_dir)
+    _save_utility_vs_elo_by_ci(adversary_df, output_dir)
+    _save_utility_vs_elo_by_rho_theta(adversary_df, output_dir)
     _save_param_line_plot(
-        long_df,
+        adversary_df,
         param_col="theta",
-        title="Game 2 Batch: Average Utility vs theta",
+        title="Game 2: Mean Adversary Utility vs theta\nAverages include rho values and both model orders.",
+        x_label=r"$\theta$",
         output_name="utility_vs_theta.png",
         output_dir=output_dir,
     )
     _save_param_line_plot(
-        long_df,
+        adversary_df,
         param_col="rho",
-        title="Game 2 Batch: Average Utility vs rho",
+        title="Game 2: Mean Adversary Utility vs rho\nAverages include theta values and both model orders.",
+        x_label=r"$\rho$",
         output_name="utility_vs_rho.png",
         output_dir=output_dir,
     )
     _save_param_line_plot(
-        long_df,
+        adversary_df,
         param_col="competition_index",
-        title="Game 2 Batch: Average Utility vs Competition Index",
+        title="Game 2: Mean Adversary Utility vs Derived CI2\nAverages include adversary models and both model orders.",
+        x_label="CI2 = theta * (1 - rho) / 2",
         output_name="utility_vs_competition_index.png",
         output_dir=output_dir,
     )
-    _save_utility_heatmap(long_df, output_dir)
+    _save_utility_heatmap(adversary_df, output_dir)
     _save_welfare_heatmap(experiment_df, output_dir)
     _write_report(index_df, output_dir, results_root)
 
