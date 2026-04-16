@@ -1,0 +1,12 @@
+# Game 1 Payoff-vs-Elo Subsection Draft
+
+Figure 1 decomposes the positive relationship between adversary Elo and payoff into two separate effects. First, the payoff increase is asymmetric: across the full Game 1 batch with recorded Elo, baseline utility is nearly flat across Elo bands (62.7 in the low band, 64.4 in the middle band, and 63.0 in the high band), whereas adversary utility rises substantially (55.5 -> 62.9 -> 69.9). Total payoff also rises (118.2 -> 127.3 -> 133.0), but more modestly than adversary utility alone. This implies that stronger adversaries are not simply making bargaining more efficient for everyone; they are also capturing a larger share of the available surplus.
+
+The welfare gain appears to come mainly from stronger models handling easy-to-trade preference structures more cleanly, not from a universal ability to solve hard conflicts. When there is no top-item conflict, mean total payoff rises sharply from 124.1 in the low-Elo band to 143.0 in the high-Elo band. By contrast, when both agents want the same top item, total payoff remains low across all three bands (93.4, 89.5, 92.5). This suggests that the main capability gain is better recognition and closure of complementary package deals, rather than a qualitative breakthrough on the hardest top-item collisions.
+
+The labeled subset supports the same mechanism qualitatively. High-welfare runs are disproportionately associated with `cooperative_exploration` openings (mean total payoff 139.0), `responsive_tradeoff` or low-friction `minimal_evidence` adaptation (119.5 and 136.2, respectively), and `hybrid_compromise` resolutions (mean total payoff 132.8). Low-payoff runs, in contrast, are dominated by `rigid_repetition` (mean total payoff 79.3) or by negotiations that collapse into the adversary's frame without much joint surplus (`adversary_frame_accepted`, mean total payoff 91.7). Taken together, the payoff-vs-Elo slope seems to combine two mechanisms: stronger models waste fewer rounds on malformed or cyclic bargaining, and they are better at turning complementary preferences into high-value package deals.
+
+## Figure and Table
+
+- Figure: [payoff_mechanisms_by_elo.png](/scratch/gpfs/DANQIC/jz4391/bargain/visualization/figures/game1_qualitative_review/payoff_mechanisms_by_elo.png)
+- Table: [game1_payoff_mechanism_table.md](/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_qualitative_review/game1_payoff_mechanism_table.md:1)
