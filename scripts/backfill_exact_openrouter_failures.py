@@ -62,25 +62,52 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def load_task(experiment_dir: Path, config_id: int, logs_dir: Path) -> Task:
-    config_path = experiment_dir / "configs" / f"config_{config_id}.json"
-    config = json.loads(config_path.read_text())
-    output_dir = Path(config["output_dir"])
-    if not output_dir.is_absolute():
-        output_dir = REPO_ROOT / output_dir
+def resolve_config_path(experiment_dir: Path, config_id: int) -> Path:
+    configs_dir = experiment_dir / "configs"
+    exact = configs_dir / f"config_{config_id}.json"
+    if exact.exists():
+        return exact
 
-    model_pair = f"{config['weak_model']}_vs_{config['strong_model']}"
-    stdout_path = logs_dir / f"backfill_exact_{config_id}.out"
-    stderr_path = logs_dir / f"backfill_exact_{config_id}.err"
+    padded = sorted(configs_dir.glob(f"config_*{config_id:04d}.json"))
+    if len(padded) == 1:
+        return padded[0]
+
+    matches = []
+    for candidate in configs_dir.glob("config_*.json"):
+        suffix = candidate.stem.split("_", 1)[1]
+        try:
+            if int(suffix) == config_id:
+                matches.append(candidate)
+        except ValueError:
+            continue
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        raise FileNotFoundError(f"No config file found for config_id={config_id} in {configs_dir}")
+    raise RuntimeError(f"Multiple config files matched config_id={config_id}: {matches}")
+
+
+def model_pair_label(config: Dict) -> str:
+    if "weak_model" in config and "strong_model" in config:
+        return f"{config['weak_model']}_vs_{config['strong_model']}"
+    models = config.get("models", [])
+    if len(models) == 2:
+        return f"{models[0]}_vs_{models[1]}"
+    return "_vs_".join(str(model) for model in models)
+
+
+def build_command(config: Dict, output_dir: Path, config_id: int) -> List[str]:
+    models = config.get("models")
+    if not models:
+        models = [config["weak_model"], config["strong_model"]]
 
     cmd = [
         sys.executable,
         "run_strong_models_experiment.py",
-        "--models", config["weak_model"], config["strong_model"],
+        "--models", *models,
         "--batch",
-        "--num-runs", "1",
+        "--num-runs", str(config.get("num_runs", 1)),
         "--run-number", str(config["run_number"]),
-        "--competition-level", str(config["competition_level"]),
         "--random-seed", str(config["random_seed"]),
         "--discussion-turns", str(config["discussion_turns"]),
         "--model-order", config["model_order"],
@@ -88,12 +115,57 @@ def load_task(experiment_dir: Path, config_id: int, logs_dir: Path) -> Task:
         "--job-id", str(config_id),
     ]
 
+    if "competition_level" in config:
+        cmd.extend(["--competition-level", str(config["competition_level"])])
     if "num_items" in config:
         cmd.extend(["--num-items", str(config["num_items"])])
     if "max_rounds" in config:
         cmd.extend(["--max-rounds", str(config["max_rounds"])])
+    if "max_tokens_per_phase" in config:
+        cmd.extend(["--max-tokens-per-phase", str(config["max_tokens_per_phase"])])
+    if "gamma_discount" in config:
+        cmd.extend(["--gamma-discount", str(config["gamma_discount"])])
     if config.get("game_type"):
         cmd.extend(["--game-type", config["game_type"]])
+
+    game_type = config.get("game_type")
+    if game_type == "diplomacy":
+        cmd.extend(["--n-issues", str(config["n_issues"])])
+        cmd.extend(["--rho", str(config["rho"])])
+        cmd.extend(["--theta", str(config["theta"])])
+    elif game_type == "co_funding":
+        cmd.extend(["--m-projects", str(config["m_projects"])])
+        cmd.extend(["--alpha", str(config["alpha"])])
+        cmd.extend(["--sigma", str(config["sigma"])])
+        cmd.extend(["--c-min", str(config["c_min"])])
+        cmd.extend(["--c-max", str(config["c_max"])])
+        cmd.extend([
+            "--cofunding-discussion-transparency",
+            str(config.get("cofunding_discussion_transparency", "own")),
+        ])
+        cmd.extend([
+            "--cofunding-time-discount",
+            str(config.get("cofunding_time_discount", 0.9)),
+        ])
+        if not config.get("cofunding_enable_commit_vote", True):
+            cmd.append("--cofunding-disable-commit-vote")
+        if not config.get("cofunding_enable_time_discount", True):
+            cmd.append("--cofunding-disable-time-discount")
+
+    return cmd
+
+
+def load_task(experiment_dir: Path, config_id: int, logs_dir: Path) -> Task:
+    config_path = resolve_config_path(experiment_dir, config_id)
+    config = json.loads(config_path.read_text())
+    output_dir = Path(config["output_dir"])
+    if not output_dir.is_absolute():
+        output_dir = REPO_ROOT / output_dir
+
+    model_pair = model_pair_label(config)
+    stdout_path = logs_dir / f"backfill_exact_{config_id}.out"
+    stderr_path = logs_dir / f"backfill_exact_{config_id}.err"
+    cmd = build_command(config, output_dir, config_id)
 
     return Task(
         config_id=config_id,

@@ -21,9 +21,11 @@ from scripts.game2_derisk_32 import FINAL_32_MODELS
 CANONICAL_MARKDOWN = REPO_ROOT / "docs" / "guides" / "chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md"
 DEFAULT_OUTPUT = REPO_ROOT / "docs" / "guides" / "openrouter_context_windows_final32_2026_04_06.md"
 OPENROUTER_MODELS_API = "https://openrouter.ai/api/v1/models"
-ALIAS_NATIVE_CONTEXT = {
-    "qwq-32b-preview": "qwq-32b",
+EXCLUDED_AUDIT_MODELS = {
+    "claude-3-5-sonnet-20241022",
+    "qwq-32b-preview",
 }
+ALIAS_NATIVE_CONTEXT = {}
 
 
 def parse_context_tokens(raw_value: str) -> Optional[int]:
@@ -103,7 +105,7 @@ def build_rows() -> List[Dict[str, str]]:
     rows: List[Dict[str, str]] = []
 
     for entry in FINAL_32_MODELS:
-        if entry["provider"] != "openrouter":
+        if entry["provider"] != "openrouter" or entry["model"] in EXCLUDED_AUDIT_MODELS:
             continue
 
         model = entry["model"]
@@ -134,6 +136,7 @@ def build_rows() -> List[Dict[str, str]]:
         rows.append(
             {
                 "rank": str(entry["rank"]),
+                "elo": str(entry["elo"]),
                 "model": model,
                 "route": route,
                 "native_context_raw": native_context_raw,
@@ -142,12 +145,14 @@ def build_rows() -> List[Dict[str, str]]:
                 "delta": format_delta(native_context_tokens, openrouter_context),
                 "ratio": format_ratio(native_context_tokens, openrouter_context),
                 "route_url": f"https://openrouter.ai/{route}",
+                "canonical_model": native_key,
                 "canonical_line": canonical["line_number"],
                 "source_kind": source_kind,
                 "notes": "; ".join(notes) if notes else "",
             }
         )
 
+    rows.sort(key=lambda row: int(row["elo"]), reverse=True)
     return rows
 
 
@@ -165,7 +170,7 @@ def render_markdown(rows: List[Dict[str, str]]) -> str:
         "",
         f"Generated: {generated_at}",
         "",
-        "This compares the repo's canonical native/full context window for each OpenRouter-backed model in the final 32-model slate against the current context window reported by OpenRouter.",
+        "This compares the repo's canonical native/full context window for each retained OpenRouter-backed model in the final 32-model slate against the current context window reported by OpenRouter.",
         "",
         "Sources:",
         f"- Native/full context reference: `{CANONICAL_MARKDOWN}`",
@@ -178,28 +183,32 @@ def render_markdown(rows: List[Dict[str, str]]) -> str:
         f"- Shorter context on OpenRouter: {shorter_count}",
         f"- Missing from live OpenRouter models API and resolved from page HTML: {sum(row['source_kind'] == 'page_html' for row in rows)}",
         f"- Missing OpenRouter context even after fallback: {unavailable_count}",
+        "- Excluded from this guide: retired `claude-3-5-sonnet-20241022` alias",
         "",
-        "| Rank | Model | OpenRouter Route | Native / Full Context | OpenRouter Context Now | OpenRouter vs Native | OpenRouter / Native | Notes |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| Elo Order | Final 32 Rank | Model | Arena Elo | OpenRouter Route | Native / Full Context | OpenRouter Context Now | OpenRouter vs Native | OpenRouter / Native | Notes |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
 
-    for row in rows:
+    for elo_order, row in enumerate(rows, start=1):
         native_label = f"{row['native_context_raw']} ({row['native_context_tokens']})"
         route_label = f"[`{row['route']}`]({row['route_url']})"
         notes = row["notes"] or ""
         lines.append(
-            f"| {row['rank']} | `{row['model']}` | {route_label} | {native_label} | {row['openrouter_context_tokens']} | {row['delta']} | {row['ratio']} | {notes} |"
+            f"| {elo_order} | {row['rank']} | `{row['model']}` | {row['elo']} | {route_label} | {native_label} | {row['openrouter_context_tokens']} | {row['delta']} | {row['ratio']} | {notes} |"
         )
 
     lines.extend(
         [
             "",
-            "Canonical slate rows consulted:",
+            "Canonical context rows consulted:",
         ]
     )
     for row in rows:
+        alias_suffix = ""
+        if row["canonical_model"] != row["model"]:
+            alias_suffix = f" (via `{row['canonical_model']}`)"
         lines.append(
-            f"- `{row['model']}`: `{CANONICAL_MARKDOWN}#L{row['canonical_line']}`"
+            f"- `{row['model']}`: `{CANONICAL_MARKDOWN}#L{row['canonical_line']}`{alias_suffix}"
         )
 
     return "\n".join(lines) + "\n"
