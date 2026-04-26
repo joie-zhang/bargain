@@ -469,8 +469,8 @@ class TestInterfaceImplementation:
             state["agent_positions"]["Agent_1"],
         ):
             assert (
-                f"{issue}: weight={diplomacy_game._format_percentage(weight)}, "
-                f"ideal={diplomacy_game._format_percentage(pos)}"
+                f"{issue}: importance={diplomacy_game._format_percentage(weight)}, "
+                f"preferred_rate={diplomacy_game._format_percentage(pos)}"
             ) in prompt
 
     def test_parse_proposal(self, item_allocation_game, diplomacy_game, agents):

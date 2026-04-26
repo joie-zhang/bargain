@@ -4,6 +4,7 @@
 import json
 import asyncio
 from pathlib import Path
+import pytest
 from strong_models_experiment.phases.phase_handlers import PhaseHandler
 # Mock agent for testing - simplified version
 class MockAgent:
@@ -17,6 +18,13 @@ class MockAgent:
         self.response_idx += 1
         return type('Response', (), {'content': response})()
 
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
+@pytest.mark.anyio
 async def test_phase_handlers():
     """Test that allocation and preferences are properly saved."""
 
