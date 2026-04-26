@@ -8,6 +8,7 @@ This keeps a stable folder layout for exporting plots to Overleaf:
       game_1/
       game_2/
       game_3/
+      cross_game/
 
 Usage:
     python scripts/sync_thesis_figures.py
@@ -43,12 +44,16 @@ FIGURES_BY_GAME = {
         "experiments/results/cofunding_20260405_083548/analysis/utility_vs_elo_by_competition_index.png",
         "experiments/results/cofunding_20260405_083548/analysis/utility_vs_elo_by_alpha_sigma.png",
     ],
+    "cross_game": [
+        "Figures/exploitation_vs_elo_combined.png",
+        "Figures/exploitation_vs_elo_combined_baseline.png",
+    ],
 }
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Copy the thesis plot set into repo-root Figures/game_{1,2,3}."
+        description="Copy the thesis plot set into repo-root Figures/{game_1,game_2,game_3,cross_game}."
     )
     parser.add_argument(
         "--output-root",
@@ -102,6 +107,10 @@ def copy_figures(output_root: Path) -> list[Path]:
         for rel_path in rel_paths:
             src = PROJECT_ROOT / rel_path
             dest = game_dir / src.name
+            if src.resolve() == dest.resolve():
+                copied_paths.append(dest)
+                print(f"Skipped (already in place): {display_path(dest)}")
+                continue
             shutil.copy2(src, dest)
             copied_paths.append(dest)
             print(f"Copied {display_path(src)} -> {display_path(dest)}")
