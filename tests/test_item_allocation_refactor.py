@@ -123,15 +123,8 @@ class TestGameStateCreation:
             assert abs(sum(prefs) - 100.0) < 1e-6
             assert all(float(pref).is_integer() for pref in prefs)
 
-    @pytest.mark.skip(reason="ItemAllocationGame delegates to create_competitive_preferences which doesn't use config seed yet")
     def test_reproducibility_with_seed(self):
-        """Test that same seed produces same game state.
-
-        NOTE: Currently skipped because ItemAllocationGame.create_game_state()
-        delegates to create_competitive_preferences() which doesn't use the
-        config's random_seed. This is a known limitation to be addressed
-        in a future refactor.
-        """
+        """Test that same seed produces same game state."""
         game1 = create_game_environment(
             "item_allocation", n_agents=2, t_rounds=5, m_items=5, random_seed=42
         )

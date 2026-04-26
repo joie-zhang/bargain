@@ -62,7 +62,8 @@ class ItemAllocationGame(GameEnvironment):
         preference_manager = create_competitive_preferences(
             n_agents=self.config.n_agents,
             m_items=self.config.m_items,
-            cosine_similarity=self.config.competition_level
+            cosine_similarity=self.config.competition_level,
+            random_seed=self.config.random_seed
         )
         preferences_data = preference_manager.generate_preferences()
 
