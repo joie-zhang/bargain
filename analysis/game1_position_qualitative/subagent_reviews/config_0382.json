@@ -1,0 +1,159 @@
+{
+  "run_id": "config_0382",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": -22.599000000000004,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first position did not look advantaged: Agent_1 opened by claiming Stone, but consensus formed only after the group anchored Stone with Agent_2 and gave the last-position agent, Agent_3, Jewel plus Pencil.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to a first-position advantage. Agent_1's early Stone-centered proposals were repeatedly rejected as too self-serving or as leaving Agent_3 with no stake. Later discussion, private thinking, and reflection converged on a fairness-floor deal: Agent_2 keeps Stone, Agent_3 receives Jewel plus Pencil, and Agent_1 receives only Apple plus Quill. After the round discount, that yields Agent_1 5.103 and Agent_3 27.702, so the last position beats the first by 22.599.",
+  "phase_notes": {
+    "public_discussion": "The public discussion started with all agents asserting the same Stone-first, Jewel-second priorities. Over rounds 2-4, the agenda shifted away from Agent_1's initial Stone claim toward a shared template where Agent_2 held Stone, Jewel rotated or landed with Agent_3, and low items were used as fairness tokens.",
+    "private_thinking": "Private thinking entries were available for all four rounds. They show agents learning to preserve Stone with Agent_2, use Jewel as the acceptance lever, and add low-item fairness floors rather than letting Agent_1 keep the top item.",
+    "formal_proposals": "Formal proposals show Agent_1 repeatedly proposed Stone for itself early, but those proposals failed. The accepted final allocation is the round-4 Agent_1/Agent_2 proposal: Agent_1 [0,3], Agent_2 [2], Agent_3 [1,4]. The transcript's final consensus label says Proposal #3, but the vote counts and final_allocation indicate the Proposal #1/#2 allocation was operative.",
+    "private_voting": "Raw private votes include some parse/identity noise, but the coherent pattern is clear: voters rejected allocations that moved Stone away from Agent_2 or left Agent_3 with nothing, and accepted the final Agent_2-Stone, Agent_3-Jewel allocation.",
+    "reflection": "Reflection entries increasingly emphasize fairness floors, nonzero stakes, and Jewel rotation. Agent_3's round-3 reflection explicitly identifies zero payoff for Agent_3 as the blocker, which explains why the final consensus gave the last-position agent a valuable package."
+  },
+  "mechanisms": [
+    {
+      "theme": "Symmetric values weakened any first-position edge",
+      "supports_first_advantage": false,
+      "explanation": "All three agents had identical preferences, so Agent_1's speaking first did not give it private information or a valuation edge. Everyone knew Stone was the dominant item and could resist any allocation that gave Agent_1 that item without enough compensation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 12,
+          "quote": "- Agent_1: [3.0, 35.0, 55.0, 4.0, 3.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 13,
+          "quote": "- Agent_2: [3.0, 35.0, 55.0, 4.0, 3.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 14,
+          "quote": "- Agent_3: [3.0, 35.0, 55.0, 4.0, 3.0]"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1's early Stone claims were vetoed",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 used its early position to propose Stone for itself, but those allocations were not accepted. Other agents rejected them because Agent_2 lost the top lever or Agent_3 received nothing.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 212,
+          "quote": "I propose: {'Agent_1': [2, 0], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 265,
+          "quote": "Proposal #1: 0 accept, 3 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 1481,
+          "quote": "leaves me with nothing"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 1780,
+          "quote": "Stone moves to Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "The public anchor shifted to Agent_2 holding Stone",
+      "supports_first_advantage": false,
+      "explanation": "By the middle rounds, public discussion and private plans increasingly framed Agent_2 as the Stone holder. That made Agent_1's first-position claim less viable and turned the main bargaining question into who should receive Jewel and low-item compensation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 770,
+          "quote": "Stone remains the dominant lever"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 971,
+          "quote": "Stone remains the strongest lever"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 2437,
+          "quote": "keeps Stone with Agent_2 (the strongest lever)"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3 gained veto leverage by rejecting zero-stake deals",
+      "supports_first_advantage": false,
+      "explanation": "The last-position agent did not passively accept low or zero allocations. Reflections and votes identify Agent_3's lack of payoff as a blocker, so the final consensus had to give Agent_3 a meaningful package.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 2303,
+          "quote": "left Agent_3 with zero or minimal payoff"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 2313,
+          "quote": "left Agent_3 with nothing"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 2542,
+          "quote": "leaving Agent_3 with nothing"
+        }
+      ]
+    },
+    {
+      "theme": "Fairness-floor mechanism favored the last position over the first",
+      "supports_first_advantage": false,
+      "explanation": "The eventual solution solved the deadlock by giving Agent_1 a small low-item stake and Agent_3 the valuable Jewel plus Pencil. That fairness-floor compromise directly explains why Agent_3's final utility exceeded Agent_1's.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 1190,
+          "quote": "I propose: {'Agent_1': [0, 3], 'Agent_2': [2], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 1195,
+          "quote": "Agent_1 = 7, Agent_2 = 55, Agent_3 = 38"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 2520,
+          "quote": "creates a tangible fairness floor for all three"
+        }
+      ]
+    },
+    {
+      "theme": "The final accepted allocation makes the counterexample explicit",
+      "supports_first_advantage": false,
+      "explanation": "The metadata and final allocation show Agent_1 receiving only Apple and Quill after discount, while Agent_3 receives Jewel and Pencil. The first speaker's final utility is therefore much lower than the last speaker's.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 5.103000000000001"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0, 3], 'Agent_2': [2], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0382.md",
+          "line": 1243,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        }
+      ]
+    }
+  ]
+}

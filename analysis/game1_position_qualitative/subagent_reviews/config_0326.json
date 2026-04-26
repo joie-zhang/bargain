@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0326",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first speaker set a useful baseline, but the result does not look like a first-position advantage. The first and last proposals gave the same value-preserving allocation to all agents, and the selected consensus was the last agent's version, while the middle proposal failed because it moved Agent_3's top item away.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Because first_minus_last is 0.0, the key counterexample is that Proposal #3, submitted by the last-position agent, duplicated the mutually optimal allocation and was the unanimously accepted consensus. Order mattered less than satisfying each agent's non-overlapping top priorities: Agent_1 needed Stone and Jewel, Agent_2 needed Pencil and Apple, and Agent_3 needed Quill.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by claiming Stone and Jewel, Agent_2 immediately accepted that baseline while asking for Pencil and Apple, and Agent_3 endorsed the same split because it preserved Quill. The public discussion converged quickly because preferences were complementary rather than contested.",
+    "private_thinking": "All three private-thinking entries described the same stable allocation as the target: Agent_1 keeps Stone and Jewel, Agent_2 keeps Pencil and Apple, and Agent_3 keeps Quill. These notes support consensus through aligned incentives, not a special advantage from speaking first.",
+    "formal_proposals": "Agent_1 and Agent_3 submitted equivalent baseline proposals. Agent_2 submitted a self-serving variant that also gave itself Quill and left Agent_3 empty, creating the only serious conflict.",
+    "private_voting": "Proposal #1 and Proposal #3 each received unanimous acceptance, while Proposal #2 received only Agent_2's support. The tabulation selected Proposal #3, the last agent's proposal, as the consensus outcome.",
+    "reflection": "No reflection section is present in the transcript, matching the metadata reflection_entries=0."
+  },
+  "mechanisms": [
+    {
+      "theme": "Complementary preferences made the opening baseline easy to accept",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first message framed a natural split around its own top items, and Agent_2 and Agent_3 publicly accepted that structure because it also gave them their highest-value items.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 23,
+          "quote": "I intend to secure Stone and Jewel for myself if possible."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 32,
+          "quote": "I can work with your baseline: you securing Stone and Jewel."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 57,
+          "quote": "best aligns with my interests and also keeps the deal clean and quick."
+        }
+      ]
+    },
+    {
+      "theme": "The last proposal matched the first proposal and became the selected consensus",
+      "supports_first_advantage": false,
+      "explanation": "The strongest counterexample to a first-position advantage is that the final accepted proposal was submitted by Agent_3, the last speaker, and it reproduced the same allocation that Agent_1 proposed.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 143,
+          "quote": "I propose: {'Agent_1': [2, 1], 'Agent_2': [4, 0], 'Agent_3': [3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 161,
+          "quote": "I propose: {'Agent_1': [2, 1], 'Agent_2': [0, 4], 'Agent_3': [3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 200,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    },
+    {
+      "theme": "Constraint violation, not proposal order, explains the rejected proposal",
+      "supports_first_advantage": false,
+      "explanation": "Agent_2's proposal came between the first and last proposals, but it failed because it reassigned Quill away from Agent_3 and left Agent_3 with nothing. The votes indicate that respecting Agent_3's top item was decisive.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 156,
+          "quote": "allocation: {'Agent_1': [1, 2], 'Agent_2': [0, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 197,
+          "quote": "Proposal #2: 1 accept, 2 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 383,
+          "quote": "Quill goes to Agent_2, removing my highest-value item"
+        }
+      ]
+    },
+    {
+      "theme": "Private reasoning converged on the same stable allocation",
+      "supports_first_advantage": false,
+      "explanation": "The private-thinking and vote rationales show each agent independently favored the same allocation because it maximized their own utility. This weakens an order-based explanation for why the first position did not beat the last position.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 208,
+          "quote": "The proposed baseline aligns with each agent’s top interests"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 231,
+          "quote": "The current discussion shows perfect alignment"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0326.md",
+          "line": 394,
+          "quote": "Same allocation as Proposal 1; secures Quill for Agent_3"
+        }
+      ]
+    }
+  ]
+}

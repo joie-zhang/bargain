@@ -1,0 +1,100 @@
+{
+  "run_id": "config_0020",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": -20.700000000000003,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "This is a counterexample to a first-position advantage: Agent_1 opened and kept Jewel, but Agent_3's Apple demand was decisive, and the final consensus gave Agent_3 a higher discounted payoff than Agent_1.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Agent_1 gained a partial anchoring benefit by keeping Jewel, but that did not translate into winning the position comparison. The last-position agent had the highest single-value item, vetoed every Round-1 proposal that denied Apple, and then accepted the Round-2 Path B allocation where Agent_1 received only Jewel while Agent_3 received Apple. With Round-2 discounting, Agent_1 ended at 69.3 and Agent_3 at 90.0, so first_minus_last is negative.",
+  "phase_notes": {
+    "public_discussion": "The public discussion quickly identified each player's anchor: Agent_1 wanted Jewel, Agent_2 wanted Quill and Pencil, and Agent_3 wanted Apple. Agent_1's first-mover framing helped keep Jewel salient, but Agent_3 repeatedly made Apple non-negotiable, and Round 2 converged publicly on Path B: Jewel to Agent_1, Stone/Quill/Pencil to Agent_2, Apple to Agent_3.",
+    "private_thinking": "The six private-thinking entries recognized the same anchor structure. They generally treated Jewel for Agent_1 and Apple for Agent_3 as protected items, while Stone became the movable fairness lever. By Round 2, all agents' private strategies supported Path B, which preserved Agent_1's Jewel but did not preserve Agent_1's secondary Stone value.",
+    "formal_proposals": "Round-1 formal proposals failed because they omitted Agent_3 or kept Apple away from Agent_3 despite public talk about respecting Apple. In Round 2, Agent_1 proposed an alternative that even Agent_1 rejected, while Agent_2 and Agent_3 submitted identical Path B proposals that became the consensus outcome.",
+    "private_voting": "The raw votes show the mechanism clearly: Agent_3 rejected every Round-1 proposal because Apple was absent, then accepted Round-2 proposals that gave Apple to Agent_3. Agent_1 accepted the same Round-2 proposals because they restored Jewel, even though the allocation left Agent_1 below Agent_3 in final utility.",
+    "reflection": "All three reflections diagnose Apple as the blocker and Stone as the flexible lever. The recommended repair was to secure Apple for Agent_3 while keeping Jewel with Agent_1 and Quill/Pencil with Agent_2; the final agreement followed that repair, producing the counterexample."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening anchor secured Jewel but not the payoff lead",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first public move established Jewel as their anchor, and later discussion and votes preserved it. This is a real first-position benefit, but it was limited because Jewel's discounted payoff was lower than Agent_3's Apple payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 22,
+          "quote": "Jewel is by far my top target (value 77)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 919,
+          "quote": "Proposal 2 assigns Jewel to me"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position Apple veto forced the repair",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's Apple claim carried decisive veto power. Round-1 proposals that favored Agent_1's Jewel but denied Apple to Agent_3 could not pass, so the bargaining path had to be repaired around Agent_3's top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 69,
+          "quote": "my top priority is Apple (value 100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 668,
+          "quote": "My top priority is Apple (100 value)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 777,
+          "quote": "Without Apple secured for Agent_3, they have zero utility"
+        }
+      ]
+    },
+    {
+      "theme": "Stone became the concession instead of a first-position gain",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 valued Stone as a secondary item, but the consensus solution used Stone as the movable fairness lever and assigned it to Agent_2. That left Agent_1 with only Jewel while preserving Apple for Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 257,
+          "quote": "Minimal-change fairness test"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 890,
+          "quote": "allocation: {\"Agent_1\": [1], \"Agent_2\": [2, 3, 4], \"Agent_3\": [0]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 985,
+          "quote": "I receive Apple (100) with 0.9 round discount = 90 utility"
+        }
+      ]
+    },
+    {
+      "theme": "Final accepted utilities favor the last position",
+      "supports_first_advantage": false,
+      "explanation": "The accepted Round-2 outcome gave Agent_1 the discounted value of Jewel and Agent_3 the discounted value of Apple. Because Apple was worth more than Jewel, the last-position agent finished ahead despite speaking last.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 69.3, 'Agent_2': 90.0, 'Agent_3': 90.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0020.md",
+          "line": 498,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    }
+  ]
+}

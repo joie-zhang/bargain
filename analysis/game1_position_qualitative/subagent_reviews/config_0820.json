@@ -1,0 +1,149 @@
+{
+  "run_id": "config_0820",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first position did not look independently advantaged. Agent_1's opening allocation survived because it gave every agent their maximum-utility bundle, and later speakers quickly endorsed or reproduced the same allocation rather than conceding value to the first mover.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to first-position advantage: Agent_1 kept Apple and Pencil, but Agent_2 received Stone and Agent_3 received Jewel plus Quill, so all agents ended with 100 utility. The last-position agent was not beaten; Agent_3 accepted because the swap moved them from a zero-value Stone to Jewel, producing their top pair.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 anchored on Apple and Pencil, but the others accepted only after the allocation was reframed as mutually optimal: Agent_2 got Stone and Agent_3 got Jewel plus Quill. The public guardrail protected Agent_1's bundle, but it was supported because it did not cost others value.",
+    "private_thinking": "Private strategies show each agent defending their own top bundle and treating the current allocation as stable. Agent_1 explicitly prioritized preserving Apple/Pencil, while Agent_2 and Agent_3 likewise prioritized Stone and Jewel/Quill.",
+    "formal_proposals": "All three formal proposals were identical, allocating Agent_1 Apple/Pencil, Agent_2 Stone, and Agent_3 Jewel/Quill. This eliminates evidence that the first proposal beat a later competing proposal.",
+    "private_voting": "All nine private votes accepted all three proposals. The reasons consistently cite each voter receiving their own best outcome or maximum utility, not deference to Agent_1.",
+    "reflection": "No reflection entries are present in the transcript metadata or transcript body."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening anchor matched all agents' top items",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 proposed keeping their two valued items, but the same opening allocation also placed each zero-value-to-Agent_1 item with the agent who valued it. Persistence of the first allocation is therefore better explained by preference compatibility than by first-mover power.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 24,
+          "quote": "- Initial offer: I (Agent_1) take Apple and Pencil. Agent_2 takes Jewel. Agent_3 takes Stone and Quill."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 70,
+          "quote": "- I go from Stone (0) + Quill (48) to Jewel (52) + Quill (48) = 100 total for my top two items."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 101,
+          "quote": "- I’m ready to lock this allocation in for Round 1. It gives each of us a strong, clear outcome: Agent_1 secures the two highest-valued items for me, Agent_2 gains Stone (top for you), and Agent_3 gains Jewel and Quill (top pairing for you)."
+        }
+      ]
+    },
+    {
+      "theme": "Guardrail protected first speaker but relied on unanimous mutual gains",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 introduced a rule freezing Apple/Pencil, which protected the first speaker's bundle. However, the guardrail was accepted by later agents because their own top bundles were already secured, limiting evidence of positional domination.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 102,
+          "quote": "- To prevent disruptive shifts in future rounds, I suggest a simple guardrail: any changes that affect Apple or Pencil require unanimous consent."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 130,
+          "quote": "- I support freezing Apple and Pencil for Round 2 unless all three of us unanimously agree to a change."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 159,
+          "quote": "- Agent_1’s guardrail idea: I agree that Apple and Pencil should stay with Agent_1 unless all three of us unanimously agree to change."
+        }
+      ]
+    },
+    {
+      "theme": "Formal proposal convergence",
+      "supports_first_advantage": false,
+      "explanation": "Formal proposals provide strong counterevidence to first-position advantage: every agent independently submitted the same final allocation, and the system enumerated three identical proposals.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 183,
+          "quote": "I propose: {'Agent_1': [0, 4], 'Agent_2': [2], 'Agent_3': [1, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 197,
+          "quote": "- reasoning: Optimal distribution aligning with each agent's top-valued items: Agent_1 gets Apple(0) and Pencil(4); Agent_2 gets Stone(2); Agent_3 gets Jewel(1) and Quill(3)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 206,
+          "quote": "- reasoning: Allocates each agent their top-priority items: Agent_1 gets Apple and Pencil (0 and 4), Agent_2 gets Stone (2), Agent_3 gets Jewel and Quill (1 and 3). This maximizes individual utilities (Agent_1: 59+41=100; Agent_2: 100; Agent_3: 52+48=100) and yields a clean, stable Round 1 allocation that respects the prior guardrails by not touching Apple/Pencil and not reassigning top items."
+        }
+      ]
+    },
+    {
+      "theme": "Private thinking shows symmetric self-protection",
+      "supports_first_advantage": false,
+      "explanation": "The private thinking sections do not show later agents yielding to Agent_1. Each agent describes a strategy centered on preserving its own high-value items and defaulting to the status quo because it already satisfies everyone.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 248,
+          "quote": "- reasoning: From the discussions: I (Agent_1) value Apple (59) and Pencil (41) the most."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 267,
+          "quote": "- reasoning: I cannot share private chain-of-thought, but here is a concise strategic summary: Stone is my only high-value item (100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 286,
+          "quote": "- reasoning: Current discussions indicate distinct priorities: Agent_1 values Apple and Pencil most, Agent_2 values Stone most, Agent_3 values Jewel and Quill most."
+        }
+      ]
+    },
+    {
+      "theme": "Private voting confirms equal maximum-utility acceptance",
+      "supports_first_advantage": false,
+      "explanation": "The private votes accepted all proposals because each voter obtained their top or maximum-utility outcome. The last-position agent explicitly described Jewel plus Quill as maximum utility, so the final result did not disadvantage the last mover.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 336,
+          "quote": "- reasoning: Allocates Apple and Pencil to Agent_1 (my top two items, totaling 100). This matches my best outcome in Round 1 with no cost to my core priorities."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 369,
+          "quote": "- reasoning: Accepts Stone for me (my top item) and preserves Apple/Pencil with Agent_1 and Jewel/Quill with Agent_3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 402,
+          "quote": "- reasoning: Allocates Jewel and Quill to me (top items), totaling 100 utility in Round 1. This is my best outcome and aligns with my preferences."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 424,
+          "quote": "- reasoning: Same allocation; same maximum utility; supports stability."
+        }
+      ]
+    },
+    {
+      "theme": "No reflection evidence available",
+      "supports_first_advantage": false,
+      "explanation": "Reflection was unavailable, so there is no later self-assessment that would alter the interpretation from discussion, proposals, private thinking, or private voting.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0820.md",
+          "line": 242,
+          "quote": "## Raw Agent Interaction Responses"
+        }
+      ]
+    }
+  ]
+}

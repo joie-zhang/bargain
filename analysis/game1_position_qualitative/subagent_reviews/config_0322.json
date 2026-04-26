@@ -1,0 +1,95 @@
+{
+  "run_id": "config_0322",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": -23.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "This is a counterexample to first-position advantage: Agent_1 opened the discussion and kept Apple, but finished at 77 while last-position Agent_3 kept Jewel+Pencil for 100. The accepted final allocation aligns with Agent_2's formal proposal and the raw unanimous votes for Proposal 2, not with Agent_1's formal proposal.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Agent_1's early move anchored Apple for itself, but it did not capture Stone or outperform the last speaker. Agent_3's high-value bundle was repeatedly treated as legitimate and value-complete, while Agent_1's later formal proposal was rejected because it gave Agent_3 nothing. The -23 first-minus-last gap is best explained by compatible private valuations and consensus around Agent_3's 100-point bundle, not by a durable first-speaker advantage.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 set the initial allocation frame, but that frame already gave Agent_3 Jewel+Pencil. The later public discussion mostly reinforced the same split, leaving Agent_1 with Apple only and Agent_3 with its full 100-point bundle.",
+    "private_thinking": "Private thinking was available for all three agents. Agent_1 recognized the discussed deal produced utilities of 77/100/100, and Agent_3 privately planned to defend Jewel+Pencil while avoiding payoff-reducing swaps.",
+    "formal_proposals": "The structured proposals weakened any first-position advantage. Agent_1's formal proposal kept Apple but assigned all other items to Agent_2 and none to Agent_3; Agent_2's proposal matched the final allocation; Agent_3's structured allocation was internally inconsistent with its stated reasoning.",
+    "private_voting": "Raw voting shows Proposal 2 accepted by all three agents, while Agent_1's Proposal 1 was rejected by Agent_1 and Agent_3. The transcript's tabulation line says Proposal #2 had 3 accepts but then labels Proposal #3 as unanimously accepted; the final allocation and raw votes support Proposal 2.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "Early agenda setting secured Apple but not dominance",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first public message successfully placed Apple with Agent_1 and that part survived through the final allocation. This is a limited first-position benefit, but it only produced 77 points and did not secure Agent_1's secondary Stone value.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 20,
+          "quote": "My top priority is Apple (77). Stone is my secondary target (23)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 23,
+          "quote": "I take Apple; Agent_2 takes Stone and Quill; Agent_3 takes Jewel and Pencil."
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker had an uncontested full-value bundle",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's last-position outcome was not squeezed by the first speaker. Public discussion and private votes both framed Jewel+Pencil as Agent_3's maximum payoff, allowing the last agent to beat Agent_1 by 23 points.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 57,
+          "quote": "Jewel (89) plus Pencil (11) totals 100 for me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 382,
+          "quote": "Proposal 2 gives Agent_3 Jewel+Pencil (89+11=100)"
+        }
+      ]
+    },
+    {
+      "theme": "First agent's formal proposal failed on consensus grounds",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's formal proposal preserved Apple but left Agent_3 with nothing, so it could not convert first position into a winning allocation. It was rejected as inequitable and inferior for Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 142,
+          "quote": "with Agent_3 receiving nothing in this proposal."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 305,
+          "quote": "This feels inequitable and reduces potential mutual gains"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 371,
+          "quote": "Proposal 1 leaves Agent_3 with no items"
+        }
+      ]
+    },
+    {
+      "theme": "Consensus followed Agent_2's compromise proposal",
+      "supports_first_advantage": false,
+      "explanation": "The final accepted allocation came from the middle speaker's formal proposal: Apple to Agent_1, Quill to Agent_2, and Jewel+Stone+Pencil to Agent_3. This preserved the first speaker's Apple claim but gave the last speaker the larger payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 146,
+          "quote": "I propose: {'Agent_1': [0], 'Agent_2': [3], 'Agent_3': [1, 2, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0322.md",
+          "line": 191,
+          "quote": "Proposal #2: 3 accept, 0 reject"
+        }
+      ]
+    }
+  ]
+}

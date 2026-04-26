@@ -1,0 +1,157 @@
+{
+  "run_id": "config_0886",
+  "n_agents": 5,
+  "competition_level": 0.0,
+  "first_minus_last": -1.6199999999999974,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 set the Quill agenda, but consensus routed Jewel to Agent_3 and Pencil to Agent_5, so the last position narrowly beat the first.",
+  "does_first_position_look_advantaged": "mixed/unclear",
+  "why_or_counterexample": "The first position secured Quill, but the final Track D allocation gave Agent_5 its 50-point Pencil; with both discounted in round 3, Pencil beat Quill by 1.62 utility.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by claiming Quill and Jewel, and the discussion repeatedly preserved Quill for Agent_1. The public coalition, however, treated Jewel-to-Agent_3, Agent_4 inclusion, and Pencil-as-fee-to-Agent_5 as consensus requirements.",
+    "private_thinking": "Available. Private notes show all agents recognized the same anchors: Jewel to Agent_3, Quill to Agent_1, Apple to Agent_2, plus a fee/inclusion problem around Stone and Pencil. By rounds 2-3, Track D was the common solution.",
+    "formal_proposals": "Agent_1's round-1 self-maximizing proposal gave Agent_1 Jewel and Quill, but it failed badly. Later Agent_1, Agent_3, and Agent_4 proposed Track D, which matches the final allocation; Agent_2 and Agent_5 proposed a two-agent alternative that private votes rejected.",
+    "private_voting": "Voting reveals the mechanism clearly: Agent_1's greedy first proposal was rejected, Agent_4 rejected plans that excluded them, and Agent_5 accepted plans giving it Pencil while rejecting plans that left Pencil with Agent_2. The round-3 tabulation line is internally inconsistent, but private votes and final allocation support Track D.",
+    "reflection": "Available. Reflections explicitly diagnose the blockers as Jewel needing to go to Agent_3, Agent_4 needing a stake, and the Pencil-vs-Stone fee dispute. The recommended fix was the five-way Track D allocation."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-mover framing secured Quill but not enough surplus",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's opening claim helped make Quill-to-Agent_1 a stable anchor across rounds. That did advantage the first position relative to being excluded, but the advantage was capped at one item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 24,
+          "quote": "My top priorities: Quill (48) and Jewel (45)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 174,
+          "quote": "moves Quill to me in the near term"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 342,
+          "quote": "secures Quill with Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 9,
+          "quote": "'Agent_1': [3]"
+        }
+      ]
+    },
+    {
+      "theme": "Top-holder norm blocked Agent_1 from also taking Jewel",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's best early attempt bundled Jewel and Quill for itself, but the group rejected that as violating the increasingly dominant norm that Jewel belonged with Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 369,
+          "quote": "'Agent_1': [1, 3]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 462,
+          "quote": "Proposal #1: 1 accept, 4 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 2018,
+          "quote": "Jewel is not allocated to me (Agent_3)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 2183,
+          "quote": "People want Jewel with the strongest current holder (Agent_3)"
+        }
+      ]
+    },
+    {
+      "theme": "Inclusion pressure converted the deal into Track D",
+      "supports_first_advantage": false,
+      "explanation": "After Agent_4 rejected exclusionary deals, the coalition moved to a one-item-per-agent Track D. This preserved Agent_1's Quill but created the exact slot that gave Agent_5 Pencil.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 719,
+          "quote": "Agent_4 felt left out in Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 724,
+          "quote": "Stone -> Agent_4; Pencil -> Agent_5 (fee)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 959,
+          "quote": "one item per agent to keep the round simple and balanced"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 2750,
+          "quote": "ensures inclusion of Agent_4"
+        }
+      ]
+    },
+    {
+      "theme": "Pencil-as-fee lifted Agent_5 above Agent_1",
+      "supports_first_advantage": false,
+      "explanation": "The last position's highest-value item was Pencil, and the final accepted structure assigned Pencil to Agent_5 as a coordination fee. Agent_1's final Quill was valuable, but Agent_5's Pencil was worth slightly more under the same discount.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 130,
+          "quote": "Pencil: 50 (top priority as a lever or fee)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 1296,
+          "quote": "Pencil -> Agent_5 (facilitator fee)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 3505,
+          "quote": "delivering 40.5 utility"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 8,
+          "quote": "'Agent_5': 40.5"
+        }
+      ]
+    },
+    {
+      "theme": "Private votes rewarded preference fit over proposal order",
+      "supports_first_advantage": false,
+      "explanation": "The final winning allocation was not simply a last-speaker takeover: Agent_1 itself proposed and accepted the inclusive allocation. The last position won because the allocation matched Agent_5's private payoff threshold better than Agent_1's final payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 1635,
+          "quote": "'Agent_1': [3], 'Agent_2': [0], 'Agent_3': [1], 'Agent_4': [2], 'Agent_5': [4]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 3285,
+          "quote": "preserves momentum and includes Agent_4 as requested"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 3516,
+          "quote": "leaves me with nothing in Round 3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0886.md",
+          "line": 8,
+          "quote": "'Agent_1': 38.88"
+        }
+      ]
+    }
+  ]
+}

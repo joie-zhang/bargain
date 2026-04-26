@@ -1,0 +1,174 @@
+{
+  "run_id": "config_0946",
+  "n_agents": 5,
+  "competition_level": 1.0,
+  "first_minus_last": 11.664000000000003,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat Agent_5 because the final consensus locked Apple to Agent_1 while Agent_5 settled for Stone. Apple was treated as part of the protected anchor set, and Stone-to-Agent_5 became the acceptable compensating lever. The advantage was not automatic: early Apple-plus-Pencil concentration for Agent_1 was vetoed, so the winning edge came from preserving Agent_1's top item while conceding enough Stone/Quill value to avoid a last-position veto.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes. The final allocation gives Agent_1 item 0, Apple, and Agent_5 item 2, Stone; with the listed preferences and round discount this yields Agent_1 26.973 versus Agent_5 15.309. Agent_5 valued Apple highly, but the negotiation normalized Apple as Agent_1's anchor, so Agent_5's acceptable route was Stone rather than dislodging Apple.",
+  "phase_notes": {
+    "public_discussion": "Public discussion converged on Apple_1, Pencil_3, Jewel_4 as protected anchors; Stone/Quill placement became the repeated hinge.",
+    "private_thinking": "Available. Private thinking mirrors the public anchor strategy and repeatedly plans a quick Option A/B Stone-Quill vote while keeping Apple with Agent_1.",
+    "formal_proposals": "Formal proposals began split between concentrated two-agent packages and anchor-preserving allocations; by round 4, four of five proposals matched the final Apple_1, Quill_2, Pencil_3, Jewel_4, Stone_5 layout.",
+    "private_voting": "Available. Private votes show agents rejecting proposals that remove their personal anchor and accepting final variants once each key veto-holder had Apple, Pencil, Jewel, or Stone.",
+    "reflection": "Available. Reflections explicitly diagnose anchors as the acceptance drivers and Stone/Quill allocation as the blocker that had to be narrowed."
+  },
+  "mechanisms": [
+    {
+      "theme": "Apple anchor protected Agent_1's payoff",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's top item became a shared anchor early and stayed protected through the final round. Since Agent_1's raw Apple value was higher than Agent_5's final Stone value, this anchor directly created the final first-over-last gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 1493,
+          "quote": "Apple should stay with Agent_1."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2048,
+          "quote": "Apple serves as a strong anchor for Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 4344,
+          "quote": "Preserves anchors Apple_1, Pencil_3, Jewel_4"
+        }
+      ]
+    },
+    {
+      "theme": "Final item values mechanically favor Agent_1",
+      "supports_first_advantage": true,
+      "explanation": "The accepted allocation gave Agent_1 Apple and Agent_5 Stone. With the transcript's final utilities, that allocation is exactly the observed 11.664 advantage for the first position.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 8,
+          "quote": "'Agent_1': 26.973000000000003"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 8,
+          "quote": "'Agent_5': 15.309000000000001"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 9,
+          "quote": "'Agent_5': [2]"
+        }
+      ]
+    },
+    {
+      "theme": "Other veto-holder anchors made Apple_1 feasible",
+      "supports_first_advantage": true,
+      "explanation": "Pencil for Agent_3 and Jewel for Agent_4 became hard constraints alongside Apple for Agent_1. This made the winning coalition an anchor-preserving allocation rather than a deal where Agent_5 could claim Apple or Pencil.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 1494,
+          "quote": "Pencil should stay with Agent_3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 1495,
+          "quote": "Jewel should stay with Agent_4."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2314,
+          "quote": "Gives me Pencil (49), my top item"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2369,
+          "quote": "Jewel goes to Agent_4, my top leverage"
+        }
+      ]
+    },
+    {
+      "theme": "Stone compensated Agent_5 without matching Apple",
+      "supports_first_advantage": true,
+      "explanation": "Agent_5 could accept the final deal because Stone was a meaningful payoff and repeatedly framed as the absorber assignment. But Stone gave Agent_5 less discounted value than Apple gave Agent_1, so acceptance did not erase the first-position lead.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 1946,
+          "quote": "Stone goes to Agent_5 (a strong absorber)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2446,
+          "quote": "Gives me Stone (21) while preserving Apple to Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 4564,
+          "quote": "Stone (21) allocated to me yields utility"
+        }
+      ]
+    },
+    {
+      "theme": "Initial Agent_1 overreach was not enough",
+      "supports_first_advantage": false,
+      "explanation": "The first position was advantaged only after compromise. Early proposals giving Agent_1 both Apple and Pencil failed because Agent_3, Agent_4, and Agent_5 had veto reasons; the final advantage came from Apple-only preservation plus concessions, not from unchecked first-mover dominance.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 418,
+          "quote": "Proposal #1: 2 accept, 3 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2303,
+          "quote": "Gives me nothing (no items)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2358,
+          "quote": "Jewel is not with Agent_4"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2413,
+          "quote": "Gives me nothing (no items)"
+        }
+      ]
+    },
+    {
+      "theme": "Round-four convergence locked the anchor allocation",
+      "supports_first_advantage": true,
+      "explanation": "By the final round, nearly all formal proposals had converged on the anchor-preserving allocation. That convergence turned the earlier Apple anchor into a unanimous outcome, while the only nonconforming proposal was rejected.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 1973,
+          "quote": "delivering a Pareto-improvement over a rigid baseline"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2034,
+          "quote": "Proposal #1: 5 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 2040,
+          "quote": "CONSENSUS REACHED!"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0946.md",
+          "line": 4531,
+          "quote": "Jewel not with Agent_4; I receive nothing."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "run_id": "config_1982",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": 12.914016300000004,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat Agent_3 because the final consensus adopted an Agent_2-centered allocation that gave Agent_1 Apple+Stone and gave Agent_3 nothing. This looks like a first-over-last advantage in the realized outcome, but the mechanism is not a clean first-position advantage: public and private planning repeatedly called for compensating Agent_3, while the decisive final private votes appear to misread or misattribute Agent_3's payoff.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes, Agent_1 is advantaged relative to Agent_3 in the final result because Agent_1 receives a nonzero rest bundle and Agent_3 receives zero. The counterexample to a structural first-position story is that the public default often assigned Agent_3 a balanced rest bundle; the last-position collapse happens when the actual accepted proposals omit Agent_3 and Agent_3's raw vote accepts them as if Agent_3 had received Agent_2's items.",
+  "phase_notes": {
+    "public_discussion": "Public discussion converged on Quill as the decisive item, usually with Agent_2 as the Quill holder and a nominal 29/30 non-Quill balance for Agent_1 and Agent_3. This public story did not inherently favor Agent_1 over Agent_3; it often named Agent_3 compensation as necessary.",
+    "private_thinking": "Private thinking from later rounds also framed Agent_3's compensation as necessary for consensus and treated Anchor A' as Quill to Agent_2 with Agent_1 and Agent_3 receiving near-balanced rest bundles. The planning logic predicted that zeroing Agent_3 should create veto risk.",
+    "formal_proposals": "The submitted proposals often diverged from the balanced public plan. By the final round, proposals #1 and #3 both allocated Apple+Stone to Agent_1, Jewel+Quill+Pencil to Agent_2, and no items to Agent_3; proposal #3 became the unanimous winner.",
+    "private_voting": "Private voting explains the first-minus-last gap. Agent_1 and Agent_2 accepted the final Agent_2-centered package because it was best or equivalent for them. Agent_3 accepted it too, but the reasoning says Agent_3 received Quill+Jewel+Pencil even though the allocation gives those items to Agent_2.",
+    "reflection": "Reflections repeatedly identified Agent_3's lack of tangible compensation as the main blocker. The final outcome contradicts those reflections, suggesting the last-position loss came from proposal/vote confusion rather than a stable negotiated acceptance of being last with zero."
+  },
+  "mechanisms": [
+    {
+      "theme": "Final allocation gives first position nonzero rest and last position zero",
+      "supports_first_advantage": true,
+      "explanation": "The recorded outcome directly creates the first-over-last gap: Agent_1 gets Apple and Stone while Agent_3 gets no items.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 12.914016300000004, 'Agent_2': 30.13270470000001, 'Agent_3': 0.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        }
+      ]
+    },
+    {
+      "theme": "Public plan nominally compensated Agent_3, so the advantage was not baked into the discussion",
+      "supports_first_advantage": false,
+      "explanation": "Late public discussion repeatedly presented a balanced Anchor A' where Agent_3 would receive Stone+Apple. That would have left Agent_1 and Agent_3 nearly tied rather than producing the observed 12.9-point gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2446,
+          "quote": "- Default public path (Anchor A’):"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2448,
+          "quote": "- Rest: Agent_1 Jewel + Pencil; Agent_3 Stone + Apple"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2450,
+          "quote": "- Rationale: Keeps Quill with the top holder, tight 29 vs 30 balance, easy to defend publicly."
+        }
+      ]
+    },
+    {
+      "theme": "Actual final proposals reverted to excluding Agent_3",
+      "supports_first_advantage": true,
+      "explanation": "Despite the balanced public rhetoric, the proposals that won support in round 9 gave Agent_1 a modest bundle and left Agent_3 empty. Proposal #3, with that structure, was the accepted consensus proposal.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2687,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2705,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 2744,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    },
+    {
+      "theme": "Private voting shows self-interest for Agent_1 and Agent_2",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 accepted the final package because Apple+Stone was their best available payoff, and Agent_2 accepted because Quill+Jewel+Pencil was their strongest outcome. These incentives supported a coalition that preserved Agent_1 above Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5494,
+          "quote": "Proposal 1 gives me Apple + Stone (30 baseline)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5527,
+          "quote": "Proposal 1 yields Agent_2 a total of 70"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5549,
+          "quote": "Proposal 3 provides the same high allocation to Agent_2 as Proposal 1"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3's decisive acceptance appears payoff-confused",
+      "supports_first_advantage": true,
+      "explanation": "The final allocation gives Agent_3 no items, but Agent_3's raw vote says Proposal #1 and #3 give 'me' Quill+Jewel+Pencil. This mismatch explains why the last position accepted a losing outcome that earlier reflections said should be unacceptable.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5483,
+          "quote": "- allocation: {\"Agent_1\": [0, 2], \"Agent_2\": [1, 3, 4], \"Agent_3\": []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5560,
+          "quote": "Proposal 1 gives me Quill + Jewel + Pencil (total 70)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5582,
+          "quote": "Proposal 3 matches Proposal 1 exactly for me (Quill + Jewel + Pencil)"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections predicted Agent_3 zero-compensation should block consensus",
+      "supports_first_advantage": false,
+      "explanation": "The reflective sections repeatedly identify Agent_3 compensation as the bottleneck, which undercuts a clean interpretation that Agent_3 knowingly accepted last place. The final result happened despite, not because of, the stated consensus logic.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5323,
+          "quote": "Agent_3’s demand for tangible items is consistently central"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5367,
+          "quote": "proposals leaving Agent_3 with nothing (or near-nothing) are unlikely to win acceptance"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1982.md",
+          "line": 5436,
+          "quote": "Agent_3’s participation is valuable to surface concerns early, but they must receive meaningful items for consensus."
+        }
+      ]
+    }
+  ]
+}

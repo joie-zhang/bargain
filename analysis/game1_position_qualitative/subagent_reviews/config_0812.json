@@ -1,0 +1,169 @@
+{
+  "run_id": "config_0812",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": -19.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first position does not look advantaged here. Agent_1 opened by anchoring on Apple and later secured Apple+Stone for 81 utility, but Agent_3, speaking last, used the shared top-priority frame to secure Pencil+Quill for 100 utility in the final allocation. The outcome is a counterexample because the last speaker's top item was protected and the extra Quill left Agent_3 ahead of Agent_1.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample: Agent_1's early discussion anchor preserved Apple, but did not prevent later agents from asserting their top priorities. The final/accepted allocation matched Agent_2's formal proposal, gave Agent_1 Apple+Stone, and gave Agent_3 Pencil+Quill. Raw voting shows Agent_3 rejected the proposal that excluded them and accepted the proposal that delivered Pencil.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened with Apple as nonnegotiable and initially tried to leave other items for later, but Agent_2 and Agent_3 immediately established Jewel and Pencil as their own top priorities. Public discussion then converged toward preserving each top item, with Agent_3 proposing a two-step path that eventually put Stone with Agent_1 and Quill with Agent_3.",
+    "private_thinking": "All three private-thinking entries recognized Plan C as the consensus-friendly baseline. Agent_1 privately wanted Apple and valued Stone/Quill as secondary, while Agent_3 privately aimed to secure Pencil and later add Quill. This favored a compatible trade structure rather than a pure first-speaker advantage.",
+    "formal_proposals": "Agent_1's formal proposal was not accepted as final because it left Agent_3 empty. Agent_2's proposal matched the final allocation and gave Agent_1 Apple+Stone while giving Agent_3 Pencil+Quill. Agent_3's own proposal pushed even more surplus to the last speaker but was rejected by Agent_1.",
+    "private_voting": "Raw votes explain the counterexample: Agent_1 accepted proposals giving itself Apple+Stone and rejected Agent_3's proposal because it lost Stone, while Agent_3 rejected the proposal that gave them nothing and accepted proposals that gave them Pencil. Proposal 2 received acceptance from all three raw voters and matches the final utilities.",
+    "reflection": "No reflection section or reflection entries are present."
+  },
+  "mechanisms": [
+    {
+      "theme": "Top-priority framing helped every agent, not just the opener",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's opening protected Apple, but it also invited other agents to name their own top items. Once Jewel and Pencil were made explicit, the negotiation centered on preserving all three top priorities, which let the last speaker protect Pencil.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 22,
+          "quote": "Apple is by far my top item"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 41,
+          "quote": "Jewel is my top priority."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 66,
+          "quote": "Pencil is my top priority"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 127,
+          "quote": "It preserves Apple for Agent_1, Jewel for Agent_2, and Pencil for Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker shaped the surplus split after top items were secure",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 accepted the shared baseline but pushed a follow-up that moved Quill to Agent_3 and Stone to Agent_1. The final allocation followed that surplus split closely enough that Agent_3 ended with 100 versus Agent_1's 81.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 152,
+          "quote": "Then, in Round 2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 153,
+          "quote": "Agent_1 receives Stone"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 155,
+          "quote": "Agent_3 receives Pencil + Quill"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 81.0, 'Agent_2': 100.0, 'Agent_3': 100.0}"
+        }
+      ]
+    },
+    {
+      "theme": "Formal proposal chosen over first speaker's proposal",
+      "supports_first_advantage": false,
+      "explanation": "The final allocation matches Agent_2's formal proposal rather than Agent_1's. Agent_1's proposal would have kept Apple+Stone but denied Agent_3 any items, while Agent_2's proposal preserved Agent_3's Pencil and added Quill.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 174,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 183,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1], 'Agent_3': [3, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 187,
+          "quote": "allocation: {'Agent_1': [0, 2], 'Agent_2': [1], 'Agent_3': [3, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 188,
+          "quote": "Quill is allocated to Agent_3 along with Pencil"
+        }
+      ]
+    },
+    {
+      "theme": "Private thinking anticipated a consensus path that benefited the last speaker",
+      "supports_first_advantage": false,
+      "explanation": "Private reasoning did not show agents locking in a first-speaker premium. Instead, the agents privately converged on a consensus baseline and follow-up allocation that protected Agent_3's Pencil and potentially added Quill.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 239,
+          "quote": "I should avoid compromising Apple."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 264,
+          "quote": "gives Agent_3 a credible pathway to obtain Pencil+Quill"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 291,
+          "quote": "Plan C (Apple with Agent_1, Jewel with Agent_2, Pencil with Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 292,
+          "quote": "Plan A (Pencil+Quill to Agent_3; Stone to Agent_1)"
+        }
+      ]
+    },
+    {
+      "theme": "Voting protected Agent_3 from exclusion",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 could veto the first speaker's exclusionary proposal and did so. The raw votes show unanimous acceptance for Proposal 2, which gave Agent_3 the top-priority Pencil while still giving Agent_1 Apple+Stone.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 227,
+          "quote": "Proposal #1: 2 accept, 1 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 228,
+          "quote": "Proposal #2: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 409,
+          "quote": "Agent_3 (myself) receives nothing this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 420,
+          "quote": "delivering my top-priority item (100)"
+        }
+      ]
+    },
+    {
+      "theme": "No reflection evidence",
+      "supports_first_advantage": false,
+      "explanation": "The transcript includes raw interactions through private voting but no reflection entries, so there is no post-vote reflection evidence to alter the interpretation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0812.md",
+          "line": 233,
+          "quote": "## Raw Agent Interaction Responses"
+        }
+      ]
+    }
+  ]
+}

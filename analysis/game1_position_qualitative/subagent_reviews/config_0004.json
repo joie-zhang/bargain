@@ -1,0 +1,105 @@
+{
+  "run_id": "config_0004",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 anchored Jewel early, but the first position did not outperform the last position. Agent_3's ability to reject allocations that left it with nothing forced the final accepted three-way split, so Agent_1 and Agent_3 both ended with 90 utility.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample to a first-position advantage: the first speaker's top item stayed protected, but the last-position agent blocked zero-allocation proposals and authored the only unanimously accepted final proposal. The equal first-minus-last result is better explained by disjoint top priorities plus unanimity pressure than by speaking first.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by naming Jewel as its sole priority, and public discussion quickly treated Jewel for Agent_1 and Stone for Agent_2 as stable constraints. By round 2, the public plan shifted to a genuine three-way split that also gave Agent_3 Apple and Pencil.",
+    "private_thinking": "Six private-thinking entries are present. The agents privately recognized disjoint top priorities and, by round 2, converged on Jewel to Agent_1, Stone plus Quill to Agent_2, and Apple plus Pencil to Agent_3 as the path to unanimity.",
+    "formal_proposals": "Round 1 formal proposals and two round 2 formal proposals favored Agent_1 and Agent_2 while excluding Agent_3. Agent_3's round 2 formal proposal was the balanced allocation that ultimately passed unanimously.",
+    "private_voting": "Eighteen private votes are present. Agent_1 and Agent_2 accepted proposals that preserved their own top items, but Agent_3 rejected proposals giving it zero value and accepted the proposal giving it Apple plus Pencil.",
+    "reflection": "Three reflection entries are present. They diagnose the round 1 failure as an Agent_3 exclusion problem and recommend moving to a genuine three-way distribution."
+  },
+  "mechanisms": [
+    {
+      "theme": "Early agenda setting secured Jewel",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public move to frame Jewel as non-negotiable, and later discussion repeatedly preserved that item for Agent_1. This is limited support for a first-position advantage, but it did not translate into beating the last position.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 20,
+          "quote": "Jewel is the only item I value (100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 40,
+          "quote": "Agent_1 gets Jewel"
+        }
+      ]
+    },
+    {
+      "theme": "Unanimity let Agent_3 veto exclusion",
+      "supports_first_advantage": false,
+      "explanation": "The early formal allocations protected Agent_1 but left Agent_3 empty-handed. Agent_3's private votes rejected those proposals, preventing a first-and-second-agent deal from becoming consensus.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 214,
+          "quote": "No proposal achieved unanimous acceptance."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 632,
+          "quote": "Proposal 1 gives Agent_3 nothing"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 643,
+          "quote": "Proposal 2 also leaves Agent_3 without any items"
+        }
+      ]
+    },
+    {
+      "theme": "Final consensus came from the last agent's balanced proposal",
+      "supports_first_advantage": false,
+      "explanation": "The accepted round 2 proposal was submitted by Agent_3 and gave every agent its main value source. That result equalized the first and last positions instead of rewarding the first mover more.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 419,
+          "quote": "{'Agent_1': [1], 'Agent_2': [2, 3], 'Agent_3': [0, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 456,
+          "quote": "Proposal #3: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 959,
+          "quote": "Proposal 3 gives me Apple+Pencil"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections identified three-way inclusion as the fix",
+      "supports_first_advantage": false,
+      "explanation": "The private and reflection sections explicitly name Agent_3's exclusion as the blocker and the inclusive three-way allocation as the route to agreement. This mechanism works against a first-position edge.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 695,
+          "quote": "The Round 1 proposals all left Agent_3 with nothing"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 728,
+          "quote": "Move toward a genuine three-way distribution"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0004.md",
+          "line": 796,
+          "quote": "clear path to unanimous acceptance"
+        }
+      ]
+    }
+  ]
+}

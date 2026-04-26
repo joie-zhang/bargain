@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1304",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": -13.581270000000004,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 used first position to anchor Quill early and kept it in the final allocation, but the negotiation gradually normalized a two-round fairness plan that gave Agent_3 Apple + Pencil. Because Agent_3's final bundle was worth much more to them than Quill alone was worth to Agent_1 after the round discount, the last-position agent beat the first-position agent.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to first-position advantage. Agent_1 did gain agenda control around Quill, but that control narrowed Agent_1 to a single-item anchor rather than a richer bundle. Public discussion, private thinking, and reflections repeatedly framed Apple + Pencil for Agent_3 as the fairness target, while private voting blocked earlier compromises until Round 6. The final accepted allocation left Agent_1 with Quill only and Agent_3 with Apple + Pencil, producing Agent_1 32.47695 versus Agent_3 46.05822.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by declaring Quill non-negotiable, and the group mostly accepted that anchor. Over successive rounds, however, the public frame shifted from a fast Quill-preserving baseline to a disciplined two-round plan that also protected Agent_3's Apple + Pencil target.",
+    "private_thinking": "Private thinking entries were present for all rounds. They show Agent_1 consistently prioritizing Quill, Agent_2 prioritizing Stone/Jewel, and Agent_3 prioritizing Apple + Pencil. By the later rounds, all agents' private plans described the Quill/Jewel+Stone/Apple+Pencil split as the credible consensus path.",
+    "formal_proposals": "Formal proposals were unstable and often diverged from public fairness language. Several middle-round proposals gave Agent_3 nothing or maximized Agent_1/Agent_2 immediate utility, delaying agreement. In Round 6, Agent_1 and Agent_2 submitted the same Quill, Jewel+Stone, Apple+Pencil allocation that matched the final allocation.",
+    "private_voting": "Private voting explains the delay: agents rejected proposals that were worse for their own utility even when those proposals matched public compromise language. By Round 6, all agents accepted the Quill/Jewel+Stone/Apple+Pencil allocation in proposals 1 and 2, while rejecting the proposal that moved Quill away from Agent_1 and left Agent_3 empty.",
+    "reflection": "Reflection sections were present and repeatedly diagnosed the blocker as the lack of a binding cross-round fairness mechanism. They also made explicit that preserving Quill alone was not enough; consensus required a credible route to Agent_3's Apple + Pencil and Agent_2's Stone/Jewel payoff."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored Quill successfully",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first move did create a durable anchor: Quill was announced as non-tradable, repeatedly described as the non-negotiable baseline, and remained with Agent_1 in the final allocation. This is the main evidence of a first-position advantage, but it was only a single-item advantage.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 20,
+          "quote": "My top priority is Quill (55)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 568,
+          "quote": "Quill (Agent_1) remains the anchor and non-negotiable"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1651,
+          "quote": "Quill remains the clear focal item for Agent_1 and is non-negotiable for me"
+        }
+      ]
+    },
+    {
+      "theme": "The public agenda shifted toward Agent_3's top pair",
+      "supports_first_advantage": false,
+      "explanation": "Although Agent_1 protected Quill, the public bargaining frame increasingly treated Agent_3's Apple + Pencil as the target that had to be honored for consensus. This diluted the positional value of opening first because later rounds were organized around satisfying the last agent's top bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 296,
+          "quote": "comfortable anchoring on the two-round plan"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 302,
+          "quote": "Agent_3: Apple + Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 745,
+          "quote": "Agent_3’s top dual is Apple + Pencil"
+        }
+      ]
+    },
+    {
+      "theme": "Private votes prioritized immediate utility over early compromise",
+      "supports_first_advantage": false,
+      "explanation": "The early Quill-preserving baseline could not close because agents privately voted for their own payoff-maximizing alternatives. Agent_1 even rejected a Quill-only compromise to chase a higher utility proposal, so first-position agenda control did not translate into early consensus.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1749,
+          "quote": "Proposal 1 would give me Quill only (55). Reject to pursue the better deal."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1782,
+          "quote": "I’m aiming for that"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1815,
+          "quote": "Best immediate value for me"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections identified missing cross-round commitment as the blocker",
+      "supports_first_advantage": false,
+      "explanation": "The reflection sections repeatedly say consensus required a credible two-round or cross-round fairness mechanism. That means the opener's Quill anchor was not decisive by itself; agreement depended on later procedural assurances that made Agent_3's and Agent_2's goals credible.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1861,
+          "quote": "The absence of a credible, agreed two-round plan"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 2179,
+          "quote": "commitment to a two-round plan with an explicit, credible tie-breaker"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 3163,
+          "quote": "lack of a binding, clearly enforced cross-round balance mechanism"
+        }
+      ]
+    },
+    {
+      "theme": "Final consensus gave Agent_3 the higher-value bundle",
+      "supports_first_advantage": false,
+      "explanation": "The final accepted allocation matched the late two-round baseline: Agent_1 kept Quill, Agent_2 got Jewel + Stone, and Agent_3 got Apple + Pencil. Under the preferences and discounting, Agent_3's Apple + Pencil bundle produced about 46.06 utility, while Agent_1's Quill-only payoff was 32.48.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [3], 'Agent_2': [1, 2], 'Agent_3': [0, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 1639,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1304.md",
+          "line": 3414,
+          "quote": "Apple + Pencil value 78 discounted to about 46.06 utility"
+        }
+      ]
+    }
+  ]
+}

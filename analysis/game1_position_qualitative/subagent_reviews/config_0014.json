@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0014",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 9.0,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 looks advantaged over Agent_3 because its opening Jewel-first allocation became the shared baseline and the Pareto-check rule made deviation hard; however, the advantage is not purely positional because Agent_2, speaking second, tied Agent_1, and Agent_3's lower utility came from a lower-valued accepted bundle plus the round-2 discount.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Earlier position beat last because the first message framed Jewel as nonnegotiable while giving Agent_2 and Agent_3 enough value to accept the baseline. By round 2, the raw votes accepted Agent_1's baseline and rejected proposals that would destabilize or harm Agent_3. The main caveat is that Agent_2 also finished at 90, so the observed gap reflects preference structure and timing as well as first-position anchoring.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened with Jewel as the anchor and a complete baseline allocation. Agent_2 and Agent_3 quickly aligned publicly, and round 2 largely repeated that no verified Pareto-improving swap was available.",
+    "private_thinking": "All six private-thinking entries identify the same baseline as the robust path: Jewel with Agent_1, Apple/Stone with Agent_2, and Quill/Pencil with Agent_3. Agent_1 privately planned to defend Jewel while conceding zero-value non-Jewel items.",
+    "formal_proposals": "Round 1 included two baseline proposals and one Agent_3-favorable alternative. Round 2, Agent_1 proposed the baseline again while Agent_2 and Agent_3 proposed all non-Jewel items to Agent_2; the tabulated votes and raw votes support Proposal #1/baseline despite the system consensus line mislabeling Proposal #3.",
+    "private_voting": "Round 1 failed unanimity because Agent_3 preferred the proposal giving Stone plus Quill/Pencil. Round 2 raw votes show all agents accepted Proposal #1/baseline and rejected the all-to-Agent_2 alternatives, leaving Agent_3 at 81 after discount.",
+    "reflection": "The reflections converge on Jewel as the fixed anchor, lack of Pareto-improving swaps, and non-Jewel distribution as the main friction. They recommend formal Pareto checks and a one-swap rule, which preserve the original baseline."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening allocation became the focal baseline",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public turn to define the desired item and a full allocation that gave the other agents their salient bundles. That made later discussion revolve around preserving or verifying departures from Agent_1's baseline.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 20,
+          "quote": "I value Jewel above all else (worth 100 to me)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 23,
+          "quote": "- Agent 1: Jewel"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 52,
+          "quote": "I agree with the Round 1 allocation you two outlined"
+        }
+      ]
+    },
+    {
+      "theme": "Pareto-check rule locked in the status quo",
+      "supports_first_advantage": true,
+      "explanation": "Once the baseline was accepted as the reference point, the group required public proof that any swap would leave no one worse off. That rule protected Agent_1's first allocation because most alternatives either failed to improve anyone or made Agent_3 worse off.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 80,
+          "quote": "Pareto-improving: at least one agent strictly better off, and no agent worse off"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 236,
+          "quote": "A swap is only allowed if it is Pareto-improving"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 327,
+          "quote": "Round-2 baseline stays in place unless a credible Pareto-improving offer is publicly proposed and verified."
+        }
+      ]
+    },
+    {
+      "theme": "Round-2 voting confirmed Agent_1's baseline",
+      "supports_first_advantage": true,
+      "explanation": "The decisive round accepted the proposal matching Agent_1's preferred allocation and rejected the alternatives that moved all non-Jewel items to Agent_2. Agent_3 accepted the baseline because it was their best available discounted outcome among the round-2 proposals.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 495,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 917,
+          "quote": "Jewel remains with Agent1 (100 utility to me)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 983,
+          "quote": "my utility is 90 * 0.9 = 81"
+        }
+      ]
+    },
+    {
+      "theme": "Preference structure limits a pure order explanation",
+      "supports_first_advantage": false,
+      "explanation": "The first-over-last gap is real, but it is partly mechanical: Agent_1 and Agent_2 each had a 100-value target item, while Agent_3's accepted core bundle was worth 90 before discount. The second speaker tied Agent_1, so the evidence supports an early stable anchor more than a first-position-only effect.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 8,
+          "quote": "- final_utilities: {'Agent_1': 90.0, 'Agent_2': 90.0, 'Agent_3': 81.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 14,
+          "quote": "- Agent_3: [0.0, 0.0, 10.0, 71.0, 19.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0014.md",
+          "line": 35,
+          "quote": "Apple+Stone = 100 in my terms"
+        }
+      ]
+    }
+  ]
+}

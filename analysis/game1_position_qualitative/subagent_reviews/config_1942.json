@@ -1,0 +1,147 @@
+{
+  "run_id": "config_1942",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": 19.683,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 looks advantaged because the first-turn Quill+Pencil anchor became a shared constraint and survived to the final allocation. Agent_3, the last-position agent, successfully defended Jewel but ended with only that one high-value item, so Agent_1's two-item bundle produced the 19.683 utility lead.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes, with a boundary. Agent_1 did not get everything they wanted: repeated no-Jewel or no-Agent_3 proposals were blocked, and the final deal gave Jewel to Agent_3. The advantage came from making Agent_1's Quill+Pencil package effectively non-negotiable early, while Agent_3's bargaining power mainly secured Jewel rather than Jewel plus Apple or Stone.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by declaring Quill and Pencil as their priority and repeatedly framed the negotiation around preserving those two items. Agent_2 and Agent_3 largely negotiated within that frame, debating whether Agent_2 or Agent_3 should get Stone while leaving Agent_1's top pair intact. By rounds 3 and 4, the public baseline had converged on Agent_1: Quill+Pencil, Agent_2: Apple+Stone, Agent_3: Jewel.",
+    "private_thinking": "Private thinking is available in 12 entries. These entries show Agent_1 treating Apple and Stone as cheap concessions while protecting Quill+Pencil, Agent_2 recognizing the Agent_1 anchor even though Pencil was privately valuable to Agent_2, and Agent_3 prioritizing Jewel while accepting Stone as the main negotiable lever.",
+    "formal_proposals": "Formal proposals repeatedly preserved Agent_1's Quill+Pencil position, but proposals that excluded Agent_3 or moved Jewel away from Agent_3 failed. In round 4, the enumerated Proposal #2 matched the final allocation and was tabulated as 3 accepts, even though the following consensus line mislabels the accepted proposal number.",
+    "private_voting": "Private voting is available in 36 entries. Agent_1 accepted proposals preserving Quill+Pencil, Agent_2 accepted the final Agent_1/Agent_2/Agent_3 split as a balanced outcome, and Agent_3 rejected no-Jewel/no-item allocations until accepting the final proposal with Jewel.",
+    "reflection": "Reflection is available in 9 entries. The reflections consistently identify Quill+Pencil as Agent_1's protected anchor, Jewel as Agent_3's pivot, and Stone as the negotiable lever; later reflections explicitly recommend the final Option D structure."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-turn anchor became a shared constraint",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first speaking position to define Quill+Pencil as the package to protect. Subsequent public discussion by both later agents largely accepted that premise, which let Agent_1 keep two high-value items while the remaining bargaining focused on Apple, Stone, and Jewel.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 22,
+          "quote": "Quill (38) > Pencil (36) > Jewel (26)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 24,
+          "quote": "I intend to keep Quill and Pencil for myself"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 39,
+          "quote": "anchoring on Quill and Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 80,
+          "quote": "Agent_1 gets to keep their top two items"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_2 did not contest Pencil despite private value",
+      "supports_first_advantage": true,
+      "explanation": "A major reason the first position held up is that Agent_2 did not aggressively contest Pencil, even though private thinking listed Pencil as Agent_2's highest-value item. That made Agent_1's most valuable pair easier to preserve through later votes.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1122,
+          "quote": "Given Pencil is my highest value item, I should not push to take it away from Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1901,
+          "quote": "preserves Agent_1's Quill+Pencil anchors"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 2257,
+          "quote": "Preserves Agent_1's Quill+Pencil, gives Agent_2 Apple+Stone"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position veto protected Jewel but not a second major item",
+      "supports_first_advantage": false,
+      "explanation": "This is the main counterexample to an overwhelming first-position story: Agent_3 repeatedly rejected proposals that left them with no items or no Jewel. The last-position agent therefore forced inclusion of their top item, but the resulting Jewel-only payoff still trailed Agent_1's Quill+Pencil bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1265,
+          "quote": "I should pursue a proposal that secures Jewel"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1934,
+          "quote": "Jewel is my top priority and must be allocated"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 2290,
+          "quote": "This is the strongest three-way allocation here"
+        }
+      ]
+    },
+    {
+      "theme": "Formal closure selected the stable Option D split",
+      "supports_first_advantage": true,
+      "explanation": "The formal proposal process ultimately accepted the allocation that preserved Agent_1's two anchors, gave Agent_2 Apple+Stone, and assigned Jewel to Agent_3. That split gave all agents something defensible, but it left Agent_1 with the higher-value bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1045,
+          "quote": "{'Agent_1': [3, 4], 'Agent_2': [0, 2], 'Agent_3': [1]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1046,
+          "quote": "preserves Agent_1's Quill+Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1086,
+          "quote": "Proposal #2: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [3, 4], 'Agent_2': [0, 2], 'Agent_3': [1]}"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections reinforced protected anchors and narrowed the bargaining space",
+      "supports_first_advantage": true,
+      "explanation": "The reflection sections show the agents learning the same lesson across rounds: preserve Agent_1's Quill+Pencil, keep Jewel with Agent_3, and negotiate over Stone. This repeated diagnosis narrowed later bargaining to a configuration favorable to Agent_1's first anchor.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1965,
+          "quote": "Jewel remains the central pivot"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 1984,
+          "quote": "This baseline preserves all three anchors"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 2067,
+          "quote": "Jewel remains the linchpin"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1942.md",
+          "line": 2165,
+          "quote": "preserving Jewel with Agent_3 and keeping Quill+Pencil with Agent_1"
+        }
+      ]
+    }
+  ]
+}

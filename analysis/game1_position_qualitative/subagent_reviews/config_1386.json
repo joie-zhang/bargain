@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1386",
+  "n_agents": 5,
+  "competition_level": 0.5,
+  "first_minus_last": -66.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "This is a clear counterexample to first-position advantage: Agent_1 opened with ambitions for Stone/Quill, but the process converged on a low-friction anchor where Agent_5 kept Quill and Agent_1 accepted Apple, producing Agent_1=6 versus Agent_5=72.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Agent_1 had the first public move but did not convert it into priority-item control. The decisive constraint was Agent_5's hard Quill claim plus a consensus norm around identical anchors, so the last position received its highest-value item while the first received a low-value fallback.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 initially pursued Stone and Quill, but Agent_5 set a firm Quill red line. In the second discussion cycle, Agent_1 and most others endorsed the anchor: Quill to Agent_5, Jewel to Agent_2, Apple to Agent_1, Pencil to Agent_3, Stone to Agent_4.",
+    "private_thinking": "Private thinking is available. Agent_1 recognized that Quill and Stone were its strongest targets but hard to secure under unanimity, while Agent_5 explicitly saw the same anchor as maximizing its own utility.",
+    "formal_proposals": "All five formal proposals were the same allocation. The accepted Proposal #5 did not differ substantively from Agent_1's proposal; the whole proposal phase simply formalized the public anchor.",
+    "private_voting": "All private votes accepted all proposals. Agent_1 accepted because it got Apple worth 6, while Agent_5 accepted because the identical anchor secured its optimal Round 1 outcome.",
+    "reflection": "No reflection entries are present in this transcript."
+  },
+  "mechanisms": [
+    {
+      "theme": "Agent_5's Quill red line displaced the opener",
+      "supports_first_advantage": false,
+      "explanation": "The last speaker publicly made Quill non-negotiable at very high value, and Agent_1 later endorsed locking Quill with Agent_5. This gave the last position a stronger process constraint than the first speaker's opening agenda.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 131,
+          "quote": "Quill is my number-one item (valued at 72)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 171,
+          "quote": "I advocate publicly locking Quill with Agent_5 for Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 319,
+          "quote": "It keeps Quill with its top-value holder (Agent_5)"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1 traded away its own high-value agenda for consensus",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's initial preferences centered on Stone and Quill, but its private reasoning treated those items as too hard to win under unanimity. In voting, Agent_1 accepted the anchor because it merely received Apple worth 6.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 25,
+          "quote": "Top: Stone (32) and Quill (35)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 453,
+          "quote": "heftiest items for me but also the hardest to secure unilaterally"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 613,
+          "quote": "give me Apple (6)."
+        }
+      ]
+    },
+    {
+      "theme": "Identical proposals erased proposer-order effects",
+      "supports_first_advantage": false,
+      "explanation": "The formal proposal phase did not reward Agent_1's first proposal; every agent submitted the same allocation and every proposal was unanimously accepted. The final selection of Proposal #5 reflected identical consensus, not first-speaker leverage.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 346,
+          "quote": "I propose: {'Agent_1': [0], 'Agent_2': [1], 'Agent_3': [4], 'Agent_4': [2], 'Agent_5': [3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 382,
+          "quote": "I propose: {'Agent_1': [0], 'Agent_2': [1], 'Agent_3': [4], 'Agent_4': [2], 'Agent_5': [3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 445,
+          "quote": "Proposal #5 accepted unanimously!"
+        }
+      ]
+    },
+    {
+      "theme": "Utility followed value asymmetry, not speaking position",
+      "supports_first_advantage": false,
+      "explanation": "The accepted anchor matched Agent_5's 72-point top item while leaving Agent_1 with a 6-point item. The large first-minus-last gap is explained by who secured which item, not by Agent_1's initial speaking slot.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 6.0"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 549,
+          "quote": "maximizes my own utility"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 877,
+          "quote": "yields my optimal Round 1 outcome"
+        }
+      ]
+    },
+    {
+      "theme": "Unanimity pressure favored a low-friction anchor over first-mover bargaining",
+      "supports_first_advantage": false,
+      "explanation": "Private reasoning repeatedly prioritized unanimous acceptance and avoiding deadlock. That process pressure made agents accept a clean anchor quickly, even when it left Agent_1 far below Agent_5.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 454,
+          "quote": "maximizes likelihood of unanimous acceptance"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 723,
+          "quote": "without risking a zero-outcome if negotiations stall"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1386.md",
+          "line": 439,
+          "quote": "Proposal #1: 5 accept, 0 reject"
+        }
+      ]
+    }
+  ]
+}

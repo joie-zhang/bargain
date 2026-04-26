@@ -1,0 +1,142 @@
+{
+  "run_id": "config_0114",
+  "n_agents": 5,
+  "competition_level": 0.5,
+  "first_minus_last": 1.6199999999999974,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 narrowly beat Agent_5 because Jewel was anchored early and is worth slightly more than Agent_5's Stone, but both positions secured their top item.",
+  "does_first_position_look_advantaged": "mixed/unclear",
+  "why_or_counterexample": "Agent_1's first move helped make Jewel-1 a stable anchor, yet Agent_5 also locked Stone-5; the final 1.62 gap mainly follows from 42 vs 40 value under the final-round discount.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by making Jewel the organizing demand, and later public turns repeatedly converged on the same baseline: Jewel-1, Quill-2, Pencil-3, Apple-4, Stone-5. Agent_5 was not excluded; its top target Stone became part of the public baseline.",
+    "private_thinking": "Available. Private thoughts in all rounds describe stable anchors and a narrow Apple hedge. Agent_1 privately protected Jewel and Apple; Agent_5 privately protected Stone and accepted small Apple/Pencil concessions only if Stone stayed safe.",
+    "formal_proposals": "Round 1 had four baseline proposals plus Agent_5's two-agent bundle, Round 2 mixed the baseline with deviations, and Round 3 all five formal proposals were identical to the final baseline.",
+    "private_voting": "Available. Early private votes rejected the baseline when agents saw richer immediate bundles, but by Round 3 every voter accepted the identical baseline because it preserved core anchors and minimized churn.",
+    "reflection": "Available. Reflections diagnose stable anchors, Apple as the low-risk balancing lever, and Stone/Pencil as risks if moved; they explain consensus as anchor preservation rather than a clean last- or first-speaker dominance effect."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-mover Jewel anchoring",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public turn to declare Jewel as the central target, then recast later proposals around Jewel staying with Agent_1. That anchor survived every round and became part of the final unanimous allocation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 22,
+          "quote": "Jewel is my top target (42)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 185,
+          "quote": "Jewel stays with Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 355,
+          "quote": "Baseline Step 1 allocation: Jewel to Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "Last position also secured its primary anchor",
+      "supports_first_advantage": false,
+      "explanation": "Agent_5's late-speaking position did not leave it marginalized. It repeatedly demanded Stone, the group baseline gave Stone to Agent_5, and Agent_5 accepted the final plan because Stone stayed with it.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 141,
+          "quote": "Stone is my clear top target (value 40)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 150,
+          "quote": "Stone goes to Agent_5 (me)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 3254,
+          "quote": "Stone to Agent_5 aligns with my top priority"
+        }
+      ]
+    },
+    {
+      "theme": "Final margin comes from top-item value difference",
+      "supports_first_advantage": true,
+      "explanation": "The final allocation gives each of Agent_1 and Agent_5 one major anchor. Agent_1's Jewel value is 42 while Agent_5's Stone value is 40, so the final-round discounted utilities differ by 1.62, matching the recorded first-minus-last gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 8,
+          "quote": "'Agent_1': 34.02"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 8,
+          "quote": "'Agent_5': 32.400000000000006"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 12,
+          "quote": "Agent_1: [38.0, 42.0"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 16,
+          "quote": "Agent_5: [8.0, 15.0, 40.0"
+        }
+      ]
+    },
+    {
+      "theme": "Early utility chasing delayed, rather than confirmed, first-position dominance",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's own baseline did not immediately win: Agent_1 and Agent_2 rejected early baseline proposals when Agent_5's bundle offered them more utility, while agents left with no items rejected that bundle. Consensus required abandoning those richer deviations and returning to the shared anchor set.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 443,
+          "quote": "Proposal #1: 3 accept, 2 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 1607,
+          "quote": "Gives me Jewel only (42) versus Proposal 5's Jewel+Apple (80)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 1706,
+          "quote": "Maximum immediate utility for Agent_2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 1761,
+          "quote": "Gives me nothing (no items); zero utility for me"
+        }
+      ]
+    },
+    {
+      "theme": "Anchor-preserving reflections converted disagreement into consensus",
+      "supports_first_advantage": false,
+      "explanation": "The reflections did not recommend giving Agent_1 extra items; they recommended preserving every core anchor and using only Apple as a narrow hedge. That process protected both Agent_1's Jewel and Agent_5's Stone, limiting any first-position edge.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 1940,
+          "quote": "Keep Step 1 as the active move"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 1961,
+          "quote": "Use Step 2 as a minimal, collaborative balance lever"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0114.md",
+          "line": 2835,
+          "quote": "broad alignment around Step 1 baseline"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "run_id": "config_0328",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first position did not look payoff-advantaged: Agent_1 successfully anchored keeping Pencil, but every agent ultimately reached utility 100 and the accepted allocation followed a symmetric mutual-gains logic rather than favoring the first speaker over the last.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "A counterexample to first-position advantage is that the last discussion speaker, Agent_3, articulated the clean 100/100 non-Pencil split, while Agent_2's formal proposal implementing that split received the unanimous private accept votes. Agent_1's own formal proposal was rejected by the other two voters because it left Agent_3 with nothing, so early agenda control did not translate into beating the last-position agent.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by framing Pencil as non-negotiable and offered zero-value non-Pencil items as the bargaining space. Agent_3 then proposed the symmetric Stone+Jewel / Apple+Quill split, and the later discussion converged around that equal-utility arrangement.",
+    "private_thinking": "All three private-thinking entries converged on keeping Pencil with Agent_1 while giving Agent_2 Stone+Jewel and Agent_3 Apple+Quill. The private plans emphasize unanimity and 100-point symmetry more than exploiting speaking order.",
+    "formal_proposals": "Agent_1's formal proposal kept Pencil but allocated all non-Pencil items to Agent_2, excluding Agent_3. Agent_2 proposed the symmetric allocation that matches the final allocation. Agent_3's formal proposal also excluded Agent_3, so neither the first nor last formal proposal beat the middle proposal.",
+    "private_voting": "Raw private votes show Proposal #2 accepted by all three agents, while Proposal #1 and Proposal #3 were each rejected by two agents. The transcript's tabulation line naming Proposal #3 as unanimous conflicts with the vote counts, raw votes, and final allocation, so the substantive evidence points to Proposal #2.",
+    "reflection": "No reflection section is present in this transcript."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored Pencil retention",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the opening turn to make Pencil retention the premise of bargaining, and later agents largely accepted that constraint. This is a real agenda-setting benefit, even though it did not create a payoff edge over Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 22,
+          "quote": "Pencil is highly valuable to me (100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 41,
+          "quote": "Pencil stays with me for now."
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker supplied the symmetric counterexample",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3, the last public-discussion speaker in the first pass, proposed the allocation that gave both non-Pencil agents full value while leaving Pencil with Agent_1. That undercuts a simple first-position advantage story because the last-position agent helped define the winning compromise and also reached 100 utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 73,
+          "quote": "Proposed non-Pencil coalition (clean and symmetric gains):"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 80,
+          "quote": "Agent_3: Apple (75) + Quill (25) = 100 total."
+        }
+      ]
+    },
+    {
+      "theme": "First formal proposal failed on fairness",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's formal proposal preserved its own utility but left Agent_3 with no items, and the private votes rejected it as unbalanced. The first formal position therefore did not beat the later symmetric proposal.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 175,
+          "quote": "I propose: {'Agent_1': [4], 'Agent_2': [0, 1, 2, 3], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 375,
+          "quote": "leaves Agent_3 with nothing, creating an unbalanced outcome"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 408,
+          "quote": "leaves me with 0."
+        }
+      ]
+    },
+    {
+      "theme": "Voting rewarded equal utility rather than position",
+      "supports_first_advantage": false,
+      "explanation": "The final utilities and raw votes show the agents converged on a unanimous 100/100/100 result. Proposal #2, not the first or last formal proposal, matched this coalition logic and was accepted by every voter.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 100.0, 'Agent_2': 100.0, 'Agent_3': 100.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 386,
+          "quote": "Delivers a symmetric 100/100 allocation"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0328.md",
+          "line": 419,
+          "quote": "Proposal #2 gives me Apple and Quill"
+        }
+      ]
+    }
+  ]
+}

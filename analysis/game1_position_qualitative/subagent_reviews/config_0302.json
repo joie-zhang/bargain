@@ -1,0 +1,152 @@
+{
+  "run_id": "config_0302",
+  "n_agents": 5,
+  "competition_level": 1.0,
+  "first_minus_last": 1.4579999999999984,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat Agent_5 narrowly because the final consensus gave Agent_1 Apple, valued at 46, and Agent_5 Pencil, valued at 44, under the same Round 4 discount. The transcript does not show a large first-position procedural advantage: Agent_1's attempts to claim extra value were rejected, and the table repeatedly protected Agent_5's Pencil.",
+  "does_first_position_look_advantaged": "mixed/unclear",
+  "why_or_counterexample": "The first position is advantaged in the final arithmetic, but only weakly. The final allocation preserved each side's top item, and the 1.458 margin is exactly consistent with the discounted two-point valuation difference between Agent_1's Apple and Agent_5's Pencil. A counterexample to strong first-position dominance is that Agent_1 preferred richer Apple-plus bundles earlier, but those failed because Agent_5 and other agents enforced Pencil protection and balanced allocation.",
+  "phase_notes": {
+    "public_discussion": "Public talk moved from Agent_1's Apple anchor to a repeated Path B script: Stone to Agent_3, Pencil protected for Agent_5, and Apple deferred or threaded later.",
+    "private_thinking": "Present. Private thinking repeatedly treats Stone-first, non-Pencil bridges, and later Apple threading as the consensus route, while Agent_1 still lists Apple as its highest-value target.",
+    "formal_proposals": "Rounds 1 and 2 fragmented, Round 3 nearly converged, and Round 4 all five agents submitted the same Apple-A1, Jewel-A2, Stone-A3, Quill-A4, Pencil-A5 allocation.",
+    "private_voting": "Early votes blocked higher-utility bundles for Agent_1; by Round 4 everyone accepted the identical allocation, with Agent_1 calculating 33.53 and Agent_5 accepting Pencil as its maximum payoff.",
+    "reflection": "Present. Reflections consistently recommend a Stone-first baseline, no Pencil bridge, and a fixed Jewel/Quill split to close the remaining gap."
+  },
+  "mechanisms": [
+    {
+      "theme": "Final top-item arithmetic",
+      "supports_first_advantage": true,
+      "explanation": "The final consensus assigned each endpoint its top item, but Agent_1's top item was worth slightly more before discounting. Round 4 voting makes the arithmetic explicit: Apple at 46 discounted by 0.729 gives 33.53, while Agent_5's protected Pencil yields a lower final utility, producing the observed narrow first-over-last margin.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4462,
+          "quote": "my utility is 46 * 0.729 = 33.53"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4682,
+          "quote": "Pencil to Agent_5 (my item of highest value for Round 4)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 8,
+          "quote": "'Agent_1': 33.534000000000006"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 8,
+          "quote": "'Agent_5': 32.07600000000001"
+        }
+      ]
+    },
+    {
+      "theme": "Apple-anchor overreach was checked",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 did try to convert Apple leverage into a richer package, including Apple-plus-Pencil outcomes. Those attempts did not become consensus because they deprived Agent_5 of Pencil or left other agents with no value. This kept the first-position edge from becoming a large bundle advantage.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 176,
+          "quote": "Apple-for-Jewel+Pencil+Quill"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 2153,
+          "quote": "Apple+Pencil = 68"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 2518,
+          "quote": "deprives me of Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 480,
+          "quote": "No proposal achieved unanimous acceptance."
+        }
+      ]
+    },
+    {
+      "theme": "Stone-first focal plan preserved Apple for Agent_1",
+      "supports_first_advantage": true,
+      "explanation": "The public focal point became Stone-first rather than Apple-first, but that did not strip Agent_1 of Apple. Instead, the compromise made Stone to Agent_3 and Pencil to Agent_5 the hard constraints while leaving Apple with Agent_1 as the high-value but later-threaded item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 557,
+          "quote": "Path B is the dominant, broadly accepted approach"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 562,
+          "quote": "Stone to me by Round 2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 868,
+          "quote": "Apple to Agent_1 leverages high value"
+        }
+      ]
+    },
+    {
+      "theme": "Pencil protection kept Agent_5 close",
+      "supports_first_advantage": false,
+      "explanation": "Agent_5 repeatedly made Pencil protection a hard condition and ultimately received its best item. This made the final gap small: Agent_5 did not lose because it was last in order, but because its protected best item was worth two points less than Agent_1's Apple before discounting.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 631,
+          "quote": "Top priority: Pencil (44)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 633,
+          "quote": "Pencil protection in Round 1 is non-negotiable."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4682,
+          "quote": "maximum personal payoff given our round discount"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4726,
+          "quote": "in line with my top priority"
+        }
+      ]
+    },
+    {
+      "theme": "Fixed baseline ended secondary-item bargaining",
+      "supports_first_advantage": false,
+      "explanation": "The Round 4 solution removed the remaining Jewel/Quill dispute and made every proposal identical. That reduced positional bargaining effects: Agent_1 no longer gained secondary items, and Agent_5 no longer risked losing Pencil. The remaining first-over-last edge came from the baseline valuations.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4224,
+          "quote": "Apple-1, Jewel-2, Stone-3, Quill-4, Pencil-5"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 4452,
+          "quote": "full allocation with clear ownership"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 1972,
+          "quote": "Proposal #1: 5 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0302.md",
+          "line": 1978,
+          "quote": "CONSENSUS REACHED!"
+        }
+      ]
+    }
+  ]
+}

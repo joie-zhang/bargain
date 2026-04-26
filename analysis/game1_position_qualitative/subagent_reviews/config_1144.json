@@ -1,0 +1,157 @@
+{
+  "run_id": "config_1144",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": -2.6244000000000014,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 used the first position to make Jewel the stable public anchor and ultimately kept it, but that anchor was worth less than Agent_3's Pencil-centered concession in the accepted Path A. The final deal gave Agent_1 only discounted Jewel while Agent_3 received discounted Pencil plus Stone, so the last position beat the first despite Agent_1's agenda-setting success.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to a simple first-position advantage. Agent_1 did get the item they most consistently demanded, but unanimity depended on satisfying Agent_3's veto over Pencil. The durable coalition became Jewel with Agent_1, Apple+Quill with Agent_2, and Stone+Pencil with Agent_3. Since Agent_3 values Pencil at 44 while Agent_1 values Jewel at 40, the same round discount leaves Agent_3 ahead: 28.8684 versus 26.244.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by anchoring on Jewel and repeatedly kept Jewel in the public frame. Agent_3 immediately made Pencil non-negotiable, and by rounds 2-5 all agents were publicly repeating the Path A structure. The public order helped Agent_1 preserve Jewel but did not stop Agent_3's Pencil demand from defining consensus.",
+    "private_thinking": "Private thinking is available. Across rounds, agents privately converged on the same three pillars: Jewel for Agent_1, Apple+Quill for Agent_2, and Pencil for Agent_3. Agent_1's own private plans treated Jewel as the goal and Pencil as a concession, which protected the first agent's core ask but not a payoff lead over Agent_3.",
+    "formal_proposals": "Formal proposals explain the delay. In rounds 1-4, proposals often left Agent_3 empty or only implied Stone+Pencil while the structured allocation did not assign those items to Agent_3. The explicit three-agent Path A appeared in round 5 from Agent_2 and matched the final allocation. The system success line is label-inconsistent, but the vote count, private votes, and final allocation point to Proposal 2 as the accepted Path A.",
+    "private_voting": "Private voting is available. Agent_1 voted around keeping Jewel, Agent_2 usually favored the highest own Apple+Quill-heavy payoff, and Agent_3 rejected any proposal with no Pencil or no items. In the final round, all three accepted Agent_2's Path A because it gave each agent their key pillar.",
+    "reflection": "Reflection is available. The reflections repeatedly diagnose Pencil as the bottleneck and the three-pillar bargain as the only plausible consensus path. They show that Agent_1's first-position anchor was necessary for the final deal but not sufficient to beat the last agent's higher-valued Pencil payoff."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored Jewel",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first public move successfully made Jewel the central non-negotiable item. That agenda-setting persisted through private planning and final voting, so the first position had a real procedural advantage even though it did not produce the highest final payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 23,
+          "quote": "Jewel is by far my top target"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 45,
+          "quote": "lock Jewel to me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 1286,
+          "quote": "Jewel is the single strongest lever for Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2710,
+          "quote": "Proposal 2 delivers Jewel to me"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3 held a hard Pencil veto",
+      "supports_first_advantage": false,
+      "explanation": "The last agent's leverage came from unanimity, not speaking order. Agent_3 consistently rejected allocations that omitted Pencil or gave them nothing, so Agent_1 could not convert the Jewel anchor into consensus without satisfying Agent_3's top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 84,
+          "quote": "I miss my top item, Pencil, which I cannot accept"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 1454,
+          "quote": "Proposal 1 gives Agent_3 no items"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2450,
+          "quote": "I need Pencil for any meaningful payoff"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2558,
+          "quote": "Without allocating Pencil to Agent_3, consensus stalls"
+        }
+      ]
+    },
+    {
+      "theme": "Three-pillar coalition constrained Agent_1's upside",
+      "supports_first_advantage": false,
+      "explanation": "The stable bargain preserved Agent_1's Jewel, but it also locked in Agent_3's Pencil. Because Agent_3 values Pencil more than Agent_1 values Jewel, the consensus structure itself predicts last-over-first once both receive the same round discount.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 1311,
+          "quote": "Unanimity hinges on keeping Jewel with Agent_1 and giving Agent_3 Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2517,
+          "quote": "The three-pillars pattern remains the strongest framework"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2682,
+          "quote": "Stone + Pencil with Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2776,
+          "quote": "total value 44. With round discount 0.6561, utility"
+        }
+      ]
+    },
+    {
+      "theme": "Formal proposals lagged behind public consensus",
+      "supports_first_advantage": false,
+      "explanation": "Although the discussion repeatedly described Path A, several structured proposals left Agent_3 empty or made Pencil implicit rather than allocated. This mismatch kept unanimity from materializing until the final round and shows that Agent_1's public anchor could not substitute for a valid allocation satisfying Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 656,
+          "quote": "allocation: {'Agent_1': [1], 'Agent_2': [0, 3], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 657,
+          "quote": "Stone + Pencil with Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2102,
+          "quote": "allocates no Pencil to me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 1275,
+          "quote": "Proposal #2: 3 accept, 0 reject"
+        }
+      ]
+    },
+    {
+      "theme": "Final payoff math favors the last agent",
+      "supports_first_advantage": false,
+      "explanation": "The accepted allocation gave Agent_1 only Jewel and Agent_3 Stone+Pencil. With the round-5 discount applied to raw values, Agent_1's 40-point Jewel became 26.244 while Agent_3's 44-point Pencil bundle became 28.8684.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 26.244"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [1]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2710,
+          "quote": "estimated utility of ~26.24"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1144.md",
+          "line": 2776,
+          "quote": "utility"
+        }
+      ]
+    }
+  ]
+}

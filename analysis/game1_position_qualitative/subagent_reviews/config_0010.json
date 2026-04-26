@@ -1,0 +1,100 @@
+{
+  "run_id": "config_0010",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "No clear first-position advantage: Agent_1's opening allocation became the consensus template, but every agent received maximum utility and the last-position Agent_3's formal proposal was the one unanimously accepted.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample to first advantage: Agent_1 did get its top bundle, but Agent_3 also got its top bundle, final utilities were equal, Agent_1's self-favoring formal proposal was rejected, and Agent_3's proposal was accepted unanimously.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened with the eventual value-aligned split, and Agents 2 and 3 endorsed it because it matched their own top priorities. The first speaker helped frame the bargain, but the discussion converged because interests were non-conflicting rather than because later agents conceded.",
+    "private_thinking": "All three private_thinking entries describe the same stable baseline: Pencil+Stone to Agent_1, Jewel to Agent_2, and Apple+Quill to Agent_3. This supports equal mutual gains, not a private plan for first-position extraction.",
+    "formal_proposals": "Agent_1's formal proposal diverged from the public consensus by giving Agent_3 nothing, while Agents 2 and 3 proposed the consensus allocation. The accepted allocation came from Agent_3's formal proposal.",
+    "private_voting": "Agent_1 and Agent_3 rejected Proposal 1, Agent_2 accepted it, and all agents accepted Proposals 2 and 3. The tabulation reports unanimous acceptance for Proposal 3.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening anchor shaped the shared baseline",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public turn to name an allocation that later agents adopted, so there is some evidence of agenda-setting by the first position. This did not become a payoff advantage because the anchor also made Agent_3 whole.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 24,
+          "quote": "I take Pencil and Stone. Agent_2 takes Jewel. Agent_3 takes Apple and Quill."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 60,
+          "quote": "Jewel goes to you, Pencil+Stone to Agent_1, and Apple+Quill to me."
+        }
+      ]
+    },
+    {
+      "theme": "Non-conflicting preferences equalized payoffs",
+      "supports_first_advantage": false,
+      "explanation": "The main driver was that each agent's high-value items were distinct. The last-position agent accepted the baseline because it maximized Agent_3's own utility, not because Agent_1 forced a concession.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 62,
+          "quote": "which is optimal for me. I’m ready to lock this in."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 255,
+          "quote": "The Round 1 allocation is Pareto-efficient and unanimously acceptable"
+        }
+      ]
+    },
+    {
+      "theme": "First formal proposal failed",
+      "supports_first_advantage": false,
+      "explanation": "When Agent_1 submitted a more first-favorable formal proposal that left Agent_3 empty, the voting process rejected it. That is the clearest counterexample against first-position advantage in this run.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 175,
+          "quote": "Agent_3: (no items)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 193,
+          "quote": "Proposal #1: 1 accept, 2 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 371,
+          "quote": "Proposal 1 leaves me with no Apple or Quill"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position proposal won unanimously",
+      "supports_first_advantage": false,
+      "explanation": "The final accepted proposal was submitted by Agent_3, the last public speaker in the initial ordering, and it gave Agent_3 its maximum bundle while keeping Agent_1 at maximum utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 158,
+          "quote": "I propose: {'Agent_1': [2, 4], 'Agent_2': [1], 'Agent_3': [0, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 197,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0010.md",
+          "line": 393,
+          "quote": "Proposal 3 provides the same optimal allocation as Proposal 2"
+        }
+      ]
+    }
+  ]
+}

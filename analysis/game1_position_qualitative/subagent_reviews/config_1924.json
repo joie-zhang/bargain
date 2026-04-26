@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1924",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "Agent_1 used the first turn to anchor on keeping Pencil and offered a clean split, but this did not create a positional advantage over Agent_3. The key proposal gave each agent its maximum utility under non-overlapping preferences, and raw voting shows Agent_3 protected its own payoff by accepting only the balanced split. One system line claims Proposal #3 was unanimously accepted, but the header allocation, tabulation counts, and raw votes point to Proposal #1 as the substantive consensus.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Agent_1 did set the agenda around Pencil, but Agent_3 immediately accepted because Stone+Quill maximized its utility. The last-position agent was not squeezed; it accepted the balanced allocation and rejected allocations where it received nothing. With final utilities at 100 for both Agent_1 and Agent_3, the process is better read as preference alignment than first-position advantage.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by declaring Pencil non-negotiable and proposing a simple split of the remaining items. Agent_2 and Agent_3 accepted because the split also met their top payoffs.",
+    "private_thinking": "Private reasoning by all agents treated the clean split as stable and utility-maximizing. Agent_1 saw Pencil as future leverage, while Agents_2 and 3 focused on preserving their high-value non-Pencil bundles.",
+    "formal_proposals": "Agent_1's formal proposal matched the public consensus and final allocation. Agent_2 and Agent_3 formally proposed giving all non-Pencil items to Agent_2, but tabulation and raw votes rejected those as unbalanced; the system's line saying Proposal #3 was unanimously accepted contradicts nearby evidence.",
+    "private_voting": "Raw votes show all agents accepted Proposal #1. Agent_1 accepted any proposal keeping Pencil, but Agent_2 and Agent_3 rejected the later proposals because they harmed balance or gave Agent_3 zero utility.",
+    "reflection": "No reflection entries are present in the transcript."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening anchor around Pencil",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first speaking slot to define Pencil as its non-negotiable target and to make all alternatives conditional on preserving or compensating Pencil. Later speakers accepted that frame rather than challenging it.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 20,
+          "quote": "Pencil is my top priority."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 23,
+          "quote": "I will not trade Pencil in Round 1."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 58,
+          "quote": "Agent_3 here. I accept Option A as stated:"
+        }
+      ]
+    },
+    {
+      "theme": "Aligned preferences neutralized positional advantage",
+      "supports_first_advantage": false,
+      "explanation": "The same allocation that preserved Agent_1's item also gave Agent_3 its maximum bundle, so Agent_1's first move did not reduce the last speaker's outcome.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 100.0, 'Agent_2': 100.0, 'Agent_3': 100.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 60,
+          "quote": "Agent_3 receives Stone + Quill (91 + 9 = 100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 64,
+          "quote": "This directly maximizes my own payoff in Round 1"
+        }
+      ]
+    },
+    {
+      "theme": "Focal first proposal won because it was balanced",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's proposal became the focal allocation and received unanimous acceptance in the tabulated counts. That is a process advantage for the first proposal, though its appeal came from satisfying everyone rather than extracting more for Agent_1.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 149,
+          "quote": "I propose: {'Agent_1': [4], 'Agent_2': [0, 1], 'Agent_3': [2, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 154,
+          "quote": "simple, conflict-free split."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 202,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position veto constrained unfair alternatives",
+      "supports_first_advantage": false,
+      "explanation": "When later formal proposals would have left Agent_3 empty-handed, Agent_3 rejected them. This is a counterexample to first-position dominance: the final speaker's utility criterion still controlled acceptance.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 380,
+          "quote": "which maximizes my utility."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 391,
+          "quote": "Gives me nothing (no items); my utility would be 0."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 402,
+          "quote": "Same as Proposal 2; I would receive nothing, utility 0."
+        }
+      ]
+    },
+    {
+      "theme": "Private reasoning favored stable unanimity",
+      "supports_first_advantage": false,
+      "explanation": "The agents' private thinking framed the clean split as the strongest path to unanimity, not as a concession to Agent_1 alone. This stability logic helped preserve equal maximum utilities.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 239,
+          "quote": "The strongest path to unanimous acceptance in Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 264,
+          "quote": "our allocation already delivers max internal utility"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1924.md",
+          "line": 358,
+          "quote": "This unbalances the round and reduces future collaboration opportunities"
+        }
+      ]
+    }
+  ]
+}

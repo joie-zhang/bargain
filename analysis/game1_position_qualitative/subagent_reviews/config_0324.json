@@ -1,0 +1,105 @@
+{
+  "run_id": "config_0324",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": -21.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "This is a first-position counterexample: Agent_1 used the opening to secure Apple, but the final split gave Agent_3 the 100-point Pencil plus Stone, leaving Agent_1 at 79 and the last speaker at 100.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "The first speaker gained a limited anchoring benefit around Apple, but the negotiation settled on a top-priority matching allocation rather than a first-mover-favored allocation. Agent_3's late-position, non-negotiable Pencil demand was accepted, Agent_1 gave up its secondary Stone, and the last speaker finished 21 utility points ahead.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by prioritizing Apple and using Stone as a bargaining chip. Agent_2 and Agent_3 quickly converted that into a shared baseline: Apple to Agent_1, Quill plus Jewel to Agent_2, and Stone plus Pencil to Agent_3. Agent_3's Pencil claim became a hard constraint.",
+    "private_thinking": "Private thinking is available. All agents treated the baseline as the likely Round 1 lock-in. Agent_1 privately still valued Stone, but accepted the plan; Agent_3 privately focused on defending Pencil.",
+    "formal_proposals": "Agent_1's formal allocation explicitly left Agent_3 empty even though its reasoning described Stone and Pencil going to Agent_3. Agent_2 and Agent_3 submitted complete allocations matching the final split.",
+    "private_voting": "Private voting is available. Agent_1 accepted all proposals, while Agent_2 and Agent_3 rejected Agent_1's explicit empty-Agent_3 proposal. Complete allocations preserving Pencil drove acceptance, though the public tabulation and one raw Agent_2 vote are inconsistent about proposal #3.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening anchor secured Apple",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first message successfully framed Apple as its core claim, and later discussion preserved that claim. This shows some first-position leverage, but only over Agent_1's top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 22,
+          "quote": "Apple is my top priority by a wide margin; Stone is useful but secondary."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 90,
+          "quote": "Apple stays with me, Quill+Jewel go to Agent_2, and Stone+Pencil go to Agent_3."
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker set a hard Pencil constraint",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 entered last but stated a clear non-negotiable demand for Pencil, the single highest-valued item in the game. The rest of the table accommodated that constraint.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 59,
+          "quote": "Pencil is my top value (100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 70,
+          "quote": "Pencil (100) is non-negotiable for me in this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 74,
+          "quote": "guarantees Pencil with me."
+        }
+      ]
+    },
+    {
+      "theme": "Efficient priority matching favored the last agent",
+      "supports_first_advantage": false,
+      "explanation": "The accepted allocation matched each agent to its main valued items instead of privileging speaking order. Because Agent_3's main item was worth 100 and Agent_1's Apple was worth 79, the last-position agent finished ahead.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 79.0, 'Agent_2': 100.0, 'Agent_3': 100.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0], 'Agent_2': [1, 3], 'Agent_3': [2, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 193,
+          "quote": "This aligns with each agent's top priorities and preserves Pencil with Agent_3 for Round 1"
+        }
+      ]
+    },
+    {
+      "theme": "First formal proposal was not decisive",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's formal proposal explicitly listed no items for Agent_3, creating resistance from the later agents. The proposal process therefore did not simply reward the first proposer.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 179,
+          "quote": "I propose: {'Agent_1': [0], 'Agent_2': [1, 3], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 371,
+          "quote": "Proposal 1 leaves Agent_3 without any item in Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0324.md",
+          "line": 404,
+          "quote": "Pencil (my top priority) is not allocated to Agent_3 in Proposal 1"
+        }
+      ]
+    }
+  ]
+}

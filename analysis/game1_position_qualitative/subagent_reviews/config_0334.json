@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0334",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first speaker gained agenda control around securing Apple, but did not gain a final payoff advantage. Agent_3 used rejection leverage against proposals that left it empty, forcing the final split where Agent_1 kept Apple, Agent_2 kept Pencil+Quill, and Agent_3 received Jewel+Stone; all three ended at 90 utility.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample to a first-position advantage: the Round 1 Apple-first proposals favored Agent_1 and Agent_2 but failed because Agent_3 rejected being left with zero. The successful outcome preserved Agent_1's Apple anchor while also giving the last-position agent its full valued bundle, so first and last tied rather than first beating last.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by anchoring Apple and Option A. Agent_2 supported that path because Pencil stayed protected, while Agent_3 repeatedly conditioned acceptance on a binding Round-2 rebalancing that delivered Jewel+Stone. By Round 2, the public discussion converged on the balanced Apple/Pencil/Jewel+Stone split.",
+    "private_thinking": "All six private-thinking entries are present. Privately, Agents 1 and 2 treated Option A plus Round-2 rebalancing as the practical path; Agent_3 preferred an immediate three-way top-item allocation but accepted Option A only with a firm Jewel+Stone guarantee.",
+    "formal_proposals": "Round 1 formal proposals from Agents 1 and 2 left Agent_3 empty and failed unanimity. In Round 2, Agent_1 proposed the final balanced allocation; Agent_2's formal proposal defaulted to all items for itself after a parse error; Agent_3's submitted allocation still left itself empty despite reasoning about rebalancing. The final allocation matches Agent_1's Round-2 proposal.",
+    "private_voting": "Round 1 private votes show Agent_3 rejecting every proposal that gave it zero, blocking the early Agent_1/Agent_2 path. Round 2 raw votes show all agents accepting Proposal 1, the balanced split, while Agent_3 rejected proposals that still left it empty. The public tabulation line labels the unanimous proposal inconsistently, but the raw votes and final allocation point to Proposal 1.",
+    "reflection": "All three reflection entries are present and identify the same obstacle: no binding guarantee for Agent_3's Jewel+Stone. The reflections recommend an explicit two-round commitment or fallback tie-breaker, which explains why the final result equalized first and last rather than preserving the initial first-speaker momentum."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-speaker agenda anchoring",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 moved first and made Apple plus a quick Option A the reference point for later discussion. This helped frame the negotiation around preserving Agent_1's top item and momentum.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 20,
+          "quote": "Apple is my top priority (worth 100 to me)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 23,
+          "quote": "Option A: I take Apple now in exchange for giving up any two non-Apple items of your choice"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 244,
+          "quote": "Apple goes to Agent_1 immediately, preserving momentum."
+        }
+      ]
+    },
+    {
+      "theme": "Last-position veto forced rebalancing",
+      "supports_first_advantage": false,
+      "explanation": "The last-position agent did not passively accept the early allocation. Agent_3 rejected zero-allocation proposals in Round 1 and only aligned once Round 2 explicitly assigned Jewel+Stone to Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 713,
+          "quote": "Proposal 1 gives Agent_3 no items, yielding zero utility this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 724,
+          "quote": "Proposal 2 also grants me nothing this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 443,
+          "quote": "Agent_3: Jewel, Stone"
+        }
+      ]
+    },
+    {
+      "theme": "Separable top preferences equalized payoffs",
+      "supports_first_advantage": false,
+      "explanation": "The agents valued different items, so consensus could give each agent its highest-valued bundle without a direct first-vs-last tradeoff. The final utilities confirm that Agent_1 and Agent_3 tied.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 12,
+          "quote": "Agent_1: [100.0, 0.0, 0.0, 0.0, 0.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 14,
+          "quote": "Agent_3: [0.0, 64.0, 36.0, 0.0, 0.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 90.0, 'Agent_2': 90.0, 'Agent_3': 90.0}"
+        }
+      ]
+    },
+    {
+      "theme": "Winning proposal did not imply payoff edge",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's Round-2 proposal was the proposal that raw votes and final allocation support, but its content was a balanced allocation rather than a first-position windfall.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 478,
+          "quote": "I propose: {'Agent_1': [0], 'Agent_2': [3, 4], 'Agent_3': [1, 2]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 531,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0334.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0], 'Agent_2': [3, 4], 'Agent_3': [1, 2]}"
+        }
+      ]
+    }
+  ]
+}

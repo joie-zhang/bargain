@@ -1,0 +1,157 @@
+{
+  "run_id": "config_0346",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": -24.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "Agent_1 spoke first and seeded the Quill/Stone/Jewel agenda, but the advantage did not hold: Agent_2 formalized the consensus triad, Agent_3 received Jewel worth 61, and Agent_1 finished with Quill plus valueless Apple for 37.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "The first position helped frame the discussion, but Agent_1's submitted proposal was off-consensus and gave Agent_3 no items. The accepted allocation came from Agent_2 and favored the last position over Agent_1 by 24 utility points.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by targeting Quill/Jewel, but Agents 2 and 3 converted the discussion into a concrete triad: Agent_1 gets Quill, Agent_2 gets Stone, Agent_3 gets Jewel. Agent_1 later accepted that baseline instead of extracting Jewel.",
+    "private_thinking": "All three private_thinking entries identify the same triad as the strongest path. Agent_1's internal strategy even says to advance it, but its later formal proposal diverged.",
+    "formal_proposals": "Agent_1 and Agent_3 submitted the same two-way split leaving Agent_3 empty; Agent_2 submitted the discussion-consistent triad. The proposal enumeration makes this contrast explicit.",
+    "private_voting": "Raw votes reject Proposal 1 and Proposal 3 and accept Proposal 2. The vote_tabulation counts show Proposal #2 has 3 accepts, while the consensus line appears mislabeled as Proposal #3; final allocation and raw votes match Proposal 2.",
+    "reflection": "No reflection section is present; assigned metadata reports 0 reflection entries."
+  },
+  "mechanisms": [
+    {
+      "theme": "Discussion converged on a shared triad, not first-speaker control",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 opened the topics, but the public discussion quickly became a three-way allocation that protected each agent's top item, including Agent_3's Jewel.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 57,
+          "quote": "Simple 3-way triad to land Stone, Quill, and Jewel"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 88,
+          "quote": "Agent_1: Quill + Apple"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 90,
+          "quote": "Agent_3: Jewel"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 130,
+          "quote": "Agent_1: Quill + Apple"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1's formal proposal abandoned the public consensus",
+      "supports_first_advantage": false,
+      "explanation": "Despite discussing the triad, Agent_1 formally proposed Apple+Stone for itself and nothing for Agent_3, producing a weak offer even for Agent_1's own utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 232,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 237,
+          "quote": "Agent_1 gains Apple and Stone"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 397,
+          "quote": "no Quill/Jewel/Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 463,
+          "quote": "I receive nothing in Proposal 1"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_2 captured the implementer role",
+      "supports_first_advantage": false,
+      "explanation": "The accepted proposal came from the middle speaker and exactly implemented the discussion-consistent package, giving Agent_2 its best bundle and Agent_3 its top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 241,
+          "quote": "I propose: {'Agent_1': [0, 3], 'Agent_2': [2, 4], 'Agent_3': [1]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 246,
+          "quote": "mirrors the preferred 3-way triad"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 271,
+          "quote": "Agent_1: 0:Apple, 3:Quill"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 273,
+          "quote": "Agent_3: 1:Jewel"
+        }
+      ]
+    },
+    {
+      "theme": "Private thinking favored the triad before proposals",
+      "supports_first_advantage": false,
+      "explanation": "The raw private_thinking blocks show that each agent already recognized the triad as the best route. Agent_1 had no durable hidden advantage because its own private plan matched the group consensus that it later failed to submit.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 297,
+          "quote": "Quill goes to Agent_1, Stone to Agent_2, and Jewel to Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 298,
+          "quote": "Advance the Option 1-style triad"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 322,
+          "quote": "delivers a Pareto-improving outcome"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 347,
+          "quote": "locks in Quill for Agent_1, Stone for Agent_2, and Jewel for Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Voting rewarded immediate utility over speaker order",
+      "supports_first_advantage": false,
+      "explanation": "All agents accepted Proposal 2 for direct utility reasons. Agent_1 accepted it as its best available outcome, while Agent_3 accepted because it secured Jewel, producing the last-position utility lead.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 286,
+          "quote": "Proposal #2: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 408,
+          "quote": "strongest outcome for Agent_1 among the three"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 441,
+          "quote": "Stone + Pencil for me (63 total)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0346.md",
+          "line": 474,
+          "quote": "Proposal 2 gives me Jewel (61)"
+        }
+      ]
+    }
+  ]
+}

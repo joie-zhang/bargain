@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1142",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": 9.565938000000004,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat Agent_3 because the final consensus preserved Agent_1's first-round Quill anchor, and Quill alone was worth more to Agent_1 than Stone plus Pencil were worth to Agent_3. The first speaking position helped make Quill-with-Agent_1 the default, but the result was not pure agenda control: Agent_3 repeatedly vetoed allocations that excluded them and ultimately secured their own top bundle.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes, with an important caveat. Agent_1 used the first public turn to make Quill non-negotiable, and the eventual unanimous baseline kept that item with Agent_1. However, first position did not let Agent_1 extract extra items in the final deal; Agent_3's Stone/Pencil guardrail held. The payoff gap comes from final raw values under the accepted split: Agent_1's Quill is 75, while Agent_3's Stone plus Pencil is 55, discounted in Round 8 to the observed first-minus-last difference.",
+  "phase_notes": {
+    "public_discussion": "The public discussion quickly stabilized around a three-way baseline: Quill to Agent_1, Jewel plus Apple to Agent_2, and Stone plus Pencil to Agent_3. Agent_1's opening anchor mattered because later public turns repeatedly treated Quill with Agent_1 as the stable premise. Agent_3's public counterweight was consistent protection of Stone/Pencil and refusal to move Pencil without consent and compensation.",
+    "private_thinking": "Private thinking broadly matched the public script. Agents privately identified Quill as Agent_1's anchor, Stone/Pencil as Agent_3's protected core, and Jewel/Apple as Agent_2's middle bundle. The hidden reasoning therefore supports the final baseline rather than revealing a private coalition against Agent_1.",
+    "formal_proposals": "Early formal proposals often diverged from the public baseline, especially by excluding Agent_3 or moving Quill/Pencil into two-agent allocations, so they failed. Consensus arrived only in Round 8 when all three formal proposals matched the same baseline allocation.",
+    "private_voting": "Private votes were mostly immediate-utility maximizing. Agent_1 and Agent_2 accepted proposals that improved their own discounted payoff and rejected weaker bundles; Agent_3 rejected any proposal that left them with no items and accepted Stone plus Pencil. In Round 8, all proposals became identical or effectively identical, so all agents accepted.",
+    "reflection": "Reflections repeatedly diagnosed Pencil/Stone as the blocker and Quill as the shared anchor. They recommended baseline-first negotiation with explicit guardrails for any Pencil movement. This explains why Agent_3 could prevent exclusion but still finish below Agent_1 once the Quill-centered baseline was accepted."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-speaker Quill anchor became the public default",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 opened by naming Quill as overwhelmingly important and offering flexibility on other items. Later public and private reasoning repeatedly treated Quill-with-Agent_1 as the anchor, making the final consensus preserve the first speaker's highest-value item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 20,
+          "quote": "Quill is my top priority by a large margin"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 1926,
+          "quote": "Quill is the anchor item and must stay with Agent_1."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 4978,
+          "quote": "Quill must stay with Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "Final value arithmetic favored Agent_1 after the baseline was accepted",
+      "supports_first_advantage": true,
+      "explanation": "The final deal did not give Agent_1 multiple items, but it gave Agent_1 Quill. Because Quill was worth 75 to Agent_1 and Agent_3's protected Stone plus Pencil bundle was worth 55 to Agent_3, the Round 8 discount translated that raw 20-point edge into the observed 9.565938 first-minus-last gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 35.87226750000001"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [3], 'Agent_2': [0, 1], 'Agent_3': [2, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 5142,
+          "quote": "Agent_3's pre-discount payoff is 55"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3's veto power blocked first-agent overreach",
+      "supports_first_advantage": false,
+      "explanation": "First position did not let Agent_1 impose self-serving or two-agent allocations. When proposals left Agent_3 empty, Agent_3 rejected them; later even Agent_1 rejected an exclusionary allocation as bad for coalition balance. This is the main counterexample to a simple first-mover-dominates story.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 2704,
+          "quote": "Agent_3 receives nothing this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 2794,
+          "quote": "leaves me with no items in Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 3730,
+          "quote": "leaving Agent_3 with nothing and breaking the three-way balance"
+        }
+      ]
+    },
+    {
+      "theme": "Stone/Pencil guardrails protected the last agent but capped their payoff below Quill",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 consistently protected Stone and Pencil, and the reflections identify Pencil as the main blocker to consensus. Those guardrails worked: Agent_3 received Stone plus Pencil in the final allocation. They did not erase Agent_1's advantage because that protected bundle still had lower value than Quill had for Agent_1.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 4886,
+          "quote": "Pencil is the stubborn blocker"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 4939,
+          "quote": "location is the primary blocker"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 5028,
+          "quote": "Agent_3 places the strongest emphasis on Stone and Pencil"
+        }
+      ]
+    },
+    {
+      "theme": "Consensus emerged only when all proposals converged on the Quill/Jewel-Apple/Stone-Pencil split",
+      "supports_first_advantage": true,
+      "explanation": "The decisive Round 8 proposals all encoded the same baseline. Private votes then accepted that shared allocation because it protected top items and maintained guardrails. Since the shared allocation preserved Agent_1's Quill anchor, convergence locked in Agent_1's higher final payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 5051,
+          "quote": "{\"Agent_1\": [3], \"Agent_2\": [0, 1], \"Agent_3\": [2, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 5076,
+          "quote": "It secures top items for all"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1142.md",
+          "line": 5164,
+          "quote": "preserves top items and complies with guardrails"
+        }
+      ]
+    }
+  ]
+}

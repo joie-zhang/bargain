@@ -1,0 +1,154 @@
+{
+  "run_id": "config_1182",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": -6.1987278240000006,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first speaker protected Apple but did not gain positional surplus. The final consensus gave Agent_1 only Apple while Agent_3, the last position, received Jewel, Pencil, and Stone, producing the higher final utility.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to first-position advantage: Agent_1's early Apple anchor survived, but the decisive consensus condition became giving Agent_3 a coherent three-item bundle. Private votes show Agent_1 and Agent_2 repeatedly preferred higher own-utility alternatives, while Agent_3 vetoed zero-allocation proposals until the final round converged on Path A.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by claiming Apple, but Agent_3's Round 1 bundle anchor became the repeated public compromise. Public talk converged on Path A: Agent_1 Apple, Agent_2 Quill, Agent_3 Jewel+Pencil+Stone.",
+    "private_thinking": "Private planning repeatedly described Path A as the cleanest route to consensus, with Path C and a unanimous Jewel/Pencil swap as fallback mechanics. The private reasoning treated the Agent_3 bundle as necessary, not as a reward for the first speaker.",
+    "formal_proposals": "Formal proposals often diverged from the stated Path A and sometimes left Agent_3 with no items. The final round proposals from Agent_1 and Agent_2 finally matched Path A, though Agent_3's structured proposal had an allocation/reasoning inconsistency.",
+    "private_voting": "Votes explain the delay: Agent_1 and Agent_2 rejected Path A when it gave them only Apple or Quill and accepted proposals with higher own payoff, while Agent_3 rejected proposals with zero allocation. Final unanimity arrived only when all accepted the Path A allocation.",
+    "reflection": "Reflections consistently diagnosed the same blocker: Apple and Quill were stable anchors, but Agent_3 needed Jewel+Pencil+Stone or a credible reversible concession. The recommended repairs were timeboxing, Path A, and fallback Path C, not privileging the first position."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored Apple but capped own payoff",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first-mover effect was real but narrow: Apple stayed with Agent_1. That left Agent_1 with one high item, while the last position received three items and higher discounted utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 29,
+          "quote": "I take Apple; Agent_2 takes Quill; Agent_3 takes Jewel and Pencil"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0], 'Agent_2': [3], 'Agent_3': [1, 4, 2]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 8,
+          "quote": "Agent_3': 17.433922005000003"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position bundle became the consensus object",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 introduced the exact shape of the eventual winning allocation early, and later private reasoning framed that bundle as the most defendable way to close.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 70,
+          "quote": "Agent_1: Apple"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 72,
+          "quote": "Agent_3: Jewel + Pencil + Stone"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6408,
+          "quote": "Jewel+Pencil+Stone (Agent_3) represents the most defendable high-value bundle"
+        }
+      ]
+    },
+    {
+      "theme": "Competitive private voting overrode public compromise",
+      "supports_first_advantage": false,
+      "explanation": "At competition_level 1.0, agents repeatedly voted for higher individual payoff rather than the publicly endorsed compromise. This prevented an early first-speaker lock and prolonged bargaining until the last-position bundle was accepted.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 5072,
+          "quote": "Proposal 1 gives me only Apple (29)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 5116,
+          "quote": "with Agent_3 receiving nothing this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 5779,
+          "quote": "Proposal 2 would give me 71 * 0.4783"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3 had veto leverage against zero-item allocations",
+      "supports_first_advantage": false,
+      "explanation": "Many midgame proposals tried to leave Agent_3 empty while preserving Apple and Quill. Agent_3 consistently rejected those, so the first position could not win by teaming with Agent_2 to exclude the last position.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 4415,
+          "quote": "Proposal 1 leaves Agent_3 with no items"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 5470,
+          "quote": "Proposal 1 leaves Agent_3 with no items"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6167,
+          "quote": "Proposal 1 allocates no items to Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Final round resolved only after Path A became common vote target",
+      "supports_first_advantage": false,
+      "explanation": "Consensus appeared when Agent_1 and Agent_2 both proposed the same Apple/Quill/Agent_3-bundle allocation and all agents accepted it. That final deal favored the last position over the first in utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6433,
+          "quote": "allocation: {\"Agent_1\": [0], \"Agent_2\": [3], \"Agent_3\": [1, 4, 2]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6491,
+          "quote": "gives Agent_3 Jewel+Pencil+Stone"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6524,
+          "quote": "It yields a defendable three-way with a 45-value bundle for Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections named the real blocker as the bundle/unanimity gate",
+      "supports_first_advantage": false,
+      "explanation": "The later reflections did not credit speaking order as decisive. They described the outcome as a repeated Stone and Jewel/Pencil bundle problem that required a timeboxed Path A or Path C process.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6209,
+          "quote": "Keeping Stone with Agent_3 implies a heavy bundle there"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6210,
+          "quote": "requires unanimous consent"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1182.md",
+          "line": 6353,
+          "quote": "The core tension is the unanimity gate"
+        }
+      ]
+    }
+  ]
+}

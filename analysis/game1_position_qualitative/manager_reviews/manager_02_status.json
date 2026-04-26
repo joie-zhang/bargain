@@ -1,0 +1,30 @@
+{
+  "manager_id": "manager_02",
+  "shard_csv": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/manager_shards/manager_02.csv",
+  "attempted_child_workers": 31,
+  "completed_review_jsons": 31,
+  "fallback_reviews": 0,
+  "spawn_errors": [
+    {
+      "attempt": "initial_child_fanout",
+      "affected_child_workers": 31,
+      "error": "codex exec rejected unsupported '-a' option before workers could start; retried with --dangerously-bypass-approvals-and-sandbox and all assigned workers completed",
+      "log_dir": "/tmp/manager_02_child_logs"
+    }
+  ],
+  "missing_outputs": [],
+  "validation": {
+    "json_schema_required_fields": "passed",
+    "metadata_consistency": "passed",
+    "evidence_path_line_quote_window": "passed",
+    "validation_errors": []
+  },
+  "retry_child_fanout": {
+    "attempted_child_workers": 31,
+    "max_concurrent_workers": 5,
+    "completed_child_workers": 31,
+    "manifest": "/tmp/manager_02_child_logs_retry/child_results.json"
+  },
+  "summary_path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/manager_reviews/manager_02_summary.md",
+  "status_path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/manager_reviews/manager_02_status.json"
+}

@@ -1,0 +1,186 @@
+{
+  "run_id": "config_0874",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": -9.8415,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first position does not look payoff-advantaged. Agent_1 helped introduce the final Alpha template, but that template gave Quill to Agent_2 and the stronger non-Quill bundle to Agent_3, leaving Agent_1 with Apple+Stone. The last speaker beat the first because Agent_3 repeatedly vetoed zero-share offers and ultimately secured Jewel+Pencil, while Agent_1 accepted the lower 18-value bundle to reach consensus.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This is a counterexample to first-position advantage. All agents had identical preferences, so Agent_1's lower payoff was not caused by taste differences. Agent_1 spoke first and even proposed the final allocation shape early, but the durable agreement centered on Agent_2 holding Quill and Agent_3 receiving a credible 33-value non-Quill stake. The bargaining power came from consensus pressure, Agent_3's veto against zero allocations, and Agent_2's pursuit of Quill, not from speaking first.",
+  "phase_notes": {
+    "public_discussion": "Public discussion began with every agent claiming Quill, but Agent_1 quickly shifted to Alpha, where Agent_2 gets Quill, Agent_1 gets Apple+Stone, and Agent_3 gets Jewel+Pencil. Later public rounds repeated that baseline and framed Stone/Pencil rebalancing as a fairness fallback, but the final public agreement stayed with the 18-vs-33 non-Quill split.",
+    "private_thinking": "Private thinking shows Agent_1 and Agent_2 increasingly treated Alpha as the practical path, while Agent_3 initially preferred Quill but later accepted Alpha if Agent_3 got a tangible non-Quill stake. The hidden reasoning is about avoiding deadlock through defensible bundles, not protecting the first speaker.",
+    "formal_proposals": "Formal proposals repeatedly tested Alpha. Some middle-round proposals overreached by giving Agent_2 Quill plus other non-Quill items and leaving Agent_3 empty; those failed. Round 5 converged when all three agents submitted the identical allocation: Agent_1 Apple+Stone, Agent_2 Quill, Agent_3 Jewel+Pencil.",
+    "private_voting": "Private votes show self-utility and veto power driving outcomes. Agent_1 rejected its own early 18-value proposal when a 33-value alternative was available, Agent_2 rejected Quill-only offers when higher self-utility was possible, and Agent_3 rejected any zero allocation. Consensus arrived only once Agent_3 received Jewel+Pencil.",
+    "reflection": "Reflections repeatedly named non-Quill fairness and Agent_3's tangible stake as the gating issues. By the final round, the agents treated Alpha plus credible non-Quill bundles as the fastest path to unanimity, which advantaged Agent_3 over Agent_1 despite Agent_1 speaking first."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker created the final template, but not a first-payoff advantage",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first formal proposal already had the final allocation shape. That is evidence of agenda-setting, but it is weak as a first-position advantage because the template gives Agent_1 the low Apple+Stone bundle and gives Agent_3 the stronger Jewel+Pencil bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 177,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [3], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 182,
+          "quote": "Quill is allocated to Agent_2 as the anchor (Option Alpha)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1430,
+          "quote": "- allocation: {'Agent_1': [0, 2], 'Agent_2': [3], 'Agent_3': [1, 4]}"
+        }
+      ]
+    },
+    {
+      "theme": "Identical preferences make the lower first payoff a real allocation effect",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 and Agent_3 had the same item values, yet the final allocation gave Agent_3 Jewel+Pencil while Agent_1 got Apple+Stone. The last position's higher utility therefore reflects bargaining and allocation, not different valuations.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 8,
+          "quote": "- final_utilities: {'Agent_1': 11.809800000000001, 'Agent_2': 32.1489, 'Agent_3': 21.6513}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 12,
+          "quote": "- Agent_1: [1.0, 13.0, 17.0, 49.0, 20.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 14,
+          "quote": "- Agent_3: [1.0, 13.0, 17.0, 49.0, 20.0]"
+        }
+      ]
+    },
+    {
+      "theme": "First speaker's Quill claim did not stick",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 opened by naming Quill as the top priority, but public bargaining quickly centered on Agent_2 as the Quill holder. The first speaker did not convert first position into the top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 22,
+          "quote": "- Priority order: Quill (highest) > Pencil > Stone > Jewel > Apple."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 243,
+          "quote": "Proposed anchor for Round 2: Alpha (Quill to Agent_2)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1183,
+          "quote": "- Anchor: Quill to Agent_2"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3 veto power forced a meaningful last-position stake",
+      "supports_first_advantage": false,
+      "explanation": "The last speaker repeatedly rejected allocations that gave Agent_3 nothing. Reflections and later votes treated that veto as a central constraint, and final consensus only arrived when Agent_3 received Jewel+Pencil.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1987,
+          "quote": "I receive no items under this proposal (Agent_3 gets nothing), so my utility is 0 after the round discount."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2114,
+          "quote": "Agent_3 keeps getting no items under the current anchors."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 3004,
+          "quote": "Agent_3's non-Quill value is 33"
+        }
+      ]
+    },
+    {
+      "theme": "Private votes followed utility comparisons rather than speaker order",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 rejected its own early final-shaped proposal because it only gave 18, while Agent_2 rejected fairer Quill-only proposals when a higher 82-value option existed. These votes show that position order was secondary to payoff and veto incentives.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1595,
+          "quote": "Proposal 1 yields Agent_1 only Apple+Stone (18 total)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2300,
+          "quote": "I’m rejecting 1 in favor of the higher personal payoff in 3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2646,
+          "quote": "Reject: It gives me only Quill (49 pre-discount"
+        }
+      ]
+    },
+    {
+      "theme": "Fairness reflections centered non-Quill credibility, especially for Agent_3",
+      "supports_first_advantage": false,
+      "explanation": "The reflection sections repeatedly diagnosed the blocker as unfair or zero non-Quill shares, not the need to preserve Agent_1's opening demand. That diagnosis pushed the final deal toward Agent_3's credible bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2058,
+          "quote": "distributing the non-Quill pool fairly is the real bottleneck."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2107,
+          "quote": "The fastest path to consensus is to guarantee a credible non-Quill share for Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 2789,
+          "quote": "guarantee Agent_3 (and Agent_1) a credible non-Quill stake"
+        }
+      ]
+    },
+    {
+      "theme": "Final convergence required identical Alpha proposals and unanimous acceptance",
+      "supports_first_advantage": false,
+      "explanation": "Consensus was not produced by unilateral first-speaker leverage. It occurred only after every agent submitted the same allocation and every private vote accepted it.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1426,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [3], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1435,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [3], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1444,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [3], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1479,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0874.md",
+          "line": 1483,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    }
+  ]
+}

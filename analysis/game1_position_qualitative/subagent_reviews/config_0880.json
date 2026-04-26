@@ -1,0 +1,132 @@
+{
+  "run_id": "config_0880",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": 64.8,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first position looks strongly advantaged because Agent_1 opened by claiming the two highest-value items, Apple and Quill, and the rest of the negotiation treated those as protected anchors. Agent_2 and Agent_3 competed over the much smaller remainder, with Agent_3 needing only Stone+Jewel to avoid zero, so consensus formed around a deal that preserved Agent_1's 83 pre-discount utility and left the last position with only 3 pre-discount utility.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "This is a clear first-position advantage case. All agents shared the same value vector, but Agent_1's first public anchor defined Apple+Quill as non-negotiable and everyone else repeatedly accepted that frame. The counterpressure was not against Agent_1's top bundle; it was between Agent_2's desire for Stone and Agent_3's need for a nonzero floor. The final accepted Path B therefore protected the first speaker's top two items while the last speaker got only Jewel+Stone.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 immediately claimed Apple+Quill, and later public turns by all agents reinforced Path B as the stable default. Agent_3 explicitly prioritized avoiding zero rather than challenging Agent_1's top bundle.",
+    "private_thinking": "Private thinking across agents recognized Apple+Quill as the decisive anchors and framed Jewel/Stone/Pencil as the flexible bargaining space. Agent_1's private strategy was to lock Path B while keeping Apple non-negotiable.",
+    "formal_proposals": "Most formal proposals preserved Apple+Quill for Agent_1. The successful final allocation matches Agent_1's Round 3 Proposal #1: Agent_1 [0,3], Agent_2 [4], Agent_3 [1,2]. The transcript's public line saying Proposal #3 was accepted is inconsistent with the vote counts and raw votes.",
+    "private_voting": "Private votes show Agent_1 accepted proposals preserving its 83 value and rejected losing Quill. By Round 3, Agent_2 also rejected its own high-payoff proposal because it violated the guardrail for Agent_3, enabling unanimous support for Path B.",
+    "reflection": "Reflections repeatedly identify Apple+Quill as non-negotiable and the remaining blocker as Stone/Jewel redistribution or the credibility of Agent_3's minimum payoff guardrail."
+  },
+  "mechanisms": [
+    {
+      "theme": "First public anchor captured the top two items",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the opening turn to define Apple+Quill as the baseline it would retain. Because those items were worth 83 out of 100 pre-discount, this early anchor left later bargaining focused on much lower-value items.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 20,
+          "quote": "Apple is the top target (value 49), followed by Quill (34)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 27,
+          "quote": "I’m flexible as long as I retain Apple + Quill."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 80,
+          "quote": "it preserves my top two items (Apple 49, Quill 34)"
+        }
+      ]
+    },
+    {
+      "theme": "Other agents conceded the high-value anchor",
+      "supports_first_advantage": true,
+      "explanation": "Agent_2 and Agent_3 did not seriously challenge Agent_1's control of Apple+Quill in public discussion. They instead negotiated over Pencil, Stone, and Jewel, which made Agent_1's dominant outcome the common reference point.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 33,
+          "quote": "I can’t challenge that this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 57,
+          "quote": "with Agent_1 keeping Apple + Quill."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 269,
+          "quote": "It preserves Apple+Quill with Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position bargaining floor was only nonzero value",
+      "supports_first_advantage": true,
+      "explanation": "Agent_3's main defense was to avoid ending with zero, not to obtain top-value items. That meant the final agreement could satisfy the last position with Stone+Jewel while leaving the first position's Apple+Quill untouched.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 61,
+          "quote": "this yields me 3 total now"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 153,
+          "quote": "It avoids leaving me bare with 0 value"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1558,
+          "quote": "Proposal 1 gives Agent_3 a non-zero value"
+        }
+      ]
+    },
+    {
+      "theme": "Private voting protected Agent_1's payoff",
+      "supports_first_advantage": true,
+      "explanation": "The raw voting shows the decisive comparison: Agent_1 accepted outcomes that kept its 83 value and rejected the proposal that reduced it to 52, while Agent_2 and Agent_3 ultimately accepted the guardrailed Path B.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1492,
+          "quote": "Keeps Apple+Quill with Agent_1 (83 value)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1514,
+          "quote": "Reduces my own value to 52"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1525,
+          "quote": "aligning with guardrails and avoiding a zero outcome."
+        }
+      ]
+    },
+    {
+      "theme": "Reflections explicitly codified Apple+Quill as non-negotiable",
+      "supports_first_advantage": true,
+      "explanation": "The reflection sections show that agents learned to treat Agent_1's top pair as fixed. This retrospection explains why later rounds moved toward consensus without reopening the first position's advantage.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 974,
+          "quote": "Apple (Agent_1 must keep Apple) and Quill (Agent_1 must keep Quill) are non-negotiable"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1045,
+          "quote": "All parties agree that Apple+Quill should stay with Agent_1."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0880.md",
+          "line": 1346,
+          "quote": "Apple+Quill remain the decisive anchors."
+        }
+      ]
+    }
+  ]
+}

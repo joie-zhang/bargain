@@ -1,0 +1,90 @@
+{
+  "run_id": "config_0482",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first position did not beat the last position. Agent_1 used the first turn to anchor Pencil, but the successful allocation was a mutually compatible top-item split where Agent_1 kept Pencil, Agent_2 received Jewel+Apple+Quill, and Agent_3 received Stone; all agents ended with utility 100.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample to first-position advantage: Agent_1 spoke first and kept its demanded Pencil, but Agent_3, the last initial speaker, also secured its only valued item, Stone. Proposals that excluded Agent_3 from Stone were rejected even when they preserved Agent_1's anchor, while the accepted allocation matched all agents' top priorities.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened with a strong Pencil anchor, but Agent_3's later three-way allocation framed the path that everyone endorsed: Pencil to Agent_1, Jewel+Apple+Quill to Agent_2, and Stone to Agent_3.",
+    "private_thinking": "All three private-thinking entries converged on the same top-item logic and treated a ledger or sequencing commitment as the way to avoid renegotiation, not as a special benefit for the first speaker.",
+    "formal_proposals": "Agent_2's formal proposal was the only clean implementation of the three-way split; Agent_1 and Agent_3 submitted variants that wrongly placed Stone with Agent_2.",
+    "private_voting": "Every agent accepted Proposal 2 and rejected the Stone-to-Agent_2 variants, showing the final choice was driven by complete top-item satisfaction rather than first-mover control.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored but did not extract extra value",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's opening position successfully made Pencil a fixed point, but Pencil was only valuable to Agent_1 and did not prevent later speakers from getting their own core items.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 20,
+          "quote": "Pencil is my top priority."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 96,
+          "quote": "Pencil stays with me in Round 1"
+        }
+      ]
+    },
+    {
+      "theme": "Last initial speaker supplied the coalition template",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's public proposal created the allocative logic that later became the accepted outcome, including Stone for the last-position agent.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 67,
+          "quote": "Round 1: Pencil stays with Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 69,
+          "quote": "Stone goes to Agent_3 (me)."
+        }
+      ]
+    },
+    {
+      "theme": "Winning proposal satisfied every top priority",
+      "supports_first_advantage": false,
+      "explanation": "The accepted allocation was not a privileged first-speaker allocation; it gave each agent the item or bundle that generated its maximum utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 182,
+          "quote": "I propose: {'Agent_1': [4], 'Agent_2': [1, 0, 3], 'Agent_3': [2]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 187,
+          "quote": "maximize each player's top-valued items."
+        }
+      ]
+    },
+    {
+      "theme": "Voting rejected allocations that harmed the last-position agent",
+      "supports_first_advantage": false,
+      "explanation": "Private votes show that preserving Agent_1's Pencil was insufficient when Stone was assigned away from Agent_3; the group selected the allocation that included Agent_3's valued item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 404,
+          "quote": "giving me zero utility this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0482.md",
+          "line": 415,
+          "quote": "exactly my preferred outcome (Stone to me)"
+        }
+      ]
+    }
+  ]
+}

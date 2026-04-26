@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0170",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 7.0,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "Agent_1's first-position advantage looks real but modest: Agent_1 opened by making Stone the protected anchor, and every later plan preserved that 100-point item. Agent_3, despite authoring the unanimously accepted final proposal and securing Jewel plus Pencil, conceded Quill to Agent_1 and stopped at 93, so the seven-point gap came from the last agent missing its small-value Quill while the first agent reached its maximum.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes. Agent_1 announced Stone as its sole high-value target first, and later public discussion, private thinking, and voting rationales treated Stone with Agent_1 as a fixed anchor. The main countervailing evidence is that Agent_1's own proposal was rejected and Agent_3's proposal won unanimously, so the advantage was not formal proposal control. The outcome still favored the first position because the accepted compromise gave Agent_1 its full 100 while Agent_3 gave up Quill, worth 7 to Agent_3.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by making Stone its objective, and the public discussion quickly converged on Stone to Agent_1, Apple to Agent_2, Jewel and Pencil to Agent_3, and Quill to Agent_1. Agent_3 accepted this because Jewel and Pencil were its top two values.",
+    "private_thinking": "All three private-thinking entries framed Stone with Agent_1 and Apple with Agent_2 as fixed anchors. Agent_3 planned to defend Jewel and Pencil while conceding Quill if needed, which explains why Agent_3 ended at 93 rather than 100.",
+    "formal_proposals": "Agent_1 and Agent_2 both submitted allocations that gave Agent_3 nothing, but these did not survive voting. Agent_3's formal proposal matched the public compromise and became the final accepted allocation.",
+    "private_voting": "Voting punished proposals that excluded Agent_3 and unanimously accepted Proposal #3. Agent_1 accepted because Stone stayed with Agent_1, while Agent_3 accepted because Jewel plus Pencil gave 93.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "Early Stone anchor",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first speaking slot to declare Stone as its decisive target, and later public statements repeatedly preserved Stone with Agent_1. This made Agent_1's 100-point outcome part of the consensus baseline.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 22,
+          "quote": "secure Stone, which is by far my top priority"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 110,
+          "quote": "It guarantees Stone stays with me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 127,
+          "quote": "Stone stays with Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "Last agent controlled the winning proposal",
+      "supports_first_advantage": false,
+      "explanation": "The formal proposal process itself does not show first-mover dominance: Agent_3 submitted the allocation that was accepted unanimously. This is an important limit on the first-advantage interpretation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 188,
+          "quote": "I propose: {'Agent_1': [2, 3], 'Agent_2': [0], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 225,
+          "quote": "Proposal #3: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 227,
+          "quote": "Proposal #3 accepted unanimously"
+        }
+      ]
+    },
+    {
+      "theme": "Quill concession created the gap",
+      "supports_first_advantage": true,
+      "explanation": "Agent_3 valued Quill at 7 but accepted a package with Jewel and Pencil while Quill went to Agent_1. Since Agent_1 already reached 100 from Stone, this small concession exactly matches the first-minus-last margin.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 14,
+          "quote": "Agent_3: [0.0, 47.0, 0.0, 7.0, 46.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 80,
+          "quote": "Quill -> Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 408,
+          "quote": "Gives me Jewel and Pencil (93 total)"
+        }
+      ]
+    },
+    {
+      "theme": "Three-way fairness protected the first agent",
+      "supports_first_advantage": true,
+      "explanation": "Voters rejected allocations that left Agent_3 empty, but their accepted fairness frame also locked in Agent_1's Stone. The final coalition logic therefore corrected extreme proposals while still preserving the first agent's maximum payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 320,
+          "quote": "breaking the intended three-way balance"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 331,
+          "quote": "leaving Agent_3 with nothing"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0170.md",
+          "line": 342,
+          "quote": "Preserves Stone with Agent_1"
+        }
+      ]
+    }
+  ]
+}

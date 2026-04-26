@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0174",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "The first position did not beat the last position: Agent_1 successfully anchored Pencil, but that item was uniquely valuable to Agent_1 and the final accepted allocation gave every agent 100 utility. The decisive counterexample is that Agent_3, the last speaker, secured Apple and Quill, rejected proposals that excluded it, and authored the unanimously accepted complete proposal.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Although Agent_1 moved first and made Pencil non-negotiable, this did not translate into an advantage over Agent_3 because preferences were complementary and noncompetitive. Agent_1 got its 100-point Pencil, Agent_2 got Jewel and Stone for 100, and Agent_3 got Apple and Quill for 100. Earlier formal proposals that shorted Agent_3 failed to reach unanimity, while Agent_3's own proposal became the final allocation.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by demanding Pencil and offering flexibility on all other items. Agent_2 and Agent_3 quickly accepted that constraint because the remaining high-value items could be split to give both of them 100.",
+    "private_thinking": "Private thinking is available. It shows Agent_1 focused on keeping Pencil fixed, Agent_2 focused on Jewel and Stone, and Agent_3 focused on Apple and Quill; the agents expected a quick 2-2 deal rather than a first-position payoff edge.",
+    "formal_proposals": "Agent_1 and Agent_2 submitted proposals that left Agent_3 with no items, despite the discussion's 2-2 framing. Agent_3's formal proposal supplied the complete agreed allocation and matched the final result.",
+    "private_voting": "Agent_1 and Agent_2 accepted any proposal preserving their 100-point outcomes, while Agent_3 rejected proposals that gave it zero and accepted Proposal 3. That veto behavior prevented first-speaker anchoring from beating the last position.",
+    "reflection": "No reflection section or reflection entries are present."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored its sole valuable item",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public turn to define Pencil as non-negotiable and all later public discussion treated that constraint as settled. This is a procedural advantage, but only over an uncontested item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 22,
+          "quote": "Pencil is my top priority (I value it at 100)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 23,
+          "quote": "Pencil stays with me in any deal"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 72,
+          "quote": "The 2-2 split proposed by Agent_2 and accepted by Agent_3 fits my goal."
+        }
+      ]
+    },
+    {
+      "theme": "Complementary values removed payoff conflict",
+      "supports_first_advantage": false,
+      "explanation": "The public deal gave each agent its own 100-point bundle, so Agent_1's early lock on Pencil did not reduce Agent_3's payoff. This directly explains the zero first-minus-last gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 56,
+          "quote": "Jewel+Stone for Agent_2 (88+12 = 100) and Apple+Quill for me (76+24 = 100)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 93,
+          "quote": "Jewel + Stone: Agent_2 (my 88 + 12 = 100)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 114,
+          "quote": "This gives me 76 + 24 = 100"
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker supplied the accepted complete proposal",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's formal proposal was the one that included all agents' valued bundles and was accepted unanimously. The first proposal preserved Agent_1's item but overreached by giving every other item to Agent_2, so it did not beat the last proposal.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 127,
+          "quote": "I propose: {'Agent_1': [4], 'Agent_2': [0, 1, 2, 3], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 145,
+          "quote": "I propose: {'Agent_1': [4], 'Agent_2': [1, 2], 'Agent_3': [0, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 184,
+          "quote": "Proposal #3 accepted unanimously!"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3 vetoed exclusionary earlier proposals",
+      "supports_first_advantage": false,
+      "explanation": "Private voting shows that proposals advantaging Agent_1 and Agent_2 at Agent_3's expense could not become consensus outcomes. Agent_3's rejection of zero-value offers is the clearest counterexample to a first-position advantage.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 343,
+          "quote": "leaving Agent_3 with zero items and zero value"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 354,
+          "quote": "This does not maximize my own potential value compared to Proposal 3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0174.md",
+          "line": 365,
+          "quote": "Proposal 3 matches my preferred 2-2 allocation"
+        }
+      ]
+    }
+  ]
+}

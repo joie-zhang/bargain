@@ -1,0 +1,127 @@
+{
+  "run_id": "config_1502",
+  "n_agents": 3,
+  "competition_level": 1.0,
+  "first_minus_last": 12.599999999999998,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first position looks advantaged because Agent_1 immediately claimed the highest-value item, Stone, and the rest of the negotiation treated that claim as a hard constraint. The last position still had veto leverage and improved from the 24-point baseline to a 28-point non-Stone bundle, but that leverage only redistributed lower-value leftovers while Agent_1 kept Stone.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Agent_1 did not win by taking multiple items; it won by making Stone the stable anchor before anyone else could contest it. A countervailing pattern is that Agent_3, the last speaker, blocked Round 1 and authored the final accepted fairness proposal, but even that successful move preserved Agent_1's Stone allocation and left Agent_3 behind the first position by 12.6 discounted utility.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by naming Stone as the top priority and proposing a split that left only non-Stone items for Agents 2 and 3. Later public discussion repeatedly framed Stone staying with Agent_1 as the stability condition, so debate shifted to Option B versus Option D for the remaining pool.",
+    "private_thinking": "The private thinking entries confirm that all agents saw Stone as the non-negotiable anchor. Agent_1 planned to keep Stone and make only bounded non-Stone concessions, while Agent_3 focused on pushing the leftover allocation from 24 to 28.",
+    "formal_proposals": "All Round 1 proposals gave Stone to Agent_1. In Round 2, the accepted proposal was submitted by Agent_3 and improved Agent_3's share, but it still kept Stone with Agent_1.",
+    "private_voting": "Agent_1 accepted proposals whenever Stone stayed with Agent_1. Agent_3 rejected every Round 1 baseline proposal to preserve leverage for Option D, then accepted the Round 2 proposal that raised Agent_3 to 28 while preserving Stone for Agent_1.",
+    "reflection": "The reflections diagnose the same mechanism: Stone was the hard constraint, and the real blocker was fairness in the non-Stone split. The proposed solution was a reversible 30/28 split between Agents 2 and 3, not any challenge to Agent_1's Stone."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored the unique top item",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first public turn to claim Stone, the 42-value item, and define acceptable alternatives as ones where Stone remained with Agent_1.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 20,
+          "quote": "Stone is my top priority (value 42)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 29,
+          "quote": "as long as Stone remains mine."
+        }
+      ]
+    },
+    {
+      "theme": "Other agents negotiated inside the Stone constraint",
+      "supports_first_advantage": true,
+      "explanation": "Rather than contesting Stone, Agents 2 and 3 repeatedly accepted it as fixed and bargained over the leftover items, which protected the first position's main payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 77,
+          "quote": "Stone is out of reach for me this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 300,
+          "quote": "Stone stays with Agent_1 this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 343,
+          "quote": "Stone stays with Agent_1 this round, as agreed."
+        }
+      ]
+    },
+    {
+      "theme": "Private strategy treated Stone as non-negotiable",
+      "supports_first_advantage": true,
+      "explanation": "The raw private-thought sections show that the public Stone anchor was internalized across agents as the premise for strategy, not merely as rhetoric.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 563,
+          "quote": "Stone is clearly the most valuable item"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 588,
+          "quote": "Stone is Agent_1's top priority and non-negotiable"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 911,
+          "quote": "Stone is the non-negotiable anchor"
+        }
+      ]
+    },
+    {
+      "theme": "Last position had veto leverage over leftovers",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 was not powerless: it rejected the Round 1 24-point baseline and forced movement to the 28-point Option D. This is the main counterexample to a simple first-mover-dominance story.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 725,
+          "quote": "Reject to preserve the possibility of a Round-2 re-evaluation"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 837,
+          "quote": "The main blocker is the gap in non-Stone shares"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 1047,
+          "quote": "the strongest non-stone stake for Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Final consensus preserved first-place payoff",
+      "supports_first_advantage": true,
+      "explanation": "The unanimously accepted final proposal was the fairer 30/28 non-Stone split, but it still assigned Stone to Agent_1, producing the observed first-over-last utility gap.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 37.800000000000004"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 520,
+          "quote": "allocation: {'Agent_1': [2], 'Agent_2': [4, 0], 'Agent_3': [3, 1]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1502.md",
+          "line": 555,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    }
+  ]
+}

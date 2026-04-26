@@ -1,0 +1,154 @@
+{
+  "run_id": "config_1442",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first speaker was not meaningfully advantaged over the last speaker. Agent_1 anchored discussion around keeping Stone, but that was already its sole high-value item and all agents eventually received their top bundles. Consensus only happened when the last-position agent's proposal gave Agent_3 Apple and Quill instead of excluding it.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "A strong counterexample is the final accepted allocation: Agent_1 and Agent_2 repeatedly proposed two-agent splits that preserved Agent_1's Stone but gave Agent_3 no items, and those proposals were rejected by Agent_3. The unanimous proposal was Agent_3's last-position proposal, which preserved all three top anchors and gave Agent_3 Apple and Quill, producing equal final utilities for all agents.",
+  "phase_notes": {
+    "public_discussion": "Public discussion let Agent_1 state the first anchor, but Agent_3 immediately introduced the missing Apple claim. By Rounds 2 and 3, all speakers publicly endorsed the same anchor set: Stone to Agent_1, Jewel/Pencil to Agent_2, Apple/Quill to Agent_3.",
+    "private_thinking": "Private reasoning across agents repeatedly identified the same efficient solution: protect Stone, Jewel, and Apple as top anchors and settle Pencil/Quill with a small adjustment. The private plans do not show first-position dominance; they show convergence on each agent's own top item.",
+    "formal_proposals": "The formal proposal phase is the clearest evidence against a first-position advantage. Agent_1's and Agent_2's proposals in every round tended to allocate nothing to Agent_3, while Agent_3's proposal was the one that matched the final consensus allocation.",
+    "private_voting": "Private votes show Agent_1 accepted any proposal preserving Stone, and Agent_2 accepted any proposal giving Jewel and Pencil. Agent_3 rejected proposals that excluded it and accepted only the proposal giving Apple and Quill, so unanimity depended on satisfying the last-position agent.",
+    "reflection": "Reflections explicitly diagnosed the blocker as Apple not going to Agent_3 and later Pencil/Quill settlement. They recommended the same anchor-preserving allocation that Agent_3 proposed and that ultimately won."
+  },
+  "mechanisms": [
+    {
+      "theme": "Top-item anchors outweighed speaking order",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 could establish Stone as an anchor because Stone was its only valuable item, but the public discussion rapidly generalized this into three equal anchors. Consensus required giving each agent its top item, not privileging the first speaker.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 20,
+          "quote": "Stone is my top priority (valued at 100 for me)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 75,
+          "quote": "Stone stays with Agent_1; Jewel goes to Agent_2; Apple goes to Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 477,
+          "quote": "It preserves the three anchor priorities everyone seemed to converge on"
+        }
+      ]
+    },
+    {
+      "theme": "First-position proposals failed when they ignored Agent_3",
+      "supports_first_advantage": false,
+      "explanation": "Despite going first, Agent_1's formal proposals did not win unanimity because they often kept Apple away from Agent_3. The first position could protect its own payoff, but not impose a consensus allocation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 173,
+          "quote": "I propose: {'Agent_1': [0, 2, 3], 'Agent_2': [1, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 407,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 650,
+          "quote": "I propose: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position veto shaped the winning allocation",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's private votes consistently rejected allocations that gave it no items, including first-speaker proposals. Its acceptance of its own final proposal was necessary for consensus and produced the final allocation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 879,
+          "quote": "Proposal 1 gives me nothing (no Apple or Quill)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 1188,
+          "quote": "Proposal 1 gives Agent_3 no items this round"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 1512,
+          "quote": "Proposal 3 gives me Apple (80) and Quill (20)"
+        }
+      ]
+    },
+    {
+      "theme": "Reflections diagnosed Agent_3's missing Apple as the blocker",
+      "supports_first_advantage": false,
+      "explanation": "The reflection sections repeatedly state that Apple not being allocated to Agent_3 caused failed unanimity. This points to a constraint imposed by the last-position agent's value claim rather than a durable advantage for Agent_1.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 917,
+          "quote": "Apple was not allocated to Agent_3 in any of the Round 1 proposals"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 962,
+          "quote": "The missing allocation: Apple to Agent_3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 1308,
+          "quote": "Proposals that don’t give Apple to Agent_3 fail"
+        }
+      ]
+    },
+    {
+      "theme": "Final formal proposal came from Agent_3 and was unanimous",
+      "supports_first_advantage": false,
+      "explanation": "The accepted Round 3 proposal was submitted by the last-position agent and exactly matches the final allocation. This is direct evidence that earlier position did not beat the last position in outcome quality.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 668,
+          "quote": "I propose: {'Agent_1': [2], 'Agent_2': [1, 4], 'Agent_3': [0, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 705,
+          "quote": "Proposal #3: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 707,
+          "quote": "CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    },
+    {
+      "theme": "Outcome equality confirms no positional payoff edge",
+      "supports_first_advantage": false,
+      "explanation": "The final utility line shows all agents received the same discounted utility. Any early agenda-setting benefit to Agent_1 did not translate into a better payoff than Agent_3's.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 81.0, 'Agent_2': 81.0, 'Agent_3': 81.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [2], 'Agent_2': [1, 4], 'Agent_3': [0, 3]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1442.md",
+          "line": 1349,
+          "quote": "directly satisfies all three top priorities"
+        }
+      ]
+    }
+  ]
+}

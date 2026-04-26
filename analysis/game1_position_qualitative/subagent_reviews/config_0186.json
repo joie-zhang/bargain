@@ -1,0 +1,154 @@
+{
+  "run_id": "config_0186",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": 9.1854,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat the last position because the first public move made Stone a non-negotiable anchor, and every later phase treated the remaining bargaining as a Quill/Jewel/Pencil calibration between Agents 2 and 3. Agent_3 still got Jewel+Pencil, but its stronger Jewel+Quill preference was repeatedly subordinated to the stable baseline.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes, with a caveat. The advantage is not purely positional because Agent_1's Stone valuation was extremely high and Agent_2 nearly matched Agent_1's final utility, but the process evidence shows Agent_1's opening Stone claim became the accepted constraint while Agent_3's later asks were negotiated down to the baseline.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by declaring Stone untouchable, then the discussion rapidly normalized Stone with Agent_1. Later rounds focused on Option B: Agent_1 keeps Stone, Agent_2 keeps Apple+Quill, and Agent_3 receives Jewel+Pencil.",
+    "private_thinking": "Private reasoning across agents repeatedly described Stone with Agent_1 as the stable anchor and converged on Option B as the pragmatic consensus route. Agent_2 resisted losing Quill, while Agent_3 accepted Jewel+Pencil as the lower-friction path.",
+    "formal_proposals": "Agent_1 proposed the eventual final allocation in rounds 1, 3, and 5. In the final round, Agent_1 and Agent_2 submitted the same baseline; Agent_3's structured proposal appears malformed, listing Agent_3 with no items while the reasoning says Jewel+Pencil.",
+    "private_voting": "Earlier voting was self-interested and fragmented. By round 5, Proposal 1 was accepted by all voters, although the public tabulation text inconsistently says Proposal #3 was accepted despite showing Proposal #1 at 3 accepts.",
+    "reflection": "Reflections consistently identified Stone with Agent_1 as broadly supported and treated the unresolved issues as Quill, Jewel, Pencil, compensation, and deadline mechanics rather than reopening Stone."
+  },
+  "mechanisms": [
+    {
+      "theme": "Opening Stone Anchor",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first speaking position to make Stone the central non-negotiable. Later public discussion and reflection treated that claim as the stable constraint, so Agent_1's best item left the bargaining space early.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 20,
+          "quote": "Stone is my top priority by a large margin."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 266,
+          "quote": "Stone must stay with Agent_1 in Round 2 (non-negotiable anchor)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2743,
+          "quote": "Stone with Agent_1 remains the strong, common anchor."
+        }
+      ]
+    },
+    {
+      "theme": "Bargaining Shifted Away From Agent_1",
+      "supports_first_advantage": true,
+      "explanation": "Once Stone was fixed, the live negotiation became a tradeoff between preserving Agent_2's Apple+Quill and improving Agent_3's Jewel package. That insulated Agent_1 from later concessions while Agent_3's upside remained contested.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1203,
+          "quote": "Stone with Agent_1 is the strongest, most stable anchor we’ve found."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1274,
+          "quote": "The core friction remains whether to move Quill away from me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2751,
+          "quote": "Jewel’s early custody for Agent_3 vs Quill remaining with Agent_2."
+        }
+      ]
+    },
+    {
+      "theme": "Private Convergence On Option B",
+      "supports_first_advantage": true,
+      "explanation": "The private plans by round 5 converged on the same baseline: keep Agent_1's Stone untouched, preserve Agent_2's Apple+Quill, and give Agent_3 Jewel+Pencil. This made Agent_1's secured outcome the default while limiting Agent_3 to the lower-variance compromise.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2875,
+          "quote": "Stone with Agent_1 remains the strongest, non-negotiable anchor."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2898,
+          "quote": "The most pragmatic path toward unanimous acceptance appears to be Round 5 baseline (Option B)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2925,
+          "quote": "Objective: keep Stone secure, preserve Agent_2’s post-Stone payoff, and secure Jewel for Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Final Acceptance Followed Agent_1's Baseline",
+      "supports_first_advantage": true,
+      "explanation": "The final accepted allocation matches Agent_1's round-5 proposal and the final allocation metadata. Agent_2 also proposed the same allocation, so this is not uniquely a first-proposer win, but the consensus landed on the first-position baseline.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1509,
+          "quote": "I propose: {'Agent_1': [2], 'Agent_2': [0, 3], 'Agent_3': [1, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1562,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 2972,
+          "quote": "Proposal 1 preserves Stone with Agent_1, assigns Apple+Quill to Agent_2, and Jewel+Pencil to Agent_3."
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3's Stronger Claim Was Contained",
+      "supports_first_advantage": true,
+      "explanation": "The last-position agent repeatedly preferred the stronger Jewel+Quill package but accepted the lower Jewel+Pencil baseline to preserve consensus. This helps explain why Agent_3 ended below Agent_1 despite receiving its top item.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 349,
+          "quote": "I strongly prefer Round 2 Option A:"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1492,
+          "quote": "Agent_3 gains 6 more than in B, but Agent_2 loses 6 in immediate payoff."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 3038,
+          "quote": "Proposal 1 delivers Jewel and Pencil to Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Non-Positional Caveats",
+      "supports_first_advantage": false,
+      "explanation": "The evidence is not a clean proof of first-speaker advantage. Agent_1's high Stone value mechanically creates a large payoff, Agent_2 nearly ties Agent_1, and the final tabulation has an inconsistency about which proposal was accepted.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 45.927, 'Agent_2': 44.6148, 'Agent_3': 36.7416}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 12,
+          "quote": "Agent_1: [16.0, 2.0, 70.0, 10.0, 2.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0186.md",
+          "line": 1566,
+          "quote": "✅ CONSENSUS REACHED! Proposal #3 accepted unanimously!"
+        }
+      ]
+    }
+  ]
+}

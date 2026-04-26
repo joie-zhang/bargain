@@ -1,0 +1,110 @@
+{
+  "run_id": "config_0162",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "The first position did not beat the last position in payoff terms. Agent_1 had procedural influence by opening the discussion around Stone/Pencil and later submitting the accepted round-2 allocation, but Agent_3's Jewel demand blocked round 1 and forced the final equal-utility allocation.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "Counterexample for first_minus_last <= 0: the last speaker, Agent_3, vetoed all round-1 plans that omitted Jewel and ultimately received Jewel, ending with the same discounted utility as Agent_1. The first mover shaped the package but could not convert that into a higher final payoff.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by centering Stone and Pencil, while Agent_3 immediately named Jewel as the 100-value priority and proposed a top-item split. Round 2 public discussion converged on Jewel to Agent_3, Quill plus Apple to Agent_2, and Stone plus Pencil to Agent_1.",
+    "private_thinking": "All six private-thinking entries identified compatible top priorities plus the Jewel blocker. Agent_1 would concede Apple but not Stone/Pencil, Agent_2 sought Quill plus Apple, and Agent_3 treated Jewel as essential for unanimity.",
+    "formal_proposals": "Round 1 proposals protected Agent_1 and often Agent_2 but left Agent_3 empty, so none gained unanimity. In round 2, Agent_1's Proposal #1 matched the final allocation; Agent_2 and Agent_3 repeated no-Agent_3 allocations that were rejected. The system line saying Proposal #3 was accepted conflicts with the adjacent vote counts showing Proposal #1 had 3 accept and Proposals #2/#3 had 0 accept.",
+    "private_voting": "In round 1, Agent_1 and Agent_2 accepted allocations that gave themselves high utility, but Agent_3 rejected them because Jewel was absent. In round 2, all raw private votes accepted Agent_1's Proposal #1 and rejected Proposals #2/#3 because Jewel was not assigned to Agent_3.",
+    "reflection": "The reflections converged on the same lesson: the path to consensus was not first-position dominance, but giving every agent its concentrated top value, especially Jewel to Agent_3."
+  },
+  "mechanisms": [
+    {
+      "theme": "First-mover agenda control",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 framed the negotiation around keeping Stone and Pencil and later submitted the round-2 proposal that every raw vote accepted. This is the main evidence for a procedural first-position benefit, even though it did not create a higher payoff.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 32,
+          "quote": "end with Stone and Pencil in my possession"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 390,
+          "quote": "I propose: {'Agent_1': [2, 4], 'Agent_2': [0, 3], 'Agent_3': [1]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 443,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        }
+      ]
+    },
+    {
+      "theme": "Last-position blocking power through Jewel",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3 spoke last but had a concentrated 100-value item. Proposals that ignored Jewel failed, so the last-position agent imposed a hard constraint on any consensus allocation.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 66,
+          "quote": "Jewel is my top priority (value 100)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 607,
+          "quote": "Jewel (my top priority) remains unawarded"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 721,
+          "quote": "No proposal in Round 1 rewarded Agent_3 with Jewel"
+        }
+      ]
+    },
+    {
+      "theme": "Consensus equalized top-value bundles",
+      "supports_first_advantage": false,
+      "explanation": "The accepted allocation gave each agent its high-value bundle rather than advantaging Agent_1 over Agent_3. Final utilities were equal after the round-2 discount.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 8,
+          "quote": "{'Agent_1': 90.0, 'Agent_2': 90.0, 'Agent_3': 90.0}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 870,
+          "quote": "It yields 100 total utility for each participant"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 903,
+          "quote": "yields me 100 value discounted by 0.9"
+        }
+      ]
+    },
+    {
+      "theme": "Apple as side payment to Agent_2",
+      "supports_first_advantage": false,
+      "explanation": "Apple moved from Agent_1's low-value bundle to Agent_2, raising Agent_2 to full utility without hurting Agent_1's Stone/Pencil payoff. This helped consensus but reduced any chance that Agent_1 alone captured surplus.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 331,
+          "quote": "Jewel goes to Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 332,
+          "quote": "Quill + Apple go to Agent_2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0162.md",
+          "line": 333,
+          "quote": "Stone + Pencil stay with Agent_1"
+        }
+      ]
+    }
+  ]
+}

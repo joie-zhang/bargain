@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1466",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": 7.440174000000002,
+  "outcome_class": "first_gt_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 beat Agent_3 because the final deal gave each of them the bundle they had repeatedly protected, but Agent_1's protected Apple was worth 74 to Agent_1 while Agent_3's protected Quill+Pencil bundle was worth 60 to Agent_3. The round-7 discount preserved that 14-point raw gap as a 7.44 utility lead. The transcript therefore looks like a mild first-position advantage through anchoring and value structure, not because Agent_3 was excluded from the final deal.",
+  "does_first_position_look_advantaged": true,
+  "why_or_counterexample": "Yes, with a caveat. Agent_1 used the first public turn to make Apple the non-negotiable anchor, and that claim was never seriously challenged; all viable paths kept Apple with Agent_1. However, Agent_3 was not simply dominated by position order: Agent_3 repeatedly vetoed proposals that left it empty and ultimately secured Quill+Pencil, its own top bundle. The first-over-last edge comes from Agent_1 anchoring a higher-valued top bundle, while Agent_3's veto power limited the damage.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by naming Apple as overwhelmingly valuable and framed any Apple transfer as requiring a large compensating package. Public discussion quickly normalized the Apple_1, Jewel+Stone_2, Quill+Pencil_3 baseline, then repeated it across rounds. Agent_3 publicly kept Quill+Pencil non-negotiable late in the transcript, but Apple had already become the stable anchor.",
+    "private_thinking": "Private thinking is available with 21 entries. Across rounds, all agents privately converged on the same one-step baseline: Apple to Agent_1, Jewel+Stone to Agent_2, Quill+Pencil to Agent_3. Agent_1's private plans protect Apple first; Agent_3's private plans protect Quill+Pencil and identify empty-Agent_3 proposals as blockers.",
+    "formal_proposals": "Formal proposals often diverged from the public baseline in rounds 1-6, repeatedly giving Agent_3 nothing or moving Quill/Pencil to Agent_2. That caused repeated failed votes. In round 7, Agent_1 and Agent_3 finally submitted the true baseline, and the system reached unanimous consensus on Agent_3's identical proposal.",
+    "private_voting": "Private voting is available with 63 entries. Agent_1 often voted for higher personal utility, including Apple+Stone when available, but accepted the final baseline once it became the workable close. Agent_3 consistently rejected zero-item or no-Quill+Pencil proposals, then accepted the final baseline because it delivered Quill+Pencil.",
+    "reflection": "Reflection is available with 18 entries. Reflections repeatedly diagnose the same blocker: proposals fail when Agent_3 does not get Quill+Pencil, while Apple with Agent_1 remains the stable anchor. Round 6 reflections explicitly set up the round 7 solution that became final."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker anchored the highest-value protected item",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first public move made Apple the central non-negotiable item. The final allocation kept Apple with Agent_1, and the final utility gap is consistent with Apple being worth more to Agent_1 than Quill+Pencil was worth to Agent_3 after the same discount.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 20,
+          "quote": "Apple is my top target by a wide margin (74 value to me)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 9,
+          "quote": "- final_allocation: {'Agent_1': [0], 'Agent_2': [1, 2], 'Agent_3': [3, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 39.326634000000006"
+        }
+      ]
+    },
+    {
+      "theme": "Private thinking preserved the three-bundle frame",
+      "supports_first_advantage": true,
+      "explanation": "Private reasoning across agents treated Apple with Agent_1 as a settled anchor and built the rest of the bargain around it. That helped Agent_1 keep the high-value Apple while negotiation energy shifted to whether Agent_3 would receive Quill+Pencil.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 1979,
+          "quote": "Apple remains with Agent_1, Jewel+Stone go to Agent_2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3904,
+          "quote": "Proposals that leave Agent_3 with nothing or that move Quill or Pencil away from Agent_3 consistently stall progress"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3930,
+          "quote": "Apple anchored with Agent_1, Agent_2 secures Jewel+Stone, Agent_3 secures Quill+Pencil"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3's veto power countered complete last-position exclusion",
+      "supports_first_advantage": false,
+      "explanation": "The last-position agent was not passively disadvantaged. Agent_3 repeatedly rejected proposals that gave it zero value, and those vetoes forced the eventual inclusion of Quill+Pencil. This is the main counterexample to a simple first-position domination story.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 2141,
+          "quote": "Proposal 1 gives me zero utility (I receive nothing)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3744,
+          "quote": "Quill+Pencil must be allocated to Agent_3"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3868,
+          "quote": "Without Quill+Pencil for Agent_3, Agent_3 rejects even fast close proposals"
+        }
+      ]
+    },
+    {
+      "theme": "Midgame proposals delayed consensus by testing Agent_3-empty allocations",
+      "supports_first_advantage": true,
+      "explanation": "For several rounds, proposals protected Agent_1's Apple and often added value to Agent_1 or Agent_2 while leaving Agent_3 empty. Those proposals failed, but they show that Agent_1's anchor was stable while Agent_3 had to spend repeated voting rounds defending inclusion of its top bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 1615,
+          "quote": "- allocation: {'Agent_1': [0, 2], 'Agent_2': [1, 3, 4], 'Agent_3': []}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3678,
+          "quote": "gives me Apple (74) + Stone (8) = 82 total"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3775,
+          "quote": "All three proposals ended with Agent_3 receiving nothing"
+        }
+      ]
+    },
+    {
+      "theme": "Final consensus was a top-bundle settlement rather than extra capture",
+      "supports_first_advantage": false,
+      "explanation": "The accepted round-7 allocation did not give Agent_1 extra Stone or other side items; it gave each agent the bundle the transcript had identified as its core demand. Agent_1 still beat Agent_3 because Apple's value to Agent_1 exceeded Quill+Pencil's value to Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 3975,
+          "quote": "- allocation: {\"Agent_1\": [0], \"Agent_2\": [1, 2], \"Agent_3\": [3, 4]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 4000,
+          "quote": "This matches each agent's top bundle, keeps Apple anchored"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1466.md",
+          "line": 4066,
+          "quote": "Proposal 1 gives Agent_3 Quill+Pencil, my top bundle"
+        }
+      ]
+    }
+  ]
+}

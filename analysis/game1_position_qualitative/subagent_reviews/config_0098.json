@@ -1,0 +1,157 @@
+{
+  "run_id": "config_0098",
+  "n_agents": 5,
+  "competition_level": 0.0,
+  "first_minus_last": -35.721000000000004,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 shaped the consensus map but Agent_5's protected Jewel was far more valuable, so the last position won on allocation value.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "The final Map Alpha allocation gave Agent_1 only Stone while locking Agent_5 onto Jewel, whose raw value to Agent_5 was 85 versus Stone's 36 for Agent_1.",
+  "phase_notes": {
+    "public_discussion": "Public discussion converged on Seed Move A and Map Alpha: Stone to Agent_1, Apple to Agent_3, Pencil to Agent_4, Quill to Agent_2, and Jewel to Agent_5. Agent_1 helped frame the path, but it preserved Agent_5's top item.",
+    "private_thinking": "Available. Private thinking repeatedly treated Jewel and Quill protection as constraints and Map Alpha as the consensus route; Agent_1 targeted Stone/Pencil while Agent_5 treated Jewel as non-negotiable.",
+    "formal_proposals": "Available. By Round 4, four formal proposals used the same Map Alpha allocation, while Agent_3's malformed proposal defaulted to all items for Agent_3 and was rejected by most voters.",
+    "private_voting": "Available. Voting was mostly self-interested: Agent_1 initially rejected Stone-only outcomes but later accepted the Map Alpha allocation as best available, while Agent_5 accepted Jewel allocations and rejected no-Jewel outcomes.",
+    "reflection": "Available. Reflections consistently named Jewel protection, Seed Move A, and a precommitted Map Alpha payoff as the practical path to consensus."
+  },
+  "mechanisms": [
+    {
+      "theme": "Valuation asymmetry outweighed position order",
+      "supports_first_advantage": false,
+      "explanation": "The final allocation gave each agent one item, so the payoff gap was driven mainly by item valuations. Agent_1's final Stone was valuable, but Agent_5's Jewel was worth much more and produced the larger discounted utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 26.244000000000003"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 12,
+          "quote": "- Agent_1: [1.0, 16.0, 36.0, 15.0, 32.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 16,
+          "quote": "- Agent_5: [6.0, 85.0, 0.0, 9.0, 0.0]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4742,
+          "quote": "Jewel is allocated to me (Agent_5)"
+        }
+      ]
+    },
+    {
+      "theme": "Jewel protection became a consensus constraint",
+      "supports_first_advantage": false,
+      "explanation": "Agent_5's last-position ask was simple and stable: keep Jewel. The group repeatedly treated Jewel protection as a consensus anchor, making it easier for Agent_5 to accept most viable maps and harder for Agent_1 to pry additional high-value items into his own bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 162,
+          "quote": "Jewel is my top target"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 194,
+          "quote": "I want Jewel, then Quill, then Apple."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 3636,
+          "quote": "Jewel dominates:"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4305,
+          "quote": "Jewel remains the single most powerful magnet."
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1 had agenda influence but capped his own payoff",
+      "supports_first_advantage": true,
+      "explanation": "The first speaker did influence the settlement path: Agent_1 repeatedly promoted Seed Move A and Map Alpha, and the final allocation matched that template. But that process advantage capped Agent_1 at Stone while assigning other high-value focal items elsewhere, including Jewel to Agent_5.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 24,
+          "quote": "Stone (36) first, Pencil (32) second."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 568,
+          "quote": "use Map Alpha as the default Round-2 target"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 975,
+          "quote": "Apple to Agent_3, Jewel to Agent_5, Stone to Agent_1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4477,
+          "quote": "Stone->Agent_1, Quill->Agent_2, Apple->Agent_3"
+        }
+      ]
+    },
+    {
+      "theme": "Private votes rewarded immediate personal utility",
+      "supports_first_advantage": false,
+      "explanation": "The voting traces do not show deference to the first position. Agent_1 held out for richer bundles in earlier rounds, while Agent_5's votes were easy whenever Jewel was secured. By Round 4, Agent_1 accepted the Stone-only consensus because it was the best viable coalition path.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 2377,
+          "quote": "Proposal 2 gives me only Stone (36.0)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 2742,
+          "quote": "Delivers Jewel to me (Agent_5) in Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4522,
+          "quote": "Proposal 1 yields my best available Round-4 allocation"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4786,
+          "quote": "preserves my strong payoff under Round-4 discounting."
+        }
+      ]
+    },
+    {
+      "theme": "Final consensus selected safe Map Alpha over risky alternatives",
+      "supports_first_advantage": false,
+      "explanation": "The last round had one malformed all-to-Agent_3 proposal and four versions of the same safe Map Alpha allocation. Voters rejected the malformed alternative and accepted the allocation that protected each focal claim, including Jewel for Agent_5 and only Stone for Agent_1.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 2194,
+          "quote": "CONSENSUS REACHED!"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4490,
+          "quote": "{\"Agent_1\": [], \"Agent_2\": [], \"Agent_3\": [0, 1, 2, 3, 4]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4511,
+          "quote": "{\"Agent_1\": [2], \"Agent_2\": [3], \"Agent_3\": [0], \"Agent_4\": [4], \"Agent_5\": [1]}"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0098.md",
+          "line": 4764,
+          "quote": "Gives me no items at all; my utility would be 0"
+        }
+      ]
+    }
+  ]
+}

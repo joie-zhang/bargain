@@ -1,0 +1,90 @@
+{
+  "run_id": "config_0178",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": -15.0,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": false,
+  "core_takeaway": "This is a counterexample to first-position advantage: Agent_1 shaped the accepted allocation and got Pencil+Stone for 85 utility, but Agent_3's single high-value Quill claim became a protected consensus anchor, so the last-position agent finished at 100 and beat the first by 15.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "First position helped Agent_1 frame Option B and consolidate Pencil+Stone, but it did not translate into the highest final utility. Agent_2 valued only Jewel and Agent_3 valued only Quill, so both could accept Agent_1's bundle while still preserving their own 100-point anchors. The private votes rejected alternatives that removed Quill from Agent_3, protecting the last-position agent rather than exploiting them.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened and then revised to Option B: Agent_1 gets Pencil+Stone, Agent_2 gets Jewel, and Agent_3 gets Apple+Quill. Agent_2 and Agent_3 accepted because their own top items stayed fixed, not because they yielded on valuable items.",
+    "private_thinking": "All three private-thinking entries converged on the same anchor logic: Jewel should stay with Agent_2 and Quill should stay with Agent_3, while Agent_1 could take Pencil+Stone. This gave Agent_1 a good outcome but still left Agent_3 with a perfect 100-point item.",
+    "formal_proposals": "Agent_1 submitted the allocation matching the final outcome. Agent_2 and Agent_3 submitted formal proposals that moved Quill away from Agent_3, making them inconsistent with the public and private anchor logic.",
+    "private_voting": "Every raw private vote accepted Proposal 1 and rejected Proposals 2 and 3. The system acceptance sentence appears mislabeled as Proposal #3, but the vote counts, final allocation, and raw votes point to Proposal 1.",
+    "reflection": "No reflection section is present."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker set the winning frame",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the public discussion to pivot from the initial allocation into Option B, then formally proposed the allocation that the raw votes accepted. This shows agenda-setting power, even though it did not produce the highest utility.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 106,
+          "quote": "This maximizes my own value: Pencil (47) + Stone (38) = 85"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 174,
+          "quote": "I propose: {'Agent_1': [4, 2], 'Agent_2': [1], 'Agent_3': [0, 3]}"
+        }
+      ]
+    },
+    {
+      "theme": "Last speaker had a protected top-item anchor",
+      "supports_first_advantage": false,
+      "explanation": "Agent_3's Quill demand was explicit, non-conflicting with Agent_2's Jewel demand, and repeatedly preserved in the accepted plan. That let the last-position agent secure full utility despite not controlling the first proposal.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 147,
+          "quote": "Quill is my top item, and under Option B I keep Quill with me (Apple + Quill to Agent_3)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 157,
+          "quote": "Quill: 100 for me, stays with me under Option B."
+        }
+      ]
+    },
+    {
+      "theme": "Orthogonal preferences made Agent_1's gain cheap",
+      "supports_first_advantage": false,
+      "explanation": "Agent_2 did not value the non-Jewel items, and Agent_3 did not value Stone, so Agent_1 could gain Pencil+Stone without taking value from either non-first agent's central objective. The resulting surplus was not evidence that the first position dominated the last position.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 124,
+          "quote": "Everything else (Apple, Stone, Pencil): 0 value to me"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 372,
+          "quote": "Agent_1 gets Pencil+Stone, Agent_2 keeps Jewel, Agent_3 retains Apple+Quill."
+        }
+      ]
+    },
+    {
+      "theme": "Voting enforced utility anchors over proposal authorship",
+      "supports_first_advantage": false,
+      "explanation": "The decisive votes were based on whether proposals preserved each agent's high-value item. Agent_3 accepted Proposal 1 because it gave Quill and rejected alternatives because they produced zero utility, which explains why the last-position agent outperformed the first.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 405,
+          "quote": "Proposal 1 assigns Quill (my top item, value 100) to me in Round 1, yielding 100 utility."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_0178.md",
+          "line": 416,
+          "quote": "My utility would be 0 vs 100 in Proposal 1."
+        }
+      ]
+    }
+  ]
+}

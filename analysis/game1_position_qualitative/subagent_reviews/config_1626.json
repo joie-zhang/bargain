@@ -1,0 +1,132 @@
+{
+  "run_id": "config_1626",
+  "n_agents": 3,
+  "competition_level": 0.5,
+  "first_minus_last": -20.7,
+  "outcome_class": "first_lt_last_counterexample",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 did get its first-position anchor, Quill, but the anchor was too narrow to beat the last-position agent. The final accepted allocation left Agent_1 with only Quill while Agent_3 received Jewel and Pencil, Agent_3's two highest-value items, producing 44.1 for Agent_1 versus 64.8 for Agent_3.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "This run is a counterexample to a simple first-position advantage story. Agent_1 used the first public turn to claim Quill and later preserved that demand, but it also framed the negotiation around cooperative top-item guarantees and lightweight balancing. That made Quill secure but left the main secondary surplus, especially Pencil, available to Agent_3. Agent_1 then voted against proposals that increased or preserved its own utility when they harmed Agent_3's position. The last-position agent benefited from the consensus norm because its top item Jewel was protected and the Round 2 lever Pencil was added to it.",
+  "phase_notes": {
+    "public_discussion": "Agent_1 opened by anchoring on Quill and Stone. Public discussion then converged on a norm that each agent should keep a top item: Quill for Agent_1, Stone for Agent_2, and Jewel for Agent_3. In Round 2, the public default added Apple to Agent_2 and Pencil to Agent_3, so the first-position anchor survived but did not control the surplus distribution.",
+    "private_thinking": "Available: six private-thinking entries. The entries repeatedly identify the stable core as Quill with Agent_1, Stone with Agent_2, and Jewel with Agent_3, while treating Pencil and Apple as bargaining levers. Agent_1's internal plan protected Quill but did not pursue a strong second item aggressively.",
+    "formal_proposals": "Round 1 failed because Agent_1's balanced proposal got only two accepts and the alternatives concentrated too much value in Agent_2. In Round 2, the formal proposals from Agent_1 and Agent_2 matched the final allocation: Agent_1 got Quill, Agent_2 got Stone and Apple, and Agent_3 got Jewel and Pencil. The system line saying Proposal #3 was accepted unanimously is inconsistent with the tabulation and final allocation, which match Proposals #1/#2.",
+    "private_voting": "Available: eighteen private-vote entries. Agent_1 accepted the final-style allocation despite only receiving Quill, and rejected alternatives that would harm Agent_3 even when they preserved or increased Agent_1's utility. Agent_2 voted for high personal payoff and later accepted Stone plus Apple. Agent_3 accepted only the options giving it Jewel and Pencil in Round 2.",
+    "reflection": "Available: three reflection entries after Round 1. The reflections diagnose the blocker as Jewel and the Pencil/Apple distribution rather than speaker position. They recommend keeping the top-item trio fixed and using Pencil/Apple for balancing, which ultimately gave Agent_3 the strongest final bundle."
+  },
+  "mechanisms": [
+    {
+      "theme": "First speaker secured a narrow top-item anchor",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1's first-position move did matter in a limited way: Quill stayed with Agent_1 throughout the public negotiation and in the final allocation. But this was only one item, so it was not enough to beat Agent_3's two-item high-value bundle.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 101,
+          "quote": "keep Quill in my hands (Agent_1)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 116,
+          "quote": "I want Quill kept with me (Agent_1)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 438,
+          "quote": "Agent_1: 3:Quill"
+        }
+      ]
+    },
+    {
+      "theme": "Final surplus flowed to the last-position agent",
+      "supports_first_advantage": false,
+      "explanation": "The final consensus gave Agent_3 Jewel and Pencil. Those are Agent_3's top two values, worth 72 before discount and 64.8 after discount, while Agent_1's final bundle was only Quill. This directly explains the negative first-minus-last outcome.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 8,
+          "quote": "'Agent_1': 44.1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 825,
+          "quote": "\"Agent_3\": [1, 4]"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 916,
+          "quote": "Jewel value 43 and Pencil value 29, totaling 72 pre-discount, or 64.8"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1 prioritized fairness over extracting marginal value",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1 repeatedly rejected proposals that left Agent_3 empty or moved Jewel away from Agent_3, even when Agent_1's own utility was stable or slightly higher. This cooperative voting behavior protected table legitimacy but reduced Agent_1's chance to outscore the last agent.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 569,
+          "quote": "leaves Agent_3 with nothing in Round 1, which harms overall balance and trust"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 580,
+          "quote": "reducing fairness and future negotiation potential despite my stable own payoff"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 872,
+          "quote": "even though it marginally increases my own utility"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_2's swing incentives blocked Agent_1's Round 1 win",
+      "supports_first_advantage": false,
+      "explanation": "Agent_1's Round 1 proposal would have given Agent_3 a very strong bundle and Agent_2 only Stone, so Agent_2 rejected it in favor of alternatives worth 76 to itself. The eventual consensus paid Agent_2 with Apple while preserving Agent_3's Jewel-plus-Pencil bundle, leaving Agent_1 behind both of them.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 591,
+          "quote": "lower immediate utility (42) compared to the other proposals (76)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 602,
+          "quote": "highest immediate utility for Round 1"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 883,
+          "quote": "Proposal 1 gives me Stone and Apple (66 total) in Round 2"
+        }
+      ]
+    },
+    {
+      "theme": "Private thinking and reflection framed secondary items as the real blocker",
+      "supports_first_advantage": false,
+      "explanation": "The private and reflective material does not point to speaker order as decisive. It repeatedly identifies Pencil, Apple, and Jewel ownership as the blocking mechanism. Once the table solved that by giving Pencil to Agent_3 and Apple to Agent_2, the first-position agent's early Quill claim became compatible with losing overall.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 470,
+          "quote": "Pencil and Apple are consistently treated as lower-value assets to be used as leverage in Round 2"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 655,
+          "quote": "The sticking point is Pencil and Apple"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1626.md",
+          "line": 733,
+          "quote": "The distribution of Pencil and Apple in Round 1 proposals created divergent incentives"
+        }
+      ]
+    }
+  ]
+}

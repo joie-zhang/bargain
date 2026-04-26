@@ -1,0 +1,142 @@
+{
+  "run_id": "config_1926",
+  "n_agents": 3,
+  "competition_level": 0.0,
+  "first_minus_last": 0.0,
+  "outcome_class": "first_eq_last",
+  "reviewer_mode": "child_worker",
+  "private_thinking_available": true,
+  "reflection_available": true,
+  "core_takeaway": "Agent_1 did not beat Agent_3. Agent_1 anchored Apple early and ultimately got Apple+Jewel, but the process also protected Agent_3's Quill throughout; the accepted allocation gives each agent a raw 100-value bundle and equal discounted utilities.",
+  "does_first_position_look_advantaged": false,
+  "why_or_counterexample": "There is some agenda-setting by Agent_1 around Apple, and the final accepted allocation matches Agent_1's Round-7 proposal. But Agent_3, despite speaking last, repeatedly made Quill non-negotiable and vetoed proposals moving it away. Consensus only arrived when Agent_3 kept Quill, so the tie looks preference- and veto-driven rather than a first-position advantage.",
+  "phase_notes": {
+    "public_discussion": "The public discussion quickly identified disjoint core priorities: Apple for Agent_1, Stone+Pencil for Agent_2, and Quill for Agent_3. By rounds 2-3, agents described a Jewel-to-Agent_1 move that would leave all three at 100 raw utility while preserving Quill.",
+    "private_thinking": "Private thinking is available for all seven rounds. It converges on Plan A: Agent_1 gets Apple+Jewel, Agent_2 keeps Stone+Pencil, Agent_3 keeps Quill, with public audit windows and no private deals.",
+    "formal_proposals": "Early formal proposals often failed because they removed Quill from Agent_3 or gave Agent_3 no items. The Round-7 proposal enumeration shows Proposal #1 as the final-allocation structure; the vote count says Proposal #1 got 3 accepts, though the consensus line mistakenly labels Proposal #3 as unanimously accepted.",
+    "private_voting": "Private votes show the decisive constraint: Agent_3 rejected proposals moving Quill away, Agent_1 also rejected late proposals that violated the Quill guardrail, and all three accepted Round-7 Proposal #1.",
+    "reflection": "Reflections repeatedly diagnose Quill protection, auditable public process, and one-change-at-a-time moves as the path to agreement. They do not frame the outcome as Agent_1 winning due to first-speaker order."
+  },
+  "mechanisms": [
+    {
+      "theme": "Complementary preferences made an equal-value solution natural",
+      "supports_first_advantage": false,
+      "explanation": "The agents had mostly non-overlapping top interests, so the stable endpoint was not Agent_1 extracting value from Agent_3. The public record explicitly computes a 100/100/100 allocation once Jewel moves to Agent_1 and Quill stays with Agent_3.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 45,
+          "quote": "Apple with you; Stone + Pencil to me; Jewel + Quill to Agent_3."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 452,
+          "quote": "Agent_1: 100; Agent_2: 100; Agent_3: 100; total 300"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 8,
+          "quote": "final_utilities: {'Agent_1': 53.14410000000001, 'Agent_2': 53.14410000000001, 'Agent_3': 53.14410000000001}"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_1 did anchor Apple, but that alone did not decide the outcome",
+      "supports_first_advantage": true,
+      "explanation": "Agent_1 used the first speaking slot to define Apple as non-negotiable, and the final winning allocation gives Agent_1 Apple+Jewel. This is the main evidence for a possible first-position process advantage, but it is bounded by the fact that other agents' top assets were also preserved.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 22,
+          "quote": "Apple is by far my top item (value 94)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 25,
+          "quote": "Keep Apple with me this round."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2601,
+          "quote": "Allocate Apple and Jewel to Agent_1"
+        }
+      ]
+    },
+    {
+      "theme": "Agent_3's Quill veto neutralized first-speaker leverage",
+      "supports_first_advantage": false,
+      "explanation": "The last-position agent consistently enforced Quill as a hard constraint. Proposals that moved Quill away from Agent_3 failed, and Agent_3 accepted the final plan specifically because it kept Quill.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2559,
+          "quote": "Quill is my non-negotiable asset (100)."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 4884,
+          "quote": "Proposal 1 keeps Quill with Agent_3 (my top asset)"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 4895,
+          "quote": "Proposal 2 moves Quill to Agent_2, which forfeits my top asset"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 4667,
+          "quote": "Quill is the make-or-break asset for Agent_3."
+        }
+      ]
+    },
+    {
+      "theme": "Consensus followed content fit, not proposal order",
+      "supports_first_advantage": false,
+      "explanation": "Round 7 succeeded because Proposal #1 was the only listed proposal preserving all core bundles: Apple+Jewel for Agent_1, Stone+Pencil for Agent_2, and Quill for Agent_3. The vote count gave it unanimous acceptance, while the final allocation confirms that structure.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2629,
+          "quote": "Agent_1: 0:Apple, 1:Jewel"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2631,
+          "quote": "Agent_3: 3:Quill"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2649,
+          "quote": "Proposal #1: 3 accept, 0 reject"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 9,
+          "quote": "final_allocation: {'Agent_1': [0, 1], 'Agent_2': [2, 4], 'Agent_3': [3]}"
+        }
+      ]
+    },
+    {
+      "theme": "Public audit norms mattered more than positional order",
+      "supports_first_advantage": false,
+      "explanation": "Across public discussion, private thinking, and reflection, the agents repeatedly emphasized public, auditable moves and no private side deals. This process constraint helped turn the negotiation toward a shared metric rather than a first-speaker win.",
+      "evidence": [
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 2336,
+          "quote": "No private side deals. All changes public and verifiable."
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 4742,
+          "quote": "Enforce a no-private-deal policy"
+        },
+        {
+          "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/game1_position_qualitative/transcripts/config_1926.md",
+          "line": 4670,
+          "quote": "Public, auditable moves with clear evaluation windows beat private deals."
+        }
+      ]
+    }
+  ]
+}
