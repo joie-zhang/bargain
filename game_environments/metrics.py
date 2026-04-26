@@ -87,7 +87,7 @@ def optimal_social_welfare(game_state: Dict) -> float:
     Compute optimal social welfare SW*.
 
     For each issue k, find the agreement value a_k that maximizes
-    Σ_i w_ik * (1 - |p_ik - a_k|).
+    100 * Σ_i w_ik * (1 - |p_ik - a_k|), matching compute_utility().
 
     For N=2: set a_k = position of agent with higher w_ik.
     For N>2: use weighted median of positions per issue.
@@ -96,7 +96,8 @@ def optimal_social_welfare(game_state: Dict) -> float:
         game_state: Game state dict
 
     Returns:
-        Maximum achievable social welfare
+        Maximum achievable social welfare on the same 0-100-per-agent scale
+        as compute_utility().
     """
     agent_ids = list(game_state["agent_positions"].keys())
     n_agents = len(agent_ids)
@@ -133,7 +134,7 @@ def optimal_social_welfare(game_state: Dict) -> float:
         for i in range(n_agents):
             total_sw += weights[i, k] * (1 - abs(positions[i, k] - a_k))
 
-    return total_sw
+    return total_sw * 100.0
 
 
 def utilitarian_efficiency(

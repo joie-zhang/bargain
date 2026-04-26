@@ -61,21 +61,21 @@ class TestComputeUtility:
     """Tests for compute_utility."""
 
     def test_perfect_match(self):
-        """Perfect agreement = utility 1.0."""
+        """Perfect agreement = utility 100.0."""
         state = make_game_state()
         agent_id = "Agent_1"
         agreement = state["agent_positions"][agent_id]
         u = compute_utility(agent_id, agreement, state)
-        assert abs(u - 1.0) < 1e-6
+        assert abs(u - 100.0) < 1e-6
 
     def test_utility_in_valid_range(self):
-        """Utility should be in [0, 1]."""
+        """Utility should be in [0, 100]."""
         state = make_game_state()
         for _ in range(20):
             agreement = np.random.uniform(0, 1, state["n_issues"]).tolist()
             for agent_id in state["agent_positions"]:
                 u = compute_utility(agent_id, agreement, state)
-                assert 0 <= u <= 1.0 + 1e-6
+                assert 0 <= u <= 100.0 + 1e-6
 
 
 class TestSocialWelfare:
@@ -112,6 +112,7 @@ class TestOptimalSocialWelfare:
             for i in range(2):
                 manual_sw += weights[i, k] * (1 - abs(positions[i, k] - a_k))
 
+        manual_sw *= 100.0
         assert abs(sw_star - manual_sw) < 1e-6
 
     def test_sw_star_at_least_as_good_as_any_agreement(self):
@@ -292,9 +293,14 @@ class TestKalaiSmorodinskyFairness:
         ks = kalai_smorodinsky_fairness(utils)
         assert abs(ks - 0.5) < 1e-6  # min(0.8/0.4, 0.4/0.8) = 0.5
 
-    def test_requires_two_agents(self):
-        with pytest.raises(ValueError, match="exactly 2 agents"):
-            kalai_smorodinsky_fairness({"A": 0.5, "B": 0.5, "C": 0.5})
+    def test_generalizes_to_three_agents(self):
+        utils = {"A": 0.8, "B": 0.4, "C": 0.6}
+        ks = kalai_smorodinsky_fairness(utils)
+        assert abs(ks - 0.5) < 1e-6  # min/max = 0.4/0.8
+
+    def test_requires_at_least_two_agents(self):
+        with pytest.raises(ValueError, match="at least 2 agents"):
+            kalai_smorodinsky_fairness({"A": 0.5})
 
 
 class TestEfficiencyFairnessDecomposition:
