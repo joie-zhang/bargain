@@ -33,6 +33,8 @@ from game_environments.cofunding_metrics import (
     exploitation_index_cofunding,
     coalition_value,
     is_in_core,
+    max_core_violation,
+    core_l1_distance,
     adaptation_rate,
 )
 
@@ -314,6 +316,49 @@ class TestCore:
         # Actually: can fund project 0 (cost=10) + project 1 (cost=20) = 30 > 25
         # So can only fund one: max surplus is project 0 (40)
         assert v >= 0
+
+
+class TestCoreDistance:
+    """Tests for max_core_violation and core_l1_distance."""
+
+    def test_core_violation_zero_for_core_outcome(self):
+        valuations = {"A": [60.0, 0.0], "B": [0.0, 60.0]}
+        costs = [10.0, 10.0]
+        budgets = {"A": 10.0, "B": 10.0}
+        contributions = {"A": [10.0, 0.0], "B": [0.0, 10.0]}
+        funded_set = [0, 1]
+
+        violation = max_core_violation(valuations, costs, budgets, contributions, funded_set)
+        dist = core_l1_distance(valuations, costs, budgets, contributions, funded_set)
+
+        assert violation <= 1e-6
+        assert dist <= 1e-6
+
+    def test_core_distance_positive_when_outside_core(self):
+        valuations = {"A": [60.0, 0.0], "B": [0.0, 60.0]}
+        costs = [10.0, 10.0]
+        budgets = {"A": 10.0, "B": 10.0}
+        contributions = {"A": [10.0, 10.0], "B": [0.0, 0.0]}
+        funded_set = [0, 1]
+
+        assert not is_in_core(valuations, costs, budgets, contributions, funded_set)
+
+        violation = max_core_violation(valuations, costs, budgets, contributions, funded_set)
+        dist = core_l1_distance(valuations, costs, budgets, contributions, funded_set)
+
+        assert violation > 0.0
+        assert dist > 0.0
+        assert np.isfinite(dist)
+
+    def test_core_distance_infinite_when_no_feasible_core_with_empty_funded_set(self):
+        valuations = {"A": [60.0], "B": [60.0]}
+        costs = [10.0]
+        budgets = {"A": 10.0, "B": 10.0}
+        contributions = {"A": [0.0], "B": [0.0]}
+        funded_set = []
+
+        dist = core_l1_distance(valuations, costs, budgets, contributions, funded_set)
+        assert np.isinf(dist)
 
 
 class TestAdaptationRate:

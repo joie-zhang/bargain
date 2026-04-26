@@ -11,6 +11,8 @@ Produces a focused set of publication-quality figures organized by narrative:
   3. Cost-sharing fairness: free-riding and Lindahl deviation.
   4. Strategic dynamics: adaptation and signaling (conditional).
   5. Model scaling: metrics vs Elo (conditional on >=5 focal models).
+  6. Cooperative stability: core membership and deviation severity.
+  7. Efficiency-fairness decomposition: where failures come from.
 
 Usage:
     python visualization/visualize_cofunding.py
@@ -24,6 +26,8 @@ What it creates:
     ├── fig4_strategic_dynamics.png       # Adaptation rate (if data exists)
     ├── fig5_model_scaling.png            # vs Elo (if ≥5 focal models)
     ├── fig6_competition_index.png        # Key metrics vs CI₃ = (1−α)·(1−σ)
+    ├── fig7_core_stability.png           # Core membership and distance
+    ├── fig8_efficiency_fairness_decomposition.png  # Decomposition plane
     └── summary_table.csv                 # Curated metrics table
 
 Dependencies:
@@ -54,13 +58,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from game_environments.cofunding_metrics import (
     adaptation_rate,
+    core_l1_distance,
     coordination_failure_weighted,
     coordination_funding_gap_ratio,
     coordination_failure_rate,
     exploitation_index_cofunding,
     free_rider_index,
+    is_in_core,
     lindahl_distance,
     lindahl_equilibrium,
+    max_core_violation,
     optimal_funded_set,
     provision_rate,
     social_welfare_cofunding,
@@ -194,12 +201,20 @@ def _extract_final_pledges(result: Dict) -> Optional[Dict[str, List[float]]]:
 
     pledges_by_round = defaultdict(dict)
     for log in logs:
-        if log.get("phase") == "pledge_submission" and "pledge" in log:
-            pledge = log["pledge"]
-            if pledge and "contributions" in pledge:
-                agent = log.get("from", pledge.get("proposed_by", ""))
-                round_num = log.get("round", 0)
-                pledges_by_round[round_num][agent] = pledge["contributions"]
+        phase = log.get("phase")
+        payload = None
+        if phase == "pledge_submission" and "pledge" in log:
+            payload = log.get("pledge", {})
+        elif phase == "proposal" and "proposal" in log:
+            payload = log.get("proposal", {})
+        if not isinstance(payload, dict):
+            continue
+        contributions = payload.get("contributions")
+        if isinstance(contributions, list):
+            agent = log.get("from", payload.get("proposed_by", ""))
+            round_num = log.get("round", 0)
+            if agent:
+                pledges_by_round[round_num][agent] = contributions
 
     if not pledges_by_round:
         return None
@@ -217,16 +232,22 @@ def _extract_pledge_history(result: Dict) -> List[Dict[str, List[float]]]:
 
     pledges_by_round: Dict[int, Dict[str, List[float]]] = defaultdict(dict)
     for log in logs:
-        if log.get("phase") != "pledge_submission":
+        phase = log.get("phase")
+        if phase == "pledge_submission":
+            payload = log.get("pledge", {})
+        elif phase == "proposal":
+            payload = log.get("proposal", {})
+        else:
             continue
-        pledge = log.get("pledge", {})
-        contributions = pledge.get("contributions")
+        if not isinstance(payload, dict):
+            continue
+        contributions = payload.get("contributions")
         if not isinstance(contributions, list):
             continue
         round_num = int(log.get("round", 0))
         if round_num <= 0:
             continue
-        agent = log.get("from", pledge.get("proposed_by", ""))
+        agent = log.get("from", payload.get("proposed_by", ""))
         if not agent:
             continue
         pledges_by_round[round_num][agent] = [float(x) for x in contributions]
@@ -376,6 +397,8 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         metrics["utility_sw"] = utility_sw
         metrics["overpayment"] = actual_sw_allocation - utility_sw if funded_set else 0.0
         metrics["utilitarian_efficiency"] = utilitarian_efficiency(actual_sw_allocation, optimal_sw)
+        metrics["efficiency_loss"] = max(0.0, optimal_sw - actual_sw_allocation)
+        metrics["efficiency_loss_ratio"] = max(0.0, 1.0 - metrics["utilitarian_efficiency"])
 
         if optimal_sw > 1e-12:
             metrics["surplus_ratio"] = actual_sw_allocation / optimal_sw
@@ -394,6 +417,21 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
         )
         metrics["coordination_failure"] = metrics["coordination_failure_weighted"]
 
+        if agent_budgets:
+            in_core = is_in_core(preferences, costs, agent_budgets, contributions, funded_set)
+            metrics["in_core"] = bool(in_core)
+            metrics["in_core_float"] = 1.0 if in_core else 0.0
+            metrics["core_violation_gap"] = max_core_violation(
+                preferences, costs, agent_budgets, contributions, funded_set
+            )
+            core_dist = core_l1_distance(
+                preferences, costs, agent_budgets, contributions, funded_set
+            )
+            metrics["core_l1_distance"] = (
+                core_dist if np.isfinite(core_dist) else float("nan")
+            )
+            metrics["core_distance_infinite"] = bool(np.isinf(core_dist))
+
     if preferences and costs and funded_set:
         lindahl_contribs = lindahl_equilibrium(preferences, costs, funded_set)
 
@@ -410,6 +448,7 @@ def compute_metrics_for_experiment(result: Dict) -> Optional[Dict]:
 
         if contributions:
             metrics["lindahl_distance"] = lindahl_distance(contributions, lindahl_contribs)
+            metrics["fairness_deviation"] = metrics["lindahl_distance"]
 
             fri = free_rider_index(preferences, contributions, funded_set)
             for a in agents:
@@ -861,10 +900,12 @@ def save_summary_table(df: pd.DataFrame, figures_dir: Path):
     cols = [
         "focal_model", "focal_short", "focal_elo", "focal_tier",
         "alpha", "sigma", "competition_index", "model_order",
-        "utilitarian_efficiency", "provision_rate",
+        "utilitarian_efficiency", "efficiency_loss", "efficiency_loss_ratio",
+        "provision_rate",
         "coordination_failure_weighted",
         "focal_advantage", "focal_exploitation",
-        "focal_free_rider", "lindahl_distance",
+        "focal_free_rider", "lindahl_distance", "fairness_deviation",
+        "in_core_float", "core_violation_gap", "core_l1_distance",
         "focal_adaptation", "reference_adaptation",
         "promise_keep_rate", "persuasion_other_agent_delta",
         "coalition_persistent_fraction",
@@ -890,12 +931,17 @@ def print_summary_statistics(df: pd.DataFrame):
 
     summary_metrics = [
         ("utilitarian_efficiency", "Efficiency (η)"),
+        ("efficiency_loss", "Efficiency loss"),
+        ("efficiency_loss_ratio", "Efficiency loss ratio"),
         ("provision_rate", "Provision rate"),
         ("coordination_failure_weighted", "Coordination failure"),
         ("focal_advantage", "Focal advantage"),
         ("focal_exploitation", "Focal exploitation"),
         ("focal_free_rider", "Focal free-rider"),
         ("lindahl_distance", "Lindahl distance"),
+        ("in_core_float", "In-core rate"),
+        ("core_violation_gap", "Core violation gap"),
+        ("core_l1_distance", "Core L1 distance"),
         ("promise_keep_rate", "Promise-keeping"),
         ("persuasion_other_agent_delta", "Persuasion delta"),
     ]
@@ -1035,6 +1081,199 @@ def fig6_competition_index(df: pd.DataFrame, figures_dir: Path):
 
 
 # =============================================================================
+# Figure 7: Core Stability
+# =============================================================================
+
+
+def fig7_core_stability(df: pd.DataFrame, figures_dir: Path):
+    """Core-focused diagnostics across game conditions.
+
+    Panel 1: In-core rate
+    Panel 2: Core violation gap (how badly coalition constraints are broken)
+    Panel 3: L1 distance to nearest in-core cost-sharing (fixed funded set)
+    """
+    panels = [
+        ("in_core_float", "In-Core Rate", (-0.05, 1.05)),
+        ("core_violation_gap", "Core Violation Gap", None),
+        ("core_l1_distance", "Core L1 Distance", None),
+    ]
+    available = [(m, l, yl) for m, l, yl in panels if m in df.columns and df[m].notna().any()]
+    if not available:
+        print("  Skipping fig7: no core metrics")
+        return
+
+    ncols = len(available)
+    fig, axes = plt.subplots(1, ncols, figsize=(5.8 * ncols, 5))
+    if ncols == 1:
+        axes = [axes]
+
+    for i, (metric, label, ylim) in enumerate(available):
+        _metric_vs_sigma(axes[i], df, metric, label, ylim=ylim, show_legend=(i == 0))
+        axes[i].set_title(label, fontsize=12)
+        if metric != "in_core_float":
+            axes[i].axhline(0, color="black", linewidth=0.8, linestyle="-", alpha=0.3)
+
+    fig.suptitle(
+        "Cooperative Stability (Core Diagnostics)",
+        fontsize=14, fontweight="bold", y=1.03,
+    )
+    fig.tight_layout()
+    _savefig(fig, figures_dir / "fig7_core_stability.png")
+
+
+# =============================================================================
+# Figure 8: Efficiency-Fairness Decomposition
+# =============================================================================
+
+
+def fig8_efficiency_fairness_decomposition(df: pd.DataFrame, figures_dir: Path):
+    """Visualize the decomposition plane: efficiency loss vs fairness deviation."""
+    required = ["efficiency_loss_ratio", "lindahl_distance"]
+    if any(c not in df.columns for c in required):
+        print("  Skipping fig8: missing decomposition columns")
+        return
+
+    data = df.dropna(subset=required).copy()
+    if data.empty:
+        print("  Skipping fig8: no decomposition data")
+        return
+
+    data["efficiency_loss_ratio"] = data["efficiency_loss_ratio"].clip(0, 1)
+    pearson = data["efficiency_loss_ratio"].corr(data["lindahl_distance"])
+    spearman = data["efficiency_loss_ratio"].corr(data["lindahl_distance"], method="spearman")
+    print(
+        f"  Decomposition correlation: "
+        f"pearson={pearson:+.3f}, spearman={spearman:+.3f} (n={len(data)})"
+    )
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
+
+    # Panel 1: raw decomposition scatter
+    ax = axes[0]
+    sigma_vals = sorted([v for v in data["sigma"].dropna().unique()])
+    marker_pool = ["o", "s", "^", "D", "v", "P", "X"]
+    sigma_marker = {s: marker_pool[i % len(marker_pool)] for i, s in enumerate(sigma_vals)}
+
+    grouped = data.groupby(["alpha", "sigma"], dropna=True)
+    for (alpha_val, sigma_val), sub in grouped:
+        color = ALPHA_COLORS.get(alpha_val, "#888888")
+        marker = sigma_marker.get(sigma_val, "o")
+        label = rf"$\alpha={alpha_val:.1f},\ \sigma={sigma_val:.1f}$"
+        ax.scatter(
+            sub["efficiency_loss_ratio"],
+            sub["lindahl_distance"],
+            s=45,
+            alpha=0.55,
+            c=color,
+            marker=marker,
+            edgecolors="white",
+            linewidth=0.4,
+            label=label,
+        )
+
+    if data["efficiency_loss_ratio"].nunique() > 1:
+        x = data["efficiency_loss_ratio"].to_numpy()
+        y = data["lindahl_distance"].to_numpy()
+        slope, intercept = np.polyfit(x, y, 1)
+        xs = np.linspace(0, 1, 100)
+        ys = slope * xs + intercept
+        ax.plot(xs, ys, color="black", linewidth=2, alpha=0.8, linestyle="--", label="Linear trend")
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_xlabel("Efficiency Loss Ratio (1 - η)")
+    ax.set_ylabel("Fairness Deviation (Lindahl Distance)")
+    ax.set_title("Run-Level Decomposition Plane", fontsize=12)
+    ax.text(
+        0.02,
+        0.98,
+        f"Pearson r={pearson:+.2f}\nSpearman ρ={spearman:+.2f}",
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=10,
+        bbox={"facecolor": "white", "alpha": 0.75, "edgecolor": "#cccccc"},
+    )
+
+    # Compact legend with one entry per alpha and one per sigma marker.
+    alpha_handles = [
+        Patch(facecolor=ALPHA_COLORS.get(a, "#888888"), label=rf"$\alpha={a:.1f}$", alpha=0.8)
+        for a in sorted(data["alpha"].dropna().unique())
+    ]
+    sigma_handles = [
+        Line2D([0], [0], marker=sigma_marker[s], color="gray", linestyle="", label=rf"$\sigma={s:.1f}$")
+        for s in sigma_vals
+    ]
+    ax.legend(handles=alpha_handles + sigma_handles, fontsize=8, loc="upper right")
+
+    # Panel 2: binned means by efficiency-loss bins, split by alpha
+    ax = axes[1]
+    bin_edges = np.linspace(0, 1, 6)  # 5 bins
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    data["eff_bin"] = pd.cut(
+        data["efficiency_loss_ratio"],
+        bins=bin_edges,
+        include_lowest=True,
+    )
+    all_bins = data["eff_bin"].cat.categories
+
+    # Overall trend
+    overall = (
+        data.groupby("eff_bin", observed=False)["lindahl_distance"]
+        .agg(["mean", "std", "count"])
+        .reindex(all_bins)
+    )
+    overall["sem"] = overall["std"] / np.sqrt(overall["count"].clip(lower=1))
+    ax.errorbar(
+        bin_centers,
+        overall["mean"],
+        yerr=overall["sem"],
+        marker="o",
+        linewidth=2.2,
+        capsize=4,
+        color="black",
+        label="Overall",
+    )
+
+    # By alpha
+    for alpha_val in sorted(data["alpha"].dropna().unique()):
+        sub = data[data["alpha"] == alpha_val]
+        if sub.empty:
+            continue
+        g = (
+            sub.groupby("eff_bin", observed=False)["lindahl_distance"]
+            .agg(["mean", "std", "count"])
+            .reindex(all_bins)
+        )
+        g["sem"] = g["std"] / np.sqrt(g["count"].clip(lower=1))
+        ax.errorbar(
+            bin_centers,
+            g["mean"],
+            yerr=g["sem"],
+            marker="o",
+            linewidth=1.8,
+            capsize=3,
+            color=ALPHA_COLORS.get(alpha_val, "#888888"),
+            alpha=0.9,
+            label=rf"$\alpha={alpha_val:.1f}$",
+        )
+
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_xlabel("Efficiency Loss Ratio Bin Center")
+    ax.set_ylabel("Mean Fairness Deviation (Lindahl Distance)")
+    ax.set_title("Binned Fairness vs Efficiency Loss", fontsize=12)
+    ax.legend(fontsize=9, loc="best")
+
+    fig.suptitle(
+        "Efficiency-Fairness Decomposition (Game 3)",
+        fontsize=14,
+        fontweight="bold",
+        y=1.03,
+    )
+    fig.tight_layout()
+    _savefig(fig, figures_dir / "fig8_efficiency_fairness_decomposition.png")
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -1103,6 +1342,8 @@ def main():
     fig4_strategic_dynamics(df, figures_dir)
     fig5_model_scaling(df, figures_dir)
     fig6_competition_index(df, figures_dir)
+    fig7_core_stability(df, figures_dir)
+    fig8_efficiency_fairness_decomposition(df, figures_dir)
 
     print(f"\nDone! Figures saved to: {figures_dir}")
 

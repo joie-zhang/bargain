@@ -13,6 +13,7 @@ Computes solution-quality and behavioral metrics specific to the co-funding
   - Free-rider index
   - Exploitation index
   - Core membership check
+  - Core violation gap and LP-based distance to core
   - Adaptation rate
 
 Usage:
@@ -25,12 +26,14 @@ Usage:
 Dependencies:
     - numpy
     - itertools (for brute-force knapsack when M <= 20)
+    - scipy.optimize.linprog (for core L1 distance)
 """
 
 from itertools import combinations
 from typing import Dict, List, Optional, Set, Tuple
 
 import numpy as np
+from scipy.optimize import linprog
 
 
 def optimal_funded_set(
@@ -525,6 +528,28 @@ def is_in_core(
     Returns:
         True if the outcome is in the core
     """
+    return max_core_violation(valuations, costs, budgets, contributions, funded_set) <= 1e-6
+
+
+def max_core_violation(
+    valuations: Dict[str, List[float]],
+    costs: List[float],
+    budgets: Dict[str, float],
+    contributions: Dict[str, List[float]],
+    funded_set: List[int],
+) -> float:
+    """
+    Return the largest coalition incentive to deviate from the current outcome.
+
+    For coalition T, violation is:
+        violation(T) = V(T) - sum_{i in T} U_i
+    where V(T) is coalition standalone value and U_i is realized utility under
+    the current contributions/funded_set. The outcome is in the core iff the
+    maximum violation is <= 0 (up to numerical tolerance).
+
+    Returns:
+        max(0, max_T violation(T))
+    """
     agents = list(valuations.keys())
     n = len(agents)
 
@@ -537,15 +562,141 @@ def is_in_core(
         actual_utilities[a] = u
 
     # Check all non-empty coalitions
+    violations = []
     for size in range(1, n + 1):
         for coalition in combinations(agents, size):
             coalition_list = list(coalition)
             coalition_util_sum = sum(actual_utilities[a] for a in coalition_list)
             v_coalition = coalition_value(valuations, costs, budgets, coalition_list)
-            if coalition_util_sum < v_coalition - 1e-6:
-                return False
+            violations.append(v_coalition - coalition_util_sum)
 
-    return True
+    return float(max(0.0, max(violations) if violations else 0.0))
+
+
+def core_l1_distance(
+    valuations: Dict[str, List[float]],
+    costs: List[float],
+    budgets: Dict[str, float],
+    contributions: Dict[str, List[float]],
+    funded_set: List[int],
+) -> float:
+    """
+    Minimum L1 distance from actual funded-project cost shares to the core.
+
+    The optimization keeps the funded set fixed and searches over alternative
+    contribution splits x' on funded projects only. It enforces:
+      - project costs exactly covered: sum_i x'_{ij} = c_j
+      - non-negativity: x'_{ij} >= 0
+      - agent budget feasibility: sum_{j in S} x'_{ij} <= B_i
+      - core coalition constraints:
+            sum_{i in T} U_i(x', S) >= V(T)   for all non-empty T
+
+    Objective:
+      min ||x' - x_actual||_1
+
+    Returns:
+        - 0.0 when actual shares are already in-core
+        - positive finite value when a feasible in-core split exists but differs
+        - float("inf") when no in-core split exists for the fixed funded set
+    """
+    agents = list(valuations.keys())
+    funded = sorted(funded_set)
+
+    if not funded:
+        # No decision variables; either already core-feasible or impossible.
+        return 0.0 if is_in_core(valuations, costs, budgets, contributions, funded_set) else float("inf")
+
+    # Variable indexing for x'_{ij} on funded projects only.
+    x_index = {}
+    counter = 0
+    for a in agents:
+        for j in funded:
+            x_index[(a, j)] = counter
+            counter += 1
+    n_x = counter
+
+    # Decision vector z = [x_vars..., d_vars...], where d_k >= |x_k - x0_k|
+    n_vars = 2 * n_x
+    objective = np.zeros(n_vars)
+    objective[n_x:] = 1.0
+
+    # Build x0 vector (actual funded-project contributions).
+    x0 = np.zeros(n_x)
+    for (a, j), idx in x_index.items():
+        contrib_vec = contributions.get(a, [])
+        x0[idx] = float(contrib_vec[j]) if j < len(contrib_vec) else 0.0
+
+    A_eq = []
+    b_eq = []
+    A_ub = []
+    b_ub = []
+
+    # Project cost equalities: sum_i x'_{ij} = c_j
+    for j in funded:
+        row = np.zeros(n_vars)
+        for a in agents:
+            row[x_index[(a, j)]] = 1.0
+        A_eq.append(row)
+        b_eq.append(float(costs[j]))
+
+    # Agent budget constraints over funded projects.
+    for a in agents:
+        budget = budgets.get(a, None)
+        if budget is None or not np.isfinite(float(budget)):
+            continue
+        row = np.zeros(n_vars)
+        for j in funded:
+            row[x_index[(a, j)]] = 1.0
+        A_ub.append(row)
+        b_ub.append(float(budget))
+
+    # Core coalition constraints in contribution-space form:
+    #   sum_{i in T, j in S} x'_{ij} <= sum_{i in T, j in S} v_ij - V(T)
+    n = len(agents)
+    for size in range(1, n + 1):
+        for coalition in combinations(agents, size):
+            coalition_list = list(coalition)
+            rhs = 0.0
+            for a in coalition_list:
+                for j in funded:
+                    rhs += valuations[a][j]
+            rhs -= coalition_value(valuations, costs, budgets, coalition_list)
+
+            row = np.zeros(n_vars)
+            for a in coalition_list:
+                for j in funded:
+                    row[x_index[(a, j)]] = 1.0
+            A_ub.append(row)
+            b_ub.append(rhs)
+
+    # Absolute value linearization:
+    #   x_k - d_k <= x0_k
+    #  -x_k - d_k <= -x0_k
+    for k in range(n_x):
+        row_pos = np.zeros(n_vars)
+        row_pos[k] = 1.0
+        row_pos[n_x + k] = -1.0
+        A_ub.append(row_pos)
+        b_ub.append(x0[k])
+
+        row_neg = np.zeros(n_vars)
+        row_neg[k] = -1.0
+        row_neg[n_x + k] = -1.0
+        A_ub.append(row_neg)
+        b_ub.append(-x0[k])
+
+    bounds = [(0.0, None)] * n_vars
+    result = linprog(
+        c=objective,
+        A_ub=np.array(A_ub) if A_ub else None,
+        b_ub=np.array(b_ub) if b_ub else None,
+        A_eq=np.array(A_eq) if A_eq else None,
+        b_eq=np.array(b_eq) if b_eq else None,
+        bounds=bounds,
+    )
+    if not result.success or result.fun is None:
+        return float("inf")
+    return float(max(0.0, result.fun))
 
 
 def adaptation_rate(
