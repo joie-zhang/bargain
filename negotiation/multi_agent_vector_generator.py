@@ -6,10 +6,15 @@ cosine similarities are approximately equal to the target competition level.
 """
 
 import numpy as np
-from typing import List, Dict, Optional, Tuple
+import logging
+from itertools import combinations
+from typing import List, Dict, Optional
 from scipy.optimize import minimize
 import warnings
 warnings.filterwarnings('ignore')
+
+
+logger = logging.getLogger(__name__)
 
 
 class MultiAgentVectorGenerator:
@@ -58,194 +63,11 @@ class MultiAgentVectorGenerator:
                 "agent_1": v2
             }
         
-        if n_agents == 3:
-            return self._generate_three_agent_vectors(
-                target_cosine, n_items, max_utility, integer_values, tolerance
-            )
-        
-        # For 4+ agents, use iterative approach
-        return self._generate_many_agent_vectors(
+        return self._generate_slsqp_vectors(
             n_agents, target_cosine, n_items, max_utility, integer_values, tolerance
         )
-    
-    def _generate_three_agent_vectors(
-        self,
-        target_cosine: float,
-        n_items: int,
-        max_utility: float,
-        integer_values: bool,
-        tolerance: float
-    ) -> Dict[str, np.ndarray]:
-        """
-        Generate 3 vectors with all pairwise similarities close to target.
-        
-        For 3 vectors to have equal pairwise cosine similarities, we use a 
-        geometric approach placing them symmetrically in the vector space.
-        """
-        
-        # Special case: identical vectors (cosine = 1.0)
-        if abs(target_cosine - 1.0) < 0.01:
-            v = self._generate_random_vector(n_items, max_utility, integer_values)
-            return {
-                "agent_0": v.copy(),
-                "agent_1": v.copy(),
-                "agent_2": v.copy()
-            }
-        
-        # Use optimization to find 3 vectors with target pairwise similarities
-        best_vectors = None
-        best_error = float('inf')
-        
-        for attempt in range(10):
-            # Initialize with random vectors
-            vectors = self._optimize_three_vectors(
-                target_cosine, n_items, max_utility
-            )
-            
-            # Calculate error
-            error = self._calculate_pairwise_error(vectors, target_cosine)
-            
-            if error < best_error:
-                best_error = error
-                best_vectors = vectors
-                
-                if error < tolerance:
-                    break
-        
-        # Round to integers if requested
-        if integer_values and best_vectors is not None:
-            for agent_id in best_vectors:
-                best_vectors[agent_id] = self._round_to_integers_maintaining_sum(
-                    best_vectors[agent_id], max_utility
-                )
-        
-        return best_vectors
-    
-    def _optimize_three_vectors(
-        self,
-        target_cosine: float,
-        n_items: int,
-        max_utility: float
-    ) -> Dict[str, np.ndarray]:
-        """Use optimization to find 3 vectors with target pairwise similarities."""
-        
-        # Start with geometric initialization
-        vectors = self._geometric_initialization_three(target_cosine, n_items, max_utility)
-        
-        # Flatten for optimization
-        x0 = np.concatenate([vectors["agent_0"], vectors["agent_1"], vectors["agent_2"]])
-        
-        def objective(x):
-            v1 = x[:n_items]
-            v2 = x[n_items:2*n_items]
-            v3 = x[2*n_items:3*n_items]
-            
-            # Ensure non-negative values
-            if np.any(x < 0):
-                return 1e10
-            
-            # Calculate all pairwise cosine similarities
-            cos_12 = self._cosine_similarity(v1, v2)
-            cos_13 = self._cosine_similarity(v1, v3)
-            cos_23 = self._cosine_similarity(v2, v3)
-            
-            # Penalty for deviation from target
-            cos_penalty = ((cos_12 - target_cosine) ** 2 + 
-                          (cos_13 - target_cosine) ** 2 + 
-                          (cos_23 - target_cosine) ** 2) * 1000
-            
-            # Penalty for sum deviation
-            sum_penalty = ((np.sum(v1) - max_utility) ** 2 + 
-                          (np.sum(v2) - max_utility) ** 2 + 
-                          (np.sum(v3) - max_utility) ** 2) * 100
-            
-            return cos_penalty + sum_penalty
-        
-        # Constraints
-        constraints = [
-            {'type': 'eq', 'fun': lambda x: np.sum(x[:n_items]) - max_utility},
-            {'type': 'eq', 'fun': lambda x: np.sum(x[n_items:2*n_items]) - max_utility},
-            {'type': 'eq', 'fun': lambda x: np.sum(x[2*n_items:3*n_items]) - max_utility}
-        ]
-        
-        bounds = [(0, max_utility) for _ in range(3 * n_items)]
-        
-        result = minimize(objective, x0, method='SLSQP',
-                         bounds=bounds, constraints=constraints,
-                         options={'maxiter': 2000, 'ftol': 1e-9})
-        
-        # Extract optimized vectors
-        v1 = result.x[:n_items]
-        v2 = result.x[n_items:2*n_items]
-        v3 = result.x[2*n_items:3*n_items]
-        
-        return {
-            "agent_0": v1,
-            "agent_1": v2,
-            "agent_2": v3
-        }
-    
-    def _geometric_initialization_three(
-        self,
-        target_cosine: float,
-        n_items: int,
-        max_utility: float
-    ) -> Dict[str, np.ndarray]:
-        """
-        Initialize 3 vectors geometrically for target cosine similarity.
-        
-        For 3 vectors with equal pairwise cosine similarities,
-        they should form an equilateral triangle in the vector space.
-        """
-        
-        # Generate first vector randomly
-        v1 = self._generate_random_vector(n_items, max_utility, False)
-        
-        # For an equilateral triangle configuration:
-        # All pairwise angles should be: arccos(target_cosine)
-        angle = np.arccos(np.clip(target_cosine, -1, 1))
-        
-        # Generate v2 at angle from v1
-        v1_norm = v1 / np.linalg.norm(v1)
-        
-        # Random orthogonal vector
-        random_vec = self.rng.randn(n_items)
-        v_orth = random_vec - np.dot(random_vec, v1_norm) * v1_norm
-        v_orth = v_orth / np.linalg.norm(v_orth)
-        
-        # v2 at angle from v1
-        v2_direction = np.cos(angle) * v1_norm + np.sin(angle) * v_orth
-        v2 = v2_direction * np.linalg.norm(v1)
-        v2 = np.abs(v2) * (max_utility / np.sum(np.abs(v2)))
-        
-        # Generate v3 to form triangle
-        # v3 should be at angle from both v1 and v2
-        # This is approximated by rotating in a different plane
-        v2_norm = v2 / np.linalg.norm(v2)
-        
-        # Find a vector orthogonal to both v1 and v2
-        random_vec2 = self.rng.randn(n_items)
-        v_orth2 = random_vec2 - np.dot(random_vec2, v1_norm) * v1_norm - np.dot(random_vec2, v2_norm) * v2_norm
-        
-        if np.linalg.norm(v_orth2) > 0:
-            v_orth2 = v_orth2 / np.linalg.norm(v_orth2)
-        else:
-            # Fallback if vectors are too aligned
-            v_orth2 = self.rng.randn(n_items)
-            v_orth2 = v_orth2 / np.linalg.norm(v_orth2)
-        
-        # Construct v3
-        v3_direction = np.cos(angle) * v1_norm + np.sin(angle) * v_orth2
-        v3 = v3_direction * np.linalg.norm(v1)
-        v3 = np.abs(v3) * (max_utility / np.sum(np.abs(v3)))
-        
-        return {
-            "agent_0": v1,
-            "agent_1": v2,
-            "agent_2": v3
-        }
-    
-    def _generate_many_agent_vectors(
+
+    def _generate_slsqp_vectors(
         self,
         n_agents: int,
         target_cosine: float,
@@ -254,125 +76,123 @@ class MultiAgentVectorGenerator:
         integer_values: bool,
         tolerance: float
     ) -> Dict[str, np.ndarray]:
-        """
-        Generate vectors for 4+ agents using improved optimization.
-        
-        For many agents, we use a combination of geometric initialization
-        and gradient-based optimization for better convergence.
-        """
-        
-        # Better initialization using geometric approach
-        vectors = self._geometric_initialization_many(
+        """Generate 3+ vectors by optimizing all pairwise cosine targets with SLSQP."""
+        if n_agents > n_items:
+            logger.warning(
+                "WARNING: N_AGENTS=%s IS GREATER THAN N_ITEMS=%s; "
+                "EQUAL PAIRWISE COSINE TARGETS MAY BE GEOMETRICALLY INFEASIBLE. "
+                "RUNNING SLSQP ANYWAY.",
+                n_agents,
+                n_items,
+            )
+
+        initial_vectors = self._initialize_slsqp_vectors(
             n_agents, target_cosine, n_items, max_utility
         )
-        
-        # Multi-stage optimization with adaptive learning rate
-        best_vectors = vectors.copy()
-        best_error = self._calculate_pairwise_error(vectors, target_cosine)
-        
-        # Stage 1: Coarse adjustment with higher learning rate
-        learning_rate = 0.5
-        momentum = 0.9
-        velocities = {agent_id: np.zeros_like(v) for agent_id, v in vectors.items()}
-        
-        for iteration in range(100):
-            # Calculate current error
-            current_error = self._calculate_pairwise_error(vectors, target_cosine)
-            
-            if current_error < best_error:
-                best_error = current_error
-                best_vectors = {k: v.copy() for k, v in vectors.items()}
-            
-            if current_error < tolerance:
-                break
-            
-            # Adaptive learning rate decay
-            if iteration > 30:
-                learning_rate = 0.2
-            if iteration > 60:
-                learning_rate = 0.1
-            
-            # Update with momentum
-            vectors, velocities = self._adjust_vectors_with_momentum(
-                vectors, velocities, target_cosine, max_utility, 
-                learning_rate, momentum
-            )
-            
-            # Occasionally restart from best if stuck
-            if iteration % 20 == 19 and current_error > best_error * 1.5:
-                vectors = {k: v.copy() for k, v in best_vectors.items()}
-                velocities = {agent_id: np.zeros_like(v) for agent_id, v in vectors.items()}
-        
-        # Stage 2: Fine-tuning with constraint satisfaction
-        vectors = self._fine_tune_vectors(
-            best_vectors, target_cosine, max_utility, tolerance
+        x0 = np.concatenate([initial_vectors[f"agent_{i}"] for i in range(n_agents)])
+        pair_indices = list(combinations(range(n_agents), 2))
+
+        def unpack(x: np.ndarray) -> List[np.ndarray]:
+            return [x[i * n_items:(i + 1) * n_items] for i in range(n_agents)]
+
+        def objective(x: np.ndarray) -> float:
+            vectors = unpack(x)
+            cosine_penalty = 0.0
+            for i, j in pair_indices:
+                similarity = self._cosine_similarity(vectors[i], vectors[j])
+                cosine_penalty += (similarity - target_cosine) ** 2
+
+            sum_penalty = sum((np.sum(v) - max_utility) ** 2 for v in vectors)
+            return cosine_penalty * 1000.0 + sum_penalty * 100.0
+
+        constraints = [
+            {
+                "type": "eq",
+                "fun": lambda x, start=i * n_items, end=(i + 1) * n_items:
+                    np.sum(x[start:end]) - max_utility,
+            }
+            for i in range(n_agents)
+        ]
+        bounds = [(0.0, max_utility) for _ in range(n_agents * n_items)]
+
+        result = minimize(
+            objective,
+            x0,
+            method="SLSQP",
+            bounds=bounds,
+            constraints=constraints,
+            options={"maxiter": 4000, "ftol": 1e-12},
         )
-        
-        # Round to integers if requested
+
+        vectors = {
+            f"agent_{i}": result.x[i * n_items:(i + 1) * n_items]
+            for i in range(n_agents)
+        }
+        final_error = self._calculate_pairwise_error(vectors, target_cosine)
+
+        if not result.success:
+            logger.warning(
+                "WARNING: SLSQP DID NOT REPORT SUCCESS FOR N_AGENTS=%s, "
+                "N_ITEMS=%s, TARGET_COSINE=%s; RETURNING BEST AVAILABLE VECTORS. "
+                "STATUS=%s MESSAGE=%s FINAL_AVG_PAIRWISE_ERROR=%.6f",
+                n_agents,
+                n_items,
+                target_cosine,
+                result.status,
+                result.message,
+                final_error,
+            )
+        elif final_error > tolerance:
+            logger.warning(
+                "WARNING: SLSQP FINISHED BUT FINAL_AVG_PAIRWISE_ERROR=%.6f "
+                "EXCEEDS TOLERANCE=%.6f FOR N_AGENTS=%s, N_ITEMS=%s, "
+                "TARGET_COSINE=%s.",
+                final_error,
+                tolerance,
+                n_agents,
+                n_items,
+                target_cosine,
+            )
+
         if integer_values:
             for agent_id in vectors:
                 vectors[agent_id] = self._round_to_integers_maintaining_sum(
                     vectors[agent_id], max_utility
                 )
-        
+
         return vectors
-    
-    def _adjust_vectors_towards_target(
+
+    def _initialize_slsqp_vectors(
         self,
-        vectors: Dict[str, np.ndarray],
+        n_agents: int,
         target_cosine: float,
-        max_utility: float,
-        learning_rate: float = 0.1
+        n_items: int,
+        max_utility: float
     ) -> Dict[str, np.ndarray]:
-        """Adjust vectors to move pairwise similarities towards target."""
-        
-        agent_ids = list(vectors.keys())
-        n_agents = len(agent_ids)
-        
-        # Calculate gradients for each vector
-        gradients = {agent_id: np.zeros_like(vectors[agent_id]) for agent_id in agent_ids}
-        
-        for i, agent1 in enumerate(agent_ids):
-            for j, agent2 in enumerate(agent_ids[i+1:], i+1):
-                v1 = vectors[agent1]
-                v2 = vectors[agent2]
-                
-                current_sim = self._cosine_similarity(v1, v2)
-                error = target_cosine - current_sim
-                
-                # Gradient to increase/decrease similarity
-                norm1 = np.linalg.norm(v1)
-                norm2 = np.linalg.norm(v2)
-                
-                if norm1 > 0 and norm2 > 0:
-                    # Gradient for v1
-                    grad1 = error * (v2 / (norm1 * norm2) - 
-                                   (np.dot(v1, v2) * v1) / (norm1**3 * norm2))
-                    gradients[agent1] += grad1
-                    
-                    # Gradient for v2
-                    grad2 = error * (v1 / (norm1 * norm2) - 
-                                   (np.dot(v1, v2) * v2) / (norm1 * norm2**3))
-                    gradients[agent2] += grad2
-        
-        # Update vectors
-        new_vectors = {}
-        for agent_id in agent_ids:
-            # Update with gradient
-            new_v = vectors[agent_id] + learning_rate * gradients[agent_id]
-            
-            # Ensure non-negative
-            new_v = np.maximum(new_v, 0)
-            
-            # Normalize to maintain sum
-            if np.sum(new_v) > 0:
-                new_v = new_v * (max_utility / np.sum(new_v))
-            else:
-                new_v = self._generate_random_vector(n_items, max_utility, False)
-            
-            new_vectors[agent_id] = new_v
-        
-        return new_vectors
+        """
+        Build an SLSQP starting point.
+
+        Boundary targets get exact feasible starts when possible. Intermediate
+        targets use random simplex starts so repeated experiments still sample
+        different feasible optima.
+        """
+        if abs(target_cosine - 1.0) < 1e-12:
+            base = self._generate_random_vector(n_items, max_utility, False)
+            return {f"agent_{i}": base.copy() for i in range(n_agents)}
+
+        if n_agents <= n_items and abs(target_cosine) < 1e-12:
+            vectors = {}
+            item_indices = self.rng.permutation(n_items)[:n_agents]
+            for i, item_index in enumerate(item_indices):
+                vector = np.zeros(n_items)
+                vector[item_index] = max_utility
+                vectors[f"agent_{i}"] = vector
+            return vectors
+
+        return {
+            f"agent_{i}": self._generate_random_vector(n_items, max_utility, False)
+            for i in range(n_agents)
+        }
     
     def _calculate_pairwise_error(
         self,
@@ -436,155 +256,6 @@ class MultiAgentVectorGenerator:
             rounded[indices] += 1
         
         return rounded.astype(float)
-    
-    def _geometric_initialization_many(
-        self,
-        n_agents: int,
-        target_cosine: float,
-        n_items: int,
-        max_utility: float
-    ) -> Dict[str, np.ndarray]:
-        """
-        Initialize many vectors using geometric approach for better starting point.
-        Places vectors approximately uniformly in the vector space.
-        """
-        vectors = {}
-        
-        # Generate first vector randomly
-        v0 = self._generate_random_vector(n_items, max_utility, False)
-        vectors["agent_0"] = v0
-        
-        # For subsequent vectors, try to maintain target similarity
-        for i in range(1, n_agents):
-            # Start with a random vector
-            v_new = self._generate_random_vector(n_items, max_utility, False)
-            
-            # Adjust to have approximately target similarity with existing vectors
-            for j in range(min(5, i)):  # Adjust against up to 5 previous vectors
-                existing_v = vectors[f"agent_{j}"]
-                current_sim = self._cosine_similarity(v_new, existing_v)
-                
-                # Move towards target similarity
-                if abs(current_sim - target_cosine) > 0.1:
-                    # Simple adjustment towards target
-                    adjustment = 0.3 * (target_cosine - current_sim)
-                    v_new = v_new + adjustment * existing_v
-                    v_new = np.maximum(v_new, 0)  # Keep non-negative
-                    
-                    # Renormalize to maintain sum
-                    if np.sum(v_new) > 0:
-                        v_new = v_new * (max_utility / np.sum(v_new))
-            
-            vectors[f"agent_{i}"] = v_new
-        
-        return vectors
-    
-    def _adjust_vectors_with_momentum(
-        self,
-        vectors: Dict[str, np.ndarray],
-        velocities: Dict[str, np.ndarray],
-        target_cosine: float,
-        max_utility: float,
-        learning_rate: float,
-        momentum: float
-    ) -> Tuple[Dict[str, np.ndarray], Dict[str, np.ndarray]]:
-        """
-        Adjust vectors using gradient descent with momentum for faster convergence.
-        """
-        agent_ids = list(vectors.keys())
-        n_agents = len(agent_ids)
-        
-        # Calculate gradients
-        gradients = {agent_id: np.zeros_like(vectors[agent_id]) for agent_id in agent_ids}
-        
-        for i, agent1 in enumerate(agent_ids):
-            for j, agent2 in enumerate(agent_ids[i+1:], i+1):
-                v1 = vectors[agent1]
-                v2 = vectors[agent2]
-                
-                current_sim = self._cosine_similarity(v1, v2)
-                error = target_cosine - current_sim
-                
-                # More robust gradient calculation
-                norm1 = np.linalg.norm(v1)
-                norm2 = np.linalg.norm(v2)
-                
-                if norm1 > 1e-6 and norm2 > 1e-6:
-                    # Gradient for v1
-                    grad1 = error * (v2 / (norm1 * norm2) - 
-                                   (np.dot(v1, v2) * v1) / (norm1**3 * norm2))
-                    gradients[agent1] += grad1 / (n_agents - 1)  # Normalize by number of pairs
-                    
-                    # Gradient for v2
-                    grad2 = error * (v1 / (norm1 * norm2) - 
-                                   (np.dot(v1, v2) * v2) / (norm1 * norm2**3))
-                    gradients[agent2] += grad2 / (n_agents - 1)
-        
-        # Update velocities and vectors with momentum
-        new_vectors = {}
-        new_velocities = {}
-        
-        for agent_id in agent_ids:
-            # Update velocity with momentum
-            new_velocities[agent_id] = (momentum * velocities[agent_id] + 
-                                       learning_rate * gradients[agent_id])
-            
-            # Update vector
-            new_v = vectors[agent_id] + new_velocities[agent_id]
-            
-            # Project back to valid space
-            new_v = np.maximum(new_v, 0)  # Non-negative
-            
-            # Renormalize to maintain sum
-            if np.sum(new_v) > 0:
-                new_v = new_v * (max_utility / np.sum(new_v))
-            else:
-                new_v = self._generate_random_vector(len(new_v), max_utility, False)
-            
-            new_vectors[agent_id] = new_v
-        
-        return new_vectors, new_velocities
-    
-    def _fine_tune_vectors(
-        self,
-        vectors: Dict[str, np.ndarray],
-        target_cosine: float,
-        max_utility: float,
-        tolerance: float
-    ) -> Dict[str, np.ndarray]:
-        """
-        Fine-tune vectors using smaller adjustments for precise convergence.
-        """
-        agent_ids = list(vectors.keys())
-        refined_vectors = {k: v.copy() for k, v in vectors.items()}
-        
-        for iteration in range(20):
-            current_error = self._calculate_pairwise_error(refined_vectors, target_cosine)
-            if current_error < tolerance:
-                break
-            
-            # Small random perturbations followed by projection
-            for agent_id in agent_ids:
-                v = refined_vectors[agent_id]
-                
-                # Small random perturbation
-                perturbation = self.rng.randn(len(v)) * 0.5
-                v_new = v + perturbation
-                
-                # Project to valid space
-                v_new = np.maximum(v_new, 0)
-                if np.sum(v_new) > 0:
-                    v_new = v_new * (max_utility / np.sum(v_new))
-                
-                # Check if this improves the error
-                refined_vectors[agent_id] = v_new
-                new_error = self._calculate_pairwise_error(refined_vectors, target_cosine)
-                
-                if new_error > current_error:
-                    # Revert if worse
-                    refined_vectors[agent_id] = v
-        
-        return refined_vectors
     
     def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         """Calculate cosine similarity between two vectors."""

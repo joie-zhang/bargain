@@ -7,6 +7,7 @@ including utility calculations, preference generation, and analysis tools.
 
 import pytest
 import numpy as np
+import logging
 from negotiation.preferences import (
     PreferenceType,
     PreferenceConfig,
@@ -17,6 +18,7 @@ from negotiation.preferences import (
     create_cooperative_preferences,
     analyze_preference_competition_level
 )
+from negotiation.multi_agent_vector_generator import MultiAgentVectorGenerator
 
 
 class TestPreferenceConfig:
@@ -133,6 +135,43 @@ class TestVectorPreferenceSystem:
         similarities = list(preferences["cosine_similarities"].values())
         for sim in similarities:
             assert abs(sim - 0.9) < 0.2  # Allow some tolerance
+
+    def test_five_agent_targeted_similarity_generation(self):
+        """n>=4 should use the SLSQP path and preserve pairwise cosine targets."""
+        config = PreferenceConfig(
+            preference_type=PreferenceType.VECTOR,
+            m_items=5,
+            n_agents=5,
+            target_cosine_similarity=0.5,
+            random_seed=7
+        )
+
+        system = VectorPreferenceSystem(config)
+        preferences = system.generate_preferences()
+
+        for prefs in preferences["agent_preferences"].values():
+            assert pytest.approx(sum(prefs), abs=1e-6) == 100.0
+
+        similarities = list(preferences["cosine_similarities"].values())
+        assert len(similarities) == 10
+        for sim in similarities:
+            assert abs(sim - 0.5) < 0.03
+
+    def test_overcomplete_agent_item_count_logs_warning(self, caplog):
+        """Overcomplete n>d cases should be flagged but still return vectors."""
+        caplog.set_level(logging.WARNING, logger="negotiation.multi_agent_vector_generator")
+        generator = MultiAgentVectorGenerator(random_seed=7)
+
+        vectors = generator.generate_vectors_for_n_agents(
+            n_agents=6,
+            target_cosine=1.0,
+            n_items=5,
+            max_utility=100.0,
+            integer_values=True,
+        )
+
+        assert len(vectors) == 6
+        assert "WARNING: N_AGENTS=6 IS GREATER THAN N_ITEMS=5" in caplog.text
     
     def test_utility_calculation(self):
         """Test vector preference utility calculation."""
