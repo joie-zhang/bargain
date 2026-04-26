@@ -13,10 +13,10 @@
 **Impact:** σ=0.2 now correctly means agents can collectively fund 20% of total cost (not 60%). All existing experiment results with σ < 1.0 are affected.
 
 ### C2 — Time discount default (`base.py`)
-**Paper:** No discount factor specified for Game 3 (co-funding).
-**Old code:** `enable_time_discount: bool = True`
-**Fixed code:** `enable_time_discount: bool = False`
-**Impact:** Round-5 utility now equals round-1 utility for the same funded set. Games 1 and 2 are unaffected (they override this default in their own configs if needed).
+**Paper:** No discount factor originally specified for Game 3 (co-funding).
+**Historical detour:** `enable_time_discount` was temporarily changed from `True` to `False` during this audit because the paper formalism did not mention discounting.
+**Current code:** `enable_time_discount: bool = True`
+**Impact:** Co-funding now uses time discounting by default to match the active experiment protocol and factory defaults. The no-discount path remains available only as an explicit override/ablation.
 
 ### C3 — NBS utility scale (`metrics.py`)
 **Paper:** Utility `U_i ∈ [0, 100]` (matches `compute_utility` formula with `* 100.0`)

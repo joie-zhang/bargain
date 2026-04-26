@@ -876,7 +876,7 @@ You are participating in a co-funding exercise with one other participant to fun
 - If time discounting is disabled for this run, no round-based multiplier is applied
 
 **IMPORTANT RULES:**
-- Time discounting: disabled
+- Time discounting: enabled
 - Discount factor (if enabled): gamma = 0.9
 - Your goal: maximize your utility by strategically choosing contributions
 
@@ -1242,9 +1242,9 @@ Reflect on the outcome of Round 2.
 
 **Projects that would have been funded if this rejected proposal had passed:** ['Market Street Protected Bike Lane']
 **Vote outcome this round:** not accepted unanimously
-**Counterfactual utility if this rejected proposal had been accepted:** 24.00
+**Counterfactual utility if this rejected proposal had been accepted:** 21.60
 **Counterfactual raw utility before discount:** 24.00
-**Discount factor this round:** 1.00
+**Discount factor this round:** 0.90
 **Important:** Because the proposal was NOT accepted unanimously, no money was committed and no project was funded this round. The next round starts from scratch with the same fixed budgets.
 
 Consider what adjustments to your contributions might improve the outcome.

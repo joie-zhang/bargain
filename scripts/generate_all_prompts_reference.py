@@ -147,7 +147,7 @@ def build_cofunding_base_state(pledge_mode: str = "individual") -> dict:
             "budget_ratio": 0.5,
             "discussion_transparency": "own",
             "enable_commit_vote": True,
-            "enable_time_discount": False,
+            "enable_time_discount": True,
             "gamma_discount": 0.9,
         },
         "game_type": "co_funding",
@@ -363,7 +363,7 @@ def build_cofunding_joint_proposal() -> tuple[CoFundingGame, dict, dict]:
             pledge_mode="individual",
             discussion_transparency="own",
             enable_commit_vote=True,
-            enable_time_discount=False,
+            enable_time_discount=True,
             random_seed=0,
         )
     )
@@ -399,7 +399,7 @@ def render_game3() -> str:
             pledge_mode="individual",
             discussion_transparency="aggregate",
             enable_commit_vote=True,
-            enable_time_discount=False,
+            enable_time_discount=True,
             random_seed=0,
         )
     )
@@ -418,7 +418,7 @@ def render_game3() -> str:
             pledge_mode="joint",
             discussion_transparency="own",
             enable_commit_vote=True,
-            enable_time_discount=False,
+            enable_time_discount=True,
             random_seed=0,
         )
     )
@@ -439,7 +439,7 @@ def render_game3() -> str:
             pledge_mode="individual",
             discussion_transparency="full",
             enable_commit_vote=True,
-            enable_time_discount=False,
+            enable_time_discount=True,
             random_seed=0,
         )
     )

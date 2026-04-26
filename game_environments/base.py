@@ -74,7 +74,7 @@ class CoFundingConfig(GameConfig):
     pledge_mode: str = "individual"  # "individual" (each agent submits own contributions) or "joint" (legacy full-plan mode)
     discussion_transparency: str = "own"  # "aggregate", "own", or "full"
     enable_commit_vote: bool = True
-    enable_time_discount: bool = False
+    enable_time_discount: bool = True
 
     def __post_init__(self):
         """Validate parameter bounds."""
