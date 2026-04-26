@@ -63,6 +63,18 @@ DEFAULT_ELO_OVERRIDES = {
     "grok-4": ("grok-4.20-beta1", 1496),
 }
 
+# Plot styling defaults (paper-facing).
+G1_MAIN_FIGSIZE = (13.0, 8.0)
+G1_BY_COMP_FIGSIZE = (12.6, 8.2)
+G1_AGG_FIGSIZE = (10.0, 7.0)
+G1_TITLE_SIZE = 18
+G1_AXIS_LABEL_SIZE = 15
+G1_TICK_SIZE = 13
+G1_ANNOT_SIZE = 12
+G1_LEGEND_SIZE = 12
+G1_LEGEND_TITLE_SIZE = 13
+G1_FOOTNOTE_SIZE = 10.5
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -477,7 +489,7 @@ def make_plot(
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=G1_MAIN_FIGSIZE)
 
     for row in rows:
         x_value = float(row["elo"])
@@ -495,19 +507,20 @@ def make_plot(
             xytext=(0, 10),
             textcoords="offset points",
             ha="center",
-            fontsize=10,
+            fontsize=G1_ANNOT_SIZE,
         )
 
     subtitle = spec["subtitle"]
     if filter_note:
         subtitle = f"{subtitle} {filter_note}"
-    ax.set_title(f"{spec['title']}\n{subtitle}")
-    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
-    ax.set_ylabel(spec["y_label"])
+    ax.set_title(f"{spec['title']}\n{subtitle}", fontsize=G1_TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)", fontsize=G1_AXIS_LABEL_SIZE)
+    ax.set_ylabel(spec["y_label"], fontsize=G1_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G1_TICK_SIZE)
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -523,7 +536,7 @@ def make_plot_by_competition_level(
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(10, 6.5))
+    fig, ax = plt.subplots(figsize=G1_BY_COMP_FIGSIZE)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#fbfdff")
     competition_levels = sorted({float(row["competition_level"]) for row in rows})
@@ -553,7 +566,7 @@ def make_plot_by_competition_level(
             xs,
             y_raw,
             marker="o",
-            markersize=4.5,
+            markersize=5.5,
             linewidth=1.3 if show_smoothed_overlay else 2.4,
             color=colors[comp],
             alpha=0.24 if show_smoothed_overlay else 0.92,
@@ -565,7 +578,7 @@ def make_plot_by_competition_level(
                 xs,
                 y_smooth,
                 marker="o",
-                markersize=6.6,
+                markersize=7.5,
                 linewidth=2.9,
                 color=colors[comp],
                 alpha=0.98,
@@ -593,15 +606,30 @@ def make_plot_by_competition_level(
         )
     ax.set_title(
         f"{spec['title_by_comp']}\n"
-        f"{fill(competition_level_plot_subtitle(smoothing_method, smoothing_alpha, smoothing_window, filter_note), width=120)}"
+        f"{fill(competition_level_plot_subtitle(smoothing_method, smoothing_alpha, smoothing_window, filter_note), width=120)}",
+        fontsize=G1_TITLE_SIZE - 1,
+        fontweight="bold",
     )
-    ax.set_xlabel("Chatbot Arena Elo")
-    ax.set_ylabel(spec["y_label"])
+    ax.set_xlabel("Chatbot Arena Elo", fontsize=G1_AXIS_LABEL_SIZE)
+    ax.set_ylabel(spec["y_label"], fontsize=G1_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G1_TICK_SIZE)
     ax.grid(True, color="#cbd5e1", alpha=0.35, linewidth=0.9)
     ax.set_axisbelow(True)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.legend(title="Competition", frameon=True, facecolor="white", framealpha=0.95)
+    ax.legend(
+        title="Competition",
+        loc="upper left",
+        bbox_to_anchor=(0.01, 0.99),
+        borderaxespad=0.2,
+        labelspacing=0.25,
+        handletextpad=0.4,
+        frameon=True,
+        facecolor="white",
+        framealpha=0.95,
+        fontsize=G1_LEGEND_SIZE,
+        title_fontsize=G1_LEGEND_TITLE_SIZE,
+    )
 
     ordered_models = ", ".join(f"{xtick_rows[x]} ({x})" for x in x_positions)
     fig.text(
@@ -610,11 +638,11 @@ def make_plot_by_competition_level(
         fill(f"Models by Elo: {ordered_models}", width=95),
         ha="center",
         va="bottom",
-        fontsize=8.7,
+        fontsize=G1_FOOTNOTE_SIZE,
         color="#475569",
     )
 
-    fig.tight_layout(rect=(0, 0.06, 1, 0.95))
+    fig.tight_layout(rect=(0, 0.055, 1, 0.975))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -627,7 +655,7 @@ def make_plot_over_competition_levels(
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(8.5, 5.8))
+    fig, ax = plt.subplots(figsize=G1_AGG_FIGSIZE)
     xs = [float(row["competition_level"]) for row in rows]
     ys = [float(row[spec["avg_key"]]) for row in rows]
 
@@ -647,20 +675,21 @@ def make_plot_over_competition_levels(
             xytext=(0, 8),
             textcoords="offset points",
             ha="center",
-            fontsize=9,
+            fontsize=G1_ANNOT_SIZE,
         )
 
     subtitle = spec["aggregate_subtitle"]
     if filter_note:
         subtitle = f"{subtitle} {filter_note}"
-    ax.set_title(f"{spec['aggregate_title']}\n{subtitle}")
-    ax.set_xlabel("Competition Level")
-    ax.set_ylabel(spec["y_label"])
+    ax.set_title(f"{spec['aggregate_title']}\n{subtitle}", fontsize=G1_TITLE_SIZE - 1, fontweight="bold")
+    ax.set_xlabel("Competition Level", fontsize=G1_AXIS_LABEL_SIZE)
+    ax.set_ylabel(spec["y_label"], fontsize=G1_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G1_TICK_SIZE)
     ax.set_xticks(xs)
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 

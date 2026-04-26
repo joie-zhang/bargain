@@ -97,6 +97,18 @@ DEFAULT_ELO_OVERRIDES: Dict[str, Tuple[str, int]] = {
     "gpt-5-nano": ("gpt-5-nano-high", 1337),
 }
 
+# Plot styling defaults (paper-facing).
+G3_MAIN_FIGSIZE = (13.0, 8.0)
+G3_MULTI_PANEL_WIDTH = 7.4
+G3_MULTI_PANEL_HEIGHT = 7.2
+G3_TITLE_SIZE = 18
+G3_SUPTITLE_SIZE = 19
+G3_AXIS_LABEL_SIZE = 15
+G3_TICK_SIZE = 13
+G3_ANNOT_SIZE = 12
+G3_LEGEND_SIZE = 12
+G3_LEGEND_TITLE_SIZE = 13
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Analyze Game 3 utility vs Elo for a co-funding batch.")
@@ -484,7 +496,7 @@ def make_overall_plot(
 ) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=G3_MAIN_FIGSIZE)
 
     for row in rows:
         x_value = float(row["elo"])
@@ -502,16 +514,17 @@ def make_overall_plot(
             xytext=(0, 10),
             textcoords="offset points",
             ha="center",
-            fontsize=10,
+            fontsize=G3_ANNOT_SIZE,
         )
 
-    ax.set_title(title)
-    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
-    ax.set_ylabel("Mean Adversary Utility")
+    ax.set_title(title, fontsize=G3_TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)", fontsize=G3_AXIS_LABEL_SIZE)
+    ax.set_ylabel("Mean Adversary Utility", fontsize=G3_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G3_TICK_SIZE)
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
 
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -519,7 +532,7 @@ def make_overall_plot(
 def make_competition_index_plot(rows: List[Dict[str, Any]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(12, 7.2))
+    fig, ax = plt.subplots(figsize=G3_MAIN_FIGSIZE)
     competition_levels = sorted({float(row["competition_index"]) for row in rows})
     color_map = plt.get_cmap("viridis")
     colors = {
@@ -541,8 +554,8 @@ def make_competition_index_plot(rows: List[Dict[str, Any]], output_path: Path) -
             xs,
             ys,
             marker="o",
-            markersize=7,
-            linewidth=2.2,
+            markersize=7.5,
+            linewidth=2.4,
             color=colors[comp],
             alpha=0.28,
             label=f"CI3={format_competition_index(comp)}",
@@ -562,24 +575,37 @@ def make_competition_index_plot(rows: List[Dict[str, Any]], output_path: Path) -
                 xytext=(0, 7),
                 textcoords="offset points",
                 ha="center",
-                fontsize=8,
+                fontsize=G3_ANNOT_SIZE - 1,
                 color=colors[comp],
             )
 
     x_positions = sorted(xtick_rows)
     ax.set_xticks(x_positions)
-    ax.set_xticklabels([f"{xtick_rows[x]}\n{x}" for x in x_positions], rotation=25, ha="right")
+    ax.set_xticklabels(
+        [f"{xtick_rows[x]}\n{x}" for x in x_positions],
+        rotation=25,
+        ha="right",
+        fontsize=G3_TICK_SIZE,
+    )
     ax.set_title(
         "Game 3: Mean Adversary Utility vs Chatbot Arena Elo\n"
-        "Stratified by derived CI3 = (1 - alpha) * (1 - sigma); averages include both model orders."
+        "Stratified by derived CI3 = (1 - alpha) * (1 - sigma); averages include both model orders.",
+        fontsize=G3_TITLE_SIZE,
+        fontweight="bold",
     )
-    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
-    ax.set_ylabel("Mean Adversary Utility")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)", fontsize=G3_AXIS_LABEL_SIZE)
+    ax.set_ylabel("Mean Adversary Utility", fontsize=G3_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="y", labelsize=G3_TICK_SIZE)
     ax.grid(True, alpha=0.25)
     ax.set_axisbelow(True)
-    ax.legend(title="Derived CI3", frameon=True)
+    ax.legend(
+        title="Derived CI3",
+        frameon=False,
+        fontsize=G3_LEGEND_SIZE,
+        title_fontsize=G3_LEGEND_TITLE_SIZE,
+    )
 
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
@@ -588,7 +614,12 @@ def make_alpha_sigma_plot(rows: List[Dict[str, Any]], output_path: Path) -> None
     output_path.parent.mkdir(parents=True, exist_ok=True)
     alpha_vals = sorted({float(row["alpha"]) for row in rows})
     sigma_vals = sorted({float(row["sigma"]) for row in rows})
-    fig, axes = plt.subplots(1, len(alpha_vals), figsize=(6 * len(alpha_vals), 5.8), sharey=True)
+    fig, axes = plt.subplots(
+        1,
+        len(alpha_vals),
+        figsize=(G3_MULTI_PANEL_WIDTH * len(alpha_vals), G3_MULTI_PANEL_HEIGHT),
+        sharey=True,
+    )
     if len(alpha_vals) == 1:
         axes = [axes]
 
@@ -615,8 +646,8 @@ def make_alpha_sigma_plot(rows: List[Dict[str, Any]], output_path: Path) -> None
                 xs,
                 ys,
                 marker="o",
-                markersize=6,
-                linewidth=2.1,
+                markersize=7,
+                linewidth=2.4,
                 color=sigma_colors[sigma],
                 alpha=0.95,
                 label=rf"$\sigma={sigma:.1f}$",
@@ -624,19 +655,31 @@ def make_alpha_sigma_plot(rows: List[Dict[str, Any]], output_path: Path) -> None
             if len(legend_handles) < len(sigma_vals):
                 legend_handles.append(line)
                 legend_labels.append(rf"$\sigma={sigma:.1f}$")
-        ax.set_title(rf"$\alpha={alpha:.1f}$")
-        ax.set_xlabel("Chatbot Arena Elo")
+        ax.set_title(rf"$\alpha={alpha:.1f}$", fontsize=G3_TITLE_SIZE - 1, fontweight="bold")
+        ax.set_xlabel("Chatbot Arena Elo", fontsize=G3_AXIS_LABEL_SIZE)
+        ax.tick_params(axis="both", labelsize=G3_TICK_SIZE)
         ax.grid(True, alpha=0.25)
         ax.set_axisbelow(True)
 
-    axes[0].set_ylabel("Mean Adversary Utility")
+    axes[0].set_ylabel("Mean Adversary Utility", fontsize=G3_AXIS_LABEL_SIZE)
     fig.suptitle(
-        "Game 3: Mean Adversary Utility vs Elo by alpha and sigma\n"
-        "Panels fix alpha; curves fix sigma; averages include both model orders.",
-        y=1.03,
+        "Game 3: Mean Adversary Utility vs Elo by alpha/sigma (panels: alpha, curves: sigma; both model orders).",
+        fontsize=G3_SUPTITLE_SIZE,
+        fontweight="bold",
+        y=0.995,
     )
-    fig.legend(legend_handles, legend_labels, title=r"$\sigma$", loc="upper center", ncol=len(sigma_vals))
-    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        title=r"$\sigma$",
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.94),
+        ncol=min(len(sigma_vals), 6),
+        fontsize=G3_LEGEND_SIZE,
+        title_fontsize=G3_LEGEND_TITLE_SIZE,
+        frameon=False,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
     fig.savefig(output_path, dpi=220, bbox_inches="tight")
     plt.close(fig)
 

@@ -89,6 +89,18 @@ DEFAULT_ELO_OVERRIDES: Dict[str, Tuple[str, int]] = {
     "grok-4": ("grok-4.20-beta1", 1496),
 }
 
+# Plot styling defaults (paper-facing).
+G2_MAIN_FIGSIZE = (13.0, 8.0)
+G2_MULTI_PANEL_WIDTH = 7.4
+G2_MULTI_PANEL_HEIGHT = 7.2
+G2_TITLE_SIZE = 18
+G2_SUPTITLE_SIZE = 19
+G2_AXIS_LABEL_SIZE = 15
+G2_TICK_SIZE = 13
+G2_ANNOT_SIZE = 12
+G2_LEGEND_SIZE = 12
+G2_LEGEND_TITLE_SIZE = 13
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export Game 2 batch summary plots as PNGs.")
@@ -324,7 +336,7 @@ def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> Non
         .agg(avg_utility=("utility", "mean"), num_runs=("utility", "size"))
         .sort_values("elo")
     )
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=G2_MAIN_FIGSIZE)
     for _, row in overall.iterrows():
         ax.scatter(row["elo"], row["avg_utility"], s=110, color="#2563eb", alpha=0.9)
         ax.annotate(
@@ -333,17 +345,20 @@ def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> Non
             textcoords="offset points",
             xytext=(0, 10),
             ha="center",
-            fontsize=10,
+            fontsize=G2_ANNOT_SIZE,
         )
     ax.set_title(
         "Game 2: Mean Adversary Utility vs Chatbot Arena Elo\n"
-        "Averages include all completed (rho, theta, model_order) settings."
+        "Averages include all completed (rho, theta, model_order) settings.",
+        fontsize=G2_TITLE_SIZE,
+        fontweight="bold",
     )
-    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
-    ax.set_ylabel("Mean Adversary Utility")
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)", fontsize=G2_AXIS_LABEL_SIZE)
+    ax.set_ylabel("Mean Adversary Utility", fontsize=G2_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G2_TICK_SIZE)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_dir / "utility_vs_elo_overall.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -356,27 +371,36 @@ def _save_utility_vs_elo_by_ci(long_df: pd.DataFrame, output_dir: Path) -> None:
     )
     ci_levels = sorted(grouped["competition_index"].unique().tolist())
     cmap = plt.cm.viridis(np.linspace(0, 1, len(ci_levels)))
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=G2_MAIN_FIGSIZE)
     for color, ci in zip(cmap, ci_levels):
         ci_df = grouped[grouped["competition_index"] == ci]
         ax.plot(
             ci_df["elo"],
             ci_df["avg_utility"],
             marker="o",
-            linewidth=2.0,
+            markersize=7,
+            linewidth=2.4,
             color=color,
             label=f"CI={ci:.2f}",
         )
     ax.set_title(
         "Game 2: Mean Adversary Utility vs Chatbot Arena Elo\n"
-        "Stratified by derived CI2 = theta * (1 - rho) / 2; averages include both model orders."
+        "Stratified by derived CI2 = theta * (1 - rho) / 2; averages include both model orders.",
+        fontsize=G2_TITLE_SIZE,
+        fontweight="bold",
     )
-    ax.set_xlabel("Chatbot Arena Elo (adversary model)")
-    ax.set_ylabel("Mean Adversary Utility")
-    ax.legend(title="Derived CI2", fontsize=9)
+    ax.set_xlabel("Chatbot Arena Elo (adversary model)", fontsize=G2_AXIS_LABEL_SIZE)
+    ax.set_ylabel("Mean Adversary Utility", fontsize=G2_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G2_TICK_SIZE)
+    ax.legend(
+        title="Derived CI2",
+        fontsize=G2_LEGEND_SIZE,
+        title_fontsize=G2_LEGEND_TITLE_SIZE,
+        frameon=False,
+    )
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_dir / "utility_vs_elo_by_competition_index.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -393,7 +417,12 @@ def _save_utility_vs_elo_by_rho_theta(long_df: pd.DataFrame, output_dir: Path) -
     )
     theta_vals = sorted(grouped["theta"].unique().tolist())
     rho_vals = sorted(grouped["rho"].unique().tolist())
-    fig, axes = plt.subplots(1, len(theta_vals), figsize=(6 * len(theta_vals), 5.8), sharey=True)
+    fig, axes = plt.subplots(
+        1,
+        len(theta_vals),
+        figsize=(G2_MULTI_PANEL_WIDTH * len(theta_vals), G2_MULTI_PANEL_HEIGHT),
+        sharey=True,
+    )
     if len(theta_vals) == 1:
         axes = [axes]
     cmap = plt.cm.viridis(np.linspace(0, 1, len(rho_vals)))
@@ -410,26 +439,39 @@ def _save_utility_vs_elo_by_rho_theta(long_df: pd.DataFrame, output_dir: Path) -
                 rho_df["elo"],
                 rho_df["avg_utility"],
                 marker="o",
-                linewidth=2.0,
+                markersize=7,
+                linewidth=2.4,
                 color=color,
                 label=rf"$\rho={float(rho):.1f}$",
             )
             if len(legend_handles) < len(rho_vals):
                 legend_handles.append(line)
                 legend_labels.append(rf"$\rho={float(rho):.1f}$")
-        ax.set_title(rf"$\theta={float(theta):.1f}$")
-        ax.set_xlabel("Chatbot Arena Elo")
+        ax.set_title(rf"$\theta={float(theta):.1f}$", fontsize=G2_TITLE_SIZE - 1, fontweight="bold")
+        ax.set_xlabel("Chatbot Arena Elo", fontsize=G2_AXIS_LABEL_SIZE)
+        ax.tick_params(axis="both", labelsize=G2_TICK_SIZE)
         ax.grid(alpha=0.25)
         ax.set_axisbelow(True)
 
-    axes[0].set_ylabel("Mean Adversary Utility")
+    axes[0].set_ylabel("Mean Adversary Utility", fontsize=G2_AXIS_LABEL_SIZE)
     fig.suptitle(
-        "Game 2: Mean Adversary Utility vs Elo by rho and theta\n"
-        "Panels fix theta; curves fix rho; averages include both model orders.",
-        y=1.03,
+        "Game 2: Mean Adversary Utility vs Elo by rho/theta (panels: theta, curves: rho; both model orders).",
+        fontsize=G2_SUPTITLE_SIZE,
+        fontweight="bold",
+        y=0.995,
     )
-    fig.legend(legend_handles, legend_labels, title=r"$\rho$", loc="upper center", ncol=len(rho_vals))
-    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        title=r"$\rho$",
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.94),
+        ncol=min(len(rho_vals), 6),
+        fontsize=G2_LEGEND_SIZE,
+        title_fontsize=G2_LEGEND_TITLE_SIZE,
+        frameon=False,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.90))
     fig.savefig(output_dir / "utility_vs_elo_by_rho_theta.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -447,22 +489,24 @@ def _save_param_line_plot(
         .agg(avg_utility=("utility", "mean"))
         .sort_values(["model_short", param_col])
     )
-    fig, ax = plt.subplots(figsize=(11, 7))
+    fig, ax = plt.subplots(figsize=G2_MAIN_FIGSIZE)
     for model_short, model_df in grouped.groupby("model_short"):
         ax.plot(
             model_df[param_col],
             model_df["avg_utility"],
             marker="o",
-            linewidth=2.0,
+            markersize=7,
+            linewidth=2.2,
             label=model_short,
         )
-    ax.set_title(title)
-    ax.set_xlabel(x_label)
-    ax.set_ylabel("Mean Adversary Utility")
-    ax.legend(title="", fontsize=9)
+    ax.set_title(title, fontsize=G2_TITLE_SIZE, fontweight="bold")
+    ax.set_xlabel(x_label, fontsize=G2_AXIS_LABEL_SIZE)
+    ax.set_ylabel("Mean Adversary Utility", fontsize=G2_AXIS_LABEL_SIZE)
+    ax.tick_params(axis="both", labelsize=G2_TICK_SIZE)
+    ax.legend(title="", fontsize=G2_LEGEND_SIZE, frameon=False)
     ax.grid(alpha=0.25)
     ax.set_axisbelow(True)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(output_dir / output_name, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
