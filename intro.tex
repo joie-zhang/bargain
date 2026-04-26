@@ -1,0 +1,35 @@
+% 1 para set the scene (what's the world we're imagining)
+LLM-based agents are beginning to find uses as representatives and assistants across an increasingly wide range of domains, from AI lawyers and therapists to enterprise-scale customer support \citep{DoNotPay,PsychiatryMentalHealth,Sierra}.
+We already see agents not only interacting with humans \citep{ProjectVend} but with other agents, be it on online marketplaces \citep{MetaBusinessAI}, or as part of AI-based monitoring and oversight regimes \citep{baker2025monitoring}.
+This new landscape of agent interactions has two important features: (i) interactions are \emph{strategic}, in the sense that agents possess different objectives due to being deployed by different actors or for different purposes; and (ii) interactions are between agents of \emph{differing capabilities} because of the costs of training or deploying more capable models, or because of access to proprietary data or tools.
+
+% 1 para explain the problem (what's the problem, why is it a problem)
+This raises important questions regarding the ability of stronger models to outwit their weaker counterparts in \emph{competitive} scenarios, or fail to reach broadly beneficial outcomes in more \emph{cooperative} scenarios.
+Such questions loom large not only in the context of individual actors deploying such agents in the economy and throughout society \citep{Dafoe2020,Hammond2025a,Sharp2025}, but also for more narrow (but critically important) applications, such as using weaker LLM agents to monitor stronger agents in scalable oversight regimes where the stronger agent may not be fully aligned \citep{Amodei2016,Christiano2018a,Kenton2024}.
+
+% 1 para summarise how we tackle the problem
+To investigate these dynamics empirically, we study three interpretable multi-turn negotiation games that isolate different strategic mechanisms: item allocation over rivalrous goods, diplomatic accord negotiation over continuous treaty terms, and participatory budgeting over threshold public goods. These games are representative of real-world applications of LLM agents \citep{Pactum2025} while allowing controlled sweeps over capability gaps and competition parameters. Our core batches use bilateral play ($n=2$), and we additionally run preliminary multi-agent extensions for $N > 2$ in Game 1 ($n \in \{3,5\}$) to test coalition and focal-point effects.
+
+We organize the essay around four research questions:
+\begin{enumerate}
+    \item \textbf{Capability scaling:} Does higher model capability (measured by LMArena Elo) translate into better outcomes against a fixed baseline?
+    \item \textbf{Competition sensitivity:} How much of outcome variation is driven by game-level competition parameters rather than capability alone?
+    \item \textbf{Fair-share extraction:} Do stronger models systematically capture more than a principled fair share, measured by an exploitation index relative to game-theoretic benchmarks?
+    \item \textbf{Multi-agent robustness:} When moving beyond bilateral play ($N > 2$), do capability advantages persist, attenuate, or reverse under coalition and coordination pressures?
+\end{enumerate}
+
+Our contributions are fourfold:
+
+\begin{itemize}
+    \item We provide a unified three-game benchmark spanning rivalrous allocation, continuous diplomatic bargaining, and threshold public-goods co-funding.
+    \item We characterize how capability and competition jointly shape utilities and agreement dynamics across all three games.
+    \item We introduce a fairness lens via exploitation indices: NBS-referenced exploitation in Games 1--2 and Lindahl-referenced exploitation in Game 3.
+    \item We report preliminary $N > 2$ evidence in item allocation indicating that capability advantages need not dilute in multi-agent settings.
+\end{itemize}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{Thesis Template COS/Figures/Hero_Figure_1.pdf}
+    \caption{\textbf{Negotiation game dynamics.} Our item allocation negotiation game (Game 1), shown here in the base $n=2$ setup, begins by (1) initializing agents with private preferences over five items; (2) agents engaging in public discussion; (3) each agent proposing an item allocation; (4) all agents voting on all proposals, where a proposal passes only with unanimous approval; and (5) if a proposal passes, the game terminates and final utilities are tallied. Otherwise, agents proceed to reflection and the next negotiation round. The same discuss-propose-vote loop extends to our preliminary $N > 2$ experiments.}
+    \label{fig:flow}
+\end{figure}

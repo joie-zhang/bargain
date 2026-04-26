@@ -1,4 +1,4 @@
-In \Cref{sec:game_1_problem_setting}, \Cref{sec:game_2_problem_setting}, and \Cref{sec:game_3_problem_setting}, we outline the mathematical formalism for our three negotiation frameworks. In \Cref{sec:game_1_experimental_setup}, \Cref{sec:game_1_multiagent_setup}, \Cref{sec:game_2_experimental_setup}, and \Cref{sec:game_3_experimental_setup}, we describe the key design choices in our experimental setups.
+In \Cref{sec:game_1_problem_setting,sec:game_2_problem_setting,sec:game_3_problem_setting}, we outline the mathematical formalism for our three negotiation frameworks. In \Cref{sec:game_1_experimental_setup,sec:game_2_experimental_setup,sec:game_3_experimental_setup}, we describe the key design choices in our experimental setups, with \Cref{sec:game_1_multiagent_setup} covering our ongoing $n > 2$ extension of Game~1. Finally, \Cref{sec:cross_game_notes} collects the design notes that apply across all three games, including utility normalization, globally optimal solutions, and the solution-concept benchmarks used to measure efficiency and exploitation.
 
 \section{Game 1: Item Allocation}
 
@@ -24,9 +24,9 @@ For $n > 2$, we use the average pairwise similarity $\bar{\alpha} = \frac{2}{n(n
 \label{sec:game_1_experimental_setup}
 
 In our current model-scale implementation, we set $n = 2$, $m = 5$, $T = 10$, and $\gamma = 0.9$.
-We evaluate competition levels in $\{0.0, 0.25, 0.5, 0.75, 0.9, 0.95, 1.0\}$, discussion-turn settings in $\{1, 2\}$, and both model orders (\texttt{weak\_first}, \texttt{strong\_first}). This yields 28 games per model pair in the base grid.
-We fix GPT-5-nano as the baseline and compare against the active April 2026 adversary roster used in the analysis scripts.
-As capability proxies, we use parameter count for open-source models when available and LMArena Elo \citep{chiang2024chatbotarenaopenplatform} (January 16, 2026 snapshot).
+We evaluate competition levels in $\{0.0, 0.25, 0.5, 0.75, 0.9, 0.95, 1.0\}$, number of discussion turns set at $2$, and both model orders (\texttt{weak\_first}, \texttt{strong\_first}). This yields 28 games per model pair in the base grid.
+We fix GPT-5-nano as the baseline and compare against 30 adversary models.
+As capability proxies, we use LMArena Elo scores \citep{chiang2024chatbotarenaopenplatform} (March 31, 2026 snapshot).
 
 Because we instantiate the game with LLM agents, each round is structured into the following stages:
 
@@ -77,16 +77,16 @@ Unlike the discrete allocations of Game 1, the per-issue value function $1 - |p^
 
 The treaty game has two independent competition controls.
 The first is \emph{preference correlation} $\rho \in [-1,1]$, which determines whether agents prefer similar or opposing issue values.
-Position vectors are generated with a Gaussian copula\footnote{A Gaussian copula is a method for generating correlated random variables with specified marginal distributions. It works by first drawing correlated normal variables, then applying the normal CDF $\Phi$ to transform each into a uniform variable, preserving the correlation structure while ensuring uniform marginals.} that preserves exact $\text{Uniform}(0,1)$ marginals:
+Position vectors are generated with a Gaussian copula~\citep{nelsen2006copulas}\footnote{A Gaussian copula is a method for generating correlated random variables with specified marginal distributions. It works by first drawing correlated normal variables, then applying the normal CDF $\Phi$ to transform each into a uniform variable, preserving the correlation structure while ensuring uniform marginals.} that preserves exact $\text{Uniform}(0,1)$ marginals:
 \begin{enumerate}
     \item Sample $\bm{z} \sim \mathcal{N}(\bm{0}, \Sigma_z)$ where $(\Sigma_z)_{ij} = \rho_z$ for $i \neq j$ and $(\Sigma_z)_{ii} = 1$.
     \item Apply $p^i_k = \Phi(z^i_k)$ component-wise, where $\Phi$ is the standard normal CDF\footnote{The standard normal cumulative distribution function $\Phi(z) = \Pr(Z \leq z)$ maps any real number to $[0,1]$, converting a normal variable into a uniformly distributed one.}.
 \end{enumerate}
-The latent correlation $\rho_z$ is calibrated so that the Pearson correlation\footnote{The Pearson correlation coefficient measures the linear association between two random variables, ranging from $-1$ (perfect negative) to $+1$ (perfect positive).} of sampled positions equals $\rho_{\text{target}}$, using $\rho_z = 2\sin(\pi\,\rho_{\text{target}} / 6)$.
+The latent correlation $\rho_z$ is calibrated so that the Pearson correlation\footnote{The Pearson correlation coefficient measures the linear association between two random variables, ranging from $-1$ (perfect negative) to $+1$ (perfect positive).} of sampled positions equals $\rho_{\text{target}}$, using $\rho_z = 2\sin(\pi\,\rho_{\text{target}} / 6)$ \citep{kruskal1958,Embrechts_McNeil_Straumann_2002}.
 For $n > 2$ agents with equicorrelation, positive semi-definiteness\footnote{A matrix is positive semi-definite (PSD) if all its eigenvalues are non-negative. Correlation matrices must be PSD; this constrains how negatively correlated multiple variables can simultaneously be.} requires $\rho_z \geq -1/(n-1)$.
 
 The second control is \emph{interest overlap} $\theta \in [0,1]$, defined as cosine similarity between issue-importance vectors.
-Weight vectors are generated with SLSQP optimization under simplex constraints to match a target overlap.
+Weight vectors are generated with Sequential Least Squares Programming (SLSQP)~\citep{kraft1988slsqp} optimization under simplex constraints to match a target overlap.
 For $n > 2$, we jointly optimize all $n$ weight vectors to match target pairwise overlap up to numerical tolerance.
 
 Together, $\rho$ and $\theta$ separate disagreement about preferred outcomes from competition over issue salience.
@@ -182,7 +182,7 @@ The Game 3 protocol generates two parallel data streams per game: (1) the sequen
 We exploit this structure to define behavioral metrics that are computable at scale across thousands of games.
 
 \paragraph{Efficiency and individual metrics.}
-We measure \emph{utilitarian efficiency} $\eta = SW_{\text{actual}} / SW_{\text{optimal}}$, where $SW_{\text{optimal}}$ is the social welfare of the welfare-maximizing funded set (a knapsack problem).
+We measure \emph{utilitarian efficiency} $\eta = \\ SW_{\text{actual}} / SW_{\text{optimal}}$, where $SW_{\text{optimal}}$ is the social welfare of the welfare-maximizing funded set (a knapsack problem).
 At the individual level, we compute each agent's utility $u^i$ and a \emph{free-rider index} $F_{ij} = (v^i_j / \sum_k v^k_j) / (x_{ij} / \sum_k x_{kj})$ for each funded project $j$ to which agent $i$ contributed ($x_{ij} > 0$), where $F_{ij} > 1$ indicates that agent $i$ extracts disproportionate value relative to their cost share.
 Agent-project pairs where $x_{ij} = 0$ are classified as \emph{pure free-riding} and tracked separately.
 We also define an \emph{exploitation index} $E_i = (u^i_{\text{actual}} - u^i_{\text{Lindahl}}) / |u^i_{\text{Lindahl}}|$ analogous to Game 2's exploitation index relative to the NBS: when $E_i > 0$, agent $i$ extracted more utility than they would receive under the proportionally fair Lindahl cost-sharing (defined in \Cref{sec:solution_concepts}), enabling analysis of whether the Elo gap predicts asymmetric exploitation.
@@ -261,7 +261,7 @@ The NBS is unique, Pareto efficient, and captures the notion of a fair outcome u
 It balances efficiency (high total utility) with equity (neither agent receives too little).
 
 For Game 1, we enumerate all $2^m = 32$ allocations and select the one maximizing $u^1(\bm{A}) \cdot u^2(\bm{A})$.
-For Game 2, the Nash product over $\bm{a} \in [0,1]^m$ is smooth, so we solve it with L-BFGS-B.
+For Game 2, the Nash product over $\bm{a} \in [0,1]^m$ is smooth, so we solve it with L-BFGS-B (Limited-Memory Bounded Broyden-Fletcher-Goldfarb-Shanno optimization).
 
 We measure \emph{distance from NBS}:
 \begin{equation}
@@ -297,24 +297,24 @@ where $\|\cdot\|_F$ is the Frobenius norm (root sum of squared entry-wise differ
 Note that $D_{\text{NBS}}$ and $D_{\text{Lindahl}}$ are not directly comparable across games because they measure distances in different spaces (utility space for $D_{\text{NBS}}$ vs.\ contribution-matrix space for $D_{\text{Lindahl}}$).
 However, the exploitation indices $E_i$ are comparable: in both cases, $E_i > 0$ means agent $i$ got more than the fair benchmark, and $E_i < 0$ means they got less.
 
-\paragraph{Game 3: Core of the cooperative game.}
-The \emph{core} is the set of cost-sharing arrangements where no coalition of agents can do better by breaking away and funding projects independently.
-Formally, a cost-sharing $\bm{X}$ for funded set $S$ is in the core if and only if for every coalition $T \subseteq \mathcal{N}$:
-\begin{equation}
-    \sum_{i \in T} u^i(\bm{X}, S) \geq V(T)
-\end{equation}
-where $V(T)$ is the value of coalition $T$, meaning the maximum total utility agents in $T$ could achieve using only their own budgets:
-\begin{equation}
-    V(T) = \max_{S' \subseteq \mathcal{M}} \sum_{j \in S'} \left(\sum_{i \in T} v^i_j - c_j\right) \quad \text{s.t.} \quad \sum_{j \in S'} c_j \leq \sum_{i \in T} b^i
-\end{equation}
-Computing $V(T)$ is a knapsack problem; for $m=5$, each coalition's value is found by enumerating 32 subsets.
-With $n=2$ agents, there are $2^n - 1 = 3$ non-empty coalitions to check.
-With $n=5$, there are 31 coalitions, each requiring 32 subset evaluations (under 1000 checks total).
+% \paragraph{Game 3: Core of the cooperative game.}
+% The \emph{core} is the set of cost-sharing arrangements where no coalition of agents can do better by breaking away and funding projects independently.
+% Formally, a cost-sharing $\bm{X}$ for funded set $S$ is in the core if and only if for every coalition $T \subseteq \mathcal{N}$:
+% \begin{equation}
+%     \sum_{i \in T} u^i(\bm{X}, S) \geq V(T)
+% \end{equation}
+% where $V(T)$ is the value of coalition $T$, meaning the maximum total utility agents in $T$ could achieve using only their own budgets:
+% \begin{equation}
+%     V(T) = \max_{S' \subseteq \mathcal{M}} \sum_{j \in S'} \left(\sum_{i \in T} v^i_j - c_j\right) \quad \text{s.t.} \quad \sum_{j \in S'} c_j \leq \sum_{i \in T} b^i
+% \end{equation}
+% Computing $V(T)$ is a knapsack problem; for $m=5$, each coalition's value is found by enumerating 32 subsets.
+% With $n=2$ agents, there are $2^n - 1 = 3$ non-empty coalitions to check.
+% With $n=5$, there are 31 coalitions, each requiring 32 subset evaluations (under 1000 checks total).
 
-The core is a polytope in the space of contribution matrices.
-We report whether the actual cost-sharing lies inside the core and, if not, its minimum distance to the core boundary (computable via linear programming).
+% The core is a polytope in the space of contribution matrices.
+% We report whether the actual cost-sharing lies inside the core and, if not, its minimum distance to the core boundary (computable via linear programming).
 
-\paragraph{Efficiency-fairness decomposition.}
-For all three games, deviation from the optimum decomposes into two orthogonal components: an \emph{efficiency loss} $SW^* - SW_{\text{actual}}$ (surplus destroyed by wrong allocations, unfunded projects, or timeout) and a \emph{fairness deviation} measured by distance from NBS (Games 1, 2) or Lindahl (Game 3) among outcomes with the same $SW_{\text{actual}}$.
-This separates ``they left money on the table'' from ``they captured the right total but split it unevenly,'' sharpening the analysis of how capability affects negotiation outcomes.
-For Game 3, the core analysis adds a stronger stability check: whether a coalition could have strictly improved by breaking away from the grand coalition.
+% \paragraph{Efficiency-fairness decomposition.}
+% For all three games, deviation from the optimum decomposes into two orthogonal components: an \emph{efficiency loss} $SW^* - SW_{\text{actual}}$ (surplus destroyed by wrong allocations, unfunded projects, or timeout) and a \emph{fairness deviation} measured by distance from NBS (Games 1, 2) or Lindahl (Game 3) among outcomes with the same $SW_{\text{actual}}$.
+% This separates ``they left money on the table'' from ``they captured the right total but split it unevenly,'' sharpening the analysis of how capability affects negotiation outcomes.
+% For Game 3, the core analysis adds a stronger stability check: whether a coalition could have strictly improved by breaking away from the grand coalition.
