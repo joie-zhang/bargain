@@ -29,6 +29,17 @@ PROPOSAL_LABELS = {
     "proposal2_mixed_ecology": "Proposal 2: Matched Mixed Ecology",
 }
 
+# Typography for publication-facing n>2 summary plots.
+NAGENT_FIG_PANEL_WIDTH = 9.0
+NAGENT_FIG_HEIGHT = 6.2
+NAGENT_SUPTITLE_SIZE = 20
+NAGENT_PANEL_TITLE_SIZE = 16
+NAGENT_AXIS_LABEL_SIZE = 14
+NAGENT_TICK_SIZE = 12
+NAGENT_POINT_LABEL_SIZE = 11
+NAGENT_LEGEND_SIZE = 11
+NAGENT_LEGEND_TITLE_SIZE = 12
+
 
 def latest_results_root() -> Optional[Path]:
     candidates = sorted(RESULTS_ROOT.glob("game1_multiagent_smoke_*"))
@@ -385,45 +396,107 @@ def _competition_palette() -> Dict[float, str]:
     }
 
 
-def plot_advantage_vs_elo(summary: pd.DataFrame, output_path: Path, title: str) -> None:
+def pair_count_column(summary: pd.DataFrame) -> Optional[str]:
+    for candidate in ("num_pairs", "num_runs", "pairs", "runs"):
+        if candidate in summary.columns:
+            return candidate
+    return None
+
+
+def identify_gemini_low_pair_rows(summary: pd.DataFrame, min_pairs: int) -> pd.DataFrame:
+    if summary.empty or min_pairs <= 0:
+        return summary.iloc[0:0].copy()
+
+    count_col = pair_count_column(summary)
+    if count_col is None:
+        return summary.iloc[0:0].copy()
+
+    pair_counts = pd.to_numeric(summary[count_col], errors="coerce")
+    gemini_mask = summary["focal_model"].astype(str).str.contains("gemini", case=False, na=False)
+    low_count_mask = pair_counts < float(min_pairs)
+    flagged = summary[gemini_mask & low_count_mask].copy()
+    if flagged.empty:
+        return flagged
+    return flagged.sort_values(["n_agents", "competition_level", "elo"])
+
+
+def _apply_gemini_pair_filter(summary: pd.DataFrame, gemini_min_pairs: Optional[int]) -> pd.DataFrame:
+    if gemini_min_pairs is None:
+        return summary.copy()
+    count_col = pair_count_column(summary)
+    if count_col is None:
+        return summary.copy()
+    pair_counts = pd.to_numeric(summary[count_col], errors="coerce")
+    gemini_mask = summary["focal_model"].astype(str).str.contains("gemini", case=False, na=False)
+    low_count_mask = pair_counts < float(gemini_min_pairs)
+    return summary[~(gemini_mask & low_count_mask)].copy()
+
+
+def plot_advantage_vs_elo(
+    summary: pd.DataFrame,
+    output_path: Path,
+    title: str,
+    *,
+    annotate_pair_counts: bool = False,
+    gemini_min_pairs: Optional[int] = None,
+) -> None:
     if summary.empty:
         return
 
+    plot_df = _apply_gemini_pair_filter(summary, gemini_min_pairs)
+    if plot_df.empty:
+        return
+
+    count_col = pair_count_column(plot_df)
     palette = _competition_palette()
-    n_values = sorted(summary["n_agents"].unique().tolist())
-    fig, axes = plt.subplots(1, len(n_values), figsize=(8 * len(n_values), 5), squeeze=False)
+    n_values = sorted(plot_df["n_agents"].unique().tolist())
+    fig, axes = plt.subplots(
+        1,
+        len(n_values),
+        figsize=(NAGENT_FIG_PANEL_WIDTH * len(n_values), NAGENT_FIG_HEIGHT),
+        squeeze=False,
+    )
 
     for ax, n_agents in zip(axes[0], n_values):
-        subset_n = summary[summary["n_agents"] == n_agents].sort_values("elo")
+        subset_n = plot_df[plot_df["n_agents"] == n_agents].sort_values("elo")
         for competition_level in sorted(subset_n["competition_level"].unique().tolist()):
             subset = subset_n[subset_n["competition_level"] == competition_level].sort_values("elo")
             ax.plot(
                 subset["elo"],
                 subset["mean_utility_advantage_vs_nano"],
                 marker="o",
+                markersize=6.5,
                 linewidth=2,
                 color=palette.get(float(competition_level), "#475569"),
                 label=f"comp={competition_level:g}",
             )
             for _, row in subset.iterrows():
+                point_label = str(row["short_name"])
+                if annotate_pair_counts and count_col is not None:
+                    try:
+                        pair_count = int(row[count_col])
+                        point_label = f"{point_label} (r={pair_count})"
+                    except (TypeError, ValueError):
+                        pass
                 ax.annotate(
-                    row["short_name"],
+                    point_label,
                     (row["elo"], row["mean_utility_advantage_vs_nano"]),
                     textcoords="offset points",
                     xytext=(0, 6),
                     ha="center",
-                    fontsize=8,
+                    fontsize=NAGENT_POINT_LABEL_SIZE,
                 )
 
         ax.axhline(0.0, color="#94a3b8", linewidth=1, linestyle="--")
-        ax.set_title(f"n = {n_agents}")
-        ax.set_xlabel("Chatbot Arena Elo")
-        ax.set_ylabel("Mean Utility Advantage vs Nano Control")
+        ax.set_title(f"n = {n_agents}", fontsize=NAGENT_PANEL_TITLE_SIZE, fontweight="bold")
+        ax.set_xlabel("Chatbot Arena Elo", fontsize=NAGENT_AXIS_LABEL_SIZE)
+        ax.set_ylabel("Mean Utility Advantage vs Nano Control", fontsize=NAGENT_AXIS_LABEL_SIZE)
+        ax.tick_params(axis="both", labelsize=NAGENT_TICK_SIZE)
         ax.grid(alpha=0.25)
-        ax.legend()
+        ax.legend(fontsize=NAGENT_LEGEND_SIZE, title_fontsize=NAGENT_LEGEND_TITLE_SIZE)
 
-    fig.suptitle(title)
-    fig.tight_layout()
+    fig.suptitle(title, fontsize=NAGENT_SUPTITLE_SIZE, fontweight="bold", y=0.995)
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
