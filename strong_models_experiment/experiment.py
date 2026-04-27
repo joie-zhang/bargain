@@ -214,12 +214,20 @@ class StrongModelsExperiment:
         # Extract reasoning configuration if present
         reasoning_config = config.get("reasoning_config", {"budget": None, "phases": []})
 
+        parallel_phases = config.get("parallel_phases", False)
+        if not isinstance(parallel_phases, bool):
+            raise ValueError(
+                "parallel_phases must be a boolean; use true to run one task per agent, "
+                "or false for serial execution"
+            )
+
         # Initialize phase handler with token config, game environment, and reasoning config
         self.phase_handler = PhaseHandler(
             save_interaction_callback=self._save_interaction,
             token_config=token_config,
             game_environment=game_environment,
-            reasoning_config=reasoning_config
+            reasoning_config=reasoning_config,
+            parallel_phases=parallel_phases
         )
 
         # Create agents
@@ -782,8 +790,10 @@ class StrongModelsExperiment:
             self.agent_interactions[agent_id] = []
         self.agent_interactions[agent_id].append(interaction)
 
-        # Stream save to JSON files
-        self._stream_save_json()
+        # Stream save to JSON files. Agent-specific files are overwritten from
+        # canonical in-memory state for the changed agent to avoid re-appending
+        # historical interactions on every stream save.
+        self._stream_save_json(changed_agent_id=agent_id)
 
     def _track_token_usage(self, agent_id: str, phase: str, prompt: str, response: str,
                           token_usage: Optional[Dict[str, Any]] = None):
@@ -895,7 +905,7 @@ class StrongModelsExperiment:
         self.logger.info("    python visualization/cost_dashboard.py --dir <results_dir>")
         self.logger.info("\n" + "=" * 70 + "\n")
     
-    def _stream_save_json(self):
+    def _stream_save_json(self, changed_agent_id: Optional[str] = None):
         """Stream save all interactions to JSON files."""
         if not self.current_experiment_id:
             return
@@ -921,10 +931,20 @@ class StrongModelsExperiment:
             batch_mode, self.current_run_number
         )
         
-        # Save agent-specific interactions
-        for agent_id, interactions in self.agent_interactions.items():
-            for interaction in interactions:
-                self.file_manager.save_interaction(
-                    interaction, exp_dir,
-                    batch_mode, self.current_run_number
-                )
+        # Save agent-specific interactions by overwriting from canonical
+        # in-memory state. Passing changed_agent_id keeps stream writes scoped
+        # to the agent that just changed; the final run-level save passes None
+        # to rewrite every agent file once.
+        if changed_agent_id is None:
+            agent_items = self.agent_interactions.items()
+        else:
+            agent_items = [(changed_agent_id, self.agent_interactions.get(changed_agent_id, []))]
+
+        for agent_id, interactions in agent_items:
+            self.file_manager.save_agent_interactions(
+                agent_id,
+                interactions,
+                exp_dir,
+                batch_mode,
+                self.current_run_number
+            )

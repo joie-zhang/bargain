@@ -340,6 +340,12 @@ async def main():
         help="Use only prompt-based reasoning budget instruction, disable API-level control (no thinking.budget_tokens or reasoning_effort)"
     )
 
+    parser.add_argument(
+        "--parallel-phases",
+        action="store_true",
+        help="Run independent per-agent phases concurrently. Discussion remains serial."
+    )
+
     args = parser.parse_args()
     
     has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
@@ -440,6 +446,7 @@ async def main():
 
     print(f"Discussion Turns: {args.discussion_turns}")
     print(f"Model Order: {args.model_order}")
+    print(f"Parallel Independent Phases: {'enabled' if args.parallel_phases else 'disabled'}")
     
     # Only show token limits if any are specified
     token_limits = []
@@ -489,6 +496,7 @@ async def main():
         "disable_reflection": args.disable_reflection,
         "discussion_turns": args.discussion_turns,
         "model_order": args.model_order,
+        "parallel_phases": args.parallel_phases,
         # Diplomacy-specific parameters
         "n_issues": args.n_issues,
         "rho": args.rho,

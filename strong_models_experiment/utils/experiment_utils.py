@@ -127,6 +127,25 @@ class FileManager:
                 "total_interactions": len(interactions),
                 "interactions": interactions
             }, f, indent=2, default=str, ensure_ascii=False)
+
+    def save_agent_interactions(self, agent_id: str, interactions: List[Dict],
+                                exp_dir: Path, batch_mode: bool = False,
+                                run_number: Optional[int] = None) -> None:
+        """Overwrite one agent's interactions from canonical in-memory state."""
+        if batch_mode and run_number:
+            agent_interactions_dir = exp_dir / "agent_interactions"
+            agent_interactions_dir.mkdir(parents=True, exist_ok=True)
+            base_filename = f"run_{run_number}_agent_{agent_id}_interactions.json"
+            agent_file = self._get_unique_filename(agent_interactions_dir, base_filename)
+        else:
+            agent_file = exp_dir / f"agent_{agent_id}_interactions.json"
+
+        with open(agent_file, 'w', encoding='utf-8') as f:
+            json.dump({
+                "agent_id": agent_id,
+                "total_interactions": len(interactions),
+                "interactions": interactions
+            }, f, indent=2, default=str, ensure_ascii=False)
     
     def _get_unique_filename(self, directory: Path, base_filename: str) -> Path:
         """

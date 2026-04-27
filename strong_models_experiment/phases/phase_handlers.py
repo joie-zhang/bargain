@@ -1,9 +1,10 @@
 """Handlers for different negotiation phases."""
 
+import asyncio
 import json
 import time
 import logging
-from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING
+from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING, Awaitable, Callable
 from negotiation import NegotiationContext
 from negotiation.llm_agents import BaseLLMAgent
 from ..prompts import PromptGenerator
@@ -26,7 +27,12 @@ class PhaseHandler:
 
     def __init__(self, save_interaction_callback=None, token_config=None,
                  game_environment: Optional["GameEnvironment"] = None,
-                 reasoning_config: Optional[Dict[str, Any]] = None):
+                 reasoning_config: Optional[Dict[str, Any]] = None,
+                 parallel_phases: bool = False):
+        if not isinstance(parallel_phases, bool):
+            raise TypeError(
+                "parallel_phases must be a boolean; partial numeric phase concurrency is unsupported"
+            )
         self.logger = logging.getLogger(__name__)
         self.prompt_gen = PromptGenerator()
         self.save_interaction = save_interaction_callback or (lambda *args, **kwargs: None)
@@ -47,6 +53,30 @@ class PhaseHandler:
         # Reasoning token budget configuration (for test-time compute scaling)
         # Format: {"budget": int, "phases": ["thinking", "reflection", ...]}
         self.reasoning_config = reasoning_config or {"budget": None, "phases": []}
+        self.parallel_phases = parallel_phases
+
+    async def _run_agent_tasks_in_order(
+        self,
+        agents: List[BaseLLMAgent],
+        task_factory: Callable[[int, BaseLLMAgent], Awaitable[Any]],
+    ) -> List[Any]:
+        """Run one independent task per agent and return results in agent order.
+
+        Parallel mode intentionally has no partial-concurrency knob: if enabled, it
+        starts exactly one task per agent and waits for all tasks before the caller
+        drains results. Callers then log/save in the original agent order.
+        """
+        if not self.parallel_phases or len(agents) <= 1:
+            return [await task_factory(idx, agent) for idx, agent in enumerate(agents)]
+
+        expected_tasks = len(agents)
+        tasks = [task_factory(idx, agent) for idx, agent in enumerate(agents)]
+        if len(tasks) != expected_tasks:
+            raise RuntimeError(
+                f"Parallel phase invariant violated: expected {expected_tasks} tasks, got {len(tasks)}"
+            )
+
+        return await asyncio.gather(*tasks, return_exceptions=True)
     
     def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
         """Extract token usage information from an AgentResponse object."""
@@ -323,7 +353,7 @@ class PhaseHandler:
         if self.game_environment is not None and self.game_environment.uses_combined_setup_phase():
             self.logger.info("📜 COMBINED GAME SETUP PROMPTS:")
 
-            for agent in agents:
+            async def setup_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
                 setup_prompt = self.game_environment.get_combined_setup_prompt(
                     agent_id=agent.agent_id,
                     game_state=game_state
@@ -340,15 +370,27 @@ class PhaseHandler:
                 )
 
                 agent_response = await agent.generate_response(context, setup_prompt)
-                response_content = agent_response.content
-                token_usage = self._extract_token_usage(agent_response)
+                return {
+                    "agent": agent,
+                    "prompt": setup_prompt,
+                    "response_content": agent_response.content,
+                    "token_usage": self._extract_token_usage(agent_response),
+                }
+
+            setup_results = await self._run_agent_tasks_in_order(agents, setup_agent)
+            for result in setup_results:
+                if isinstance(result, BaseException):
+                    raise result
+                agent = result["agent"]
+                response_content = result["response_content"]
+                token_usage = result["token_usage"]
 
                 self.logger.info(f"  📬 {agent.agent_id} response:")
                 self.logger.info(f"    {response_content}")
                 self.save_interaction(
                     agent.agent_id,
                     "game_setup",
-                    setup_prompt,
+                    result["prompt"],
                     response_content,
                     0,
                     token_usage,
@@ -368,8 +410,8 @@ class PhaseHandler:
         
         self.logger.info("📜 GAME RULES PROMPT:")
         self.logger.info(f"  {game_rules_prompt}")
-        
-        for agent in agents:
+
+        async def setup_agent_with_rules(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             context = NegotiationContext(
                 current_round=0,
                 max_rounds=config["t_rounds"],
@@ -379,12 +421,22 @@ class PhaseHandler:
                 preferences=preferences["agent_preferences"][agent.agent_id],
                 turn_type="setup"
             )
-            
-            # Get response with token info
+
             agent_response = await agent.generate_response(context, game_rules_prompt)
-            response_content = agent_response.content
-            token_usage = self._extract_token_usage(agent_response)
-            
+            return {
+                "agent": agent,
+                "response_content": agent_response.content,
+                "token_usage": self._extract_token_usage(agent_response),
+            }
+
+        setup_results = await self._run_agent_tasks_in_order(agents, setup_agent_with_rules)
+        for result in setup_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+            response_content = result["response_content"]
+            token_usage = result["token_usage"]
+
             self.logger.info(f"  📬 {agent.agent_id} response:")
             self.logger.info(f"    {response_content}")
             self.save_interaction(agent.agent_id, "game_setup", game_rules_prompt, response_content, 0, token_usage, model_name=agent.get_model_info()["model_name"])
@@ -405,7 +457,7 @@ class PhaseHandler:
             )
             return
 
-        for agent in agents:
+        async def assign_preferences_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             agent_preferences = preferences["agent_preferences"][agent.agent_id]
 
             # Use GameEnvironment if provided, otherwise use legacy PromptGenerator
@@ -422,12 +474,7 @@ class PhaseHandler:
                 preference_prompt = self.prompt_gen.create_preference_assignment_prompt(
                     items, agent_preferences, agent.agent_id
                 )
-            
-            self.logger.info(f"  🎯 {agent.agent_id} preferences:")
-            for i, (item, value) in enumerate(zip(items, agent_preferences)):
-                item_name = item["name"] if isinstance(item, dict) else str(item)
-                self.logger.info(f"    - {item_name}: {value:.1f}")
-            
+
             context = NegotiationContext(
                 current_round=0,
                 max_rounds=config["t_rounds"],
@@ -437,15 +484,33 @@ class PhaseHandler:
                 preferences=agent_preferences,
                 turn_type="preference_assignment"
             )
-            
-            # Get response with token info
+
             agent_response = await agent.generate_response(context, preference_prompt)
-            response_content = agent_response.content
-            token_usage = self._extract_token_usage(agent_response)
-            
+            return {
+                "agent": agent,
+                "agent_preferences": agent_preferences,
+                "preference_prompt": preference_prompt,
+                "response_content": agent_response.content,
+                "token_usage": self._extract_token_usage(agent_response),
+            }
+
+        preference_results = await self._run_agent_tasks_in_order(agents, assign_preferences_for_agent)
+        for result in preference_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+            agent_preferences = result["agent_preferences"]
+            response_content = result["response_content"]
+            token_usage = result["token_usage"]
+
+            self.logger.info(f"  🎯 {agent.agent_id} preferences:")
+            for i, (item, value) in enumerate(zip(items, agent_preferences)):
+                item_name = item["name"] if isinstance(item, dict) else str(item)
+                self.logger.info(f"    - {item_name}: {value:.1f}")
+
             self.logger.info(f"  📬 {agent.agent_id} acknowledgment:")
             self.logger.info(f"    {response_content}")
-            self.save_interaction(agent.agent_id, "preference_assignment", preference_prompt, response_content, 0, token_usage, model_name=agent.get_model_info()["model_name"])
+            self.save_interaction(agent.agent_id, "preference_assignment", result["preference_prompt"], response_content, 0, token_usage, model_name=agent.get_model_info()["model_name"])
         
         self.logger.info("Private preference assignment completed")
     
@@ -576,7 +641,7 @@ class PhaseHandler:
         # Apply token limits for thinking phase if configured for this experiment or agent.
         self._apply_phase_token_limits(agents, "thinking")
 
-        for agent in agents:
+        async def think_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             # Get reasoning budget for this specific agent
             reasoning_budget = self._get_reasoning_budget("thinking", agent.agent_id)
 
@@ -619,32 +684,24 @@ class PhaseHandler:
 
                 # Extract token usage if present (remove from response to avoid saving it in the content)
                 token_usage = thinking_response.pop("_token_usage", None)
-
-                self.logger.info(f"🧠 [PRIVATE] {agent.agent_id} strategic thinking:")
-                self.logger.info(f"  Full reasoning: {thinking_response.get('reasoning', 'No reasoning provided')}")
-                self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
-                # Log priorities/targets based on game type
-                priorities = thinking_response.get('key_priorities') or thinking_response.get('target_items', [])
-                concessions = thinking_response.get('potential_concessions') or thinking_response.get('anticipated_resistance', [])
-                self.logger.info(f"  Key priorities: {priorities}")
-                self.logger.info(f"  Potential concessions: {concessions}")
-                
-                thinking_response_str = json.dumps(thinking_response, default=str)
-                self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}", 
-                                    thinking_prompt, thinking_response_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
-                
-                thinking_results.append({
-                    "agent_id": agent.agent_id,
-                    "reasoning": thinking_response.get('reasoning', ''),
-                    "strategy": thinking_response.get('strategy', ''),
-                    "key_priorities": priorities,
-                    "potential_concessions": concessions,
-                    "target_items": thinking_response.get('target_items', priorities),
-                    "anticipated_resistance": thinking_response.get('anticipated_resistance', concessions)
-                })
-                
+                return {
+                    "agent": agent,
+                    "thinking_prompt": thinking_prompt,
+                    "thinking_response": thinking_response,
+                    "token_usage": token_usage,
+                    "error": None,
+                }
             except Exception as e:
-                self.logger.error(f"Error in private thinking for {agent.agent_id}: {e}")
+                return {"agent": agent, "error": e}
+
+        raw_results = await self._run_agent_tasks_in_order(agents, think_for_agent)
+        for result in raw_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+
+            if result["error"] is not None:
+                self.logger.error(f"Error in private thinking for {agent.agent_id}: {result['error']}")
                 thinking_results.append({
                     "agent_id": agent.agent_id,
                     "reasoning": "Unable to complete strategic thinking due to error",
@@ -654,6 +711,34 @@ class PhaseHandler:
                     "target_items": [],
                     "anticipated_resistance": []
                 })
+                continue
+
+            thinking_response = result["thinking_response"]
+            token_usage = result["token_usage"]
+            thinking_prompt = result["thinking_prompt"]
+
+            self.logger.info(f"🧠 [PRIVATE] {agent.agent_id} strategic thinking:")
+            self.logger.info(f"  Full reasoning: {thinking_response.get('reasoning', 'No reasoning provided')}")
+            self.logger.info(f"  Strategy: {thinking_response.get('strategy', 'No strategy provided')}")
+            # Log priorities/targets based on game type
+            priorities = thinking_response.get('key_priorities') or thinking_response.get('target_items', [])
+            concessions = thinking_response.get('potential_concessions') or thinking_response.get('anticipated_resistance', [])
+            self.logger.info(f"  Key priorities: {priorities}")
+            self.logger.info(f"  Potential concessions: {concessions}")
+
+            thinking_response_str = json.dumps(thinking_response, default=str)
+            self.save_interaction(agent.agent_id, f"private_thinking_round_{round_num}",
+                                thinking_prompt, thinking_response_str, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
+
+            thinking_results.append({
+                "agent_id": agent.agent_id,
+                "reasoning": thinking_response.get('reasoning', ''),
+                "strategy": thinking_response.get('strategy', ''),
+                "key_priorities": priorities,
+                "potential_concessions": concessions,
+                "target_items": thinking_response.get('target_items', priorities),
+                "anticipated_resistance": thinking_response.get('anticipated_resistance', concessions)
+            })
         
         return {
             "thinking_results": thinking_results,
@@ -677,7 +762,8 @@ class PhaseHandler:
         # Apply token limits for proposal phase if configured for this experiment or agent.
         self._apply_phase_token_limits(agents, "proposal")
 
-        for agent in agents:
+        async def propose_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
+            log_records = []
             # Get reasoning budget for this specific agent
             reasoning_budget = self._get_reasoning_budget("proposal", agent.agent_id)
 
@@ -728,8 +814,8 @@ class PhaseHandler:
                     or "contributions" in proposal
                 )
                 if should_retry_invalid and not self.game_environment.validate_proposal(proposal, game_state):
-                    self.logger.warning(
-                        f"  Invalid proposal from {agent.agent_id}, retrying once..."
+                    log_records.append(
+                        ("warning", f"  Invalid proposal from {agent.agent_id}, retrying once...")
                     )
                     retry_prompt = (
                         proposal_prompt
@@ -744,8 +830,11 @@ class PhaseHandler:
                         [a.agent_id for a in agents]
                     )
                     if not self.game_environment.validate_proposal(proposal, game_state):
-                        self.logger.error(
-                            f"  {agent.agent_id} proposal still invalid after retry, using zero vector"
+                        log_records.append(
+                            (
+                                "error",
+                                f"  {agent.agent_id} proposal still invalid after retry, using zero vector",
+                            )
                         )
                         proposal = {
                             "contributions": [0.0] * game_state["m_projects"],
@@ -761,6 +850,26 @@ class PhaseHandler:
             else:
                 # Legacy item allocation path
                 proposal = await agent.propose_allocation(context)
+
+            return {
+                "agent": agent,
+                "proposal_prompt": proposal_prompt,
+                "proposal": proposal,
+                "log_records": log_records,
+            }
+
+        raw_results = await self._run_agent_tasks_in_order(agents, propose_for_agent)
+        for result in raw_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+            proposal_prompt = result["proposal_prompt"]
+            proposal = result["proposal"]
+            for level, message in result["log_records"]:
+                if level == "warning":
+                    self.logger.warning(message)
+                elif level == "error":
+                    self.logger.error(message)
 
             # Extract token usage if present (remove from proposal to avoid saving it in the content)
             token_usage = proposal.pop("_token_usage", None)
@@ -954,13 +1063,13 @@ class PhaseHandler:
                 proposal_for_voting["round"] = round_num
                 prepared_batch_proposals.append(proposal_for_voting)
 
-        for agent in agents:
+        async def vote_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             # Get reasoning budget for this specific agent
             reasoning_budget = self._get_reasoning_budget("voting", agent.agent_id)
 
             agent_votes = []
-
-            self.logger.info(f"🗳️ Collecting private votes from {agent.agent_id}...")
+            interaction_records = []
+            warnings = []
 
             voting_context = NegotiationContext(
                 current_round=round_num,
@@ -997,13 +1106,67 @@ class PhaseHandler:
 
                     response = await agent.generate_response(voting_context, voting_prompt)
                     token_usage = self._extract_token_usage(response)
+                    proposal_numbers = [
+                        proposal["proposal_number"]
+                        for proposal in prepared_batch_proposals
+                    ]
 
                     vote_results = self.game_environment.parse_batch_voting_response(
                         response.content,
-                        [proposal["proposal_number"] for proposal in prepared_batch_proposals],
+                        proposal_numbers,
                         agent.agent_id,
                         round_num
                     )
+
+                    def missing_vote_numbers(votes: List[Dict[str, Any]]) -> List[int]:
+                        missing = []
+                        by_number = {
+                            vote.get("proposal_number"): vote
+                            for vote in votes
+                            if isinstance(vote, dict)
+                        }
+                        for proposal_number in proposal_numbers:
+                            vote = by_number.get(proposal_number, {})
+                            if (
+                                vote.get("reasoning") == "Missing or invalid vote entry"
+                                or "parse_error" in vote
+                            ):
+                                missing.append(proposal_number)
+                        return missing
+
+                    missing_numbers = missing_vote_numbers(vote_results)
+                    if missing_numbers:
+                        self.logger.warning(
+                            f"  Batch vote from {agent.agent_id} omitted or invalidated "
+                            f"proposal votes {missing_numbers}; retrying once."
+                        )
+                        retry_prompt = (
+                            voting_prompt
+                            + "\n\nYour previous response was incomplete or invalid. "
+                            f"Return exactly one JSON object with a votes array containing "
+                            f"one entry for every proposal number in this exact list: {proposal_numbers}. "
+                            "Do not omit any proposal. If unsure, choose reject and explain briefly. "
+                            "No prose outside the JSON object."
+                        )
+                        retry_response = await agent.generate_response(voting_context, retry_prompt)
+                        retry_token_usage = self._extract_token_usage(retry_response)
+                        retry_vote_results = self.game_environment.parse_batch_voting_response(
+                            retry_response.content,
+                            proposal_numbers,
+                            agent.agent_id,
+                            round_num
+                        )
+                        retry_missing_numbers = missing_vote_numbers(retry_vote_results)
+                        if len(retry_missing_numbers) <= len(missing_numbers):
+                            response = retry_response
+                            token_usage = retry_token_usage
+                            vote_results = retry_vote_results
+                            missing_numbers = retry_missing_numbers
+                        if missing_numbers:
+                            warnings.append(
+                                f"Batch vote from {agent.agent_id} still missing/invalid "
+                                f"proposal votes after retry: {missing_numbers}"
+                            )
 
                     for idx, (enum_proposal, vote_result) in enumerate(zip(enumerated_proposals, vote_results)):
                         vote_entry = {
@@ -1015,8 +1178,6 @@ class PhaseHandler:
                             "timestamp": time.time()
                         }
                         agent_votes.append(vote_entry)
-
-                        self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
 
                         if "agreement" in enum_proposal:
                             proposal_detail_key = "agreement"
@@ -1042,14 +1203,14 @@ class PhaseHandler:
                         if "parse_error" in vote_result:
                             enhanced_vote_response["parse_error"] = vote_result["parse_error"]
 
-                        self.save_interaction(
-                            agent.agent_id,
-                            f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
-                            voting_prompt,
-                            json.dumps(enhanced_vote_response, default=str),
-                            round_num,
-                            token_usage if idx == 0 else None,
-                            model_name=agent.get_model_info()["model_name"]
+                        interaction_records.append(
+                            {
+                                "phase": f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
+                                "prompt": voting_prompt,
+                                "response": json.dumps(enhanced_vote_response, default=str),
+                                "token_usage": token_usage if idx == 0 else None,
+                                "log_message": f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}",
+                            }
                         )
                 else:
                     for enum_proposal in enumerated_proposals:
@@ -1110,7 +1271,7 @@ Vote must be either "accept" or "reject"."""
                             try:
                                 vote_result = self._parse_vote_response(response.content, agent.agent_id, round_num)
                             except (ValueError, json.JSONDecodeError) as e:
-                                self.logger.warning(f"Failed to parse vote from {agent.agent_id}: {e}")
+                                warnings.append(f"Failed to parse vote from {agent.agent_id}: {e}")
                                 vote_result = {
                                     "vote": "reject",
                                     "reasoning": "Failed to parse vote response",
@@ -1135,8 +1296,6 @@ Vote must be either "accept" or "reject"."""
                         }
                         agent_votes.append(vote_entry)
 
-                        self.logger.info(f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}")
-
                         # Create enhanced vote response with full context
                         # Use native proposal key (agreement or allocation)
                         if "agreement" in enum_proposal:
@@ -1159,21 +1318,34 @@ Vote must be either "accept" or "reject"."""
                             "timestamp": time.time()
                         }
 
-                        # Save the voting interaction with enhanced context
-                        vote_response_str = json.dumps(enhanced_vote_response, default=str)
-                        self.save_interaction(
-                            agent.agent_id,
-                            f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
-                            voting_prompt,
-                            vote_response_str,
-                            round_num,
-                            token_usage,
-                            model_name=agent.get_model_info()["model_name"]
+                        interaction_records.append(
+                            {
+                                "phase": f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
+                                "prompt": voting_prompt,
+                                "response": json.dumps(enhanced_vote_response, default=str),
+                                "token_usage": token_usage,
+                                "log_message": f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}",
+                            }
                         )
-                
-                private_votes.extend(agent_votes)
-                
+                return {
+                    "agent": agent,
+                    "agent_votes": agent_votes,
+                    "interaction_records": interaction_records,
+                    "warnings": warnings,
+                    "error": None,
+                }
             except Exception as e:
+                return {"agent": agent, "error": e}
+
+        raw_results = await self._run_agent_tasks_in_order(agents, vote_for_agent)
+        for result in raw_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+            self.logger.info(f"🗳️ Collecting private votes from {agent.agent_id}...")
+
+            if result["error"] is not None:
+                e = result["error"]
                 self.logger.error(f"Error collecting private votes from {agent.agent_id}: {e}")
                 for enum_proposal in enumerated_proposals:
                     fallback_vote = {
@@ -1185,6 +1357,23 @@ Vote must be either "accept" or "reject"."""
                         "timestamp": time.time()
                     }
                     private_votes.append(fallback_vote)
+                continue
+
+            for warning in result["warnings"]:
+                self.logger.warning(warning)
+            for record in result["interaction_records"]:
+                self.logger.info(record["log_message"])
+                self.save_interaction(
+                    agent.agent_id,
+                    record["phase"],
+                    record["prompt"],
+                    record["response"],
+                    round_num,
+                    record["token_usage"],
+                    model_name=agent.get_model_info()["model_name"]
+                )
+
+            private_votes.extend(result["agent_votes"])
         
         voting_summary = {
             "total_agents": len(agents),
@@ -1340,7 +1529,7 @@ Vote must be either "accept" or "reject"."""
         # Apply token limits for reflection phase if configured for this experiment or agent.
         self._apply_phase_token_limits(agents, "reflection")
 
-        for agent in agents:
+        async def reflect_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             # Get reasoning budget for this specific agent
             reasoning_budget = self._get_reasoning_budget("reflection", agent.agent_id)
 
@@ -1379,26 +1568,44 @@ Consider what adjustments might lead to consensus in future rounds."""
                 conversation_history=list(public_context or []),
                 strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, [])
             )
-            
+
             try:
                 # Get response with token info
                 agent_response = await agent.generate_response(context, reflection_prompt)
-                reflection = agent_response.content
-                token_usage = self._extract_token_usage(agent_response)
-                
-                reflections.append({
-                    "agent_id": agent.agent_id,
-                    "reflection": reflection,
-                    "round": round_num
-                })
-                
-                self.logger.info(f"  💭 {agent.agent_id} reflection:")
-                self.logger.info(f"    {reflection}")
-                
-                self.save_interaction(agent.agent_id, f"reflection_round_{round_num}", 
-                                    reflection_prompt, reflection, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
+                return {
+                    "agent": agent,
+                    "reflection_prompt": reflection_prompt,
+                    "reflection": agent_response.content,
+                    "token_usage": self._extract_token_usage(agent_response),
+                    "error": None,
+                }
             except Exception as e:
-                self.logger.error(f"Error in reflection for {agent.agent_id}: {e}")
+                return {"agent": agent, "error": e}
+
+        raw_results = await self._run_agent_tasks_in_order(agents, reflect_for_agent)
+        for result in raw_results:
+            if isinstance(result, BaseException):
+                raise result
+            agent = result["agent"]
+
+            if result["error"] is not None:
+                self.logger.error(f"Error in reflection for {agent.agent_id}: {result['error']}")
+                continue
+
+            reflection = result["reflection"]
+            token_usage = result["token_usage"]
+
+            reflections.append({
+                "agent_id": agent.agent_id,
+                "reflection": reflection,
+                "round": round_num
+            })
+
+            self.logger.info(f"  💭 {agent.agent_id} reflection:")
+            self.logger.info(f"    {reflection}")
+
+            self.save_interaction(agent.agent_id, f"reflection_round_{round_num}",
+                                result["reflection_prompt"], reflection, round_num, token_usage, model_name=agent.get_model_info()["model_name"])
         
         return {"reflections": reflections}
 
