@@ -2,11 +2,14 @@
 """Tests for Game 2's simultaneous multi-proposal voting flow."""
 
 import asyncio
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+import pytest
+
 from game_environments import create_game_environment
-from strong_models_experiment.phases.phase_handlers import PhaseHandler
+from strong_models_experiment.phases.phase_handlers import PhaseHandler, VoteIntegrityError
 
 
 @dataclass
@@ -164,5 +167,192 @@ def test_private_voting_phase_batches_diplomatic_treaty_votes():
             "voting_round_1_proposal_1",
             "voting_round_1_proposal_2",
         ]
+
+    asyncio.run(run_test())
+
+
+def test_invalid_final_round_batch_vote_uses_audited_synthetic_rejects_without_serial_fallback():
+    """Final-round invalid structured voting may use audited synthetic rejects."""
+
+    async def run_test():
+        game = create_game_environment(
+            "diplomacy",
+            n_agents=2,
+            t_rounds=2,
+            n_issues=3,
+            random_seed=7,
+        )
+
+        agent = FakeAgent("Agent_1", "!!!!!!!!!!!!!!!!!!!!!!!!")
+        agent_2 = FakeAgent(
+            "Agent_2",
+            """
+            {
+                "votes": [
+                    {"proposal_number": 1, "vote": "accept", "reasoning": "Acceptable package"},
+                    {"proposal_number": 2, "vote": "reject", "reasoning": "Worse than proposal one"}
+                ]
+            }
+            """,
+        )
+        agents = [agent, agent_2]
+        state = game.create_game_state(agents)
+        preferences = {
+            "agent_preferences": state["agent_positions"],
+            "agent_weights": state["agent_weights"],
+            "game_state": state,
+        }
+        items = [{"name": issue} for issue in state["issues"]]
+
+        proposals = [
+            {
+                "agreement": [65, 20, 55],
+                "reasoning": "Proposal one",
+                "proposed_by": "Agent_2",
+                "round": 1,
+            },
+            {
+                "agreement": [45, 60, 35],
+                "reasoning": "Proposal two",
+                "proposed_by": "Agent_1",
+                "round": 1,
+            },
+        ]
+        enumerated_proposals = [
+            {
+                "proposal_number": idx + 1,
+                "proposer": proposal["proposed_by"],
+                "reasoning": proposal["reasoning"],
+                "original_proposal": proposal,
+                "agreement": proposal["agreement"],
+            }
+            for idx, proposal in enumerate(proposals)
+        ]
+
+        saved_interactions = []
+
+        def save_interaction(agent_id, phase, prompt, response, round_num=None, token_usage=None, model_name=None):
+            saved_interactions.append(
+                {
+                    "agent_id": agent_id,
+                    "phase": phase,
+                    "response": response,
+                }
+            )
+
+        handler = PhaseHandler(save_interaction_callback=save_interaction, game_environment=game)
+
+        result = await handler.run_private_voting_phase(
+            agents=agents,
+            items=items,
+            preferences=preferences,
+            round_num=2,
+            max_rounds=2,
+            proposals=proposals,
+            enumerated_proposals=enumerated_proposals,
+        )
+
+        # Initial batch vote + one full retry + one compact repair retry.
+        # The old behavior could add one or two extra calls per missing proposal.
+        assert len(agent.prompts) == 3
+        assert len(agent_2.prompts) == 1
+        assert [
+            (vote["voter_id"], vote["proposal_number"], vote["vote"])
+            for vote in result["private_votes"]
+        ] == [
+            ("Agent_1", 1, "reject"),
+            ("Agent_1", 2, "reject"),
+            ("Agent_2", 1, "accept"),
+            ("Agent_2", 2, "reject"),
+        ]
+        agent_1_interactions = [
+            entry for entry in saved_interactions if entry["agent_id"] == "Agent_1"
+        ]
+        assert len(agent_1_interactions) == 2
+        agent_1_payloads = [json.loads(entry["response"]) for entry in agent_1_interactions]
+        assert all(payload["synthetic_vote"] is True for payload in agent_1_payloads)
+        assert all("parse_error" in payload for payload in agent_1_payloads)
+        integrity = result["voting_summary"]["vote_integrity"]
+        assert integrity["contaminated"] is True
+        assert integrity["synthetic_vote_count"] == 2
+        assert integrity["hard_failed"] is False
+
+    asyncio.run(run_test())
+
+
+def test_invalid_prefinal_batch_vote_hard_fails_without_synthetic_votes():
+    """Pre-final invalid structured voting should fail the run instead of inventing votes."""
+
+    async def run_test():
+        game = create_game_environment(
+            "diplomacy",
+            n_agents=2,
+            t_rounds=3,
+            n_issues=3,
+            random_seed=7,
+        )
+
+        agents = [
+            FakeAgent("Agent_1", "!!!!!!!!!!!!!!!!!!!!!!!!"),
+            FakeAgent(
+                "Agent_2",
+                """
+                {
+                    "votes": [
+                        {"proposal_number": 1, "vote": "accept", "reasoning": "Acceptable package"},
+                        {"proposal_number": 2, "vote": "reject", "reasoning": "Worse than proposal one"}
+                    ]
+                }
+                """,
+            ),
+        ]
+        state = game.create_game_state(agents)
+        preferences = {
+            "agent_preferences": state["agent_positions"],
+            "agent_weights": state["agent_weights"],
+            "game_state": state,
+        }
+        items = [{"name": issue} for issue in state["issues"]]
+        proposals = [
+            {
+                "agreement": [65, 20, 55],
+                "reasoning": "Proposal one",
+                "proposed_by": "Agent_2",
+                "round": 1,
+            },
+            {
+                "agreement": [45, 60, 35],
+                "reasoning": "Proposal two",
+                "proposed_by": "Agent_1",
+                "round": 1,
+            },
+        ]
+        enumerated_proposals = [
+            {
+                "proposal_number": idx + 1,
+                "proposer": proposal["proposed_by"],
+                "reasoning": proposal["reasoning"],
+                "original_proposal": proposal,
+                "agreement": proposal["agreement"],
+            }
+            for idx, proposal in enumerate(proposals)
+        ]
+
+        handler = PhaseHandler(game_environment=game)
+        with pytest.raises(VoteIntegrityError):
+            await handler.run_private_voting_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=3,
+                proposals=proposals,
+                enumerated_proposals=enumerated_proposals,
+            )
+
+        integrity = handler.get_vote_integrity()
+        assert integrity["hard_failed"] is True
+        assert integrity["synthetic_vote_count"] == 0
+        assert integrity["contaminated"] is False
 
     asyncio.run(run_test())

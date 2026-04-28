@@ -6,7 +6,6 @@ agents compete to allocate discrete items based on private preference vectors.
 """
 
 import json
-import re
 from typing import Any, Dict, List, Optional
 
 from .base import GameEnvironment, GameType, ItemAllocationConfig
@@ -20,13 +19,16 @@ class ItemAllocationGame(GameEnvironment):
     - N agents negotiate over M discrete items
     - Each agent has a secret preference vector (value for each item)
     - Proposals assign items to agents (each item to exactly one agent)
-    - Unanimous voting required for acceptance
+    - Two-thirds supermajority voting required for acceptance
     - Utility = sum of preference values for received items × gamma^(round-1)
     """
 
     ITEM_NAMES = [
         "Apple", "Jewel", "Stone", "Quill", "Pencil",
-        "Book", "Hat", "Camera", "Ring", "Clock"
+        "Book", "Hat", "Camera", "Ring", "Clock",
+        "Key", "Map", "Lantern", "Compass", "Vase",
+        "Coin", "Shell", "Brush", "Scarf", "Cup",
+        "Bottle", "Globe", "Medal", "Ticket", "Tablet",
     ]
 
     def __init__(self, config: ItemAllocationConfig):
@@ -100,6 +102,7 @@ class ItemAllocationGame(GameEnvironment):
         items_text = "\n".join([f"  {i}: {item['name']}" for i, item in enumerate(items)])
 
         agent_phrase = self._get_agent_phrase()
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
@@ -121,8 +124,9 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 **VOTING RULES:**
 - All proposals submitted in a round are shown together during voting
 - You vote "accept" or "reject" on each proposal independently
-- A proposal needs UNANIMOUS acceptance from all agents to pass
-- If no proposal gets unanimous support, we continue to the next round
+- A proposal passes if it receives at least {threshold} accept votes out of {self.config.n_agents} agents (a two-thirds supermajority, rounded up)
+- If multiple proposals pass, the proposal with the most accept votes is selected; exact top-count ties are broken randomly
+- If no proposal gets supermajority support, we continue to the next round
 - If no agreement is reached by the final round, then all agents walk away with zero utility.
 
 **REWARD DISCOUNTING:**
@@ -170,7 +174,7 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 1. Other agents don't know your exact preferences
 2. You may choose to reveal some preferences truthfully or misleadingly
 3. Consider which agents might have complementary preferences
-4. Remember: you need ALL agents to accept a proposal"""
+4. Remember: you need at least {self.supermajority_threshold(self.config.n_agents)} out of {self.config.n_agents} agents to accept a proposal"""
 
     def get_game_rules_prompt(self, game_state: Dict[str, Any]) -> str:
         """Generate item allocation game rules explanation."""
@@ -266,20 +270,15 @@ Respond with ONLY a JSON object in this exact format:
         n_items = len(items)
 
         try:
-            # Try direct JSON parse
-            if response.strip().startswith('{'):
-                proposal = json.loads(response)
-            else:
-                # Extract JSON from text
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    proposal = json.loads(json_match.group())
-                else:
-                    raise ValueError("No JSON found in response")
+            proposal = self._parse_json_object(response, "proposal response")
 
             # Ensure allocation exists and is valid
             if "allocation" not in proposal:
-                raise ValueError("No allocation in proposal")
+                if isinstance(proposal.get("agreement"), dict):
+                    proposal["allocation"] = proposal["agreement"]
+                    proposal["recovered_from_legacy_agreement_key"] = True
+                else:
+                    raise ValueError("No allocation in proposal")
 
             # Validate and clean allocation
             allocation = proposal["allocation"]
@@ -302,13 +301,14 @@ Respond with ONLY a JSON object in this exact format:
             return proposal
 
         except (json.JSONDecodeError, ValueError, KeyError, TypeError) as exc:
-            # Fallback: proposer gets all items
+            # Preserve diagnostics without manufacturing a valid proposal. The
+            # phase handler can retry or fail the run; it should not silently
+            # enter a synthetic proposer-gets-all allocation into voting.
             fallback_allocation = {aid: [] for aid in agents}
-            fallback_allocation[agent_id] = list(range(n_items))
 
             return {
                 "allocation": fallback_allocation,
-                "reasoning": "Failed to parse response - defaulting to proposer gets all",
+                "reasoning": "Failed to parse response; proposal is invalid",
                 "proposed_by": agent_id,
                 "raw_response": response,
                 "parse_error": {
@@ -431,12 +431,12 @@ You do not need to reveal your full private strategy.{urgency}
 Keep the conversation flowing naturally."""
         else:
             # First speaker in a later round
-            context = f"""Previous proposals didn't reach consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
+            context = f"""Previous proposals didn't reach supermajority support. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
 
 **DISCUSSION FOCUS:**
 - Refer back to what earlier rounds revealed about agents' priorities and sticking points
 - Use lessons from failed proposals to shape what you emphasize, clarify, or revise
-- Highlight possible compromises, trade-offs, or coalition opportunities that could move the group closer to consensus
+- Highlight possible compromises, trade-offs, or coalition opportunities that could move the group closer to supermajority support
 
 You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy."""
 
@@ -508,6 +508,7 @@ This is the open discussion phase where agents can discuss and strategize public
 
         proposals_text = "\n\n".join(proposal_blocks)
         votes_example = ",\n".join(example_entries)
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""The following proposals have been made for item allocation this round:
 
@@ -522,6 +523,7 @@ Vote on EACH proposal independently. Consider:
 - How each allocation affects your utility
 - Whether you might get a better deal by continuing negotiation
 - The strategic implications of accepting or rejecting each proposal
+- A proposal passes with at least {threshold} accept votes out of {self.config.n_agents} agents (a two-thirds supermajority, rounded up); if several pass, the most-supported proposal is selected
 - You may accept zero, one, or multiple proposals
 - You may reject zero, one, or multiple proposals
 - Seeing all proposals together does not eliminate any proposal before you vote{reasoning_instruction}
@@ -546,14 +548,7 @@ Each vote must be either "accept" or "reject"."""
         """Parse a batch voting response into one vote per proposal."""
         parse_error = None
         try:
-            if response.strip().startswith('{'):
-                payload = json.loads(response)
-            else:
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    payload = json.loads(json_match.group())
-                else:
-                    raise ValueError("No JSON found in batch vote response")
+            payload = self._parse_json_object(response, "batch vote response")
 
             raw_votes = payload.get("votes", [])
             if not isinstance(raw_votes, list):
@@ -660,7 +655,7 @@ This is your private strategic planning time.
 **STRATEGIC ANALYSIS TASKS:**
 1. What have you learned about other agents' priorities from the discussion so far?
 2. Which items are your highest priorities to secure, and which lower-value items could you concede on?
-3. What allocation would maximize your utility while still having a realistic path to unanimous acceptance?
+3. What allocation would maximize your utility while still having a realistic path to supermajority acceptance?
 4. Where are the likely sticking points, and how should you adapt if other agents push for items you value highly?{reasoning_instruction}
 
 **OUTPUT REQUIRED:**

@@ -20,6 +20,7 @@ class ExperimentResults:
     qualitative_events: List[Dict[str, Any]] = field(default_factory=list)
     conversation_logs: List[Dict[str, Any]] = field(default_factory=list)
     agent_performance: Dict[str, Any] = field(default_factory=dict)
+    vote_integrity: Dict[str, Any] = field(default_factory=dict)
     exploitation_detected: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
@@ -38,6 +39,7 @@ class ExperimentResults:
             "qualitative_events": self.qualitative_events,
             "conversation_logs": self.conversation_logs,
             "agent_performance": self.agent_performance,
+            "vote_integrity": self.vote_integrity,
             "exploitation_detected": self.exploitation_detected
         }
 

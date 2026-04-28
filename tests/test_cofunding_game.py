@@ -122,6 +122,27 @@ class TestValuationGeneration:
                     f"Pair ({i},{j}): expected cos_sim=0.5, got {cos_sim:.4f}"
                 )
 
+    @pytest.mark.parametrize("alpha", [0.2, 0.8])
+    def test_10agent_valuations_match_alpha_for_full_batch_shape(self, alpha):
+        """Full-batch Game 3 shape should keep all-pairs cosine near alpha."""
+        game = make_game(alpha=alpha, n_agents=10, m_projects=25, seed=42)
+        agents = create_test_agents(10)
+        state = game.create_game_state(agents)
+        vecs = [
+            np.array(state["agent_valuations"][f"Agent_{idx}"], dtype=float)
+            for idx in range(1, 11)
+        ]
+        errors = []
+        for i in range(10):
+            assert sum(vecs[i]) == 100
+            assert all(float(value).is_integer() for value in vecs[i])
+            for j in range(i + 1, 10):
+                cos_sim = np.dot(vecs[i], vecs[j]) / (
+                    np.linalg.norm(vecs[i]) * np.linalg.norm(vecs[j])
+                )
+                errors.append(abs(cos_sim - alpha))
+        assert max(errors) < 0.02
+
 
 class TestGameStateCreation:
     """Tests for create_game_state."""
@@ -735,7 +756,7 @@ class TestPrompts:
         assert f"**YOUR PRIVATE BUDGET:** {budget_text} " in prompt
 
         for val in state["agent_valuations"]["Agent_1"]:
-            assert f"Your valuation = {game._format_display_number(val)} (" in prompt
+            assert f"Your valuation = {game._format_display_number(val)}" in prompt
 
     def test_preference_assignment_prompt_omits_trailing_point_zero_zero_for_integer_budget_valuations_and_costs(self):
         game = make_game()
@@ -753,7 +774,7 @@ class TestPrompts:
 
         assert "**YOUR PRIVATE BUDGET:** 27 " in prompt
         assert "(cost: 10): Your valuation = 40" in prompt
-        assert "Your valuation = 40 (" in prompt
+        assert "Your valuation = 40 (" not in prompt
         assert "**TOTAL VALUATIONS:** 100" in prompt
         assert "**TOTAL PROJECT COSTS:** 150" in prompt
         assert "**YOUR PRIVATE BUDGET:** 27.00" not in prompt

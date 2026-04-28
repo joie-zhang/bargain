@@ -18,6 +18,7 @@ class FakeAgentResponse:
     content: str
     metadata: Optional[Dict[str, Any]] = None
     tokens_used: Optional[int] = None
+    response_time: Optional[float] = None
 
 
 class DelayedVoteAgent:
@@ -112,6 +113,52 @@ def test_serial_helper_runs_one_agent_at_a_time():
 def test_parallel_phases_rejects_numeric_partial_concurrency():
     with pytest.raises(TypeError, match="parallel_phases must be a boolean"):
         PhaseHandler(parallel_phases=3)
+
+
+def test_extract_token_usage_preserves_response_time_seconds():
+    response = FakeAgentResponse(
+        content="ok",
+        metadata={"usage": {"prompt_tokens": 3, "completion_tokens": 4, "total_tokens": 7}},
+        response_time=1.25,
+    )
+
+    token_usage = PhaseHandler()._extract_token_usage(response)
+
+    assert token_usage == {
+        "input_tokens": 3,
+        "output_tokens": 4,
+        "total_tokens": 7,
+        "response_time_seconds": 1.25,
+    }
+
+
+def test_legacy_vote_parsers_repair_literal_newlines_inside_json_strings():
+    handler = PhaseHandler()
+    vote = handler._parse_vote_response(
+        """{
+          "vote": "accept",
+          "reasoning": "First line.
+
+Second line."
+        }""",
+        "Agent_1",
+        1,
+    )
+    commit_vote = handler._parse_commit_vote_response(
+        """{
+          "commit_vote": "yay",
+          "reasoning": "First line.
+
+Second line."
+        }""",
+        "Agent_1",
+        1,
+    )
+
+    assert vote["vote"] == "accept"
+    assert "Second line" in vote["reasoning"]
+    assert commit_vote["commit_vote"] == "yay"
+    assert "Second line" in commit_vote["reasoning"]
 
 
 def test_parallel_voting_saves_in_agent_order_even_when_completion_order_differs():

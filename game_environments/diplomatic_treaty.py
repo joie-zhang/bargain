@@ -85,6 +85,13 @@ class DiplomaticTreatyGame(GameEnvironment):
         "{pct}% of proposed commercial deep-sea mining zones covered by the moratorium",
     ]
 
+    SIMULATION_BOUNDARY = (
+        "This is a fictional, abstract treaty-rate negotiation for a research game. "
+        "Discuss only policy percentages and bargaining strategy; do not provide "
+        "real-world operational instructions about weapons, chemicals, evasion, "
+        "or enforcement tactics."
+    )
+
     def __init__(self, config: DiplomaticTreatyConfig):
         """
         Initialize Diplomatic Treaty game.
@@ -529,6 +536,7 @@ class DiplomaticTreatyGame(GameEnvironment):
             if self.config.n_agents == 2
             else "the other delegations do not know them"
         )
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""Welcome to the Diplomatic Treaty Negotiation!
 
@@ -537,6 +545,8 @@ You are one delegation in a diplomatic negotiation with {parties_phrase} over th
 These issues are shared accord clauses, not direct side-versus-side claims.
 The negotiation is about choosing one common policy setting for each issue, and every delegation evaluates that same package from its own interests and constraints.
 Different delegations may prefer different settings because of their own security, economic, legal, and domestic political priorities.
+
+Simulation boundary: {self.SIMULATION_BOUNDARY}
 
 **ISSUES UNDER NEGOTIATION:**
 Each issue is a continuous policy rate expressed as an integer percentage from 0% to 100%, where:
@@ -581,8 +591,9 @@ Percentages here are policy settings, not generic resources, unless the issue te
 **VOTING RULES:**
 - All treaty proposals submitted in a round are shown together during voting
 - You vote "accept" or "reject" on each proposal independently
-- A proposal needs UNANIMOUS acceptance from all delegations to take effect
-- If no proposal gets unanimous support, negotiation continues to the next round
+- A proposal takes effect if it receives at least {threshold} accept votes out of {self.config.n_agents} delegations (a two-thirds supermajority, rounded up)
+- If multiple proposals pass, the proposal with the most accept votes is selected; exact top-count ties are broken randomly
+- If no proposal gets supermajority support, negotiation continues to the next round
 - If no agreement is reached by the final round, then all parties walk away with zero utility.
 
 **REWARD DISCOUNTING:**
@@ -608,6 +619,7 @@ Percentages here are policy settings, not generic resources, unless the issue te
         issues = game_state["issues"]
         positions = game_state["agent_positions"][agent_id]
         weights = game_state["agent_weights"][agent_id]
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         lines = ["LOCKED PRIVATE PREFERENCES", ""]
         lines.append(
@@ -656,7 +668,9 @@ Percentages here are policy settings, not generic resources, unless the issue te
         lines.append(
             "3. Consider where lower-weight issues could be traded for gains on higher-weight issues"
         )
-        lines.append("4. Remember: you need ALL parties to accept a proposal")
+        lines.append(
+            f"4. Remember: you need at least {threshold} out of {self.config.n_agents} parties to accept a proposal"
+        )
 
         return "\n".join(lines)
 
@@ -715,13 +729,15 @@ In your response, just acknowledge the setup, summarize the game structure and r
         reasoning_instruction = ""
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""Please propose a treaty.
 
 **Current Context:**
 - Issues being negotiated:
 {issues_list}
-- Round: {round_num}/{self.config.t_rounds}{reasoning_instruction}
+- Round: {round_num}/{self.config.t_rounds}
+- Simulation boundary: {self.SIMULATION_BOUNDARY}{reasoning_instruction}
 
 **Instructions:**
 Propose a resolution for each issue as an integer percentage between 0 and 100.
@@ -736,7 +752,7 @@ Respond with ONLY a JSON object in this exact format:
 - The "agreement" array must have exactly {n_issues} values (one per issue)
 - Each value must be an integer between 0 and 100
 - Each value is a policy rate on that issue's scale, not an importance weight
-- Consider what would be acceptable to all parties"""
+- Consider what would be acceptable to enough parties to earn supermajority support ({threshold}/{self.config.n_agents} parties)"""
 
     def parse_proposal(
         self,
@@ -749,16 +765,7 @@ Respond with ONLY a JSON object in this exact format:
         n_issues = game_state["n_issues"]
 
         try:
-            # Try direct JSON parse
-            if response.strip().startswith('{'):
-                proposal = json.loads(response)
-            else:
-                # Extract JSON from text
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    proposal = json.loads(json_match.group())
-                else:
-                    raise ValueError("No JSON found in response")
+            proposal = self._parse_json_object(response, "proposal response")
 
             # Ensure agreement exists
             agreement = proposal.get("agreement", [])
@@ -916,12 +923,12 @@ You do not need to reveal your full private strategy.{urgency}
 
 How precisely you communicate your preferred rates is a strategic choice."""
         else:
-            context = f"""Previous proposals didn't achieve consensus. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
+            context = f"""Previous proposals didn't achieve supermajority support. Use what you learned from earlier discussion, proposals, and votes to guide what you say in this round.{urgency}
 
 **DISCUSSION FOCUS:**
 - Refer back to what earlier rounds revealed about other parties' priorities and sticking points
 - Use lessons from failed proposals to shape what you emphasize, clarify, or revise
-- Highlight package deals, trade-offs, or issue linkages that could move the negotiation closer to consensus
+- Highlight package deals, trade-offs, or issue linkages that could move the negotiation closer to supermajority support
 
 You are speaking first this round. Open the discussion in a way that reflects what you learned in earlier rounds. You do not need to reveal your full private strategy."""
 
@@ -932,6 +939,7 @@ You are speaking first this round. Open the discussion in a way that reflects wh
         return f"""🗣️ DIPLOMATIC DISCUSSION - Round {round_num}/{max_rounds}
 
 Issues under negotiation: {issues_text}
+Simulation boundary: {self.SIMULATION_BOUNDARY}
 {history_section}
 {context}{reasoning_instruction}"""
 
@@ -986,7 +994,7 @@ Issues under negotiation: {issues_text}
             )
 
         example_entries = []
-        for example_index, proposal in enumerate(proposals[: max(1, min(2, len(proposals)))], start=1):
+        for example_index, proposal in enumerate(proposals, start=1):
             proposal_number = proposal.get("proposal_number", example_index)
             example_vote = "accept" if example_index == 1 else "reject"
             example_entries.append(
@@ -999,10 +1007,13 @@ Issues under negotiation: {issues_text}
 
         proposals_text = "\n\n".join(proposal_blocks)
         votes_example = ",\n".join(example_entries)
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""The following treaty proposals have been submitted this round:
 
 {proposals_text}
+
+Simulation boundary: {self.SIMULATION_BOUNDARY}
 
 **REMINDER — HOW YOUR UTILITY IS CALCULATED:**
 - Your utility is the weighted sum of how close each proposal is to your ideal rates
@@ -1018,6 +1029,7 @@ Vote on EACH proposal independently. Consider:
 - How close is each proposed rate to your ideal position on each issue?
 - Could you realistically negotiate a better proposal than each of these options before the final round?
 - The cost of delay: each additional round reduces your eventual payoff
+- A proposal passes with at least {threshold} accept votes out of {self.config.n_agents} delegations (a two-thirds supermajority, rounded up); if several pass, the most-supported proposal is selected
 - You may accept zero, one, or multiple proposals
 - You may reject zero, one, or multiple proposals
 - Seeing all proposals together does not eliminate any proposal before you vote{reasoning_instruction}
@@ -1032,6 +1044,79 @@ Respond with ONLY a JSON object in this exact format:
 Include exactly one vote entry for each proposal shown above.
 Each vote must be either "accept" or "reject"."""
 
+    @staticmethod
+    def _parse_vote_transcript_response(
+        response: str,
+        proposal_numbers: List[int],
+        agent_id: str,
+        round_num: int,
+    ) -> Dict[int, Dict[str, Any]]:
+        """Recover votes from transcript-style outputs like `Agent_3 accepts proposal #2`."""
+        proposal_number_set = set(proposal_numbers)
+        parsed_votes: Dict[int, Dict[str, Any]] = {}
+        accepted_numbers = set()
+        saw_agent_action = False
+
+        agent_line_pattern = re.compile(
+            rf"\b{re.escape(agent_id)}\b[^\n\r]*?\b(accepts?|rejects?)\b"
+            r"[^\n\r]*?\bproposal\s*#?\s*(\d+)",
+            re.IGNORECASE,
+        )
+        for match in agent_line_pattern.finditer(response):
+            saw_agent_action = True
+            vote_value = "accept" if match.group(1).lower().startswith("accept") else "reject"
+            proposal_number = int(match.group(2))
+            if vote_value == "accept":
+                accepted_numbers.add(proposal_number)
+            if proposal_number in proposal_number_set:
+                parsed_votes[proposal_number] = {
+                    "proposal_number": proposal_number,
+                    "vote": vote_value,
+                    "reasoning": "Parsed from natural-language vote transcript",
+                    "voter": agent_id,
+                    "round": round_num,
+                    "raw_response": response,
+                    "parse_repair": "natural_language_vote_transcript",
+                }
+
+        if saw_agent_action and accepted_numbers:
+            for proposal_number in proposal_numbers:
+                if proposal_number not in parsed_votes:
+                    parsed_votes[proposal_number] = {
+                        "proposal_number": proposal_number,
+                        "vote": "reject",
+                        "reasoning": (
+                            "Parsed from natural-language vote transcript: "
+                            "no explicit acceptance by this voter for this proposal"
+                        ),
+                        "voter": agent_id,
+                        "round": round_num,
+                        "raw_response": response,
+                        "parse_repair": "natural_language_vote_transcript",
+                    }
+
+        if len(proposal_numbers) == 1 and not parsed_votes:
+            single_number = proposal_numbers[0]
+            first_person_match = re.search(
+                r"\b(I|we)\s+(accept|approve|support|reject|decline|oppose)\b",
+                response,
+                re.IGNORECASE,
+            )
+            if first_person_match:
+                verb = first_person_match.group(2).lower()
+                vote_value = "accept" if verb in {"accept", "approve", "support"} else "reject"
+                parsed_votes[single_number] = {
+                    "proposal_number": single_number,
+                    "vote": vote_value,
+                    "reasoning": "Parsed from natural-language single-proposal vote",
+                    "voter": agent_id,
+                    "round": round_num,
+                    "raw_response": response,
+                    "parse_repair": "natural_language_single_vote",
+                }
+
+        return parsed_votes
+
     def parse_batch_voting_response(
         self,
         response: str,
@@ -1042,14 +1127,7 @@ Each vote must be either "accept" or "reject"."""
         """Parse a batch voting response into one vote per treaty proposal."""
         parse_error = None
         try:
-            if response.strip().startswith('{'):
-                payload = json.loads(response)
-            else:
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    payload = json.loads(json_match.group())
-                else:
-                    raise ValueError("No JSON found in batch vote response")
+            payload = self._parse_json_object(response, "batch vote response")
 
             raw_votes = payload.get("votes", [])
             if not isinstance(raw_votes, list):
@@ -1087,6 +1165,19 @@ Each vote must be either "accept" or "reject"."""
                 "voter": agent_id,
                 "round": round_num,
             }
+
+        parsed_votes.update(
+            {
+                proposal_number: vote
+                for proposal_number, vote in self._parse_vote_transcript_response(
+                    response=response,
+                    proposal_numbers=proposal_numbers,
+                    agent_id=agent_id,
+                    round_num=round_num,
+                ).items()
+                if proposal_number not in parsed_votes
+            }
+        )
 
         vote_results = []
         for proposal_number in proposal_numbers:

@@ -14,7 +14,7 @@ Protocol: Propose-and-Vote
   3. Proposal - each agent submits their proposed contribution vector
   4. Voting - agents vote accept/reject on the single joint proposal
   5. Reflection - agents reflect on the round outcome
-  6. Repeat until consensus or max rounds
+  6. Repeat until supermajority acceptance or max rounds
 
 Key differences from Games 1/2:
   - Individual submissions are aggregated into one joint proposal per round
@@ -28,8 +28,8 @@ Dependencies:
 """
 
 import json
-import re
 import warnings
+from itertools import combinations
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -49,7 +49,7 @@ class CoFundingGame(GameEnvironment):
       - Budget B_i: maximum total contribution
     - Each round, agents submit contribution vectors x_i = [x_i1, ..., x_iM]
     - The round's joint proposal aggregates all submitted contribution vectors
-    - The joint proposal only takes effect if unanimously accepted
+    - The joint proposal only takes effect if accepted by a two-thirds supermajority
     - Project j is funded if sum_i(x_ij) >= c_j (threshold)
     - Utility: U_i = sum_{j in S} v_ij - sum_{j in S} x_ij
       where S is the set of funded projects
@@ -58,7 +58,7 @@ class CoFundingGame(GameEnvironment):
     Two control parameters:
     - alpha: Preference alignment [0, 1] (cosine similarity of valuations)
     - sigma: Budget abundance scale (0, 1]
-      total budget ratio = 0.5 + 0.5 * sigma (from 50% to 100% of total cost)
+      total budget ratio = sigma (total budget / total project cost)
     """
 
     PROJECT_NAMES = [
@@ -72,6 +72,21 @@ class CoFundingGame(GameEnvironment):
         "Dog Park",
         "Pollinator Garden Network",
         "Community Wi-Fi Plaza Hubs",
+        "Elm Street Stormwater Rain Gardens",
+        "Northside Senior Center HVAC Upgrade",
+        "Maple Library Study Room Renovation",
+        "West End Food Pantry Cold Storage",
+        "Downtown Public Restroom Renovation",
+        "Hillcrest ADA Sidewalk Repairs",
+        "Lakeside Youth Soccer Field Drainage",
+        "South Station Real-Time Transit Signs",
+        "Brighton Community Garden Tool Shed",
+        "Pine Terrace Tree Canopy Planting",
+        "Civic Center Emergency Generator",
+        "Meadowbrook Traffic Calming Islands",
+        "Ash Street School Safe Routes Markings",
+        "Riverside Amphitheater Shade Structure",
+        "Lincoln Avenue Streetlight Upgrades",
     ]
 
     def __init__(self, config: CoFundingConfig):
@@ -270,6 +285,19 @@ class CoFundingGame(GameEnvironment):
             agent_valuations[aid] = valuations[i].tolist()
             agent_budgets[aid] = per_agent_budget
 
+        valuation_cosine_similarities: Dict[str, float] = {}
+        for i, aid_i in enumerate(agent_ids):
+            vec_i = np.asarray(agent_valuations[aid_i], dtype=float)
+            norm_i = np.linalg.norm(vec_i)
+            for j in range(i + 1, len(agent_ids)):
+                aid_j = agent_ids[j]
+                vec_j = np.asarray(agent_valuations[aid_j], dtype=float)
+                norm_j = np.linalg.norm(vec_j)
+                cosine = 0.0
+                if norm_i > 1e-12 and norm_j > 1e-12:
+                    cosine = float(np.dot(vec_i, vec_j) / (norm_i * norm_j))
+                valuation_cosine_similarities[f"{aid_i}_vs_{aid_j}"] = cosine
+
         return {
             "projects": projects,
             "m_projects": m,
@@ -278,6 +306,7 @@ class CoFundingGame(GameEnvironment):
             "agent_budgets": agent_budgets,
             "total_budget": total_budget,
             "agent_valuations": agent_valuations,
+            "valuation_cosine_similarities": valuation_cosine_similarities,
             "parameters": {
                 "alpha": self.config.alpha,
                 "sigma": self.config.sigma,
@@ -303,7 +332,8 @@ class CoFundingGame(GameEnvironment):
         Generate valuation vectors with target cosine similarity alpha.
 
         Each agent's valuation vector sums to 100 with non-negative entries.
-        Uses SLSQP optimization (same pattern as diplomatic_treaty.py).
+        Uses SLSQP joint optimization for all non-trivial pairwise cosine
+        targets, including high-agent-count runs.
 
         Args:
             n_agents: Number of agents
@@ -322,19 +352,25 @@ class CoFundingGame(GameEnvironment):
             v0 = self._round_to_integer_values(v0, total=100)
             return np.tile(v0, (n_agents, 1))
 
-        if n_agents == 2:
-            valuations = self._generate_valuations_2agents(M, alpha, dir_alpha)
-        else:
-            valuations = self._generate_valuations_nagents(n_agents, M, alpha, dir_alpha)
+        valuations = self._generate_valuations_nagents(n_agents, M, alpha, dir_alpha)
 
         integer_valuations = np.vstack([
             self._round_to_integer_values(row, total=100)
             for row in valuations
         ])
-        return self._refine_integer_valuations_for_target_cosine(
+        integer_valuations = self._refine_integer_valuations_for_target_cosine(
             integer_valuations,
             alpha,
+            max_iterations=25,
         )
+
+        max_abs_error = self._max_pairwise_cosine_abs_error(integer_valuations, alpha)
+        if max_abs_error > 0.08:
+            raise RuntimeError(
+                f"Failed to integerize co-funding valuations near alpha={alpha}; "
+                f"max pairwise cosine error after SLSQP and rounding was {max_abs_error:.6f}"
+            )
+        return integer_valuations
 
     def _generate_valuations_2agents(self, M: int, alpha: float, dir_alpha: float) -> np.ndarray:
         """Generate valuations for exactly 2 agents with target cosine similarity."""
@@ -395,73 +431,147 @@ class CoFundingGame(GameEnvironment):
         return valuations
 
     def _generate_valuations_nagents(self, n_agents: int, M: int, alpha: float, dir_alpha: float) -> np.ndarray:
-        """Generate valuations for N>2 agents with all-pairs target cosine similarity.
+        """Generate valuations with all-pairs target cosine similarity using SLSQP."""
+        pair_indices = list(combinations(range(n_agents), 2))
 
-        Uses joint SLSQP optimization over all N vectors simultaneously,
-        minimizing the sum of squared errors across all N(N-1)/2 pairs.
-        """
-        dim = n_agents * M
-
-        def objective(x):
-            vecs = x.reshape(n_agents, M)
-            total_err = 0.0
-            for i in range(n_agents):
-                ni = np.linalg.norm(vecs[i])
-                if ni < 1e-12:
-                    return 1e10
-                for j in range(i + 1, n_agents):
-                    nj = np.linalg.norm(vecs[j])
-                    if nj < 1e-12:
-                        return 1e10
-                    cos_sim = np.dot(vecs[i], vecs[j]) / (ni * nj)
-                    total_err += (cos_sim - alpha) ** 2
-            return total_err
-
-        constraints = [
-            {'type': 'eq', 'fun': lambda x, i=i: np.sum(x[i * M:(i + 1) * M]) - 100.0}
-            for i in range(n_agents)
-        ]
-        bounds = [(0.0, 100.0)] * dim
+        if not pair_indices:
+            raise ValueError("Co-funding requires at least two agents")
 
         best_x = None
-        best_error = float('inf')
-        max_attempts = 30
+        best_error = float("inf")
+        best_message = ""
+        max_attempts = 3
 
-        for _ in range(max_attempts):
-            conc = self._rng.uniform(0.5, 3.0)
-            x0 = np.concatenate([
-                self._rng.dirichlet(np.full(M, conc)) * 100.0
+        def objective(x: np.ndarray) -> float:
+            vectors = x.reshape(n_agents, M)
+            total_error = 0.0
+            for i, j in pair_indices:
+                norm_i = np.linalg.norm(vectors[i])
+                norm_j = np.linalg.norm(vectors[j])
+                if norm_i < 1e-12 or norm_j < 1e-12:
+                    return 1e10
+                cosine = np.dot(vectors[i], vectors[j]) / (norm_i * norm_j)
+                total_error += (cosine - alpha) ** 2
+            return total_error
+
+        constraints = [
+            {
+                "type": "eq",
+                "fun": lambda x, start=i * M, end=(i + 1) * M:
+                    np.sum(x[start:end]) - 100.0,
+            }
+            for i in range(n_agents)
+        ]
+        bounds = [(0.0, 100.0)] * (n_agents * M)
+
+        starts = [self._initialize_slsqp_valuations(n_agents, M, alpha, dir_alpha)]
+        starts.extend(
+            np.vstack([
+                self._rng.dirichlet(np.full(M, self._rng.uniform(0.5, 3.0))) * 100.0
                 for _ in range(n_agents)
             ])
+            for _ in range(max_attempts - 1)
+        )
 
+        for start in starts:
+            x0 = np.asarray(start, dtype=float).reshape(n_agents * M)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 result = minimize(
-                    objective, x0, method='SLSQP',
-                    bounds=bounds, constraints=constraints,
-                    options={'maxiter': 3000, 'ftol': 1e-14}
+                    objective,
+                    x0,
+                    method="SLSQP",
+                    bounds=bounds,
+                    constraints=constraints,
+                    options={"maxiter": 3000, "ftol": 1e-14},
                 )
 
             error = objective(result.x)
             if error < best_error:
                 best_error = error
                 best_x = result.x.copy()
-            if best_error < 1e-10:
+                best_message = str(result.message)
+            if result.success and best_error < 1e-10:
                 break
 
         if best_x is None or best_error > 0.001:
             raise RuntimeError(
-                f"Failed to generate valuations with all-pairs cosine similarity "
-                f"alpha={alpha} for {n_agents} agents after "
-                f"{max_attempts} attempts. Best error: {best_error:.6f}"
+                f"Failed to generate co-funding valuations with all-pairs cosine "
+                f"alpha={alpha} for {n_agents} agents and {M} projects using SLSQP. "
+                f"Best squared error: {best_error:.6f}. Last message: {best_message}"
             )
 
         valuations = best_x.reshape(n_agents, M)
-        for i in range(n_agents):
-            valuations[i] = np.maximum(valuations[i], 0.0)
-            valuations[i] = valuations[i] / valuations[i].sum() * 100.0
+        valuations = np.maximum(valuations, 0.0)
+        row_sums = valuations.sum(axis=1)
+        if np.any(row_sums <= 1e-12):
+            raise RuntimeError("SLSQP produced a near-zero co-funding valuation row")
+        valuations = valuations / row_sums[:, None] * 100.0
+        return valuations
+
+    def _initialize_slsqp_valuations(
+        self,
+        n_agents: int,
+        M: int,
+        alpha: float,
+        dir_alpha: float,
+    ) -> np.ndarray:
+        """Build a randomized feasible SLSQP start with the requested cosine."""
+        if M < n_agents:
+            raise ValueError(
+                "Co-funding SLSQP initialization requires "
+                f"m_projects >= n_agents, got M={M}, n_agents={n_agents}"
+            )
+
+        permutation = self._rng.permutation(M)
+        private_indices = permutation[:n_agents]
+        common_indices = permutation[n_agents:]
+
+        if len(common_indices) == 0:
+            if alpha > 1e-12:
+                raise ValueError(
+                    "Positive alpha requires at least one common project "
+                    f"dimension, got M={M}, n_agents={n_agents}"
+                )
+            valuations = np.zeros((n_agents, M), dtype=float)
+            for i, private_idx in enumerate(private_indices):
+                valuations[i, private_idx] = 100.0
+            return valuations
+
+        valuations = np.zeros((n_agents, M), dtype=float)
+        if alpha <= 1e-12:
+            common_component = np.zeros(len(common_indices), dtype=float)
+            private_value = 100.0
+        else:
+            common_weights = self._rng.dirichlet(np.full(len(common_indices), dir_alpha))
+            common_norm = np.linalg.norm(common_weights)
+            private_to_common_mass = common_norm * np.sqrt((1.0 - alpha) / alpha)
+            common_mass = 100.0 / (1.0 + private_to_common_mass)
+            private_value = 100.0 - common_mass
+            common_component = common_weights * common_mass
+
+        for i, private_idx in enumerate(private_indices):
+            valuations[i, common_indices] = common_component
+            valuations[i, private_idx] = private_value
 
         return valuations
+
+    @staticmethod
+    def _max_pairwise_cosine_abs_error(value_matrix: np.ndarray, target_alpha: float) -> float:
+        matrix = np.asarray(value_matrix, dtype=float)
+        n_agents = matrix.shape[0]
+        max_error = 0.0
+        for i in range(n_agents):
+            norm_i = np.linalg.norm(matrix[i])
+            if norm_i < 1e-12:
+                return float("inf")
+            for j in range(i + 1, n_agents):
+                norm_j = np.linalg.norm(matrix[j])
+                if norm_j < 1e-12:
+                    return float("inf")
+                cosine = float(np.dot(matrix[i], matrix[j]) / (norm_i * norm_j))
+                max_error = max(max_error, abs(cosine - target_alpha))
+        return max_error
 
     # ---- Abstract method implementations ----
 
@@ -481,6 +591,7 @@ class CoFundingGame(GameEnvironment):
         ])
 
         parties_phrase = self._get_parties_phrase()
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""Welcome to the Participatory Budgeting (Co-Funding) Game!
 
@@ -505,12 +616,12 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 **HOW IT WORKS:**
 - Each participant has a PRIVATE BUDGET for the entire game
 - Each new round is a fresh re-proposal of how to use that same fixed total budget
-- Previous-round proposals do NOT carry over, do NOT accumulate, and do NOT spend money unless unanimously accepted
+- Previous-round proposals do NOT carry over, do NOT accumulate, and do NOT spend money unless accepted by a two-thirds supermajority
 - In the PROPOSAL phase, each participant submits a contribution vector — how much they propose contributing to each project
 - Those submitted vectors are combined into ONE JOINT PROPOSAL for the round
 - In the VOTING phase, every participant votes accept/reject on that joint proposal
-- If that joint proposal is unanimously accepted, the game ends immediately and that exact proposal becomes the final outcome
-- If that joint proposal is not unanimously accepted, nothing from it takes effect and the next round starts over from scratch
+- If that joint proposal receives at least {threshold} accept votes out of {self.config.n_agents} participants (a two-thirds supermajority, rounded up), the game ends immediately and that exact proposal becomes the final outcome
+- If that joint proposal does not receive supermajority support, nothing from it takes effect and the next round starts over from scratch
 - A project is FUNDED if and only if the TOTAL contributions from ALL participants meet or exceed its cost
 - **ALL-OR-NOTHING**: Funding is binary — a project either reaches its full cost threshold (funded) or it doesn't (unfunded). There is no partial benefit from contributing to a project that falls short of its threshold.
 - In an accepted proposal, any project below its full cost is simply UNFUNDED: it gives zero value and is not partially funded
@@ -526,7 +637,7 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
 - You gain value from funded projects but pay for your contributions to them
 - **IMPORTANT**: If your contribution to a funded project exceeds your valuation, your net utility from that project is NEGATIVE
 - Contributions to unfunded projects cost you nothing
-- If no joint proposal is unanimously accepted by the final round, everyone gets zero utility
+- If no joint proposal is accepted by a two-thirds supermajority by the final round, everyone gets zero utility
 
 **REWARD DISCOUNTING:**
 - If time discounting is enabled, your utility from the final funded outcome is multiplied by gamma^(round - 1)
@@ -571,10 +682,9 @@ You are participating in a co-funding exercise with {parties_phrase} to fund pub
         lines.append("**PROJECT DETAILS AND YOUR VALUATIONS:**")
 
         for j, (proj, val, cost) in enumerate(zip(projects, valuations, costs)):
-            priority = "HIGH" if val > 30 else "Medium" if val > 15 else "Low"
             cost_text = self._format_display_number(cost)
             val_text = self._format_display_number(val)
-            lines.append(f"  {proj['name']} (cost: {cost_text}): Your valuation = {val_text} ({priority} priority)")
+            lines.append(f"  {proj['name']} (cost: {cost_text}): Your valuation = {val_text}")
 
         lines.append("")
         lines.append(f"**TOTAL VALUATIONS:** {self._format_display_number(sum(valuations))}")
@@ -678,6 +788,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
 
         all_budgets = game_state["agent_budgets"]
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         if pledge_mode == "joint":
             # Legacy joint mode: agents submit contribution vectors for all participants
@@ -698,8 +809,8 @@ In your response, just acknowledge the setup, summarize the game structure and r
 Submit a JOINT FUNDING PLAN: a dictionary specifying contribution vectors for ALL participants.
 Your plan proposes how every participant (including yourself) should allocate their budget in THIS ROUND'S candidate final outcome.
 The round's JOINT PROPOSAL will be constructed from the self-assignment that each participant submits.
-If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
-If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
+If at least {threshold} out of {self.config.n_agents} participants accept that joint proposal, the game ends immediately with exactly that outcome.
+If it is not accepted by a two-thirds supermajority, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 **Participant budgets:**
 {budget_lines}
@@ -723,8 +834,8 @@ Respond with ONLY a JSON object in this exact format:
             format_section = f"""**Instructions:**
 Submit a contribution vector specifying how much YOU propose contributing to each project in THIS ROUND'S candidate final outcome.
 All participants' submitted vectors will be combined into one JOINT PROPOSAL before voting.
-If everyone accepts that joint proposal, the game ends immediately with exactly that outcome.
-If it is not unanimously accepted, nothing is committed and the next round starts from scratch with the same fixed budgets.
+If at least {threshold} out of {self.config.n_agents} participants accept that joint proposal, the game ends immediately with exactly that outcome.
+If it is not accepted by a two-thirds supermajority, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 Respond with ONLY a JSON object in this exact format:
 {{
@@ -772,15 +883,7 @@ Last round's proposal did not carry over or accumulate with this round.{reasonin
         pledge_mode = game_state.get("pledge_mode", "individual")
 
         try:
-            # Try direct JSON parse
-            if response.strip().startswith('{'):
-                parsed = json.loads(response)
-            else:
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    parsed = json.loads(json_match.group())
-                else:
-                    raise ValueError("No JSON found in response")
+            parsed = self._parse_json_object(response, "response")
 
             raw_contributions = parsed.get("contributions", [])
 
@@ -1018,7 +1121,7 @@ Last round's proposal did not carry over or accumulate with this round.{reasonin
             budget_section = "\n".join(budget_lines)
             extra_transparency_block = f"""
 
-**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted unanimously. Nothing is currently funded or committed.**
+**IMPORTANT: status above is historical only. It describes the PREVIOUS ROUND proposal, which was not accepted by a two-thirds supermajority. Nothing is currently funded or committed.**
 This round starts from scratch with the same fixed budgets. Previous-round proposals do not carry over, and you are not adding new money on top of last round.
 
 **PREVIOUS ROUND PROPOSAL SNAPSHOT (not committed):**
@@ -1054,7 +1157,7 @@ Based on what others have said above, please:
             if round_num >= max_rounds - 1:
                 urgency = "\n**TIME PRESSURE**: Limited rounds remaining!"
 
-            context = f"""Previous round's joint proposal did not achieve unanimous acceptance, so nothing from that round took effect.{urgency}
+            context = f"""Previous round's joint proposal did not achieve supermajority acceptance, so nothing from that round took effect.{urgency}
 
 **REFLECTION:**
 - Which projects are close to being funded?
@@ -1106,20 +1209,21 @@ Share your updated strategy for this round."""
         reasoning_instruction = ""
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         return f"""The following JOINT FUNDING PROPOSAL has been constructed from all submitted contribution vectors this round:
 
-**Final project outcome if this proposal is accepted unanimously:**
+**Final project outcome if this proposal is accepted by at least {threshold} out of {self.config.n_agents} participants:**
 {chr(10).join(status_lines)}
 
 Please vote on this proposal. Consider:
-- If this proposal is unanimously accepted, the game ends immediately. There is no later round to add more money.
+- If this proposal is accepted by a two-thirds supermajority ({threshold}/{self.config.n_agents} accept votes), the game ends immediately. There is no later round to add more money.
 - Only the projects marked "FUNDED IF ACCEPTED" would be funded
 - Any project below its cost in this accepted proposal would be UNFUNDED, give zero value, and receive no partial credit
 - How much you would contribute under this proposal
 - Your utility from the resulting funded set after subtracting your own contributions
-- If this proposal is rejected or not unanimous, nothing from it happens and the next round starts from scratch with the same fixed budgets
-- If no joint proposal is unanimously accepted by the final round, your utility is 0{reasoning_instruction}
+- If this proposal is rejected or does not get supermajority support, nothing from it happens and the next round starts from scratch with the same fixed budgets
+- If no joint proposal is accepted by a two-thirds supermajority by the final round, your utility is 0{reasoning_instruction}
 
 Respond with ONLY a JSON object in this exact format:
 {{
@@ -1141,6 +1245,7 @@ Vote must be either "accept" or "reject"."""
         costs = game_state["project_costs"]
         aggregates = game_state["aggregate_totals"]
         funded = set(game_state.get("funded_projects", []))
+        threshold = self.supermajority_threshold(self.config.n_agents)
 
         status_lines = []
         for j, (proj, cost, agg) in enumerate(zip(projects, costs, aggregates)):
@@ -1164,7 +1269,7 @@ You are voting on whether to LOCK IN this exact round's proposal immediately.
 Vote **yay** if you are satisfied with this exact round's proposal and your own proposed contribution vector for this round, and want to finalize now.
 Vote **nay** if you want to throw away this round's proposal and try again next round from scratch with the same fixed budgets.
 
-**CONSEQUENCE:** If ALL participants vote yay, the game ends immediately with this exact proposal as the final outcome. Any project still below cost remains unfunded. If ANY participant votes nay, no money is committed and another revision round occurs.
+**CONSEQUENCE:** If at least {threshold} out of {self.config.n_agents} participants vote yay (a two-thirds supermajority, rounded up), the game ends immediately with this exact proposal as the final outcome. Any project still below cost remains unfunded. If the proposal does not get supermajority support, no money is committed and another revision round occurs.
 
 Respond with ONLY JSON:
 {{
@@ -1457,9 +1562,9 @@ Remember: This analysis is completely private."""
             else "Counterfactual raw utility before discount"
         )
         outcome_note = (
-            "Because the proposal was accepted unanimously, the game ends with this exact outcome."
+            "Because the proposal was accepted by a two-thirds supermajority, the game ends with this exact outcome."
             if consensus_reached
-            else "Because the proposal was NOT accepted unanimously, no money was committed and no project was funded this round. The next round starts from scratch with the same fixed budgets."
+            else "Because the proposal was NOT accepted by a two-thirds supermajority, no money was committed and no project was funded this round. The next round starts from scratch with the same fixed budgets."
         )
 
         reasoning_instruction = ""
@@ -1472,7 +1577,7 @@ Remember: This analysis is completely private."""
 {chr(10).join(status_lines)}
 
 **{funded_label}:** {[projects[j]['name'] for j in funded] if funded else 'None'}
-**Vote outcome this round:** {"accepted unanimously" if consensus_reached else "not accepted unanimously"}
+**Vote outcome this round:** {"accepted by two-thirds supermajority" if consensus_reached else "not accepted by two-thirds supermajority"}
 **{utility_label}:** {utility:.2f}
 **{raw_utility_label}:** {raw_utility:.2f}
 **Discount factor this round:** {discount_factor:.2f}

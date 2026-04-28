@@ -127,6 +127,22 @@ class TestProposalValidation:
         assert parsed["raw_response"] == response
         assert parsed["parse_error"]["type"] == "ValueError"
 
+    def test_repairs_literal_newlines_inside_json_strings(self):
+        """Game 3 should parse model JSON with unescaped newlines in reasoning."""
+        game, agents, state = make_game_and_state(m_projects=3)
+
+        response = """{
+          "contributions": [1.0, 2.0, 3.0],
+          "reasoning": "First line.
+
+Second line with detail."
+        }"""
+        parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+
+        assert parsed["contributions"] == [1.0, 2.0, 3.0]
+        assert "parse_error" not in parsed
+        assert "Second line" in parsed["reasoning"]
+
     def test_run_proposal_phase_saves_parse_failure_diagnostics(self):
         """Saved proposal interactions should include raw responses on parse failure."""
         game, _, state = make_game_and_state(m_projects=3)
@@ -295,7 +311,7 @@ class TestEarlyTerminationIntegration:
 class TestVotingPhases:
     """Tests for the active propose-and-vote flow."""
 
-    def test_unanimous_accept_records_accepted_joint_proposal(self):
+    def test_all_accept_records_accepted_joint_proposal(self):
         game, _, state = make_game_and_state(m_projects=3)
         items = state["projects"]
         preferences = {
@@ -406,6 +422,58 @@ class TestVotingPhases:
         )
         assert result["consensus_reached"] is False
         assert state["accepted_proposal"] is None
+
+    def test_supermajority_accept_records_accepted_joint_proposal_for_n3(self):
+        game, agents, state = make_game_and_state(n_agents=3, m_projects=4)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+
+        raw_proposals = []
+        for agent in agents:
+            budget = state["agent_budgets"][agent.agent_id]
+            raw_proposals.append({
+                "contributions": [budget * 0.5, 0.0, 0.0, 0.0],
+                "proposed_by": agent.agent_id,
+            })
+
+        handler = PhaseHandler(game_environment=game)
+        enumeration = asyncio.run(
+            handler.run_proposal_enumeration_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=5,
+                proposals=raw_proposals,
+            )
+        )
+        private_votes = [
+            {"voter_id": "Agent_1", "proposal_number": 1, "vote": "accept"},
+            {"voter_id": "Agent_2", "proposal_number": 1, "vote": "accept"},
+            {"voter_id": "Agent_3", "proposal_number": 1, "vote": "reject"},
+        ]
+
+        result = asyncio.run(
+            handler.run_vote_tabulation_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=5,
+                private_votes=private_votes,
+                enumerated_proposals=enumeration["enumerated_proposals"],
+            )
+        )
+
+        assert result["consensus_reached"] is True
+        assert result["supermajority_threshold"] == 2
+        assert result["majority_threshold"] == 2
+        assert result["acceptance_rule"] == "two_thirds_supermajority"
+        assert result["accepted_proposal_number"] == 1
+        assert state["accepted_proposal"] is not None
 
 
 class TestFullRoundLoop:

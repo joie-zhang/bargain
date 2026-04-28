@@ -1,6 +1,8 @@
 """Main experiment runner for strong models negotiation."""
 
 import asyncio
+import gzip
+import hashlib
 import json
 import logging
 import os
@@ -8,6 +10,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+
+import numpy as np
 
 from .data_models import ExperimentResults, BatchResults
 from .configs import STRONG_MODELS_CONFIG
@@ -56,6 +60,11 @@ class StrongModelsExperiment:
         self.current_experiment_id = None
         self.current_batch_id = None
         self.current_run_number = None
+        self.externalize_prompts = os.getenv("EXPERIMENT_EXTERNALIZE_PROMPTS", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
 
         # Token usage tracking for cost aggregation
         self.batch_token_usage = {
@@ -150,6 +159,10 @@ class StrongModelsExperiment:
                 # (config generator should have already handled this, but verify)
                 self.logger.info(f"Using configured order: {model_order}")
 
+        # Preserve the realized model order. For n-agent experiments this is the
+        # authoritative speaking/action order, regardless of the order label.
+        config["models"] = list(models)
+
         self.logger.info(f"Starting experiment {experiment_id}")
         
         # Extract token configuration from config
@@ -227,25 +240,78 @@ class StrongModelsExperiment:
             token_config=token_config,
             game_environment=game_environment,
             reasoning_config=reasoning_config,
+            access_config=config.get("access_config", {"k": 1, "phases": [], "agent_ids": []}),
             parallel_phases=parallel_phases
         )
+        self.phase_handler.reset_vote_integrity()
 
         # Create agents
         agents = await self.agent_factory.create_agents(models, config)
         if not agents:
             raise ValueError("Failed to create agents")
 
+        agent_model_map = {
+            agent.agent_id: model_name
+            for agent, model_name in zip(agents, models)
+        }
+        config["agent_model_map"] = agent_model_map
+        try:
+            from .analysis.active_model_roster import elo_for_model
+
+            config["agent_elo_map"] = {
+                agent_id: elo_for_model(model_name)
+                for agent_id, model_name in agent_model_map.items()
+            }
+        except Exception:
+            config["agent_elo_map"] = {}
+
+        access_config = dict(config.get("access_config") or {})
+        try:
+            access_k = int(access_config.get("k", 1) or 1)
+        except (TypeError, ValueError):
+            access_k = 1
+        if access_k < 1:
+            access_k = 1
+        access_config["k"] = access_k
+        if not access_config.get("phases"):
+            access_config["phases"] = []
+
+        if access_k > 1:
+            access_agent_ids = access_config.get("agent_ids")
+            if not access_agent_ids:
+                access_agent_index = int(access_config.get("agent_index", 0) or 0)
+                access_agent_index = max(0, min(access_agent_index, len(agents) - 1))
+                access_agent_ids = [agents[access_agent_index].agent_id]
+                access_config["agent_index"] = access_agent_index
+            access_config["agent_ids"] = list(access_agent_ids)
+            self.phase_handler.access_config = access_config
+            self.logger.info(
+                "Access scaling will be applied to %s with k=%s on phases=%s",
+                access_config["agent_ids"],
+                access_k,
+                access_config.get("phases", []),
+            )
+        else:
+            access_agent_index = int(access_config.get("agent_index", 0) or 0)
+            access_agent_index = max(0, min(access_agent_index, len(agents) - 1))
+            access_config.setdefault("agent_ids", [agents[access_agent_index].agent_id])
+            access_config["agent_index"] = access_agent_index
+            self.phase_handler.access_config = access_config
+
+        config["access_config"] = access_config
+
         # Determine which agent(s) should receive reasoning budget prompt
         # Only the reasoning model should get the prompt instruction, not the baseline
         model_order = config.get("model_order", "weak_first")
         if reasoning_config.get("budget"):
-            # Agent mapping: first model in list -> Agent_Alpha, second -> Agent_Beta
-            # weak_first: models = [baseline, reasoning] -> Agent_Beta is reasoning
-            # strong_first: models = [reasoning, baseline] -> Agent_Alpha is reasoning
-            if model_order == "weak_first":
-                reasoning_agent_ids = ["Agent_Beta"]
-            else:  # strong_first
-                reasoning_agent_ids = ["Agent_Alpha"]
+            if "reasoning_agent_index" in config:
+                reasoning_agent_index = int(config["reasoning_agent_index"])
+            elif model_order == "weak_first":
+                reasoning_agent_index = 1
+            else:
+                reasoning_agent_index = 0
+            reasoning_agent_index = min(reasoning_agent_index, len(agents) - 1)
+            reasoning_agent_ids = [agents[reasoning_agent_index].agent_id]
             self.phase_handler.reasoning_config["reasoning_agent_ids"] = reasoning_agent_ids
             self.logger.info(f"Reasoning prompt will be applied to: {reasoning_agent_ids}")
 
@@ -253,10 +319,59 @@ class StrongModelsExperiment:
         # This generates items/issues and preferences based on game type
         game_state = game_environment.create_game_state(agents)
 
+        def pairwise_cosine_summary(
+            vectors_by_agent: Dict[str, Any],
+            target_cosine: float,
+        ) -> tuple[Dict[str, float], Dict[str, float]]:
+            agent_ids_for_cosine = list(vectors_by_agent.keys())
+            cosines: Dict[str, float] = {}
+            for i, agent_i in enumerate(agent_ids_for_cosine):
+                vec_i = np.asarray(vectors_by_agent[agent_i], dtype=float)
+                norm_i = np.linalg.norm(vec_i)
+                for j in range(i + 1, len(agent_ids_for_cosine)):
+                    agent_j = agent_ids_for_cosine[j]
+                    vec_j = np.asarray(vectors_by_agent[agent_j], dtype=float)
+                    norm_j = np.linalg.norm(vec_j)
+                    cosine = 0.0
+                    if norm_i > 1e-12 and norm_j > 1e-12:
+                        cosine = float(np.dot(vec_i, vec_j) / (norm_i * norm_j))
+                    cosines[f"{agent_i}_vs_{agent_j}"] = cosine
+
+            cosine_values = list(cosines.values())
+            if not cosine_values:
+                return cosines, {}
+            abs_errors = [abs(float(value) - target_cosine) for value in cosine_values]
+            return cosines, {
+                "target": float(target_cosine),
+                "pair_count": len(cosine_values),
+                "min": min(float(value) for value in cosine_values),
+                "mean": sum(float(value) for value in cosine_values) / len(cosine_values),
+                "max": max(float(value) for value in cosine_values),
+                "mean_abs_error": sum(abs_errors) / len(abs_errors),
+                "max_abs_error": max(abs_errors),
+            }
+
         # Extract items/issues and preferences based on game type
         if game_type == "item_allocation":
             items = game_state["items"]
-            preferences = {"agent_preferences": game_state["agent_preferences"]}
+            preferences = {
+                "agent_preferences": game_state["agent_preferences"],
+                "cosine_similarities": game_state.get("cosine_similarities", {}),
+            }
+            config["actual_pairwise_cosines"] = game_state.get("cosine_similarities", {})
+            cosine_values = list(config["actual_pairwise_cosines"].values())
+            if cosine_values:
+                target_cosine = float(config.get("competition_level", 0.0) or 0.0)
+                abs_errors = [abs(float(value) - target_cosine) for value in cosine_values]
+                config["pairwise_cosine_summary"] = {
+                    "target": target_cosine,
+                    "pair_count": len(cosine_values),
+                    "min": min(float(value) for value in cosine_values),
+                    "mean": sum(float(value) for value in cosine_values) / len(cosine_values),
+                    "max": max(float(value) for value in cosine_values),
+                    "mean_abs_error": sum(abs_errors) / len(abs_errors),
+                    "max_abs_error": max(abs_errors),
+                }
             self.logger.info(f"Created {len(items)} items with competition_level={config.get('competition_level')}")
         elif game_type == "diplomacy":
             # Convert issues to item-like format for compatibility
@@ -267,6 +382,13 @@ class StrongModelsExperiment:
                 "agent_weights": game_state["agent_weights"],
                 "game_state": game_state  # Full state for utility calculation
             }
+            cosines, summary = pairwise_cosine_summary(
+                game_state["agent_weights"],
+                float(config.get("theta", 0.0) or 0.0),
+            )
+            config["actual_pairwise_cosines"] = cosines
+            if summary:
+                config["pairwise_cosine_summary"] = summary
             self.logger.info(f"Created {len(items)} issues with rho={config.get('rho')}, theta={config.get('theta')}")
         elif game_type == "co_funding":
             items = game_state["projects"]
@@ -274,6 +396,16 @@ class StrongModelsExperiment:
                 "agent_preferences": game_state["agent_valuations"],
                 "game_state": game_state,
             }
+            cosines, summary = pairwise_cosine_summary(
+                game_state["agent_valuations"],
+                float(config.get("alpha", 0.0) or 0.0),
+            )
+            config["actual_pairwise_cosines"] = game_state.get(
+                "valuation_cosine_similarities",
+                cosines,
+            )
+            if summary:
+                config["pairwise_cosine_summary"] = summary
             self.logger.info(
                 f"Created {len(items)} projects with alpha={config.get('alpha')}, sigma={config.get('sigma')}"
             )
@@ -447,7 +579,7 @@ class StrongModelsExperiment:
                         final_utilities = tabulation_result.get("final_utilities", {})
                         final_allocation = tabulation_result.get("final_allocation", {})
                         agent_preferences_data = tabulation_result.get("agent_preferences", {})
-                        self.logger.info(f"CONSENSUS REACHED in round {round_num}!")
+                        self.logger.info(f"SUPERMAJORITY AGREEMENT REACHED in round {round_num}!")
                         break
 
                     # Phase 6: Individual Reflection (optional)
@@ -495,9 +627,12 @@ class StrongModelsExperiment:
                         conversation_logs.extend(commit_result.get("messages", []))
                         extend_public_context(commit_result.get("messages", []))
 
-                        if commit_result.get("unanimous_yay", False):
+                        if commit_result.get(
+                            "supermajority_yay",
+                            commit_result.get("majority_yay", commit_result.get("unanimous_yay", False)),
+                        ):
                             self.logger.info(
-                                f"Unanimous co-funding commit reached in round {round_num}; ending early."
+                                f"Supermajority co-funding commit reached in round {round_num}; ending early."
                             )
                             final_round = round_num
                             break
@@ -544,6 +679,8 @@ class StrongModelsExperiment:
             # Calculate final utilities if no consensus (propose_and_vote only)
             elif not consensus_reached:
                 final_round = config["t_rounds"]
+                if game_type == "item_allocation":
+                    final_utilities = {agent.agent_id: 0.0 for agent in agents}
                 self.logger.info(f"No consensus after {config['t_rounds']} rounds")
         
         except Exception as e:
@@ -581,6 +718,8 @@ class StrongModelsExperiment:
         enhanced_config = self.utils.create_enhanced_config(
             config, agents, preferences, items, experiment_start_time, experiment_id
         )
+        vote_integrity = self.phase_handler.get_vote_integrity()
+        enhanced_config["vote_integrity"] = vote_integrity
         
         # Save all interactions
         self._stream_save_json()
@@ -610,6 +749,7 @@ class StrongModelsExperiment:
             qualitative_events=qualitative_events,
             conversation_logs=conversation_logs,
             agent_performance=agent_performance,
+            vote_integrity=vote_integrity,
             exploitation_detected=exploitation_detected
         )
         
@@ -761,13 +901,34 @@ class StrongModelsExperiment:
             round_num: Round number
             token_usage: Optional dict with token usage info (e.g., {'input_tokens': int, 'output_tokens': int, 'total_tokens': int})
         """
+        prompt_text = prompt or ""
+        prompt_sha256 = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest() if prompt_text else None
+        prompt_chars = len(prompt_text)
+        prompt_storage_path = None
+        stored_prompt = prompt
+        if self.externalize_prompts and prompt_text:
+            prompt_storage_path = self._write_external_prompt(
+                agent_id=agent_id,
+                phase=phase,
+                round_num=round_num,
+                prompt=prompt_text,
+                prompt_sha256=prompt_sha256 or "",
+            )
+            stored_prompt = (
+                f"[externalized prompt: {prompt_storage_path}; "
+                f"chars={prompt_chars}; sha256={prompt_sha256}]"
+            )
+
         interaction = {
             "timestamp": time.time(),
             "experiment_id": self.current_experiment_id,
             "agent_id": agent_id,
             "phase": phase,
             "round": round_num,
-            "prompt": prompt,
+            "prompt": stored_prompt,
+            "prompt_chars": prompt_chars,
+            "prompt_sha256": prompt_sha256,
+            "prompt_storage_path": prompt_storage_path,
             "response": response,
             "model_name": model_name if model_name else None
         }
@@ -794,6 +955,93 @@ class StrongModelsExperiment:
         # canonical in-memory state for the changed agent to avoid re-appending
         # historical interactions on every stream save.
         self._stream_save_json(changed_agent_id=agent_id)
+        self._write_progress_checkpoint(interaction)
+        self.logger.info(
+            "PROGRESS interaction=%s round=%s phase=%s agent=%s model=%s prompt_chars=%s response_chars=%s",
+            len(self.all_interactions),
+            round_num,
+            phase,
+            agent_id,
+            model_name,
+            prompt_chars,
+            len(response or ""),
+        )
+
+    def _current_output_dir(self) -> Path:
+        """Return the directory used for streamed artifacts for the active run."""
+        if self.use_custom_output:
+            exp_dir = self.results_dir
+        elif self.current_batch_id and self.current_run_number:
+            exp_dir = self.results_dir / self.current_batch_id
+        else:
+            exp_dir = self.results_dir / self.current_experiment_id
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        return exp_dir
+
+    @staticmethod
+    def _safe_filename_part(value: Any) -> str:
+        text = str(value or "none")
+        return "".join(ch if ch.isalnum() else "_" for ch in text).strip("_")[:80]
+
+    def _write_external_prompt(
+        self,
+        *,
+        agent_id: str,
+        phase: str,
+        round_num: Optional[int],
+        prompt: str,
+        prompt_sha256: str,
+    ) -> str:
+        """Persist large prompts outside all_interactions.json to avoid memory blowup."""
+        exp_dir = self._current_output_dir()
+        prompt_dir = exp_dir / "externalized_prompts"
+        prompt_dir.mkdir(parents=True, exist_ok=True)
+        index = len(self.all_interactions) + 1
+        filename = (
+            f"{index:06d}_round{round_num or 0}_"
+            f"{self._safe_filename_part(phase)}_{self._safe_filename_part(agent_id)}_"
+            f"{prompt_sha256[:12]}.txt.gz"
+        )
+        path = prompt_dir / filename
+        with gzip.open(path, "wt", encoding="utf-8") as handle:
+            handle.write(prompt)
+        return str(path.relative_to(exp_dir))
+
+    def _write_progress_checkpoint(self, interaction: Dict[str, Any]) -> None:
+        """Write lightweight progress metadata after every saved interaction."""
+        exp_dir = self._current_output_dir()
+        phase_counts: Dict[str, int] = {}
+        round_counts: Dict[str, int] = {}
+        max_round_seen = 0
+        for item in self.all_interactions:
+            phase = str(item.get("phase"))
+            phase_counts[phase] = phase_counts.get(phase, 0) + 1
+            round_value = item.get("round")
+            if round_value is not None:
+                round_key = str(round_value)
+                round_counts[round_key] = round_counts.get(round_key, 0) + 1
+                try:
+                    max_round_seen = max(max_round_seen, int(round_value))
+                except (TypeError, ValueError):
+                    pass
+        progress = {
+            "updated_at": datetime.now().isoformat(),
+            "experiment_id": self.current_experiment_id,
+            "interaction_count": len(self.all_interactions),
+            "current_round": max_round_seen,
+            "last_interaction": {
+                "round": interaction.get("round"),
+                "phase": interaction.get("phase"),
+                "agent_id": interaction.get("agent_id"),
+                "model_name": interaction.get("model_name"),
+            },
+            "phase_counts": phase_counts,
+            "round_counts": round_counts,
+        }
+        (exp_dir / "progress.json").write_text(
+            json.dumps(progress, indent=2, default=str) + "\n",
+            encoding="utf-8",
+        )
 
     def _track_token_usage(self, agent_id: str, phase: str, prompt: str, response: str,
                           token_usage: Optional[Dict[str, Any]] = None):
@@ -910,16 +1158,7 @@ class StrongModelsExperiment:
         if not self.current_experiment_id:
             return
         
-        # Determine the directory structure
-        if self.use_custom_output:
-            # Use custom output directory directly
-            exp_dir = self.results_dir
-        elif self.current_batch_id and self.current_run_number:
-            exp_dir = self.results_dir / self.current_batch_id
-        else:
-            exp_dir = self.results_dir / self.current_experiment_id
-        
-        exp_dir.mkdir(parents=True, exist_ok=True)
+        exp_dir = self._current_output_dir()
         
         # Determine batch mode: use run_number if set, regardless of batch_id
         # (batch_id can be empty string when using custom output directories)

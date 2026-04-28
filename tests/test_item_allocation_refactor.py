@@ -99,6 +99,24 @@ class TestGameStateCreation:
             assert isinstance(item["name"], str)
             assert len(item["name"]) > 0
 
+    def test_twenty_five_item_names_are_human_readable(self):
+        """The n=10 runs use M=25 and should not expose fallback item labels."""
+        game = create_game_environment(
+            "item_allocation", n_agents=10, t_rounds=5, m_items=25, random_seed=42
+        )
+        agents = create_test_agents(10)
+        state = game.create_game_state(agents)
+
+        names = [item["name"] for item in state["items"]]
+        assert names == [
+            "Apple", "Jewel", "Stone", "Quill", "Pencil",
+            "Book", "Hat", "Camera", "Ring", "Clock",
+            "Key", "Map", "Lantern", "Compass", "Vase",
+            "Coin", "Shell", "Brush", "Scarf", "Cup",
+            "Bottle", "Globe", "Medal", "Ticket", "Tablet",
+        ]
+        assert not any(name.startswith("Item_") for name in names)
+
     def test_preferences_are_numeric(self):
         """Test that preferences are numeric values."""
         game = create_game_environment(
@@ -331,8 +349,8 @@ class TestProposalParsing:
         assert proposal["allocation"]["Agent_2"] == [1]
         assert proposal["proposed_by"] == "Agent_1"
 
-    def test_fallback_on_invalid_json(self):
-        """Test fallback to proposer-gets-all on invalid JSON."""
+    def test_invalid_json_preserves_diagnostics_without_valid_fallback(self):
+        """Invalid JSON should not become a valid proposer-gets-all proposal."""
         game = create_game_environment(
             "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
         )
@@ -344,9 +362,46 @@ class TestProposalParsing:
             response, "Agent_1", state, ["Agent_1", "Agent_2"]
         )
 
-        # Fallback: proposer gets all items
-        assert proposal["allocation"]["Agent_1"] == [0, 1, 2]
+        assert proposal["allocation"]["Agent_1"] == []
         assert proposal["allocation"]["Agent_2"] == []
+        assert proposal["raw_response"] == response
+        assert proposal["parse_error"]["type"] == "ValueError"
+        assert game.validate_proposal(proposal, state) is False
+
+    def test_legacy_agreement_vector_is_not_treated_as_allocation(self):
+        """Game 2-style agreement vectors are not interpretable Game 1 allocations."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        response = '{"agreement": [36, 0, 12], "reasoning": "old schema"}'
+        proposal = game.parse_proposal(
+            response, "Agent_1", state, ["Agent_1", "Agent_2"]
+        )
+
+        assert proposal["allocation"] == {"Agent_1": [], "Agent_2": []}
+        assert proposal["parse_error"]["message"] == "No allocation in proposal"
+        assert game.validate_proposal(proposal, state) is False
+
+    def test_legacy_agreement_mapping_key_is_recovered(self):
+        """A correct allocation under the old agreement key can be safely recovered."""
+        game = create_game_environment(
+            "item_allocation", n_agents=2, t_rounds=5, m_items=3, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        response = '{"agreement": {"Agent_1": [0, 2], "Agent_2": [1]}, "reasoning": "wrong key"}'
+        proposal = game.parse_proposal(
+            response, "Agent_1", state, ["Agent_1", "Agent_2"]
+        )
+
+        assert proposal["allocation"] == {"Agent_1": [0, 2], "Agent_2": [1]}
+        assert proposal["recovered_from_legacy_agreement_key"] is True
+        assert "parse_error" not in proposal
+        assert game.validate_proposal(proposal, state) is True
 
 
 class TestGameType:

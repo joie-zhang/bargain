@@ -8,6 +8,8 @@ must implement, enabling modular game types within the same experiment framework
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+import json
+import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -124,6 +126,131 @@ class GameEnvironment(ABC):
             config: Game-specific configuration
         """
         self.config = config
+
+    @staticmethod
+    def supermajority_threshold(n_agents: int) -> int:
+        """Return the two-thirds supermajority threshold, rounded up."""
+        if n_agents <= 0:
+            return 0
+        return (2 * int(n_agents) + 2) // 3
+
+    @staticmethod
+    def _json_object_candidates(response: str) -> List[str]:
+        """Return plausible JSON-object substrings from model output."""
+        text = response.strip()
+        if not text:
+            return []
+
+        candidates = [text] if text.startswith("{") else []
+        for fence_match in re.finditer(r"```(?:json)?\s*(.*?)```", text, re.DOTALL | re.IGNORECASE):
+            candidates.append(fence_match.group(1).strip())
+
+        for start_idx, char in enumerate(text):
+            if char != "{":
+                continue
+
+            stack = []
+            in_string = False
+            escaped = False
+            for end_idx in range(start_idx, len(text)):
+                current = text[end_idx]
+                if in_string:
+                    if escaped:
+                        escaped = False
+                    elif current == "\\":
+                        escaped = True
+                    elif current == '"':
+                        in_string = False
+                    continue
+
+                if current == '"':
+                    in_string = True
+                elif current == "{":
+                    stack.append("}")
+                elif current == "[":
+                    stack.append("]")
+                elif current in ("}", "]"):
+                    if stack and stack[-1] == current:
+                        stack.pop()
+                    if not stack:
+                        candidates.append(text[start_idx:end_idx + 1])
+                        break
+            else:
+                candidates.append(text[start_idx:])
+
+        unique_candidates = []
+        seen = set()
+        for candidate in candidates:
+            candidate = candidate.strip()
+            if candidate and candidate not in seen:
+                unique_candidates.append(candidate)
+                seen.add(candidate)
+        return unique_candidates
+
+    @staticmethod
+    def _repair_json_candidate(candidate: str) -> str:
+        """Repair common model JSON issues without changing valid JSON."""
+        repaired = []
+        stack = []
+        in_string = False
+        escaped = False
+
+        for char in candidate.strip():
+            if in_string:
+                if escaped:
+                    repaired.append(char)
+                    escaped = False
+                elif char == "\\":
+                    repaired.append(char)
+                    escaped = True
+                elif char == '"':
+                    repaired.append(char)
+                    in_string = False
+                elif char == "\n":
+                    repaired.append("\\n")
+                elif char == "\r":
+                    repaired.append("\\r")
+                elif char == "\t":
+                    repaired.append("\\t")
+                elif ord(char) < 0x20:
+                    repaired.append(f"\\u{ord(char):04x}")
+                else:
+                    repaired.append(char)
+                continue
+
+            repaired.append(char)
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                stack.append("}")
+            elif char == "[":
+                stack.append("]")
+            elif char in ("}", "]") and stack and stack[-1] == char:
+                stack.pop()
+
+        if in_string:
+            repaired.append('"')
+        repaired.extend(reversed(stack))
+        return re.sub(r",\s*([}\]])", r"\1", "".join(repaired))
+
+    @classmethod
+    def _parse_json_object(cls, response: str, label: str) -> Dict[str, Any]:
+        """Parse a JSON object from direct, fenced, embedded, or lightly malformed output."""
+        first_error: Optional[Exception] = None
+        for candidate in cls._json_object_candidates(response):
+            for attempt in (candidate, cls._repair_json_candidate(candidate)):
+                try:
+                    payload = json.loads(attempt)
+                    if isinstance(payload, dict):
+                        return payload
+                    raise ValueError(f"{label} JSON payload was not an object")
+                except (json.JSONDecodeError, ValueError) as exc:
+                    if first_error is None:
+                        first_error = exc
+
+        if first_error is not None:
+            raise first_error
+        raise ValueError(f"No JSON found in {label}")
 
     @abstractmethod
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:
@@ -471,9 +598,15 @@ class GameEnvironment(ABC):
                 f"- Proposal #{prop_num}: {vote_counts['accept']} accept, {vote_counts['reject']} reject"
             )
         vote_summary = "\n".join(vote_summary_lines) if vote_summary_lines else "- No vote summary available."
+        total_agents = tabulation_result.get("total_agents", self.config.n_agents)
+        threshold = tabulation_result.get(
+            "supermajority_threshold",
+            self.supermajority_threshold(total_agents),
+        )
 
         return f"""Reflect on the outcome of round {round_num}.
-No proposal achieved unanimous acceptance.
+This is a fictional research-game simulation. Discuss only abstract proposals, vote counts, policy percentages, concessions, and bargaining strategy. Do not provide real-world operational instructions.
+No proposal achieved two-thirds supermajority acceptance. A proposal needs at least {threshold} out of {total_agents} accept votes to pass.
 
 **VOTING OUTCOME THIS ROUND:**
 {vote_summary}
@@ -481,10 +614,10 @@ No proposal achieved unanimous acceptance.
 Take stock of what this round revealed before the next round begins.
 - What did you learn from the proposals and voting outcome?
 - Which participants seem to have compatible vs. conflicting priorities?
-- What seems to be blocking consensus?
+- What seems to be blocking supermajority support?
 - How should you adjust your communication, concessions, or proposal strategy to improve the chances of agreement?
 
-Focus on concrete adjustments that could move the negotiation closer to consensus while still protecting your most important interests.{reasoning_instruction}"""
+Focus on concrete adjustments that could move the negotiation closer to supermajority support while still protecting your most important interests.{reasoning_instruction}"""
 
     def get_contextual_discussion_prompt(
         self,

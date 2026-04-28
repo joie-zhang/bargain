@@ -4,14 +4,24 @@ import asyncio
 import json
 import time
 import logging
+import random
 from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING, Awaitable, Callable
 from negotiation import NegotiationContext
 from negotiation.llm_agents import BaseLLMAgent
+from game_environments.base import GameEnvironment as BaseGameEnvironment
 from ..prompts import PromptGenerator
 
 # Import GameEnvironment for type checking to avoid circular imports
 if TYPE_CHECKING:
     from game_environments import GameEnvironment
+
+
+class VoteIntegrityError(RuntimeError):
+    """Raised when voting would require a synthetic vote before the final round."""
+
+    def __init__(self, message: str, event: Optional[Dict[str, Any]] = None):
+        super().__init__(message)
+        self.event = event
 
 
 class PhaseHandler:
@@ -25,9 +35,15 @@ class PhaseHandler:
     for game-specific phases (discussion, proposal, voting).
     """
 
+    STRUCTURED_VOTE_BATCH_MAX_TOKENS = 8192
+    STRUCTURED_VOTE_REPAIR_MAX_TOKENS = 4096
+    STRUCTURED_VOTE_TIMEOUT_SECONDS = 240.0
+    STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS = 120.0
+
     def __init__(self, save_interaction_callback=None, token_config=None,
                  game_environment: Optional["GameEnvironment"] = None,
                  reasoning_config: Optional[Dict[str, Any]] = None,
+                 access_config: Optional[Dict[str, Any]] = None,
                  parallel_phases: bool = False):
         if not isinstance(parallel_phases, bool):
             raise TypeError(
@@ -53,7 +69,11 @@ class PhaseHandler:
         # Reasoning token budget configuration (for test-time compute scaling)
         # Format: {"budget": int, "phases": ["thinking", "reflection", ...]}
         self.reasoning_config = reasoning_config or {"budget": None, "phases": []}
+        # Black-box access scaling configuration.
+        # Format: {"k": int, "phases": ["proposal", ...], "agent_ids": ["Agent_1"]}
+        self.access_config = access_config or {"k": 1, "phases": [], "agent_ids": []}
         self.parallel_phases = parallel_phases
+        self.reset_vote_integrity()
 
     async def _run_agent_tasks_in_order(
         self,
@@ -77,12 +97,70 @@ class PhaseHandler:
             )
 
         return await asyncio.gather(*tasks, return_exceptions=True)
+
+    def reset_vote_integrity(self) -> None:
+        """Reset per-experiment voting integrity audit state."""
+        self.vote_integrity: Dict[str, Any] = {
+            "synthetic_vote_used": False,
+            "synthetic_vote_count": 0,
+            "contaminated": False,
+            "hard_failed": False,
+            "events": [],
+        }
+
+    def get_vote_integrity(self) -> Dict[str, Any]:
+        """Return a JSON-serializable copy of the vote integrity audit state."""
+        return json.loads(json.dumps(self.vote_integrity, default=str))
+
+    def _build_vote_integrity_event(
+        self,
+        *,
+        agent_id: str,
+        round_num: int,
+        max_rounds: int,
+        proposal_numbers: List[int],
+        reason: str,
+        error: Optional[Any] = None,
+        synthetic_vote_count: int = 0,
+        contaminated: bool = False,
+        hard_failed: bool = False,
+    ) -> Dict[str, Any]:
+        error_type = type(error).__name__ if error is not None else None
+        error_message = str(error) if error is not None else None
+        return {
+            "phase": "private_voting",
+            "agent_id": agent_id,
+            "round": int(round_num),
+            "max_rounds": int(max_rounds),
+            "proposal_numbers": [int(number) for number in proposal_numbers],
+            "reason": reason,
+            "error_type": error_type,
+            "error_message": error_message,
+            "synthetic_vote_count": int(synthetic_vote_count),
+            "final_round_fallback_allowed": bool(round_num >= max_rounds),
+            "contaminated": bool(contaminated),
+            "hard_failed": bool(hard_failed),
+            "timestamp": time.time(),
+        }
+
+    def _record_vote_integrity_event(self, event: Dict[str, Any]) -> None:
+        """Append one vote-integrity event and update aggregate audit flags."""
+        self.vote_integrity["events"].append(event)
+        synthetic_count = int(event.get("synthetic_vote_count", 0) or 0)
+        if synthetic_count > 0:
+            self.vote_integrity["synthetic_vote_used"] = True
+            self.vote_integrity["synthetic_vote_count"] += synthetic_count
+        if event.get("contaminated"):
+            self.vote_integrity["contaminated"] = True
+        if event.get("hard_failed"):
+            self.vote_integrity["hard_failed"] = True
     
     def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
         """Extract token usage information from an AgentResponse object."""
         if not agent_response:
             return None
 
+        response_time = getattr(agent_response, "response_time", None)
         token_usage = None
         if agent_response.metadata and agent_response.metadata.get("usage"):
             usage = agent_response.metadata["usage"]
@@ -108,6 +186,9 @@ class PhaseHandler:
                 token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
             elif usage.get("reasoning_tokens"):
                 token_usage["reasoning_tokens"] = usage.get("reasoning_tokens")
+            for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
+                if agent_response.metadata.get(access_key) is not None:
+                    token_usage[access_key] = agent_response.metadata[access_key]
         elif agent_response.tokens_used:
             token_usage = {
                 "total_tokens": agent_response.tokens_used
@@ -115,8 +196,220 @@ class PhaseHandler:
             # Check for reasoning tokens in metadata
             if agent_response.metadata and agent_response.metadata.get("reasoning_tokens"):
                 token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
+            if agent_response.metadata:
+                for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
+                    if agent_response.metadata.get(access_key) is not None:
+                        token_usage[access_key] = agent_response.metadata[access_key]
+
+        if response_time is not None:
+            if token_usage is None:
+                token_usage = {}
+            token_usage["response_time_seconds"] = response_time
 
         return token_usage
+
+    @staticmethod
+    def _looks_like_refusal(content: str) -> bool:
+        """Detect short safety-style refusals that should not silently enter transcripts."""
+        normalized = " ".join(str(content or "").strip().lower().split())
+        if not normalized:
+            return True
+        refusal_prefixes = (
+            "i'm sorry, but i cannot assist",
+            "i am sorry, but i cannot assist",
+            "sorry, but i can't assist",
+            "i can't assist with that request",
+            "i cannot assist with that request",
+        )
+        return any(normalized.startswith(prefix) for prefix in refusal_prefixes)
+
+    def _get_access_k(self, phase: str, agent_id: Optional[str] = None) -> int:
+        """Return the access-scaling call budget for this phase and agent."""
+        if not self.access_config:
+            return 1
+        try:
+            k = int(self.access_config.get("k", 1) or 1)
+        except (TypeError, ValueError):
+            k = 1
+        if k <= 1:
+            return 1
+
+        phases = self.access_config.get("phases", []) or []
+        if "all" not in phases and phase not in phases:
+            return 1
+
+        access_agent_ids = self.access_config.get("agent_ids") or []
+        if access_agent_ids and agent_id and agent_id not in access_agent_ids:
+            return 1
+
+        return k
+
+    @staticmethod
+    def _sum_token_usage(usages: List[Optional[Dict[str, Any]]]) -> Optional[Dict[str, int]]:
+        """Sum token usage dictionaries while ignoring missing values."""
+        totals = {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+            "reasoning_tokens": 0,
+        }
+        seen_any = False
+        for usage in usages:
+            if not usage:
+                continue
+            seen_any = True
+            for key in totals:
+                totals[key] += int(usage.get(key, 0) or 0)
+        if not seen_any:
+            return None
+        return totals
+
+    def _attach_access_metadata(
+        self,
+        response,
+        *,
+        phase: str,
+        k: int,
+        token_usages: List[Optional[Dict[str, Any]]],
+        candidate_count: int,
+    ):
+        """Attach aggregate usage and access-scaling metadata to the final response."""
+        aggregate_usage = self._sum_token_usage(token_usages)
+        metadata = dict(response.metadata or {})
+        metadata["access_scaling"] = {
+            "enabled": True,
+            "phase": phase,
+            "k_total_calls": k,
+            "candidate_count": candidate_count,
+            "selector_calls": 1,
+            "mechanism": "private_candidate_drafts_plus_self_selector",
+        }
+        metadata["access_k"] = k
+        metadata["access_candidate_count"] = candidate_count
+        metadata["access_total_calls"] = k
+        if aggregate_usage:
+            metadata["usage"] = {
+                "prompt_tokens": aggregate_usage["input_tokens"],
+                "completion_tokens": aggregate_usage["output_tokens"],
+                "total_tokens": aggregate_usage["total_tokens"],
+                "reasoning_tokens": aggregate_usage["reasoning_tokens"],
+            }
+            metadata["reasoning_tokens"] = aggregate_usage["reasoning_tokens"]
+            response.tokens_used = aggregate_usage["total_tokens"]
+        response.metadata = metadata
+        return response
+
+    async def _generate_response_with_access(
+        self,
+        agent: BaseLLMAgent,
+        context: NegotiationContext,
+        prompt: str,
+        *,
+        phase: str,
+    ):
+        """Generate a response, optionally using black-box access scaling.
+
+        K is interpreted as total model calls for the scaled phase. K=1 is the
+        ordinary single call. K>1 spends K-1 private candidate draft calls, then
+        one selector/reviser call that returns the public response.
+        """
+        k = self._get_access_k(phase, agent.agent_id)
+        if k <= 1:
+            return await agent.generate_response(context, prompt)
+
+        candidate_count = k - 1
+        candidate_responses = []
+        token_usages: List[Optional[Dict[str, Any]]] = []
+
+        for candidate_idx in range(candidate_count):
+            candidate_prompt = (
+                f"{prompt}\n\n"
+                "PRIVATE ACCESS-SCALING DRAFT "
+                f"{candidate_idx + 1}/{candidate_count}.\n"
+                "Draft one possible final response for the current phase. "
+                "This private draft will not be shown to other agents. "
+                "Focus on maximizing your own utility while keeping the response valid, "
+                "credible, and consistent with the original instructions. "
+                "Return only the candidate final response."
+            )
+            candidate_response = await agent.generate_response(context, candidate_prompt)
+            candidate_responses.append(candidate_response)
+            token_usages.append(self._extract_token_usage(candidate_response))
+
+        candidate_block = "\n\n".join(
+            f"CANDIDATE {idx + 1}:\n{candidate_response.content}"
+            for idx, candidate_response in enumerate(candidate_responses)
+        )
+        selector_prompt = (
+            f"{prompt}\n\n"
+            "PRIVATE ACCESS-SCALING SELECTION.\n"
+            f"You generated {candidate_count} private candidate responses below. "
+            "Choose the best response or synthesize a better final response from them. "
+            "Evaluate validity first, then expected utility, then persuasiveness and strategic fit. "
+            "Return only the final outward response to send in the current phase. "
+            "Preserve any exact JSON schema or formatting requirements from the original prompt; "
+            "do not include analysis, labels, markdown fences, or any mention of private drafts, "
+            "candidates, selection, or finalization.\n\n"
+            f"{candidate_block}"
+        )
+        final_response = await agent.generate_response(context, selector_prompt)
+        token_usages.append(self._extract_token_usage(final_response))
+        return self._attach_access_metadata(
+            final_response,
+            phase=phase,
+            k=k,
+            token_usages=token_usages,
+            candidate_count=candidate_count,
+        )
+
+    async def _generate_response_with_generation_bounds(
+        self,
+        agent: BaseLLMAgent,
+        context: NegotiationContext,
+        prompt: str,
+        *,
+        phase: str,
+        max_tokens: Optional[int] = None,
+        timeout: Optional[float] = None,
+    ):
+        """Generate a response with temporary per-call bounds.
+
+        Structured phases such as voting should not inherit long discussion
+        timeouts or large completion caps. These overrides are scoped to one
+        call and restored before the next call on the same agent.
+        """
+        original_max_tokens = getattr(getattr(agent, "config", None), "max_tokens", None)
+        changed_max_tokens = max_tokens is not None and hasattr(agent, "update_max_tokens")
+
+        router_config = getattr(agent, "openrouter_config", None)
+        original_timeout = getattr(router_config, "timeout", None) if router_config is not None else None
+        changed_timeout = timeout is not None and router_config is not None and hasattr(router_config, "timeout")
+
+        if changed_max_tokens:
+            if original_max_tokens is None or original_max_tokens >= 999999:
+                bounded_max_tokens = max_tokens
+            else:
+                bounded_max_tokens = min(int(original_max_tokens), max_tokens)
+            agent.update_max_tokens(bounded_max_tokens)
+
+        if changed_timeout:
+            if original_timeout is None:
+                router_config.timeout = timeout
+            else:
+                router_config.timeout = min(float(original_timeout), timeout)
+
+        try:
+            return await self._generate_response_with_access(
+                agent,
+                context,
+                prompt,
+                phase=phase,
+            )
+        finally:
+            if changed_max_tokens:
+                agent.update_max_tokens(original_max_tokens)
+            if changed_timeout:
+                router_config.timeout = original_timeout
 
     def _get_reasoning_budget(self, phase: str, agent_id: Optional[str] = None) -> Optional[int]:
         """Get reasoning token budget for a specific phase and agent if applicable.
@@ -204,15 +497,10 @@ class PhaseHandler:
         Returns:
             Dict with vote, reasoning, voter, and round fields
         """
-        import re
         try:
-            vote = json.loads(content)
-        except json.JSONDecodeError:
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                vote = json.loads(json_match.group())
-            else:
-                raise ValueError(f"No valid JSON in vote response from {agent_id}")
+            vote = BaseGameEnvironment._parse_json_object(content, "vote response")
+        except (json.JSONDecodeError, ValueError) as exc:
+            raise ValueError(f"No valid JSON in vote response from {agent_id}: {exc}") from exc
 
         vote_val = vote.get("vote", "reject")
         if isinstance(vote_val, dict):
@@ -229,29 +517,24 @@ class PhaseHandler:
 
     def _parse_commit_vote_response(self, content: str, agent_id: str, round_num: int) -> Dict:
         """Parse co-funding commit vote (yay/nay) from raw LLM output."""
-        import re
         try:
-            vote = json.loads(content)
-        except json.JSONDecodeError:
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                vote = json.loads(json_match.group())
-            else:
-                # Last-resort keyword parse
-                lowered = content.lower()
-                if "yay" in lowered:
-                    return {
-                        "commit_vote": "yay",
-                        "reasoning": "Parsed from plain-text response",
-                        "voter": agent_id,
-                        "round": round_num,
-                    }
+            vote = BaseGameEnvironment._parse_json_object(content, "commit vote response")
+        except (json.JSONDecodeError, ValueError):
+            # Last-resort keyword parse
+            lowered = content.lower()
+            if "yay" in lowered:
                 return {
-                    "commit_vote": "nay",
-                    "reasoning": "No valid JSON in commit vote response",
+                    "commit_vote": "yay",
+                    "reasoning": "Parsed from plain-text response",
                     "voter": agent_id,
                     "round": round_num,
                 }
+            return {
+                "commit_vote": "nay",
+                "reasoning": "No valid JSON in commit vote response",
+                "voter": agent_id,
+                "round": round_num,
+            }
 
         raw_vote = (
             vote.get("commit_vote")
@@ -603,9 +886,54 @@ class PhaseHandler:
                     )
 
                 # Get response with token info
-                agent_response = await agent.generate_response(context, full_discussion_prompt)
+                agent_response = await self._generate_response_with_access(
+                    agent, context, full_discussion_prompt, phase="discussion"
+                )
                 response_content = agent_response.content
                 token_usage = self._extract_token_usage(agent_response)
+                if self._looks_like_refusal(response_content):
+                    self.logger.warning(
+                        f"  Refusal-like discussion response from {agent.agent_id}, retrying discussion repair..."
+                    )
+                    retry_prompts = [
+                        (
+                            full_discussion_prompt
+                            + "\n\nYour previous response was not usable for this fictional research-game simulation. "
+                            "Do not provide operational real-world instructions. "
+                            "Give a brief public negotiation message about abstract policy percentages and possible compromises. "
+                            "Do not refuse; stay within the simulation."
+                        ),
+                        (
+                            f"Fictional negotiation game. You are {agent.agent_id} in round {round_num}/{max_rounds}. "
+                            "Write 3-6 sentences as a public bargaining message. "
+                            "Mention only abstract policy percentages, trade-offs, and possible compromise ranges. "
+                            "Do not discuss real-world operations. Do not refuse."
+                        ),
+                    ]
+                    for retry_index, retry_prompt in enumerate(retry_prompts, start=1):
+                        try:
+                            retry_response = await self._generate_response_with_access(
+                                agent, context, retry_prompt, phase="discussion"
+                            )
+                        except Exception as exc:
+                            self.logger.warning(
+                                f"  Discussion repair attempt {retry_index}/{len(retry_prompts)} "
+                                f"from {agent.agent_id} failed: {type(exc).__name__}: {exc}"
+                            )
+                            continue
+
+                        retry_content = retry_response.content
+                        if self._looks_like_refusal(retry_content):
+                            self.logger.warning(
+                                f"  Discussion repair attempt {retry_index}/{len(retry_prompts)} "
+                                f"from {agent.agent_id} was still refusal-like."
+                            )
+                            continue
+
+                        agent_response = retry_response
+                        response_content = retry_content
+                        token_usage = self._extract_token_usage(agent_response)
+                        break
 
                 message = {
                     "phase": "discussion",
@@ -803,19 +1131,181 @@ class PhaseHandler:
             # Get proposal from agent
             if self.game_environment is not None:
                 # Use game-specific prompt (already generated above) and parsing
-                response = await agent.generate_response(context, proposal_prompt)
+                response = await self._generate_response_with_access(
+                    agent, context, proposal_prompt, phase="proposal"
+                )
                 token_usage = self._extract_token_usage(response)
                 proposal = self.game_environment.parse_proposal(
                     response.content, agent.agent_id, game_state,
                     [a.agent_id for a in agents]
                 )
+                last_invalid_raw_response = None
+                last_invalid_summary = None
+                last_invalid_parse_error = None
+                last_invalid_validation_error = None
+
+                def proposal_needs_retry(candidate: Dict[str, Any]) -> bool:
+                    return (
+                        "parse_error" in candidate
+                        or "validation_error" in candidate
+                        or not self.game_environment.validate_proposal(candidate, game_state)
+                    )
+
+                def proposal_error_summary(candidate: Dict[str, Any]) -> str:
+                    if "parse_error" in candidate:
+                        return "parse error"
+                    if "validation_error" in candidate:
+                        return f"validation error ({candidate['validation_error']})"
+
+                    if game_state.get("game_type") == "co_funding":
+                        contributions = candidate.get("contributions", [])
+                        budget = game_state.get("agent_budgets", {}).get(agent.agent_id, 0.0)
+                        expected_len = game_state.get("m_projects")
+                        if expected_len is not None and len(contributions) != expected_len:
+                            return (
+                                "validation error "
+                                f"(wrong contribution length: got {len(contributions)}, expected {expected_len})"
+                            )
+                        try:
+                            numeric_contributions = [float(value) for value in contributions]
+                        except (TypeError, ValueError):
+                            return "validation error (non-numeric contribution)"
+                        if any(value < -1e-9 for value in numeric_contributions):
+                            return "validation error (negative contribution)"
+                        total = sum(numeric_contributions)
+                        if total > float(budget) + 1e-6:
+                            return (
+                                "validation error "
+                                f"(over budget: total={total:.2f}, budget={float(budget):.2f})"
+                            )
+
+                    return "validation error"
+
+                game_type = game_state.get("game_type")
+                agent_ids = [a.agent_id for a in agents]
+                n_slots = game_state.get("n_issues") or game_state.get("m_projects") or len(items)
+                if game_type == "co_funding":
+                    neutral_vector = ", ".join(["0.0"] * int(n_slots or 1))
+                    budget = game_state.get("agent_budgets", {}).get(agent.agent_id, 0.0)
+                    proposal_retry_prompts = [
+                        (
+                            proposal_prompt
+                            + "\n\nYour previous response was invalid for this simulation. "
+                            "Return ONLY one JSON object with a contributions array of the exact required length, "
+                            "using non-negative numbers whose total does not exceed your budget "
+                            f"({budget}). Do not include prose outside the JSON object."
+                        ),
+                        (
+                            "JSON repair task for a fictional co-funding game. "
+                            "Output exactly one JSON object and no other text. "
+                            f"Use this shape: {{\"contributions\": [{neutral_vector}], "
+                            "\"reasoning\": \"brief funding rationale\"}}. "
+                            "You may change the numbers, but keep the same count and do not exceed the budget."
+                        ),
+                    ]
+                elif game_type == "item_allocation":
+                    n_items = len(game_state.get("items", items))
+                    example_allocation = {aid: [] for aid in agent_ids}
+                    for item_index in range(n_items):
+                        example_allocation[agent_ids[item_index % len(agent_ids)]].append(item_index)
+                    example_payload = json.dumps(
+                        {
+                            "allocation": example_allocation,
+                            "reasoning": "brief allocation rationale",
+                        },
+                        indent=2,
+                    )
+                    proposal_retry_prompts = [
+                        (
+                            proposal_prompt
+                            + "\n\nYour previous response was invalid for this simulation. "
+                            "Return ONLY one JSON object with an allocation object whose keys are the exact agent IDs "
+                            f"{agent_ids}. The values must be arrays of item indices. "
+                            f"Every item index from 0 to {n_items - 1} must appear exactly once across all agents. "
+                            "Do not include an agreement array, utility vector, markdown, or prose outside the JSON object."
+                        ),
+                        (
+                            "JSON repair task for a fictional item-allocation negotiation game. "
+                            "Output exactly one JSON object and no other text. "
+                            "Use this exact schema, changing only which item indices each agent receives if needed:\n"
+                            f"{example_payload}\n"
+                            f"Every item index from 0 to {n_items - 1} must appear exactly once."
+                        ),
+                    ]
+                else:
+                    neutral_vector = ", ".join(["50"] * int(n_slots or 1))
+                    proposal_retry_prompts = [
+                        (
+                            proposal_prompt
+                            + "\n\nYour previous response was invalid for this simulation. "
+                            "Return ONLY one JSON object with an agreement array of the exact required length, "
+                            "using integer percentages from 0 to 100. Do not include prose outside the JSON object. "
+                            "If you are uncertain, choose a moderate compromise vector and explain it in the JSON reasoning field."
+                        ),
+                        (
+                            "JSON repair task for a fictional negotiation game. "
+                            "Output exactly one JSON object and no other text. "
+                            f"Use this shape: {{\"agreement\": [{neutral_vector}], "
+                            "\"reasoning\": \"brief compromise rationale\"}}. "
+                            "You may change the numbers, but keep the same count and use only integers from 0 to 100."
+                        ),
+                    ]
+                for retry_index, retry_prompt in enumerate(proposal_retry_prompts, start=1):
+                    if not proposal_needs_retry(proposal):
+                        break
+                    last_invalid_raw_response = response.content
+                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_parse_error = proposal.get("parse_error")
+                    if "validation_error" in proposal:
+                        last_invalid_validation_error = proposal["validation_error"]
+                    elif last_invalid_parse_error is None:
+                        last_invalid_validation_error = "Proposal invalid after retry"
+                    log_records.append(
+                        (
+                            "warning",
+                            f"  Proposal from {agent.agent_id} failed: "
+                            f"{last_invalid_summary}; "
+                            f"retrying repair attempt {retry_index}/{len(proposal_retry_prompts)}...",
+                        )
+                    )
+                    response = await self._generate_response_with_access(
+                        agent, context, retry_prompt, phase="proposal"
+                    )
+                    token_usage = self._extract_token_usage(response)
+                    proposal = self.game_environment.parse_proposal(
+                        response.content, agent.agent_id, game_state,
+                        [a.agent_id for a in agents]
+                    )
+                if game_type != "co_funding" and proposal_needs_retry(proposal):
+                    last_invalid_raw_response = response.content
+                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_parse_error = proposal.get("parse_error")
+                    if "validation_error" in proposal:
+                        last_invalid_validation_error = proposal["validation_error"]
+                    elif last_invalid_parse_error is None:
+                        last_invalid_validation_error = "Proposal invalid after retry"
+                    raise ValueError(
+                        f"{game_type or 'game'} proposal from {agent.agent_id} remained invalid "
+                        f"after {len(proposal_retry_prompts)} repair attempts: {last_invalid_summary}"
+                    )
                 should_retry_invalid = (
-                    game_state.get("game_type") == "co_funding"
+                    game_type == "co_funding"
                     or "contributions" in proposal
                 )
                 if should_retry_invalid and not self.game_environment.validate_proposal(proposal, game_state):
+                    last_invalid_raw_response = response.content
+                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_parse_error = proposal.get("parse_error")
+                    if "validation_error" in proposal:
+                        last_invalid_validation_error = proposal["validation_error"]
+                    elif last_invalid_parse_error is None:
+                        last_invalid_validation_error = "Proposal invalid after retry"
                     log_records.append(
-                        ("warning", f"  Invalid proposal from {agent.agent_id}, retrying once...")
+                        (
+                            "warning",
+                            f"  Proposal from {agent.agent_id} failed: "
+                            f"{last_invalid_summary}; retrying once...",
+                        )
                     )
                     retry_prompt = (
                         proposal_prompt
@@ -823,7 +1313,9 @@ class PhaseHandler:
                         "(negative values, over-budget, or wrong length). "
                         "Please resubmit a valid proposal.**"
                     )
-                    response = await agent.generate_response(context, retry_prompt)
+                    response = await self._generate_response_with_access(
+                        agent, context, retry_prompt, phase="proposal"
+                    )
                     token_usage = self._extract_token_usage(response)
                     proposal = self.game_environment.parse_proposal(
                         response.content, agent.agent_id, game_state,
@@ -843,6 +1335,14 @@ class PhaseHandler:
                             "raw_response": response.content,
                             "validation_error": "Proposal invalid after retry",
                         }
+                if last_invalid_raw_response is not None:
+                    proposal.setdefault("raw_response", last_invalid_raw_response)
+                    if last_invalid_parse_error is not None:
+                        proposal.setdefault("parse_error", last_invalid_parse_error)
+                    if last_invalid_validation_error is not None:
+                        proposal.setdefault("validation_error", last_invalid_validation_error)
+                    if last_invalid_summary is not None:
+                        proposal.setdefault("recovered_after_error", last_invalid_summary)
                 proposal["proposed_by"] = agent.agent_id
                 proposal["round"] = round_num
                 if token_usage:
@@ -1070,6 +1570,7 @@ class PhaseHandler:
             agent_votes = []
             interaction_records = []
             warnings = []
+            vote_integrity_events = []
 
             voting_context = NegotiationContext(
                 current_round=round_num,
@@ -1104,19 +1605,56 @@ class PhaseHandler:
                         reasoning_token_budget=reasoning_budget
                     )
 
-                    response = await agent.generate_response(voting_context, voting_prompt)
-                    token_usage = self._extract_token_usage(response)
                     proposal_numbers = [
                         proposal["proposal_number"]
                         for proposal in prepared_batch_proposals
                     ]
+                    prompt_by_proposal_number = {
+                        proposal_number: voting_prompt
+                        for proposal_number in proposal_numbers
+                    }
+                    token_usage_by_proposal_number = {}
 
-                    vote_results = self.game_environment.parse_batch_voting_response(
-                        response.content,
-                        proposal_numbers,
-                        agent.agent_id,
-                        round_num
-                    )
+                    def unrecoverable_vote_failure(
+                        proposal_numbers_for_event: List[int],
+                        reason: str,
+                        error: Optional[Any] = None,
+                    ) -> None:
+                        event = self._build_vote_integrity_event(
+                            agent_id=agent.agent_id,
+                            round_num=round_num,
+                            max_rounds=max_rounds,
+                            proposal_numbers=proposal_numbers_for_event,
+                            reason=reason,
+                            error=error,
+                            synthetic_vote_count=0,
+                            contaminated=False,
+                            hard_failed=True,
+                        )
+                        raise VoteIntegrityError(
+                            f"Unrecoverable voting failure for {agent.agent_id} "
+                            f"in round {round_num}/{max_rounds}: {reason}",
+                            event=event,
+                        )
+
+                    def record_final_round_synthetic_votes(
+                        proposal_numbers_for_event: List[int],
+                        reason: str,
+                        error: Optional[Any] = None,
+                    ) -> None:
+                        vote_integrity_events.append(
+                            self._build_vote_integrity_event(
+                                agent_id=agent.agent_id,
+                                round_num=round_num,
+                                max_rounds=max_rounds,
+                                proposal_numbers=proposal_numbers_for_event,
+                                reason=reason,
+                                error=error,
+                                synthetic_vote_count=len(proposal_numbers_for_event),
+                                contaminated=True,
+                                hard_failed=False,
+                            )
+                        )
 
                     def missing_vote_numbers(votes: List[Dict[str, Any]]) -> List[int]:
                         missing = []
@@ -1134,6 +1672,63 @@ class PhaseHandler:
                                 missing.append(proposal_number)
                         return missing
 
+                    def default_reject_vote(
+                        proposal_number: int,
+                        reason: str,
+                        raw_response: Optional[str] = None,
+                        parse_error: Optional[Any] = None,
+                    ) -> Dict[str, Any]:
+                        vote = {
+                            "proposal_number": proposal_number,
+                            "vote": "reject",
+                            "reasoning": reason,
+                            "voter": agent.agent_id,
+                            "round": round_num,
+                            "synthetic_vote": True,
+                            "parse_error": parse_error or {
+                                "type": "StructuredVoteRecoveryFailed",
+                                "message": "structured_vote_recovery_failed",
+                            },
+                        }
+                        if raw_response:
+                            vote["raw_response"] = raw_response
+                        return vote
+
+                    try:
+                        response = await self._generate_response_with_generation_bounds(
+                            agent,
+                            voting_context,
+                            voting_prompt,
+                            phase="voting",
+                            max_tokens=self.STRUCTURED_VOTE_BATCH_MAX_TOKENS,
+                            timeout=self.STRUCTURED_VOTE_TIMEOUT_SECONDS,
+                        )
+                        token_usage = self._extract_token_usage(response)
+                        token_usage_by_proposal_number = {
+                            proposal_numbers[0]: token_usage
+                        } if proposal_numbers else {}
+                        vote_results = self.game_environment.parse_batch_voting_response(
+                            response.content,
+                            proposal_numbers,
+                            agent.agent_id,
+                            round_num
+                        )
+                    except Exception as e:
+                        response = None
+                        token_usage = None
+                        token_usage_by_proposal_number = {}
+                        vote_results = [
+                            default_reject_vote(
+                                proposal_number,
+                                f"Default reject because structured vote request failed: {e}",
+                            )
+                            for proposal_number in proposal_numbers
+                        ]
+                        warnings.append(
+                            f"Structured batch vote request from {agent.agent_id} failed; "
+                            f"will attempt bounded structured-vote repair: {e}"
+                        )
+
                     missing_numbers = missing_vote_numbers(vote_results)
                     if missing_numbers:
                         self.logger.warning(
@@ -1148,35 +1743,144 @@ class PhaseHandler:
                             "Do not omit any proposal. If unsure, choose reject and explain briefly. "
                             "No prose outside the JSON object."
                         )
-                        retry_response = await agent.generate_response(voting_context, retry_prompt)
-                        retry_token_usage = self._extract_token_usage(retry_response)
-                        retry_vote_results = self.game_environment.parse_batch_voting_response(
-                            retry_response.content,
-                            proposal_numbers,
-                            agent.agent_id,
-                            round_num
-                        )
+                        try:
+                            retry_response = await self._generate_response_with_generation_bounds(
+                                agent,
+                                voting_context,
+                                retry_prompt,
+                                phase="voting",
+                                max_tokens=self.STRUCTURED_VOTE_REPAIR_MAX_TOKENS,
+                                timeout=self.STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS,
+                            )
+                            retry_token_usage = self._extract_token_usage(retry_response)
+                            retry_vote_results = self.game_environment.parse_batch_voting_response(
+                                retry_response.content,
+                                proposal_numbers,
+                                agent.agent_id,
+                                round_num
+                            )
+                        except Exception as e:
+                            retry_response = None
+                            retry_token_usage = None
+                            retry_vote_results = vote_results
+                            warnings.append(
+                                f"Structured batch vote retry from {agent.agent_id} failed: {e}"
+                            )
                         retry_missing_numbers = missing_vote_numbers(retry_vote_results)
-                        if len(retry_missing_numbers) <= len(missing_numbers):
+                        if retry_response is not None and len(retry_missing_numbers) <= len(missing_numbers):
                             response = retry_response
                             token_usage = retry_token_usage
                             vote_results = retry_vote_results
+                            token_usage_by_proposal_number = {
+                                proposal_numbers[0]: token_usage
+                            } if proposal_numbers and token_usage is not None else {}
                             missing_numbers = retry_missing_numbers
                         if missing_numbers:
-                            warnings.append(
-                                f"Batch vote from {agent.agent_id} still missing/invalid "
-                                f"proposal votes after retry: {missing_numbers}"
+                            self.logger.warning(
+                                f"  Batch vote from {agent.agent_id} still invalid; "
+                                "retrying with compact JSON-only repair prompt."
                             )
+                            compact_entries = ", ".join(
+                                f'{{"proposal_number": {proposal_number}, "vote": "reject", "reasoning": "brief reason"}}'
+                                for proposal_number in proposal_numbers
+                            )
+                            compact_retry_prompt = (
+                                "JSON repair task for a fictional negotiation game. "
+                                "Output exactly one JSON object and no other text. "
+                                f"The votes array must contain these proposal numbers exactly: {proposal_numbers}. "
+                                f"Use this shape: {{\"votes\": [{compact_entries}]}}. "
+                                "You may change votes to accept or reject, but every vote must be one of those two strings."
+                            )
+                            try:
+                                compact_retry_response = await self._generate_response_with_generation_bounds(
+                                    agent,
+                                    voting_context,
+                                    compact_retry_prompt,
+                                    phase="voting",
+                                    max_tokens=self.STRUCTURED_VOTE_REPAIR_MAX_TOKENS,
+                                    timeout=self.STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS,
+                                )
+                                compact_retry_token_usage = self._extract_token_usage(compact_retry_response)
+                                compact_retry_vote_results = self.game_environment.parse_batch_voting_response(
+                                    compact_retry_response.content,
+                                    proposal_numbers,
+                                    agent.agent_id,
+                                    round_num
+                                )
+                            except Exception as e:
+                                compact_retry_response = None
+                                compact_retry_token_usage = None
+                                compact_retry_vote_results = vote_results
+                                warnings.append(
+                                    f"Structured compact vote retry from {agent.agent_id} failed: {e}"
+                                )
+                            compact_retry_missing_numbers = missing_vote_numbers(compact_retry_vote_results)
+                            if compact_retry_response is not None and len(compact_retry_missing_numbers) <= len(missing_numbers):
+                                response = compact_retry_response
+                                token_usage = compact_retry_token_usage
+                                vote_results = compact_retry_vote_results
+                                token_usage_by_proposal_number = {
+                                    proposal_numbers[0]: token_usage
+                                } if proposal_numbers and token_usage is not None else {}
+                                missing_numbers = compact_retry_missing_numbers
+                        if missing_numbers:
+                            if round_num < max_rounds:
+                                unrecoverable_vote_failure(
+                                    missing_numbers,
+                                    "structured vote recovery failed after bounded retries",
+                                )
+
+                            self.logger.warning(
+                                f"  Final-round batch vote from {agent.agent_id} still missing/invalid "
+                                f"proposal votes after retries {missing_numbers}; "
+                                "using audited synthetic rejects."
+                            )
+                            record_final_round_synthetic_votes(
+                                missing_numbers,
+                                "structured vote recovery failed after bounded retries",
+                            )
+                            vote_results_by_number = {
+                                vote.get("proposal_number"): vote
+                                for vote in vote_results
+                                if isinstance(vote, dict)
+                            }
+                            raw_response = getattr(response, "content", None) if response is not None else None
+                            for missing_number in list(missing_numbers):
+                                previous_vote = vote_results_by_number.get(missing_number, {})
+                                vote_results_by_number[missing_number] = default_reject_vote(
+                                    missing_number,
+                                    "Default reject because structured vote recovery failed after bounded retries.",
+                                    raw_response=raw_response,
+                                    parse_error=previous_vote.get("parse_error"),
+                                )
+
+                            vote_results = [
+                                vote_results_by_number.get(proposal_number, {
+                                    "proposal_number": proposal_number,
+                                    "vote": "reject",
+                                    "reasoning": "Missing or invalid vote entry",
+                                    "voter": agent.agent_id,
+                                    "round": round_num,
+                                    "synthetic_vote": True,
+                                })
+                                for proposal_number in proposal_numbers
+                            ]
+                            missing_numbers = []
 
                     for idx, (enum_proposal, vote_result) in enumerate(zip(enumerated_proposals, vote_results)):
+                        proposal_number = enum_proposal["proposal_number"]
                         vote_entry = {
                             "voter_id": agent.agent_id,
-                            "proposal_number": enum_proposal["proposal_number"],
+                            "proposal_number": proposal_number,
                             "vote": vote_result.get("vote", "reject"),
                             "reasoning": vote_result.get("reasoning", "Strategic voting decision"),
                             "round": round_num,
                             "timestamp": time.time()
                         }
+                        if vote_result.get("synthetic_vote"):
+                            vote_entry["synthetic_vote"] = True
+                        if "parse_error" in vote_result:
+                            vote_entry["parse_error"] = vote_result["parse_error"]
                         agent_votes.append(vote_entry)
 
                         if "agreement" in enum_proposal:
@@ -1202,13 +1906,15 @@ class PhaseHandler:
                             enhanced_vote_response["raw_response"] = vote_result["raw_response"]
                         if "parse_error" in vote_result:
                             enhanced_vote_response["parse_error"] = vote_result["parse_error"]
+                        if vote_result.get("synthetic_vote"):
+                            enhanced_vote_response["synthetic_vote"] = True
 
                         interaction_records.append(
                             {
-                                "phase": f"voting_round_{round_num}_proposal_{enum_proposal['proposal_number']}",
-                                "prompt": voting_prompt,
+                                "phase": f"voting_round_{round_num}_proposal_{proposal_number}",
+                                "prompt": prompt_by_proposal_number.get(proposal_number, voting_prompt),
                                 "response": json.dumps(enhanced_vote_response, default=str),
-                                "token_usage": token_usage if idx == 0 else None,
+                                "token_usage": token_usage_by_proposal_number.get(proposal_number),
                                 "log_message": f"  [PRIVATE] {agent.agent_id} votes {vote_entry['vote']} on Proposal #{vote_entry['proposal_number']}",
                             }
                         )
@@ -1266,17 +1972,61 @@ Vote must be either "accept" or "reject"."""
                         # Collect vote using game-environment-aware path or legacy
                         if self.game_environment is not None:
                             # Use game-specific voting prompt directly with generate_response
-                            response = await agent.generate_response(voting_context, voting_prompt)
+                            response = await self._generate_response_with_generation_bounds(
+                                agent,
+                                voting_context,
+                                voting_prompt,
+                                phase="voting",
+                                max_tokens=self.STRUCTURED_VOTE_REPAIR_MAX_TOKENS,
+                                timeout=self.STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS,
+                            )
                             token_usage = self._extract_token_usage(response)
                             try:
                                 vote_result = self._parse_vote_response(response.content, agent.agent_id, round_num)
                             except (ValueError, json.JSONDecodeError) as e:
+                                proposal_number = enum_proposal["proposal_number"]
                                 warnings.append(f"Failed to parse vote from {agent.agent_id}: {e}")
+                                if round_num < max_rounds:
+                                    event = self._build_vote_integrity_event(
+                                        agent_id=agent.agent_id,
+                                        round_num=round_num,
+                                        max_rounds=max_rounds,
+                                        proposal_numbers=[proposal_number],
+                                        reason="single-proposal vote parse failed",
+                                        error=e,
+                                        synthetic_vote_count=0,
+                                        contaminated=False,
+                                        hard_failed=True,
+                                    )
+                                    raise VoteIntegrityError(
+                                        f"Unrecoverable vote parse failure for {agent.agent_id} "
+                                        f"on proposal {proposal_number} in round {round_num}/{max_rounds}: {e}",
+                                        event=event,
+                                    )
+                                vote_integrity_events.append(
+                                    self._build_vote_integrity_event(
+                                        agent_id=agent.agent_id,
+                                        round_num=round_num,
+                                        max_rounds=max_rounds,
+                                        proposal_numbers=[proposal_number],
+                                        reason="single-proposal vote parse failed",
+                                        error=e,
+                                        synthetic_vote_count=1,
+                                        contaminated=True,
+                                        hard_failed=False,
+                                    )
+                                )
                                 vote_result = {
                                     "vote": "reject",
                                     "reasoning": "Failed to parse vote response",
                                     "voter": agent.agent_id,
                                     "round": round_num,
+                                    "synthetic_vote": True,
+                                    "raw_response": response.content,
+                                    "parse_error": {
+                                        "type": type(e).__name__,
+                                        "message": str(e),
+                                    },
                                 }
                         else:
                             vote_result = await agent.vote_on_proposal(
@@ -1294,6 +2044,10 @@ Vote must be either "accept" or "reject"."""
                             "round": round_num,
                             "timestamp": time.time()
                         }
+                        if vote_result.get("synthetic_vote"):
+                            vote_entry["synthetic_vote"] = True
+                        if "parse_error" in vote_result:
+                            vote_entry["parse_error"] = vote_result["parse_error"]
                         agent_votes.append(vote_entry)
 
                         # Create enhanced vote response with full context
@@ -1317,6 +2071,12 @@ Vote must be either "accept" or "reject"."""
                             "round": round_num,
                             "timestamp": time.time()
                         }
+                        if "raw_response" in vote_result:
+                            enhanced_vote_response["raw_response"] = vote_result["raw_response"]
+                        if "parse_error" in vote_result:
+                            enhanced_vote_response["parse_error"] = vote_result["parse_error"]
+                        if vote_result.get("synthetic_vote"):
+                            enhanced_vote_response["synthetic_vote"] = True
 
                         interaction_records.append(
                             {
@@ -1332,10 +2092,29 @@ Vote must be either "accept" or "reject"."""
                     "agent_votes": agent_votes,
                     "interaction_records": interaction_records,
                     "warnings": warnings,
+                    "vote_integrity_events": vote_integrity_events,
                     "error": None,
                 }
+            except VoteIntegrityError as e:
+                if e.event is not None:
+                    vote_integrity_events.append(e.event)
+                return {
+                    "agent": agent,
+                    "agent_votes": agent_votes,
+                    "interaction_records": interaction_records,
+                    "warnings": warnings,
+                    "vote_integrity_events": vote_integrity_events,
+                    "error": e,
+                }
             except Exception as e:
-                return {"agent": agent, "error": e}
+                return {
+                    "agent": agent,
+                    "agent_votes": agent_votes,
+                    "interaction_records": interaction_records,
+                    "warnings": warnings,
+                    "vote_integrity_events": vote_integrity_events,
+                    "error": e,
+                }
 
         raw_results = await self._run_agent_tasks_in_order(agents, vote_for_agent)
         for result in raw_results:
@@ -1344,23 +2123,10 @@ Vote must be either "accept" or "reject"."""
             agent = result["agent"]
             self.logger.info(f"🗳️ Collecting private votes from {agent.agent_id}...")
 
-            if result["error"] is not None:
-                e = result["error"]
-                self.logger.error(f"Error collecting private votes from {agent.agent_id}: {e}")
-                for enum_proposal in enumerated_proposals:
-                    fallback_vote = {
-                        "voter_id": agent.agent_id,
-                        "proposal_number": enum_proposal["proposal_number"],
-                        "vote": "reject",
-                        "reasoning": f"Unable to process vote due to error: {e}",
-                        "round": round_num,
-                        "timestamp": time.time()
-                    }
-                    private_votes.append(fallback_vote)
-                continue
-
             for warning in result["warnings"]:
                 self.logger.warning(warning)
+            for event in result.get("vote_integrity_events", []):
+                self._record_vote_integrity_event(event)
             for record in result["interaction_records"]:
                 self.logger.info(record["log_message"])
                 self.save_interaction(
@@ -1373,13 +2139,88 @@ Vote must be either "accept" or "reject"."""
                     model_name=agent.get_model_info()["model_name"]
                 )
 
+            if result["error"] is not None:
+                e = result["error"]
+                self.logger.error(f"Error collecting private votes from {agent.agent_id}: {e}")
+                if isinstance(e, VoteIntegrityError):
+                    raise e
+
+                proposal_numbers = [
+                    int(enum_proposal["proposal_number"])
+                    for enum_proposal in enumerated_proposals
+                ]
+                if round_num < max_rounds:
+                    event = self._build_vote_integrity_event(
+                        agent_id=agent.agent_id,
+                        round_num=round_num,
+                        max_rounds=max_rounds,
+                        proposal_numbers=proposal_numbers,
+                        reason="private voting task raised an unrecoverable error",
+                        error=e,
+                        synthetic_vote_count=0,
+                        contaminated=False,
+                        hard_failed=True,
+                    )
+                    self._record_vote_integrity_event(event)
+                    raise VoteIntegrityError(
+                        f"Unrecoverable private voting failure for {agent.agent_id} "
+                        f"in round {round_num}/{max_rounds}: {e}",
+                        event=event,
+                    ) from e
+
+                existing_votes = result.get("agent_votes", [])
+                private_votes.extend(existing_votes)
+                existing_numbers = {
+                    int(vote.get("proposal_number"))
+                    for vote in existing_votes
+                    if vote.get("proposal_number") is not None
+                }
+                missing_proposals = [
+                    enum_proposal
+                    for enum_proposal in enumerated_proposals
+                    if int(enum_proposal["proposal_number"]) not in existing_numbers
+                ]
+                self._record_vote_integrity_event(
+                    self._build_vote_integrity_event(
+                        agent_id=agent.agent_id,
+                        round_num=round_num,
+                        max_rounds=max_rounds,
+                        proposal_numbers=[
+                            int(enum_proposal["proposal_number"])
+                            for enum_proposal in missing_proposals
+                        ],
+                        reason="final-round private voting task raised an unrecoverable error",
+                        error=e,
+                        synthetic_vote_count=len(missing_proposals),
+                        contaminated=bool(missing_proposals),
+                        hard_failed=False,
+                    )
+                )
+                for enum_proposal in missing_proposals:
+                    fallback_vote = {
+                        "voter_id": agent.agent_id,
+                        "proposal_number": enum_proposal["proposal_number"],
+                        "vote": "reject",
+                        "reasoning": f"Unable to process vote due to error: {e}",
+                        "round": round_num,
+                        "timestamp": time.time(),
+                        "synthetic_vote": True,
+                        "parse_error": {
+                            "type": type(e).__name__,
+                            "message": str(e),
+                        },
+                    }
+                    private_votes.append(fallback_vote)
+                continue
+
             private_votes.extend(result["agent_votes"])
         
         voting_summary = {
             "total_agents": len(agents),
             "total_proposals": len(enumerated_proposals),
             "total_votes_cast": len(private_votes),
-            "votes_by_proposal": {}
+            "votes_by_proposal": {},
+            "vote_integrity": self.get_vote_integrity(),
         }
         
         for vote in private_votes:
@@ -1398,6 +2239,8 @@ Vote must be either "accept" or "reject"."""
 
             voting_summary["votes_by_proposal"][prop_num][vote_value] += 1
             voting_summary["votes_by_proposal"][prop_num]["votes"].append(vote)
+
+        voting_summary["vote_integrity"] = self.get_vote_integrity()
         
         self.logger.info(f"✅ Private voting complete: {len(private_votes)} votes collected from {len(agents)} agents")
         
@@ -1432,56 +2275,81 @@ Vote must be either "accept" or "reject"."""
 
             votes_by_proposal[prop_num][vote_value] += 1
         
-        # Check for unanimous acceptance
+        # Check for two-thirds supermajority acceptance. If multiple proposals pass,
+        # choose the one with the most accept votes; break exact top ties randomly.
+        total_agents = len(agents)
+        supermajority_threshold = BaseGameEnvironment.supermajority_threshold(total_agents)
+        majority_threshold = supermajority_threshold  # Backward-compatible result key alias.
         consensus_reached = False
         final_utilities = {}
         final_allocation = {}
         agent_preferences = {}
+        accepted_proposal_number = None
+        accepted_vote_count = 0
+        tied_winning_proposals: List[int] = []
 
-        for prop_num, vote_counts in votes_by_proposal.items():
-            if vote_counts["reject"] == 0 and vote_counts["accept"] == len(agents):
-                consensus_reached = True
-                # Find the winning proposal to calculate utilities
-                for enum_prop in enumerated_proposals:
-                    if enum_prop["proposal_number"] == prop_num:
-                        if self.game_environment is not None:
-                            # Game-environment-aware utility calculation
-                            game_state = preferences.get("game_state", {
-                                "items": items,
-                                "agent_preferences": preferences.get("agent_preferences", {}),
-                            })
-                            winning_proposal = enum_prop.get("original_proposal", enum_prop)
-                            self.game_environment.record_accepted_proposal(
-                                game_state,
-                                winning_proposal,
+        passing_proposals = [
+            prop_num
+            for prop_num, vote_counts in votes_by_proposal.items()
+            if vote_counts["accept"] >= supermajority_threshold
+        ]
+        if passing_proposals:
+            accepted_vote_count = max(
+                votes_by_proposal[prop_num]["accept"] for prop_num in passing_proposals
+            )
+            tied_winning_proposals = sorted(
+                prop_num
+                for prop_num in passing_proposals
+                if votes_by_proposal[prop_num]["accept"] == accepted_vote_count
+            )
+            accepted_proposal_number = (
+                random.choice(tied_winning_proposals)
+                if len(tied_winning_proposals) > 1
+                else tied_winning_proposals[0]
+            )
+            consensus_reached = True
+
+        if accepted_proposal_number is not None:
+            # Find the winning proposal to calculate utilities
+            for enum_prop in enumerated_proposals:
+                if enum_prop["proposal_number"] == accepted_proposal_number:
+                    if self.game_environment is not None:
+                        # Game-environment-aware utility calculation
+                        game_state = preferences.get("game_state", {
+                            "items": items,
+                            "agent_preferences": preferences.get("agent_preferences", {}),
+                        })
+                        winning_proposal = enum_prop.get("original_proposal", enum_prop)
+                        self.game_environment.record_accepted_proposal(
+                            game_state,
+                            winning_proposal,
+                        )
+                        for agent in agents:
+                            final_utilities[agent.agent_id] = self.game_environment.calculate_utility(
+                                agent.agent_id, winning_proposal, game_state, round_num
                             )
-                            for agent in agents:
-                                final_utilities[agent.agent_id] = self.game_environment.calculate_utility(
-                                    agent.agent_id, winning_proposal, game_state, round_num
-                                )
-                                agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
-                            # Store in native format (agreement vector or allocation dict)
-                            final_allocation = winning_proposal.get(
-                                "agreement",
-                                winning_proposal.get(
-                                    "allocation",
-                                    winning_proposal.get("funded_projects", []),
-                                )
+                            agent_preferences[agent.agent_id] = preferences["agent_preferences"][agent.agent_id]
+                        # Store in native format (agreement vector, allocation dict, or funded projects)
+                        final_allocation = winning_proposal.get(
+                            "agreement",
+                            winning_proposal.get(
+                                "allocation",
+                                winning_proposal.get("funded_projects", []),
                             )
-                        else:
-                            # Legacy item allocation utility calculation
-                            allocation = enum_prop["allocation"]
-                            final_allocation = allocation.copy()
-                            for agent in agents:
-                                agent_items = allocation.get(agent.agent_id, [])
-                                agent_prefs = preferences["agent_preferences"][agent.agent_id]
-                                utility = sum(agent_prefs[i]
-                                            for i in agent_items
-                                            if i < len(items) and i < len(agent_prefs))
-                                final_utilities[agent.agent_id] = utility
-                                agent_preferences[agent.agent_id] = agent_prefs
-                        break
-                break
+                        )
+                    else:
+                        # Legacy item allocation utility calculation
+                        allocation = enum_prop["allocation"]
+                        final_allocation = allocation.copy()
+                        for agent in agents:
+                            agent_items = allocation.get(agent.agent_id, [])
+                            agent_prefs = preferences["agent_preferences"][agent.agent_id]
+                            utility = sum(agent_prefs[i]
+                                          for i in agent_items
+                                          if i < len(items) and i < len(agent_prefs))
+                            final_utilities[agent.agent_id] = utility
+                            agent_preferences[agent.agent_id] = agent_prefs
+                    break
         
         # Create tabulation message
         tabulation_lines = [f"📊 VOTE TABULATION - Round {round_num}", "=" * 60]
@@ -1490,9 +2358,22 @@ Vote must be either "accept" or "reject"."""
             tabulation_lines.append(f"Proposal #{prop_num}: {vote_counts['accept']} accept, {vote_counts['reject']} reject")
         
         if consensus_reached:
-            tabulation_lines.append(f"\n✅ CONSENSUS REACHED! Proposal #{prop_num} accepted unanimously!")
+            tie_note = ""
+            if len(tied_winning_proposals) > 1:
+                tie_note = (
+                    f" Tied top supermajority proposals {tied_winning_proposals}; "
+                    f"randomly selected Proposal #{accepted_proposal_number}."
+                )
+            tabulation_lines.append(
+                f"\n✅ SUPERMAJORITY AGREEMENT REACHED! Proposal #{accepted_proposal_number} "
+                f"accepted by two-thirds supermajority with {accepted_vote_count}/{total_agents} "
+                f"accept votes (threshold: {supermajority_threshold}/{total_agents}).{tie_note}"
+            )
         else:
-            tabulation_lines.append(f"\n❌ No proposal achieved unanimous acceptance.")
+            tabulation_lines.append(
+                f"\n❌ No proposal achieved two-thirds supermajority acceptance "
+                f"(threshold: {supermajority_threshold}/{total_agents})."
+            )
         
         tabulation_summary = "\n".join(tabulation_lines)
         
@@ -1510,10 +2391,18 @@ Vote must be either "accept" or "reject"."""
         return {
             "messages": messages,
             "consensus_reached": consensus_reached,
+            "agreement_reached": consensus_reached,
             "final_utilities": final_utilities,
             "final_allocation": final_allocation,
             "agent_preferences": agent_preferences,
-            "votes_by_proposal": votes_by_proposal
+            "votes_by_proposal": votes_by_proposal,
+            "acceptance_rule": "two_thirds_supermajority",
+            "supermajority_threshold": supermajority_threshold,
+            "majority_threshold": majority_threshold,
+            "total_agents": total_agents,
+            "accepted_proposal_number": accepted_proposal_number,
+            "accepted_vote_count": accepted_vote_count,
+            "tied_winning_proposals": tied_winning_proposals,
         }
     
     async def run_individual_reflection_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
@@ -1553,9 +2442,14 @@ Vote must be either "accept" or "reject"."""
                     reasoning_token_budget=reasoning_budget
                 )
             else:
+                total_agents = tabulation_result.get("total_agents", len(agents))
+                threshold = tabulation_result.get(
+                    "supermajority_threshold",
+                    BaseGameEnvironment.supermajority_threshold(total_agents),
+                )
                 reflection_prompt = f"""Reflect on the outcome of round {round_num}.
-No proposal achieved unanimous acceptance.
-Consider what adjustments might lead to consensus in future rounds."""
+No proposal achieved two-thirds supermajority acceptance. A proposal needs at least {threshold} out of {total_agents} accept votes to pass.
+Consider what adjustments might lead to supermajority support in future rounds."""
 
             context = NegotiationContext(
                 current_round=round_num,
@@ -1571,7 +2465,49 @@ Consider what adjustments might lead to consensus in future rounds."""
 
             try:
                 # Get response with token info
-                agent_response = await agent.generate_response(context, reflection_prompt)
+                agent_response = await self._generate_response_with_access(
+                    agent, context, reflection_prompt, phase="reflection"
+                )
+                if self._looks_like_refusal(agent_response.content):
+                    self.logger.warning(
+                        f"  Refusal-like reflection response from {agent.agent_id}, retrying reflection repair..."
+                    )
+                    retry_prompts = [
+                        (
+                            reflection_prompt
+                            + "\n\nYour previous response was not usable for this fictional research-game simulation. "
+                            "Reflect only on abstract proposals, vote counts, policy percentages, and bargaining strategy. "
+                            "Do not provide operational real-world instructions. Do not refuse; stay within the simulation."
+                        ),
+                        (
+                            f"Fictional negotiation game reflection. You are {agent.agent_id} after round "
+                            f"{round_num}/{max_rounds}. Write 3-6 sentences about what the vote outcome revealed, "
+                            "which abstract policy-percentage compromises may get broader support, and how you will adjust "
+                            "your next communication or proposal. Do not discuss real-world operations. Do not refuse."
+                        ),
+                    ]
+                    for retry_index, retry_prompt in enumerate(retry_prompts, start=1):
+                        try:
+                            retry_response = await self._generate_response_with_access(
+                                agent, context, retry_prompt, phase="reflection"
+                            )
+                        except Exception as exc:
+                            self.logger.warning(
+                                f"  Reflection repair attempt {retry_index}/{len(retry_prompts)} "
+                                f"from {agent.agent_id} failed: {type(exc).__name__}: {exc}"
+                            )
+                            continue
+
+                        if self._looks_like_refusal(retry_response.content):
+                            self.logger.warning(
+                                f"  Reflection repair attempt {retry_index}/{len(retry_prompts)} "
+                                f"from {agent.agent_id} was still refusal-like."
+                            )
+                            continue
+
+                        agent_response = retry_response
+                        break
+
                 return {
                     "agent": agent,
                     "reflection_prompt": reflection_prompt,
@@ -1844,7 +2780,7 @@ Consider what adjustments might lead to consensus in future rounds."""
         """Post-pledge commit vote for co-funding.
 
         Each agent votes yay/nay on whether to lock in the current pledge profile.
-        If all agents vote yay, the orchestrator can terminate early.
+        If a two-thirds supermajority of agents vote yay, the orchestrator can terminate early.
         """
         messages = []
         commit_votes = []
@@ -1959,6 +2895,10 @@ Consider what adjustments might lead to consensus in future rounds."""
             )
 
         yay_count = sum(1 for v in commit_votes if v.get("commit_vote") == "yay")
+        supermajority_threshold = BaseGameEnvironment.supermajority_threshold(len(agents))
+        majority_threshold = supermajority_threshold  # Backward-compatible result key alias.
+        supermajority_yay = len(agents) > 0 and yay_count >= supermajority_threshold
+        majority_yay = supermajority_yay
         unanimous_yay = yay_count == len(agents) and len(agents) > 0
 
         summary_message = {
@@ -1967,8 +2907,13 @@ Consider what adjustments might lead to consensus in future rounds."""
             "from": "system",
             "content": (
                 f"Commit vote summary: {yay_count} yay / {len(agents) - yay_count} nay. "
-                f"{'UNANIMOUS_YAY' if unanimous_yay else 'NO_UNANIMOUS_COMMIT'}"
+                f"{'SUPERMAJORITY_YAY' if supermajority_yay else 'NO_SUPERMAJORITY_COMMIT'} "
+                f"(threshold: {supermajority_threshold}/{len(agents)})"
             ),
+            "supermajority_yay": supermajority_yay,
+            "supermajority_threshold": supermajority_threshold,
+            "majority_yay": majority_yay,
+            "majority_threshold": majority_threshold,
             "unanimous_yay": unanimous_yay,
             "timestamp": time.time(),
         }
@@ -1978,6 +2923,10 @@ Consider what adjustments might lead to consensus in future rounds."""
             "commit_votes": commit_votes,
             "yay_count": yay_count,
             "nay_count": len(agents) - yay_count,
+            "supermajority_yay": supermajority_yay,
+            "supermajority_threshold": supermajority_threshold,
+            "majority_yay": majority_yay,
+            "majority_threshold": majority_threshold,
             "unanimous_yay": unanimous_yay,
             "messages": messages,
         }

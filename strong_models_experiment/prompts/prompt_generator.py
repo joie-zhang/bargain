@@ -14,6 +14,7 @@ class PromptGenerator:
         
         # Get discount factor from config, default to 0.9 if not specified
         gamma_discount = config.get("gamma_discount", 0.9)
+        supermajority_threshold = (2 * int(num_agents) + 2) // 3
         
         # Create clearer phrasing for 2-agent negotiations
         if num_agents == 2:
@@ -38,8 +39,9 @@ You have been assigned private preferences for each item. These preferences are 
 
 **VOTING RULES:**
 - You vote "accept" or "reject" on each proposal
-- A proposal needs UNANIMOUS acceptance to pass
-- If no proposal gets unanimous support, we continue to the next round
+- A proposal needs at least {supermajority_threshold} accept votes out of {num_agents} agents to pass (a two-thirds supermajority, rounded up)
+- If multiple proposals pass, the proposal with the most accept votes is selected; exact top-count ties are broken randomly
+- If no proposal gets supermajority support, we continue to the next round
 
 **REWARD DISCOUNTING:**
 - Rewards are discounted by a factor of {gamma_discount} per round
@@ -86,7 +88,7 @@ Please acknowledge that you understand these rules and are ready to participate!
 1. Other agents don't know your exact preferences
 2. You may choose to reveal some preferences truthfully or misleadingly
 3. Consider which agents might have complementary preferences
-4. Remember: you need ALL agents to accept a proposal
+4. Remember: you need enough agents to reach supermajority support for a proposal
 
 Please acknowledge that you understand your private preferences."""
     
@@ -123,7 +125,7 @@ Please share your thoughts on the items and any initial ideas for how we might s
         
         return f"""🗣️ PUBLIC DISCUSSION PHASE - Round {round_num}/{max_rounds}
 
-Previous proposals didn't reach consensus. Adjust your approach based on what you learned.
+Previous proposals didn't reach supermajority support. Adjust your approach based on what you learned.
 
 **ITEMS AVAILABLE:**
 {items_text}{urgency_note}
@@ -131,7 +133,7 @@ Previous proposals didn't reach consensus. Adjust your approach based on what yo
 **REFLECTION & STRATEGY:**
 - What did you learn from previous proposals and votes?
 - Which agents have conflicting vs. compatible preferences?
-- How can you adjust to build consensus?
+- How can you adjust to build supermajority support?
 
 Given what happened in previous rounds, what's your updated strategy?"""
     
@@ -178,7 +180,7 @@ This is your private strategic planning time.
 **STRATEGIC ANALYSIS TASKS:**
 1. What did you learn about other agents' preferences?
 2. Which items do others value less that you value highly?
-3. What allocation would maximize your utility while achieving consensus?
+3. What allocation would maximize your utility while achieving supermajority support?
 4. What concessions might be necessary?
 
 **OUTPUT REQUIRED:**
