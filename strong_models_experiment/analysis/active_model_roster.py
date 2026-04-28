@@ -168,6 +168,86 @@ def tier_from_elo(elo: int | float | None) -> str:
     return "Weak"
 
 
+def _context_token_count(raw_context: str) -> int | None:
+    value = raw_context.strip().replace(",", "")
+    if not value or value == "-":
+        return None
+    lower_value = value.lower()
+    try:
+        if lower_value.endswith("m"):
+            return int(float(lower_value[:-1]) * 1_000_000)
+        if lower_value.endswith("k"):
+            return int(float(lower_value[:-1]) * 1_000)
+        return int(float(lower_value))
+    except ValueError:
+        return None
+
+
+@lru_cache(maxsize=1)
+def context_filtered_model_pool(
+    min_context_tokens: int = 100_000,
+    min_elo: int = 1240,
+) -> Tuple[str, ...]:
+    """Return the canonical model pool with sufficient usable context length.
+
+    For OpenRouter-backed routes, use the realized OpenRouter context column.
+    For native provider routes, use the Arena context column.
+    """
+
+    models: List[str] = []
+    for line in DEFAULT_ELO_MARKDOWN.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|") or "`" not in line:
+            continue
+        columns = [part.strip() for part in line.strip().strip("|").split("|")]
+        if len(columns) < 7:
+            continue
+        try:
+            int(columns[0])
+            elo = int(columns[2])
+        except ValueError:
+            continue
+
+        model_name = canonical_model_name(columns[1].replace("`", "").strip())
+        route = columns[6]
+        arena_context = columns[3]
+        openrouter_context = columns[4]
+        context_source = openrouter_context if route == "OpenRouter" and openrouter_context != "-" else arena_context
+        context_tokens = _context_token_count(context_source)
+        if context_tokens is None:
+            continue
+        if elo >= min_elo and context_tokens >= min_context_tokens:
+            models.append(model_name)
+    return tuple(models)
+
+
+def quantile_elo_bucket_map(model_names: Iterable[str], n_buckets: int = 3) -> Dict[str, str]:
+    """Assign models to roughly equal-sized Elo quantile buckets."""
+
+    canonical_models = []
+    seen = set()
+    elo_map = active_model_elo_map()
+    for model_name in model_names:
+        canonical = canonical_model_name(model_name)
+        if canonical in seen:
+            continue
+        seen.add(canonical)
+        canonical_models.append(canonical)
+
+    ordered = sorted(canonical_models, key=lambda model: elo_map[model])
+    labels = {
+        0: "low",
+        1: "mid",
+        2: "high",
+    }
+    bucket_map: Dict[str, str] = {}
+    total = len(ordered)
+    for index, model_name in enumerate(ordered):
+        bucket_index = min(n_buckets - 1, int(index * n_buckets / max(total, 1)))
+        bucket_name = labels.get(bucket_index, f"q{bucket_index + 1}")
+        bucket_map[model_name] = f"elo_q{bucket_index + 1}_{bucket_name}"
+    return bucket_map
+
+
 def active_model_info_map() -> Dict[str, Dict[str, object]]:
     return {
         model_name: {
