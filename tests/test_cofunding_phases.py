@@ -68,6 +68,17 @@ class FakeAgent:
         }
 
 
+class FakeThinkingAgent(FakeAgent):
+    """Fake agent that returns a supplied private-thinking payload."""
+
+    def __init__(self, agent_id: str, thinking_response: Dict[str, Any]):
+        super().__init__(agent_id)
+        self._thinking_response = dict(thinking_response)
+
+    async def think_strategy(self, prompt, context) -> Dict[str, Any]:
+        return dict(self._thinking_response)
+
+
 def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5, pledge_mode="individual"):
     """Helper to create a game and its state."""
     config = CoFundingConfig(
@@ -87,6 +98,66 @@ def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5,
 
 class TestProposalValidation:
     """Tests for co-funding proposal parsing and validation."""
+
+    def test_run_private_thinking_phase_saves_raw_fallback_diagnostics(self):
+        """Saved private-thinking interactions should retain raw fallback provenance."""
+        game, _, state = make_game_and_state(n_agents=2, m_projects=3)
+        raw_response = '{"reasoning": "missing comma" "strategy": "fallback"}'
+        fallback_payload = {
+            "reasoning": raw_response,
+            "strategy": "Basic preference-driven approach",
+            "key_priorities": [],
+            "potential_concessions": [],
+            "target_items": [],
+            "anticipated_resistance": [],
+            "raw_response": raw_response,
+            "parse_error": {
+                "type": "JSONDecodeError",
+                "message": "Expecting ',' delimiter",
+                "pos": 29,
+            },
+            "parsed_or_fallback_response": {
+                "reasoning": raw_response,
+                "strategy": "Basic preference-driven approach",
+                "key_priorities": [],
+                "potential_concessions": [],
+                "target_items": [],
+                "anticipated_resistance": [],
+            },
+            "used_fallback": True,
+        }
+        agents = [FakeThinkingAgent("Agent_1", fallback_payload)]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(
+            save_interaction_callback=save_interaction,
+            game_environment=game,
+        )
+
+        asyncio.run(
+            handler.run_private_thinking_phase(
+                agents=agents,
+                items=state["projects"],
+                preferences=preferences,
+                round_num=1,
+                max_rounds=game.config.t_rounds,
+                discussion_messages=[],
+            )
+        )
+
+        saved_response = json.loads(saved[0][0][3])
+        assert saved[0][0][1] == "private_thinking_round_1"
+        assert saved_response["used_fallback"] is True
+        assert saved_response["raw_response"] == raw_response
+        assert saved_response["parse_error"]["type"] == "JSONDecodeError"
+        assert saved_response["parsed_or_fallback_response"]["strategy"] == "Basic preference-driven approach"
 
     def test_pledge_parse_and_validate(self):
         """Pledges should be parsed and validated correctly."""

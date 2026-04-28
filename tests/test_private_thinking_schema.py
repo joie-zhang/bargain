@@ -1,5 +1,7 @@
 """Tests for shared private-thinking schema normalization."""
 
+import json
+
 from negotiation.llm_agents import BaseLLMAgent, LLMConfig, ModelType
 
 
@@ -28,3 +30,26 @@ def test_thinking_response_normalizes_shared_schema():
     assert parsed["potential_concessions"] == ["Pencil"]
     assert parsed["target_items"] == ["Apple", "Jewel"]
     assert parsed["anticipated_resistance"] == ["Pencil"]
+
+
+def test_thinking_parse_fallback_preserves_raw_response_and_metadata():
+    """JSON parse fallbacks should retain full raw output for provenance."""
+    agent = DummyAgent("test_agent", LLMConfig(model_type=ModelType.GPT_4O))
+    raw_response = """{
+  "reasoning": "I should fund Apple"
+  "strategy": "Missing comma before this key"
+}"""
+
+    parsed = agent._parse_thinking_response(raw_response)
+
+    assert parsed["used_fallback"] is True
+    assert parsed["raw_response"] == raw_response
+    assert parsed["parse_error"]["type"] == "JSONDecodeError"
+    assert "Expecting" in parsed["parse_error"]["message"]
+    assert parsed["parsed_or_fallback_response"]["strategy"] == "Basic preference-driven approach"
+    assert parsed["reasoning"].startswith(raw_response[:40])
+
+    saved_payload = json.dumps(parsed)
+    reloaded = json.loads(saved_payload)
+    assert reloaded["raw_response"] == raw_response
+    assert reloaded["parsed_or_fallback_response"]["reasoning"] == parsed["reasoning"]

@@ -643,6 +643,30 @@ Response format: Provide your analysis as structured strategic thinking."""
     
     def _parse_thinking_response(self, response_content: str) -> Dict[str, Any]:
         """Parse the strategic thinking response with enhanced O3 support."""
+        def thinking_parse_error_payload(error: Exception) -> Dict[str, Any]:
+            payload: Dict[str, Any] = {
+                "type": type(error).__name__,
+                "message": str(error),
+            }
+            for attr in ("pos", "lineno", "colno"):
+                value = getattr(error, attr, None)
+                if value is not None:
+                    payload[attr] = value
+            return payload
+
+        def fallback_thinking_response(error: Exception) -> Dict[str, Any]:
+            fallback = self._normalize_thinking_response({
+                "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
+                "strategy": "Basic preference-driven approach",
+            })
+            return {
+                **fallback,
+                "raw_response": response_content,
+                "parse_error": thinking_parse_error_payload(error),
+                "parsed_or_fallback_response": fallback,
+                "used_fallback": True,
+            }
+
         try:
             # Try to parse as JSON first
             if response_content.strip().startswith('{'):
@@ -753,17 +777,10 @@ Response format: Provide your analysis as structured strategic thinking."""
             else:
                 self.logger.warning(f"Failed to parse thinking response as JSON: {error_msg}")
             
-            # Return fallback response
-            return self._normalize_thinking_response({
-                "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
-                "strategy": "Basic preference-driven approach",
-            })
+            return fallback_thinking_response(json_err)
         except Exception as e:
             self.logger.warning(f"Failed to parse thinking response: {e}\nResponse length: {len(response_content)}\nFirst 200 chars: {response_content[:200]}")
-            return self._normalize_thinking_response({
-                "reasoning": response_content[:500] + "..." if len(response_content) > 500 else response_content,
-                "strategy": "Basic preference-driven approach",
-            })
+            return fallback_thinking_response(e)
 
     def _normalize_thinking_response(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize private thinking outputs across game schemas."""
