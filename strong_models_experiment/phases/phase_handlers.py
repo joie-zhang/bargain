@@ -1321,6 +1321,33 @@ class PhaseHandler:
                         response.content, agent.agent_id, game_state,
                         [a.agent_id for a in agents]
                     )
+                if "parse_error" in proposal:
+                    last_invalid_raw_response = response.content
+                    last_invalid_summary = record_invalid_proposal_attempt(
+                        attempt_index=len(proposal_retry_prompts),
+                        attempt_prompt=proposal_retry_prompts[-1] if proposal_retry_prompts else proposal_prompt,
+                        attempt_response=response,
+                        candidate=proposal,
+                        attempt_token_usage=token_usage,
+                        will_retry=False,
+                        hard_failed=True,
+                    )
+                    last_invalid_parse_error = proposal.get("parse_error")
+                    if "validation_error" in proposal:
+                        last_invalid_validation_error = proposal["validation_error"]
+                    error = ValueError(
+                        f"{game_type or 'game'} proposal from {agent.agent_id} remained invalid "
+                        "(unparsable) "
+                        f"after {len(proposal_retry_prompts)} repair attempts: {last_invalid_summary}"
+                    )
+                    return {
+                        "agent": agent,
+                        "proposal_prompt": proposal_prompt,
+                        "proposal": None,
+                        "log_records": log_records,
+                        "invalid_proposal_records": invalid_proposal_records,
+                        "error": error,
+                    }
                 if game_type != "co_funding" and proposal_needs_retry(proposal):
                     last_invalid_raw_response = response.content
                     last_invalid_summary = record_invalid_proposal_attempt(
@@ -1390,6 +1417,32 @@ class PhaseHandler:
                         response.content, agent.agent_id, game_state,
                         [a.agent_id for a in agents]
                     )
+                    if "parse_error" in proposal:
+                        last_invalid_raw_response = response.content
+                        last_invalid_summary = record_invalid_proposal_attempt(
+                            attempt_index=len(invalid_proposal_records),
+                            attempt_prompt=retry_prompt,
+                            attempt_response=response,
+                            candidate=proposal,
+                            attempt_token_usage=token_usage,
+                            will_retry=False,
+                            hard_failed=True,
+                        )
+                        last_invalid_parse_error = proposal.get("parse_error")
+                        error = ValueError(
+                            f"{game_type or 'game'} proposal from {agent.agent_id} remained invalid "
+                            "(unparsable) "
+                            "after validation repair attempt: "
+                            f"{last_invalid_summary}"
+                        )
+                        return {
+                            "agent": agent,
+                            "proposal_prompt": proposal_prompt,
+                            "proposal": None,
+                            "log_records": log_records,
+                            "invalid_proposal_records": invalid_proposal_records,
+                            "error": error,
+                        }
                     if not self.game_environment.validate_proposal(proposal, game_state):
                         record_invalid_proposal_attempt(
                             attempt_index=len(invalid_proposal_records),

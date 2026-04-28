@@ -254,6 +254,51 @@ Second line with detail."
         assert saved_response["raw_proposal"] == bad_response
         assert saved_response["parse_error"]["type"] == "ValueError"
 
+    def test_run_proposal_phase_hard_fails_unrepaired_parse_failure(self):
+        """Game 3 parse failures should not silently become zero contribution vectors."""
+        game, _, state = make_game_and_state(m_projects=3)
+        items = state["projects"]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        bad_response = "not json"
+        agents = [
+            FakeAgent("Agent_1", [bad_response, bad_response, bad_response]),
+            FakeAgent("Agent_2", [json.dumps({"contributions": [0.0, 0.0, 0.0], "reasoning": "ok"})]),
+        ]
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(
+            save_interaction_callback=save_interaction,
+            game_environment=game,
+        )
+
+        with pytest.raises(ValueError, match="co_funding proposal from Agent_1 remained invalid"):
+            asyncio.run(
+                handler.run_proposal_phase(
+                    agents=agents,
+                    items=items,
+                    preferences=preferences,
+                    round_num=1,
+                    max_rounds=game.config.t_rounds,
+                )
+            )
+
+        assert [args[1] for args, _kwargs in saved] == [
+            "proposal_round_1_invalid_attempt_0",
+            "proposal_round_1_invalid_attempt_1",
+            "proposal_round_1_invalid_attempt_2",
+        ]
+        final_diagnostic = json.loads(saved[-1][0][3])
+        assert final_diagnostic["raw_response"] == bad_response
+        assert final_diagnostic["parse_error"]["type"] == "ValueError"
+        assert final_diagnostic["will_retry"] is False
+        assert final_diagnostic["hard_failed"] is True
+
     def test_run_proposal_phase_saves_validation_failure_diagnostics(self):
         """Saved proposal interactions should keep the last invalid raw response."""
         game, _, state = make_game_and_state(m_projects=3)
