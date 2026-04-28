@@ -34,6 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strong_models_experiment import StrongModelsExperiment, STRONG_MODELS_CONFIG
+from negotiation.provider_key_rotation import has_provider_keys
 
 
 async def main():
@@ -379,10 +380,10 @@ async def main():
 
     args = parser.parse_args()
     
-    has_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
-    has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
-    has_openai = bool(os.getenv("OPENAI_API_KEY"))
-    has_google = bool(os.getenv("GOOGLE_API_KEY"))
+    has_openrouter = has_provider_keys("openrouter", fallback_key=os.getenv("OPENROUTER_API_KEY"))
+    has_anthropic = has_provider_keys("anthropic", fallback_key=os.getenv("ANTHROPIC_API_KEY"))
+    has_openai = has_provider_keys("openai", fallback_key=os.getenv("OPENAI_API_KEY"))
+    has_google = has_provider_keys("google", fallback_key=os.getenv("GOOGLE_API_KEY"))
     has_xai = bool(os.getenv("XAI_API_KEY"))
 
     provider_env_vars = {
@@ -392,13 +393,20 @@ async def main():
         "google": "GOOGLE_API_KEY",
         "xai": "XAI_API_KEY",
     }
+    provider_key_available = {
+        "anthropic": has_anthropic,
+        "openai": has_openai,
+        "openrouter": has_openrouter,
+        "google": has_google,
+        "xai": has_xai,
+    }
 
     missing_provider_env = []
     for model_name in args.models:
         model_config = STRONG_MODELS_CONFIG.get(model_name, {})
         api_type = model_config.get("api_type", "openrouter")
         env_var = provider_env_vars.get(api_type)
-        if env_var and not os.getenv(env_var):
+        if env_var and not provider_key_available.get(api_type, False):
             missing_provider_env.append((model_name, api_type, env_var))
 
     if missing_provider_env:
