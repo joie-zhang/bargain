@@ -93,6 +93,18 @@ def test_proxy_provider_error_is_non_retryable(monkeypatch):
         asyncio.run(agent._make_request([{"role": "user", "content": "hi"}]))
 
 
+def test_proxy_output_limit_error_is_non_retryable(monkeypatch):
+    agent = make_agent(monkeypatch, transport="proxy", slurm_job_id="12345")
+
+    async def fake_proxy(url, headers, payload, timeout):
+        return None, "Exception: Empty content from model. finish_reason=length", None
+
+    monkeypatch.setattr(agent, "_send_request_via_proxy", fake_proxy)
+
+    with pytest.raises(NonRetryableLLMError):
+        asyncio.run(agent._make_request([{"role": "user", "content": "hi"}]))
+
+
 def test_proxy_waits_for_complete_response_file(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENROUTER_PROXY_POLL_DIR", str(tmp_path))
     monkeypatch.setenv("OPENROUTER_PROXY_CLIENT_POLL_INTERVAL", "0.01")

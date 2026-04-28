@@ -40,6 +40,7 @@ ADVERSARY_MODELS = [
     "claude-opus-4-6-thinking",
 ]
 N_VALUES = [2, 4, 6, 8, 10]
+MAX_AGENT_COLUMNS = max(N_VALUES)
 GAME1_COMPETITION_LEVELS = [0.0, 0.25, 0.5, 0.75, 1.0]
 GAME2_THETAS = [0.2, 0.8]
 GAME3_SIGMAS = [0.2, 0.5]
@@ -51,12 +52,21 @@ ELO_BUCKET_COUNT = 3
 MAX_ROUNDS = 10
 DISCUSSION_TURNS = 2
 GAMMA_DISCOUNT = 0.9
-MAX_TOKENS_VOTING = 768
+MAX_TOKENS_VOTING = None
 SLURM_TIME = "08:00:00"
 MAX_CONCURRENT = 50
 MASTER_SEED = 20260427
 JOB_NAME = "fg123"
 MAX_ARRAY_TASKS_PER_SUBMISSION = 2000
+EXCLUDED_MODEL_REFERENCE_PATTERNS = tuple(
+    sorted({
+        model.lower()
+        for model in HETEROGENEOUS_EXCLUDED_MODELS
+    } | {
+        model.split("-", 1)[0].lower()
+        for model in HETEROGENEOUS_EXCLUDED_MODELS
+    })
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -141,6 +151,78 @@ def config_output_dir(config: Dict[str, Any]) -> Path:
     return (PROJECT_ROOT / path).resolve()
 
 
+def read_json_file(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def config_status_path(results_root: Path, config_id: int) -> Path:
+    return results_root / "status" / f"config_{config_id:04d}.json"
+
+
+def config_latest_log_path(results_root: Path, config_id: int) -> Path:
+    return results_root / "logs" / f"config_{config_id:04d}.log"
+
+
+def config_attempt_log_path(results_root: Path, config_id: int, start: dt.datetime) -> Tuple[Path, str]:
+    job_id = os.getenv("SLURM_JOB_ID", "nojob")
+    task_id = os.getenv("SLURM_ARRAY_TASK_ID", "notask")
+    timestamp = start.strftime("%Y%m%dT%H%M%S_%f")
+    attempt_id = f"{timestamp}_job{sanitize_token(job_id)}_task{sanitize_token(task_id)}_pid{os.getpid()}"
+    return results_root / "logs" / f"config_{config_id:04d}_attempt_{attempt_id}.log", attempt_id
+
+
+def legacy_attempts_from_status(status: Dict[str, Any]) -> List[Dict[str, Any]]:
+    attempts = list(status.get("attempts") or [])
+    if attempts or not status:
+        return attempts
+    if status.get("started_at") or status.get("log_path"):
+        attempts.append(
+            {
+                "attempt_id": status.get("attempt_id", "legacy"),
+                "state": status.get("state"),
+                "returncode": status.get("returncode"),
+                "started_at": status.get("started_at"),
+                "finished_at": status.get("finished_at"),
+                "duration_seconds": status.get("duration_seconds"),
+                "log_path": status.get("attempt_log_path") or status.get("log_path"),
+                "result_path": status.get("result_path"),
+            }
+        )
+    return attempts
+
+
+def update_latest_log_pointer(latest_path: Path, attempt_path: Path) -> None:
+    """Point logs/config_XXXX.log at the newest attempt without overwriting attempts."""
+    latest_path.parent.mkdir(parents=True, exist_ok=True)
+    if latest_path.exists() and not latest_path.is_symlink():
+        try:
+            legacy_name = (
+                latest_path.parent
+                / f"{latest_path.stem}_attempt_legacy_{int(latest_path.stat().st_mtime)}{latest_path.suffix}"
+            )
+            if not legacy_name.exists():
+                latest_path.rename(legacy_name)
+            else:
+                latest_path.unlink()
+        except OSError:
+            latest_path.unlink(missing_ok=True)
+    elif latest_path.is_symlink():
+        latest_path.unlink()
+
+    try:
+        latest_path.symlink_to(attempt_path)
+    except OSError:
+        latest_path.write_text(
+            f"Latest attempt log: {attempt_path}\n",
+            encoding="utf-8",
+        )
+
+
 def rho_lower_bound(n_agents: int) -> float:
     return (6.0 / math.pi) * math.asin(-1.0 / (2.0 * (n_agents - 1)))
 
@@ -184,6 +266,26 @@ def filtered_heterogeneous_pool() -> List[str]:
     if len(pool) != 24:
         raise ValueError(f"Expected 24 heterogeneous models after exclusions, got {len(pool)}")
     return pool
+
+
+def find_excluded_model_references(value: Any, path: str = "$") -> List[str]:
+    """Find recursive references to excluded heterogeneous models in generated payloads."""
+    matches: List[str] = []
+    if isinstance(value, str):
+        lowered = value.lower()
+        if any(pattern and pattern in lowered for pattern in EXCLUDED_MODEL_REFERENCE_PATTERNS):
+            matches.append(path)
+        return matches
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_path = f"{path}.{key}"
+            matches.extend(find_excluded_model_references(str(key), f"{key_path}<key>"))
+            matches.extend(find_excluded_model_references(child, key_path))
+        return matches
+    if isinstance(value, list):
+        for index, child in enumerate(value):
+            matches.extend(find_excluded_model_references(child, f"{path}[{index}]"))
+    return matches
 
 
 def game_parameter_grid(game_label: str, n_agents: int) -> List[Dict[str, Any]]:
@@ -251,7 +353,7 @@ def common_config(
     random_seed: int,
     max_rounds: int,
     discussion_turns: int,
-    max_tokens_voting: int,
+    max_tokens_voting: Optional[int],
     game_params: Dict[str, Any],
     seed_replicate: Optional[int] = None,
     heterogeneous_run_index: Optional[int] = None,
@@ -294,7 +396,6 @@ def common_config(
         "discussion_turns": int(discussion_turns),
         "gamma_discount": GAMMA_DISCOUNT,
         "parallel_phases": True,
-        "max_tokens_voting": int(max_tokens_voting),
         "random_seed": int(random_seed),
         "seed": int(random_seed),
         "seed_replicate": seed_replicate,
@@ -305,12 +406,14 @@ def common_config(
         "output_dir": relative_or_absolute(output_dir),
         **build_agent_maps(models, adversary_model, family),
     }
+    if max_tokens_voting is not None:
+        config["max_tokens_voting"] = int(max_tokens_voting)
     config.update({key: value for key, value in game_params.items() if key != "competition_id"})
 
     if heterogeneous_model_pool is not None:
         config["model_pool"] = heterogeneous_model_pool
         config["model_pool_size"] = len(heterogeneous_model_pool)
-        config["heterogeneous_excluded_models"] = sorted(HETEROGENEOUS_EXCLUDED_MODELS)
+        config["heterogeneous_excluded_model_count"] = len(HETEROGENEOUS_EXCLUDED_MODELS)
         config["heterogeneous_sampling"] = {
             "without_replacement_within_run": True,
             "with_replacement_across_runs": True,
@@ -319,7 +422,7 @@ def common_config(
     if heterogeneous_draw_seed is not None:
         config["heterogeneous_draw_seed"] = int(heterogeneous_draw_seed)
     if elo_bucket_map is not None:
-        config["elo_bucket_method"] = "quantile_terciles_after_qwq_exclusion"
+        config["elo_bucket_method"] = "quantile_terciles_after_explicit_exclusions"
         config["model_elo_bucket_map"] = elo_bucket_map
         config["agent_elo_bucket_map"] = {
             agent_id: elo_bucket_map.get(model)
@@ -334,7 +437,7 @@ def build_configs(
     master_seed: int,
     max_rounds: int,
     discussion_turns: int,
-    max_tokens_voting: int,
+    max_tokens_voting: Optional[int],
 ) -> List[Dict[str, Any]]:
     configs: List[Dict[str, Any]] = []
     config_id = 1
@@ -470,19 +573,47 @@ def write_generated_files(results_root: Path, manifest: Dict[str, Any], configs:
         encoding="utf-8",
     )
 
+    agent_fieldnames = []
+    for agent_idx in range(1, MAX_AGENT_COLUMNS + 1):
+        agent_fieldnames.extend([
+            f"agent_{agent_idx}_id",
+            f"agent_{agent_idx}_model",
+            f"agent_{agent_idx}_elo",
+            f"agent_{agent_idx}_elo_bucket",
+            f"agent_{agent_idx}_role",
+        ])
+
     fieldnames = [
         "config_id", "game_label", "game_type", "experiment_family", "competition_id",
         "n_agents", "num_items", "n_issues", "m_projects", "competition_level",
         "rho", "theta", "sigma", "alpha", "adversary_model", "adversary_position",
-        "seed_replicate", "heterogeneous_run_index", "random_seed", "model_order",
-        "models", "output_dir",
-    ]
+        "seed_replicate", "random_seed", "seed", "model_order", "models",
+        "heterogeneous_run_index", "heterogeneous_draw_seed", "model_pool_size",
+        "model_pool", "heterogeneous_sampling", "elo_bucket_method",
+        "output_dir",
+    ] + agent_fieldnames
     with (config_dir / "experiment_index.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         for config in configs:
             row = {field: config.get(field) for field in fieldnames if field != "models"}
             row["models"] = "+".join(config["models"])
+            model_pool = config.get("model_pool") or []
+            row["model_pool"] = "+".join(model_pool)
+            heterogeneous_sampling = config.get("heterogeneous_sampling")
+            row["heterogeneous_sampling"] = (
+                json.dumps(heterogeneous_sampling, sort_keys=True)
+                if heterogeneous_sampling
+                else ""
+            )
+            for agent_idx in range(1, MAX_AGENT_COLUMNS + 1):
+                agent_id = f"Agent_{agent_idx}"
+                active_agent = agent_idx <= int(config["n_agents"])
+                row[f"agent_{agent_idx}_id"] = agent_id if active_agent else ""
+                row[f"agent_{agent_idx}_model"] = config.get("agent_model_map", {}).get(agent_id, "")
+                row[f"agent_{agent_idx}_elo"] = config.get("agent_elo_map", {}).get(agent_id, "")
+                row[f"agent_{agent_idx}_elo_bucket"] = config.get("agent_elo_bucket_map", {}).get(agent_id, "")
+                row[f"agent_{agent_idx}_role"] = config.get("agent_role_map", {}).get(agent_id, "")
             writer.writerow(row)
 
     latest = results_root.parent / "full_games123_multiagent_latest"
@@ -559,9 +690,9 @@ def build_command(config: Dict[str, Any]) -> List[str]:
         "--gamma-discount",
         str(config.get("gamma_discount", GAMMA_DISCOUNT)),
         "--parallel-phases",
-        "--max-tokens-voting",
-        str(config.get("max_tokens_voting", MAX_TOKENS_VOTING)),
     ]
+    if config.get("max_tokens_voting") is not None:
+        cmd.extend(["--max-tokens-voting", str(config["max_tokens_voting"])])
     if config["game_type"] == "item_allocation":
         cmd.extend([
             "--num-items",
@@ -616,8 +747,9 @@ def enrich_result_metadata(config: Dict[str, Any]) -> None:
         "models", "agent_model_map", "agent_elo_map", "agent_role_map",
         "model_order", "adversary_model", "adversary_position",
         "seed_replicate", "heterogeneous_run_index", "heterogeneous_draw_seed",
-        "model_pool", "model_pool_size", "heterogeneous_excluded_models",
-        "heterogeneous_sampling", "elo_bucket_method", "model_elo_bucket_map",
+        "model_pool", "model_pool_size",
+        "heterogeneous_sampling", "heterogeneous_excluded_model_count",
+        "elo_bucket_method", "model_elo_bucket_map",
         "agent_elo_bucket_map", "max_tokens_voting", "parallel_phases",
     ]
     payload["config"].update({key: config[key] for key in metadata_keys if key in config})
@@ -629,18 +761,24 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     monitoring_dir = results_root / "monitoring"
     monitoring_dir.mkdir(parents=True, exist_ok=True)
-    log_path = results_root / "logs" / f"config_{config['config_id']:04d}.log"
-    status_path = results_root / "status" / f"config_{config['config_id']:04d}.json"
+    config_id = int(config["config_id"])
+    (results_root / "logs").mkdir(parents=True, exist_ok=True)
+    latest_log_path = config_latest_log_path(results_root, config_id)
+    status_path = config_status_path(results_root, config_id)
+    previous_status = read_json_file(status_path)
+    attempts = legacy_attempts_from_status(previous_status)
 
     existing = result_path_for(config)
     if existing is not None:
         enrich_result_metadata(config)
         status = {
-            "config_id": config["config_id"],
+            "config_id": config_id,
             "state": "SUCCESS",
             "returncode": 0,
             "skipped_existing": True,
             "result_path": str(existing),
+            "log_path": str(latest_log_path),
+            "attempts": attempts,
             "updated_at": dt.datetime.now().isoformat(),
         }
         write_json(status_path, status)
@@ -648,15 +786,32 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
 
     cmd = build_command(config)
     start = dt.datetime.now()
+    log_path, attempt_id = config_attempt_log_path(results_root, config_id, start)
+    update_latest_log_pointer(latest_log_path, log_path)
+    attempt_record = {
+        "attempt_id": attempt_id,
+        "state": "RUNNING",
+        "started_at": start.isoformat(),
+        "log_path": str(log_path),
+        "slurm_job_id": os.getenv("SLURM_JOB_ID"),
+        "slurm_array_job_id": os.getenv("SLURM_ARRAY_JOB_ID"),
+        "slurm_array_task_id": os.getenv("SLURM_ARRAY_TASK_ID"),
+        "pid": os.getpid(),
+    }
+    attempts.append(attempt_record)
     write_json(
         status_path,
         {
-            "config_id": config["config_id"],
+            "config_id": config_id,
             "state": "RUNNING",
+            "attempt_id": attempt_id,
             "game_label": config["game_label"],
             "experiment_family": config["experiment_family"],
             "command": shlex.join(cmd),
             "started_at": start.isoformat(),
+            "log_path": str(latest_log_path),
+            "attempt_log_path": str(log_path),
+            "attempts": attempts,
         },
     )
 
@@ -698,15 +853,27 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     state = "SUCCESS" if returncode == 0 and result_path is not None else "FAILED"
     if state == "SUCCESS":
         enrich_result_metadata(config)
+    attempts[-1].update(
+        {
+            "state": state,
+            "returncode": returncode,
+            "finished_at": end.isoformat(),
+            "duration_seconds": (end - start).total_seconds(),
+            "result_path": str(result_path) if result_path else None,
+        }
+    )
     status = {
-        "config_id": config["config_id"],
+        "config_id": config_id,
         "state": state,
         "returncode": returncode,
+        "attempt_id": attempt_id,
         "started_at": start.isoformat(),
         "finished_at": end.isoformat(),
         "duration_seconds": (end - start).total_seconds(),
-        "log_path": str(log_path),
+        "log_path": str(latest_log_path),
+        "attempt_log_path": str(log_path),
         "result_path": str(result_path) if result_path else None,
+        "attempts": attempts,
         "updated_at": end.isoformat(),
     }
     write_json(status_path, status)
@@ -806,14 +973,23 @@ def validate_configs(configs: List[Dict[str, Any]]) -> Dict[str, Any]:
             errors.append(f"config_{config['config_id']:04d}: max_rounds is not 10")
         if int(config.get("discussion_turns", 0)) != 2:
             errors.append(f"config_{config['config_id']:04d}: discussion_turns is not 2")
-        if int(config.get("max_tokens_voting", 0)) != 768:
-            errors.append(f"config_{config['config_id']:04d}: max_tokens_voting is not 768")
+        if config.get("max_tokens_voting") is not None:
+            errors.append(
+                f"config_{config['config_id']:04d}: max_tokens_voting must be absent/null "
+                "for the full batch"
+            )
+        excluded_refs = find_excluded_model_references(config)
+        if excluded_refs:
+            errors.append(
+                f"config_{config['config_id']:04d}: contains excluded model reference(s) "
+                f"at {excluded_refs[:5]}"
+            )
 
         if config["experiment_family"] == "heterogeneous_random":
             if len(set(config["models"])) != len(config["models"]):
                 errors.append(f"config_{config['config_id']:04d}: heterogeneous models are not unique")
-            if "qwq-32b" in config["models"]:
-                errors.append(f"config_{config['config_id']:04d}: contains excluded qwq-32b")
+            if any(model in HETEROGENEOUS_EXCLUDED_MODELS for model in config["models"]):
+                errors.append(f"config_{config['config_id']:04d}: contains excluded heterogeneous model")
             if int(config.get("model_pool_size", 0)) != 24:
                 errors.append(f"config_{config['config_id']:04d}: model_pool_size is not 24")
 
@@ -1164,12 +1340,12 @@ def cmd_generate(args: argparse.Namespace) -> int:
         "heterogeneous_runs_per_cell": HETEROGENEOUS_RUNS_PER_CELL,
         "heterogeneous_pool": filtered_heterogeneous_pool(),
         "heterogeneous_pool_count": len(filtered_heterogeneous_pool()),
-        "heterogeneous_excluded_models": sorted(HETEROGENEOUS_EXCLUDED_MODELS),
+        "heterogeneous_excluded_model_count": len(HETEROGENEOUS_EXCLUDED_MODELS),
         "elo_bucket_count": ELO_BUCKET_COUNT,
         "master_seed": int(args.master_seed),
         "max_rounds": int(args.max_rounds),
         "discussion_turns": int(args.discussion_turns),
-        "max_tokens_voting": int(args.max_tokens_voting),
+        "max_tokens_voting": args.max_tokens_voting,
         "parallel_phases": True,
         "slurm_time": str(args.slurm_time),
         "max_concurrent": int(args.max_concurrent),

@@ -7,7 +7,12 @@ import logging
 import random
 from typing import List, Dict, Any, Optional, Tuple, TYPE_CHECKING, Awaitable, Callable
 from negotiation import NegotiationContext
-from negotiation.llm_agents import BaseLLMAgent
+from negotiation.llm_agents import BaseLLMAgent, NonRetryableLLMError
+from negotiation.provider_key_rotation import (
+    ProviderKeyExhaustedError,
+    ProviderTransientRetryExhaustedError,
+    is_deterministic_provider_failure,
+)
 from game_environments.base import GameEnvironment as BaseGameEnvironment
 from ..prompts import PromptGenerator
 
@@ -115,6 +120,7 @@ class PhaseHandler:
     def _build_vote_integrity_event(
         self,
         *,
+        phase: str = "private_voting",
         agent_id: str,
         round_num: int,
         max_rounds: int,
@@ -128,7 +134,7 @@ class PhaseHandler:
         error_type = type(error).__name__ if error is not None else None
         error_message = str(error) if error is not None else None
         return {
-            "phase": "private_voting",
+            "phase": phase,
             "agent_id": agent_id,
             "round": int(round_num),
             "max_rounds": int(max_rounds),
@@ -154,6 +160,21 @@ class PhaseHandler:
             self.vote_integrity["contaminated"] = True
         if event.get("hard_failed"):
             self.vote_integrity["hard_failed"] = True
+
+    @staticmethod
+    def _is_hard_llm_failure(error: BaseException) -> bool:
+        """Return True for provider/model failures that should not be masked."""
+        return (
+            isinstance(
+                error,
+                (
+                    NonRetryableLLMError,
+                    ProviderKeyExhaustedError,
+                    ProviderTransientRetryExhaustedError,
+                ),
+            )
+            or is_deterministic_provider_failure(error)
+        )
     
     def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
         """Extract token usage information from an AgentResponse object."""
@@ -515,11 +536,20 @@ class PhaseHandler:
             "round": round_num,
         }
 
-    def _parse_commit_vote_response(self, content: str, agent_id: str, round_num: int) -> Dict:
+    def _parse_commit_vote_response(
+        self,
+        content: str,
+        agent_id: str,
+        round_num: int,
+        *,
+        strict: bool = False,
+    ) -> Dict:
         """Parse co-funding commit vote (yay/nay) from raw LLM output."""
         try:
             vote = BaseGameEnvironment._parse_json_object(content, "commit vote response")
-        except (json.JSONDecodeError, ValueError):
+        except (json.JSONDecodeError, ValueError) as exc:
+            if strict:
+                raise ValueError(f"No valid JSON in commit vote response from {agent_id}: {exc}") from exc
             # Last-resort keyword parse
             lowered = content.lower()
             if "yay" in lowered:
@@ -541,8 +571,11 @@ class PhaseHandler:
             or vote.get("vote")
             or vote.get("decision")
             or vote.get("commit")
-            or "nay"
         )
+        if raw_vote is None and strict:
+            raise ValueError(f"No commit vote field in response from {agent_id}")
+        if raw_vote is None:
+            raw_vote = "nay"
         if isinstance(raw_vote, dict):
             raw_vote = raw_vote.get("commit_vote", raw_vote.get("vote", raw_vote.get("decision", "nay")))
 
@@ -552,6 +585,10 @@ class PhaseHandler:
         elif normalized in ("nay", "no", "reject", "decline", "false"):
             commit_vote = "nay"
         else:
+            if strict:
+                raise ValueError(
+                    f"Invalid commit vote value from {agent_id}: {raw_vote!r}"
+                )
             commit_vote = "nay"
 
         return {
@@ -1029,6 +1066,8 @@ class PhaseHandler:
             agent = result["agent"]
 
             if result["error"] is not None:
+                if self._is_hard_llm_failure(result["error"]):
+                    raise result["error"]
                 self.logger.error(f"Error in private thinking for {agent.agent_id}: {result['error']}")
                 thinking_results.append({
                     "agent_id": agent.agent_id,
@@ -1614,6 +1653,7 @@ class PhaseHandler:
                         for proposal_number in proposal_numbers
                     }
                     token_usage_by_proposal_number = {}
+                    last_vote_error: Optional[BaseException] = None
 
                     def unrecoverable_vote_failure(
                         proposal_numbers_for_event: List[int],
@@ -1717,13 +1757,8 @@ class PhaseHandler:
                         response = None
                         token_usage = None
                         token_usage_by_proposal_number = {}
-                        vote_results = [
-                            default_reject_vote(
-                                proposal_number,
-                                f"Default reject because structured vote request failed: {e}",
-                            )
-                            for proposal_number in proposal_numbers
-                        ]
+                        vote_results = []
+                        last_vote_error = e
                         warnings.append(
                             f"Structured batch vote request from {agent.agent_id} failed; "
                             f"will attempt bounded structured-vote repair: {e}"
@@ -1763,6 +1798,7 @@ class PhaseHandler:
                             retry_response = None
                             retry_token_usage = None
                             retry_vote_results = vote_results
+                            last_vote_error = e
                             warnings.append(
                                 f"Structured batch vote retry from {agent.agent_id} failed: {e}"
                             )
@@ -1811,6 +1847,7 @@ class PhaseHandler:
                                 compact_retry_response = None
                                 compact_retry_token_usage = None
                                 compact_retry_vote_results = vote_results
+                                last_vote_error = e
                                 warnings.append(
                                     f"Structured compact vote retry from {agent.agent_id} failed: {e}"
                                 )
@@ -1828,6 +1865,7 @@ class PhaseHandler:
                                 unrecoverable_vote_failure(
                                     missing_numbers,
                                     "structured vote recovery failed after bounded retries",
+                                    error=last_vote_error,
                                 )
 
                             self.logger.warning(
@@ -1838,6 +1876,7 @@ class PhaseHandler:
                             record_final_round_synthetic_votes(
                                 missing_numbers,
                                 "structured vote recovery failed after bounded retries",
+                                error=last_vote_error,
                             )
                             vote_results_by_number = {
                                 vote.get("proposal_number"): vote
@@ -1851,7 +1890,14 @@ class PhaseHandler:
                                     missing_number,
                                     "Default reject because structured vote recovery failed after bounded retries.",
                                     raw_response=raw_response,
-                                    parse_error=previous_vote.get("parse_error"),
+                                    parse_error=previous_vote.get("parse_error") or (
+                                        {
+                                            "type": type(last_vote_error).__name__,
+                                            "message": str(last_vote_error),
+                                        }
+                                        if last_vote_error is not None
+                                        else None
+                                    ),
                                 )
 
                             vote_results = [
@@ -2525,6 +2571,8 @@ Consider what adjustments might lead to supermajority support in future rounds."
             agent = result["agent"]
 
             if result["error"] is not None:
+                if self._is_hard_llm_failure(result["error"]):
+                    raise result["error"]
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {result['error']}")
                 continue
 
@@ -2853,9 +2901,42 @@ Consider what adjustments might lead to supermajority support in future rounds."
                 response_content = agent_response.content
                 token_usage = self._extract_token_usage(agent_response)
                 parsed_vote = self._parse_commit_vote_response(
-                    response_content, agent.agent_id, round_num
+                    response_content, agent.agent_id, round_num, strict=True
                 )
             except Exception as e:
+                if round_num < max_rounds:
+                    event = self._build_vote_integrity_event(
+                        phase="cofunding_commit_vote",
+                        agent_id=agent.agent_id,
+                        round_num=round_num,
+                        max_rounds=max_rounds,
+                        proposal_numbers=[],
+                        reason="co-funding commit vote failed before final round",
+                        error=e,
+                        synthetic_vote_count=0,
+                        contaminated=False,
+                        hard_failed=True,
+                    )
+                    self._record_vote_integrity_event(event)
+                    raise VoteIntegrityError(
+                        f"Unrecoverable co-funding commit vote failure for {agent.agent_id} "
+                        f"in round {round_num}/{max_rounds}: {e}",
+                        event=event,
+                    ) from e
+
+                event = self._build_vote_integrity_event(
+                    phase="cofunding_commit_vote",
+                    agent_id=agent.agent_id,
+                    round_num=round_num,
+                    max_rounds=max_rounds,
+                    proposal_numbers=[],
+                    reason="final-round co-funding commit vote failed; using audited synthetic nay",
+                    error=e,
+                    synthetic_vote_count=1,
+                    contaminated=True,
+                    hard_failed=False,
+                )
+                self._record_vote_integrity_event(event)
                 self.logger.error(f"Error collecting commit vote from {agent.agent_id}: {e}")
                 response_content = json.dumps({"commit_vote": "nay", "reasoning": f"error: {e}"})
                 token_usage = None
@@ -2864,6 +2945,11 @@ Consider what adjustments might lead to supermajority support in future rounds."
                     "reasoning": f"fallback due to error: {e}",
                     "voter": agent.agent_id,
                     "round": round_num,
+                    "synthetic_vote": True,
+                    "parse_error": {
+                        "type": type(e).__name__,
+                        "message": str(e),
+                    },
                 }
 
             commit_votes.append(parsed_vote)

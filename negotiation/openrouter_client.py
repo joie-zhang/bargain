@@ -231,6 +231,7 @@ class OpenRouterAgent(BaseLLMAgent):
     @classmethod
     def _is_non_retryable_error_message(cls, message: str) -> bool:
         lowered = message.lower()
+        normalized = re.sub(r"[^a-z0-9]+", "", lowered)
         match = re.search(r"http\s+(\d{3})", lowered)
         if match:
             status = int(match.group(1))
@@ -243,6 +244,24 @@ class OpenRouterAgent(BaseLLMAgent):
                 "no endpoints found",
                 "not_found_error",
                 "provider returned error",
+                "empty content from model. finish_reason=length",
+                "finish_reason=length",
+                "native_finish_reason=length",
+                "finish_reason=max_tokens",
+                "response truncated (max_tokens) with no content",
+                "could not finish the message because max_tokens or model output limit was reached",
+                "`max_tokens` must be greater than `thinking.budget_tokens`",
+            )
+        ) or any(
+            marker in normalized
+            for marker in (
+                "emptycontentfrommodelfinishreasonlength",
+                "finishreasonlength",
+                "nativefinishreasonlength",
+                "finishreasonmaxtokens",
+                "responsetruncatedmaxtokenswithnocontent",
+                "couldnotfinishthemessagebecausemaxtokensormodeloutputlimitwasreached",
+                "maxtokensmustbegreaterthanthinkingbudgettokens",
             )
         )
     

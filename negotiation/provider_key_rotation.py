@@ -237,16 +237,34 @@ def is_deterministic_provider_failure(exc: BaseException) -> bool:
     if status is not None:
         return 400 <= status < 500 and status not in {402, 408, 409, 429}
     text = _error_text(exc).lower()
-    return any(
-        marker in text
-        for marker in (
-            "max_tokens must be greater than thinking.budget_tokens",
-            "invalid model",
-            "invalid_request_error",
-            "bad request",
-            "not_found_error",
-            "no endpoints found",
-        )
+    normalized = re.sub(r"[^a-z0-9]+", "", text)
+    text_markers = (
+        "max_tokens must be greater than thinking.budget_tokens",
+        "`max_tokens` must be greater than `thinking.budget_tokens`",
+        "invalid model",
+        "invalid_request_error",
+        "bad request",
+        "not_found_error",
+        "no endpoints found",
+        "could not finish the message because max_tokens or model output limit was reached",
+        "response truncated (max_tokens) with no content",
+        "finish_reason=max_tokens",
+        "finish_reason=length",
+        "native_finish_reason=length",
+        "empty content from model. finish_reason=length",
+    )
+    normalized_markers = (
+        "maxtokensmustbegreaterthanthinkingbudgettokens",
+        "couldnotfinishthemessagebecausemaxtokensormodeloutputlimitwasreached",
+        "responsetruncatedmaxtokenswithnocontent",
+        "finishreasonmaxtokens",
+        "finishreasonlength",
+        "nativefinishreasonlength",
+        "emptycontentfrommodelfinishreasonlength",
+    )
+    return any(marker in text for marker in text_markers) or any(
+        marker in normalized
+        for marker in normalized_markers
     )
 
 

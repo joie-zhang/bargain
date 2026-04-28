@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 from game_environments import CoFundingConfig
 from game_environments.co_funding import CoFundingGame
-from strong_models_experiment.phases.phase_handlers import PhaseHandler
+from strong_models_experiment.phases.phase_handlers import PhaseHandler, VoteIntegrityError
 
 
 # ---- Fake agent for testing ----
@@ -422,6 +422,62 @@ class TestVotingPhases:
         )
         assert result["consensus_reached"] is False
         assert state["accepted_proposal"] is None
+
+    def test_prefinal_commit_vote_failure_hard_fails_without_synthetic_nay(self):
+        game, _, state = make_game_and_state(m_projects=3)
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        agents = [
+            FakeAgent("Agent_1", ["not json"]),
+            FakeAgent("Agent_2", ['{"commit_vote": "yay", "reasoning": "ok"}']),
+        ]
+        handler = PhaseHandler(game_environment=game)
+
+        with pytest.raises(VoteIntegrityError):
+            asyncio.run(
+                handler.run_cofunding_commit_vote_phase(
+                    agents=agents,
+                    items=state["projects"],
+                    preferences=preferences,
+                    round_num=1,
+                    max_rounds=3,
+                )
+            )
+
+        integrity = handler.get_vote_integrity()
+        assert integrity["hard_failed"] is True
+        assert integrity["synthetic_vote_count"] == 0
+        assert integrity["contaminated"] is False
+
+    def test_final_commit_vote_failure_uses_audited_synthetic_nay(self):
+        game, _, state = make_game_and_state(m_projects=3)
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        agents = [
+            FakeAgent("Agent_1", ["not json"]),
+            FakeAgent("Agent_2", ['{"commit_vote": "yay", "reasoning": "ok"}']),
+        ]
+        handler = PhaseHandler(game_environment=game)
+
+        result = asyncio.run(
+            handler.run_cofunding_commit_vote_phase(
+                agents=agents,
+                items=state["projects"],
+                preferences=preferences,
+                round_num=3,
+                max_rounds=3,
+            )
+        )
+
+        assert result["commit_votes"][0]["commit_vote"] == "nay"
+        assert result["commit_votes"][0]["synthetic_vote"] is True
+        integrity = handler.get_vote_integrity()
+        assert integrity["contaminated"] is True
+        assert integrity["synthetic_vote_count"] == 1
 
     def test_supermajority_accept_records_accepted_joint_proposal_for_n3(self):
         game, agents, state = make_game_and_state(n_agents=3, m_projects=4)

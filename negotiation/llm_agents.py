@@ -133,6 +133,14 @@ class NonRetryableLLMError(Exception):
     """Fail-fast model/provider error that should not be retried by outer loops."""
 
 
+def _coerce_positive_int(value: Any) -> Optional[int]:
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError):
+        return None
+    return coerced if coerced > 0 else None
+
+
 @dataclass 
 class NegotiationContext:
     """Context information for LLM agents during negotiation."""
@@ -1463,7 +1471,11 @@ class AnthropicAgent(BaseLLMAgent):
         # We support either a direct `thinking` object (for adaptive thinking)
         # or the older `thinking_budget_tokens` convenience knob.
         explicit_thinking = self.config.custom_parameters.get("thinking")
-        thinking_budget = self.config.custom_parameters.get("thinking_budget_tokens")
+        thinking_budget = _coerce_positive_int(
+            self.config.custom_parameters.get("thinking_budget_tokens")
+        )
+        if thinking_budget is None and isinstance(explicit_thinking, dict):
+            thinking_budget = _coerce_positive_int(explicit_thinking.get("budget_tokens"))
 
         # Build API params - filter out our custom keys that aren't direct API params
         filtered_custom_params = {k: v for k, v in self.config.custom_parameters.items()
@@ -1512,6 +1524,12 @@ class AnthropicAgent(BaseLLMAgent):
         else:
             # Only set temperature if no thinking mode is enabled.
             api_params["temperature"] = self.config.temperature
+
+        if thinking_min_max_tokens is not None:
+            api_params["max_tokens"] = max(
+                int(api_params.get("max_tokens") or 0),
+                thinking_min_max_tokens,
+            )
         
         async def request_with_key(key: ProviderKey) -> AgentResponse:
             self._configure_client_key(key)

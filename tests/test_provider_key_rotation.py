@@ -15,6 +15,7 @@ from negotiation.provider_key_rotation import (
     _DISABLED_KEY_LABELS_BY_PROVIDER,
     call_with_key_rotation,
     discover_provider_keys,
+    is_deterministic_provider_failure,
 )
 
 
@@ -164,6 +165,23 @@ def test_transient_budget_exhaustion_fails_without_rotation(monkeypatch):
                 request_coro_factory=request,
             )
         )
+
+
+def test_deterministic_provider_failure_catches_output_limit_messages():
+    assert is_deterministic_provider_failure(
+        RuntimeError(
+            "Error code: 400 - {'error': {'type': 'invalid_request_error', "
+            "'message': '`max_tokens` must be greater than `thinking.budget_tokens`.'}}"
+        )
+    )
+    assert is_deterministic_provider_failure(
+        RuntimeError(
+            "Could not finish the message because max_tokens or model output limit was reached."
+        )
+    )
+    assert is_deterministic_provider_failure(
+        RuntimeError("Empty content from model. finish_reason=length")
+    )
 
 
 def test_google_configure_and_generate_are_serialized(monkeypatch):
