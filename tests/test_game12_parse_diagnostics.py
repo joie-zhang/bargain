@@ -283,7 +283,18 @@ def test_item_allocation_proposal_repair_prompt_uses_allocation_schema():
         assert "agreement array" in repair_prompt
         assert "\"agreement\"" not in repair_prompt
         assert result["proposals"][0]["allocation"] == {"Agent_1": [0, 2], "Agent_2": [1]}
-        saved_response = json.loads(saved[0][0][3])
+        invalid_response = json.loads(
+            next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1_invalid_attempt_0")
+        )
+        assert invalid_response["raw_proposal"] == bad_legacy_response
+        assert invalid_response["raw_response"] == bad_legacy_response
+        assert invalid_response["parse_error"]["type"] == "ValueError"
+        assert invalid_response["will_retry"] is True
+        assert invalid_response["hard_failed"] is False
+
+        saved_response = json.loads(
+            next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1")
+        )
         assert saved_response["recovered_after_error"] == "parse error"
         assert saved_response["raw_response"] == bad_legacy_response
 
@@ -337,7 +348,17 @@ def test_item_allocation_unrepaired_legacy_agreement_vector_hard_fails():
                 max_rounds=3,
             )
 
-        assert saved == []
+        assert [args[1] for args, _kwargs in saved] == [
+            "proposal_round_1_invalid_attempt_0",
+            "proposal_round_1_invalid_attempt_1",
+            "proposal_round_1_invalid_attempt_2",
+        ]
+        final_diagnostic = json.loads(saved[-1][0][3])
+        assert final_diagnostic["raw_proposal"] == bad_legacy_response
+        assert final_diagnostic["raw_response"] == bad_legacy_response
+        assert final_diagnostic["parse_error"]["type"] == "ValueError"
+        assert final_diagnostic["will_retry"] is False
+        assert final_diagnostic["hard_failed"] is True
 
     asyncio.run(run_test())
 

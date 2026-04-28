@@ -176,8 +176,11 @@ Second line with detail."
             )
         )
 
-        saved_response = json.loads(saved[0][0][3])
+        saved_response = json.loads(
+            next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1_invalid_attempt_0")
+        )
         assert saved_response["raw_response"] == bad_response
+        assert saved_response["raw_proposal"] == bad_response
         assert saved_response["parse_error"]["type"] == "ValueError"
 
     def test_run_proposal_phase_saves_validation_failure_diagnostics(self):
@@ -221,7 +224,16 @@ Second line with detail."
             )
         )
 
-        saved_response = json.loads(saved[0][0][3])
+        invalid_response = json.loads(
+            next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1_invalid_attempt_0")
+        )
+        assert invalid_response["raw_response"] == invalid_first
+        assert invalid_response["raw_proposal"] == invalid_first
+        assert "over budget" in invalid_response["validation_error"]
+
+        saved_response = json.loads(
+            next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1")
+        )
         assert saved_response["contributions"] == [0.0, 0.0, 0.0]
         assert saved_response["raw_response"] == invalid_retry
         assert saved_response["validation_error"] == "Proposal invalid after retry"

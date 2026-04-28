@@ -1121,6 +1121,7 @@ class PhaseHandler:
             # Get proposal from agent
             if self.game_environment is not None:
                 # Use game-specific prompt (already generated above) and parsing
+                invalid_proposal_records = []
                 response = await self._generate_response_with_access(
                     agent, context, proposal_prompt, phase="proposal"
                 )
@@ -1170,6 +1171,52 @@ class PhaseHandler:
                             )
 
                     return "validation error"
+
+                def proposal_validation_error(candidate: Dict[str, Any], summary: str) -> Optional[Any]:
+                    if "validation_error" in candidate:
+                        return candidate["validation_error"]
+                    if "parse_error" not in candidate:
+                        return summary
+                    return None
+
+                def record_invalid_proposal_attempt(
+                    *,
+                    attempt_index: int,
+                    attempt_prompt: str,
+                    attempt_response,
+                    candidate: Dict[str, Any],
+                    attempt_token_usage: Optional[Dict[str, Any]],
+                    will_retry: bool,
+                    hard_failed: bool,
+                ) -> str:
+                    summary = proposal_error_summary(candidate)
+                    diagnostic = {
+                        "proposed_by": agent.agent_id,
+                        "round": round_num,
+                        "game_type": game_type,
+                        "proposal_repair_attempt": int(attempt_index),
+                        "raw_proposal": attempt_response.content,
+                        "raw_proposal_response": attempt_response.content,
+                        "raw_response": attempt_response.content,
+                        "parsed_proposal": candidate,
+                        "error_summary": summary,
+                        "will_retry": bool(will_retry),
+                        "hard_failed": bool(hard_failed),
+                    }
+                    if "parse_error" in candidate:
+                        diagnostic["parse_error"] = candidate["parse_error"]
+                    validation_error = proposal_validation_error(candidate, summary)
+                    if validation_error is not None:
+                        diagnostic["validation_error"] = validation_error
+                    invalid_proposal_records.append(
+                        {
+                            "phase": f"proposal_round_{round_num}_invalid_attempt_{attempt_index}",
+                            "prompt": attempt_prompt,
+                            "response": json.dumps(diagnostic, default=str),
+                            "token_usage": attempt_token_usage,
+                        }
+                    )
+                    return summary
 
                 game_type = game_state.get("game_type")
                 agent_ids = [a.agent_id for a in agents]
@@ -1244,7 +1291,15 @@ class PhaseHandler:
                     if not proposal_needs_retry(proposal):
                         break
                     last_invalid_raw_response = response.content
-                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_summary = record_invalid_proposal_attempt(
+                        attempt_index=retry_index - 1,
+                        attempt_prompt=proposal_prompt if retry_index == 1 else proposal_retry_prompts[retry_index - 2],
+                        attempt_response=response,
+                        candidate=proposal,
+                        attempt_token_usage=token_usage,
+                        will_retry=True,
+                        hard_failed=False,
+                    )
                     last_invalid_parse_error = proposal.get("parse_error")
                     if "validation_error" in proposal:
                         last_invalid_validation_error = proposal["validation_error"]
@@ -1268,23 +1323,47 @@ class PhaseHandler:
                     )
                 if game_type != "co_funding" and proposal_needs_retry(proposal):
                     last_invalid_raw_response = response.content
-                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_summary = record_invalid_proposal_attempt(
+                        attempt_index=len(proposal_retry_prompts),
+                        attempt_prompt=proposal_retry_prompts[-1] if proposal_retry_prompts else proposal_prompt,
+                        attempt_response=response,
+                        candidate=proposal,
+                        attempt_token_usage=token_usage,
+                        will_retry=False,
+                        hard_failed=True,
+                    )
                     last_invalid_parse_error = proposal.get("parse_error")
                     if "validation_error" in proposal:
                         last_invalid_validation_error = proposal["validation_error"]
                     elif last_invalid_parse_error is None:
                         last_invalid_validation_error = "Proposal invalid after retry"
-                    raise ValueError(
+                    error = ValueError(
                         f"{game_type or 'game'} proposal from {agent.agent_id} remained invalid "
                         f"after {len(proposal_retry_prompts)} repair attempts: {last_invalid_summary}"
                     )
+                    return {
+                        "agent": agent,
+                        "proposal_prompt": proposal_prompt,
+                        "proposal": None,
+                        "log_records": log_records,
+                        "invalid_proposal_records": invalid_proposal_records,
+                        "error": error,
+                    }
                 should_retry_invalid = (
                     game_type == "co_funding"
                     or "contributions" in proposal
                 )
                 if should_retry_invalid and not self.game_environment.validate_proposal(proposal, game_state):
                     last_invalid_raw_response = response.content
-                    last_invalid_summary = proposal_error_summary(proposal)
+                    last_invalid_summary = record_invalid_proposal_attempt(
+                        attempt_index=len(invalid_proposal_records),
+                        attempt_prompt=proposal_retry_prompts[-1] if invalid_proposal_records else proposal_prompt,
+                        attempt_response=response,
+                        candidate=proposal,
+                        attempt_token_usage=token_usage,
+                        will_retry=True,
+                        hard_failed=False,
+                    )
                     last_invalid_parse_error = proposal.get("parse_error")
                     if "validation_error" in proposal:
                         last_invalid_validation_error = proposal["validation_error"]
@@ -1312,6 +1391,15 @@ class PhaseHandler:
                         [a.agent_id for a in agents]
                     )
                     if not self.game_environment.validate_proposal(proposal, game_state):
+                        record_invalid_proposal_attempt(
+                            attempt_index=len(invalid_proposal_records),
+                            attempt_prompt=retry_prompt,
+                            attempt_response=response,
+                            candidate=proposal,
+                            attempt_token_usage=token_usage,
+                            will_retry=False,
+                            hard_failed=False,
+                        )
                         log_records.append(
                             (
                                 "error",
@@ -1346,6 +1434,8 @@ class PhaseHandler:
                 "proposal_prompt": proposal_prompt,
                 "proposal": proposal,
                 "log_records": log_records,
+                "invalid_proposal_records": invalid_proposal_records,
+                "error": None,
             }
 
         raw_results = await self._run_agent_tasks_in_order(agents, propose_for_agent)
@@ -1360,6 +1450,23 @@ class PhaseHandler:
                     self.logger.warning(message)
                 elif level == "error":
                     self.logger.error(message)
+            for record in result.get("invalid_proposal_records", []):
+                self.logger.warning(
+                    "Saving invalid proposal diagnostic for %s phase=%s",
+                    agent.agent_id,
+                    record["phase"],
+                )
+                self.save_interaction(
+                    agent.agent_id,
+                    record["phase"],
+                    record["prompt"],
+                    record["response"],
+                    round_num,
+                    record["token_usage"],
+                    model_name=agent.get_model_info()["model_name"],
+                )
+            if result.get("error") is not None:
+                raise result["error"]
 
             # Extract token usage if present (remove from proposal to avoid saving it in the content)
             token_usage = proposal.pop("_token_usage", None)
