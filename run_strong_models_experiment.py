@@ -179,7 +179,7 @@ async def main():
         action="store_true",
         default=False,
         help=(
-            "Disable post-pledge unanimous commit vote (yay/nay) in co-funding. "
+            "Disable post-pledge commit vote (yay/nay) in co-funding. "
             "Enabled by default."
         ),
     )
@@ -299,9 +299,12 @@ async def main():
     parser.add_argument(
         "--model-order",
         type=str,
-        choices=["weak_first", "strong_first", "random"],
         default="weak_first",
-        help="Order of model speaking: weak_first, strong_first, or random (default: weak_first)"
+        help=(
+            "Order label for model speaking. Legacy values weak_first, strong_first, "
+            "and random are supported; n-agent batches may pass arbitrary labels "
+            "such as adversary_first or sampled_random_order."
+        )
     )
 
     parser.add_argument(
@@ -344,6 +347,34 @@ async def main():
         "--parallel-phases",
         action="store_true",
         help="Run independent per-agent phases concurrently. Discussion remains serial."
+    )
+
+    parser.add_argument(
+        "--access-k",
+        type=int,
+        default=1,
+        help=(
+            "Black-box access-scaling budget for the selected agent. "
+            "K is total model calls per scaled phase: K-1 private drafts plus one selector."
+        ),
+    )
+
+    parser.add_argument(
+        "--access-agent-index",
+        type=int,
+        default=0,
+        help="Zero-based agent index receiving access scaling (default: 0 / Agent_1).",
+    )
+
+    parser.add_argument(
+        "--access-phases",
+        nargs="+",
+        choices=["discussion", "proposal", "voting", "reflection", "all"],
+        default=["proposal", "voting", "reflection"],
+        help=(
+            "Phases to scale with black-box access sampling "
+            "(default: proposal voting reflection)."
+        ),
     )
 
     args = parser.parse_args()
@@ -447,6 +478,10 @@ async def main():
     print(f"Discussion Turns: {args.discussion_turns}")
     print(f"Model Order: {args.model_order}")
     print(f"Parallel Independent Phases: {'enabled' if args.parallel_phases else 'disabled'}")
+    print(
+        f"Access Scaling: k={args.access_k}, agent_index={args.access_agent_index}, "
+        f"phases={', '.join(args.access_phases)}"
+    )
     
     # Only show token limits if any are specified
     token_limits = []
@@ -497,6 +532,16 @@ async def main():
         "discussion_turns": args.discussion_turns,
         "model_order": args.model_order,
         "parallel_phases": args.parallel_phases,
+        "access_config": {
+            "k": args.access_k,
+            "agent_index": args.access_agent_index,
+            "phases": (
+                ["discussion", "proposal", "voting", "reflection"]
+                if "all" in args.access_phases
+                else args.access_phases
+            ),
+            "mechanism": "private_candidate_drafts_plus_self_selector",
+        },
         # Diplomacy-specific parameters
         "n_issues": args.n_issues,
         "rho": args.rho,
@@ -526,6 +571,17 @@ async def main():
         experiment_config["max_tokens_thinking"] = args.max_tokens_thinking
     if args.max_tokens_default is not None:
         experiment_config["max_tokens_default"] = args.max_tokens_default
+    if args.max_tokens_per_phase is not None:
+        for phase_key in (
+            "max_tokens_discussion",
+            "max_tokens_proposal",
+            "max_tokens_voting",
+            "max_tokens_reflection",
+            "max_tokens_thinking",
+            "max_tokens_default",
+        ):
+            experiment_config.setdefault(phase_key, args.max_tokens_per_phase)
+        experiment_config["max_tokens_per_phase"] = args.max_tokens_per_phase
 
     # Add reasoning token budget configuration
     if args.reasoning_token_budget is not None:
@@ -546,8 +602,7 @@ async def main():
         if not args.prompt_only:
             experiment_config["reasoning_token_budget"] = args.reasoning_token_budget
 
-        # Apply max_tokens_per_phase to all phases if reasoning budget is specified
-        experiment_config["max_tokens_per_phase"] = args.max_tokens_per_phase
+        # max_tokens_per_phase is applied above independently of reasoning budget.
     
     # Create output directory name if not provided
     if args.output_dir:
@@ -575,6 +630,14 @@ async def main():
             run_str = f"runs{args.num_runs}"
 
         output_dir = f"experiments/results/{model1}_vs_{model2}_{config_str}_{run_str}_{game_str}"
+
+    # Default ad hoc provider-failure reports to the run output directory.
+    # Batch wrappers can override this with a shared RUN_DIR-level path.
+    if output_dir:
+        os.environ.setdefault(
+            "LLM_FAILURE_REPORT_PATH",
+            str(Path(output_dir) / "monitoring" / "provider_failures.md"),
+        )
 
     # Initialize experiment runner with custom output directory
     experiment = StrongModelsExperiment(output_dir=output_dir)
@@ -612,7 +675,7 @@ async def main():
             
             print(f"\n📊 Single Experiment Results:")
             print(f"  Experiment ID: {single_result.experiment_id}")
-            print(f"  Consensus Reached: {'✓' if single_result.consensus_reached else '✗'}")
+            print(f"  Agreement Reached: {'✓' if single_result.consensus_reached else '✗'}")
             print(f"  Final Round: {single_result.final_round}")
             print(f"  Exploitation Detected: {'✓' if single_result.exploitation_detected else '✗'}")
             

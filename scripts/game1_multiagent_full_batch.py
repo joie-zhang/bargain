@@ -511,6 +511,8 @@ def build_command(config: Dict) -> List[str]:
         str(output_dir),
         "--job-id",
         str(config["config_id"]),
+        "--max-tokens-voting",
+        str(config.get("max_tokens_voting", 768)),
     ]
 
 
@@ -750,12 +752,20 @@ module purge
 module load anaconda3/2024.2
 module load proxy/default
 
+KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-/home/jz4391/.config/bargain/api_keys.env}}"
+if [[ -f "$KEY_ENV_FILE" ]]; then
+  set -a
+  source "$KEY_ENV_FILE"
+  set +a
+fi
+
 : "${{RUN_DIR:?RUN_DIR is required}}"
 : "${{SUBMISSION_FILE:?SUBMISSION_FILE is required}}"
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
 export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
 export OPENROUTER_PROXY_CLIENT_TIMEOUT="${{OPENROUTER_PROXY_CLIENT_TIMEOUT:-9000}}"
+export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-$RUN_DIR/monitoring/provider_failures.md}}"
 export PYTHONUNBUFFERED=1
 
 CONFIG_ID=$("{python_bin}" - <<'PY'
@@ -911,7 +921,11 @@ def cmd_run_one(args: argparse.Namespace) -> int:
                 cwd=str(PROJECT_ROOT),
                 stdout=handle,
                 stderr=subprocess.STDOUT,
-                env={**os.environ, "PYTHONUNBUFFERED": "1"},
+                env={
+                    **os.environ,
+                    "PYTHONUNBUFFERED": "1",
+                    "LLM_FAILURE_REPORT_PATH": str(results_root / "monitoring" / "provider_failures.md"),
+                },
                 text=True,
             )
             returncode = proc.wait()

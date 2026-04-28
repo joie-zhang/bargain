@@ -12,10 +12,20 @@ from enum import Enum
 from abc import ABC, abstractmethod
 import asyncio
 import json
+import os
 import time
 import random
 from pathlib import Path
 import logging
+
+from .provider_key_rotation import (
+    ProviderKey,
+    ProviderKeyExhaustedError,
+    ProviderKeyPool,
+    ProviderTransientRetryExhaustedError,
+    call_with_key_rotation,
+    is_deterministic_provider_failure,
+)
 
 try:
     import httpx
@@ -36,6 +46,8 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
+
+_GOOGLE_CONFIGURE_LOCK = asyncio.Lock()
 
 
 class ModelProvider(Enum):
@@ -172,10 +184,10 @@ class RateLimiter:
     def __init__(self, requests_per_minute: int, tokens_per_minute: int):
         self.requests_per_minute = requests_per_minute
         self.tokens_per_minute = tokens_per_minute
-        
+
         self.request_times: List[float] = []
         self.token_usage: List[Tuple[float, int]] = []  # (timestamp, tokens)
-        
+
     async def wait_if_needed(self, estimated_tokens: int = 100) -> None:
         """Wait if rate limits would be exceeded."""
         now = time.time()
@@ -315,11 +327,74 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
 
         return str(sender), serialized
 
+    @staticmethod
+    def _env_positive_int(name: str) -> Optional[int]:
+        raw_value = os.getenv(name)
+        if raw_value is None or raw_value == "":
+            return None
+        try:
+            value = int(raw_value)
+        except ValueError:
+            return None
+        return value if value > 0 else None
+
+    def _bounded_history_entries(
+        self,
+        entries: List[Dict[str, Any]],
+        *,
+        max_entries_env: str,
+        max_chars_env: str,
+    ) -> List[Dict[str, Any]]:
+        """Return recent context entries bounded by optional environment limits."""
+        max_entries = self._env_positive_int(max_entries_env)
+        max_chars = self._env_positive_int(max_chars_env)
+        bounded = list(entries)
+        if max_entries is not None:
+            bounded = bounded[-max_entries:]
+        if max_chars is None:
+            return bounded
+
+        selected: List[Dict[str, Any]] = []
+        total_chars = 0
+        for entry in reversed(bounded):
+            _, serialized = self._serialize_history_entry(entry)
+            entry_chars = len(serialized)
+            if selected and total_chars + entry_chars > max_chars:
+                break
+            selected.append(entry)
+            total_chars += entry_chars
+        return list(reversed(selected))
+
+    def _bounded_strategic_notes(self, notes: List[str]) -> List[str]:
+        """Return recent private notes bounded by optional environment limits."""
+        max_entries = self._env_positive_int("NEGOTIATION_STRATEGIC_NOTES_MAX_ENTRIES")
+        max_chars = self._env_positive_int("NEGOTIATION_STRATEGIC_NOTES_MAX_CHARS")
+        bounded = list(notes)
+        if max_entries is not None:
+            bounded = bounded[-max_entries:]
+        if max_chars is None:
+            return bounded
+
+        selected: List[str] = []
+        total_chars = 0
+        for note in reversed(bounded):
+            note_chars = len(str(note))
+            if selected and total_chars + note_chars > max_chars:
+                break
+            selected.append(str(note))
+            total_chars += note_chars
+        return list(reversed(selected))
+
     def _append_context_blocks(
         self, messages: List[Dict[str, str]], context: NegotiationContext
     ) -> None:
         """Append accumulated public and private context to a message list."""
-        for entry in context.conversation_history:
+        conversation_history = self._bounded_history_entries(
+            context.conversation_history,
+            max_entries_env="NEGOTIATION_CONTEXT_HISTORY_MAX_ENTRIES",
+            max_chars_env="NEGOTIATION_CONTEXT_HISTORY_MAX_CHARS",
+        )
+        for entry in conversation_history:
             sender, serialized = self._serialize_history_entry(entry)
             if sender == self.agent_id:
                 messages.append({"role": "assistant", "content": serialized})
@@ -344,12 +419,13 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                 ),
             })
 
-        if context.strategic_notes:
+        strategic_notes = self._bounded_strategic_notes(context.strategic_notes)
+        if strategic_notes:
             messages.append({
                 "role": "user",
                 "content": (
                     "PRIVATE NOTES FROM EARLIER PHASES AVAILABLE ONLY TO YOU:\n\n"
-                    + "\n\n".join(context.strategic_notes)
+                    + "\n\n".join(str(note) for note in strategic_notes)
                 ),
             })
     
@@ -452,7 +528,11 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                 
                 return thinking_result
                 
+            except (NonRetryableLLMError, ProviderKeyExhaustedError, ProviderTransientRetryExhaustedError):
+                raise
             except Exception as e:
+                if is_deterministic_provider_failure(e):
+                    raise NonRetryableLLMError(str(e)) from e
                 self.logger.warning(f"Thinking attempt {attempt + 1} failed: {e}")
                 if attempt == self.config.max_retries - 1:
                     # Return fallback thinking
@@ -480,7 +560,7 @@ YOUR PREFERENCES:
 {self._format_preferences(context.preferences, context.items)}
 
 STRATEGIC MINDSET:
-- Maximize your utility while ensuring proposals can get unanimous support
+- Maximize your utility while ensuring proposals can get supermajority support
 - Identify items others seem to value less but you value highly
 - Plan how to frame proposals to appear fair to all agents
 - Consider what concessions you might need to make
@@ -710,8 +790,10 @@ Response format: Provide your analysis as structured strategic thinking."""
         resistance_mentions = []
         if 'haiku' in content_lower or 'other' in content_lower:
             resistance_mentions.append("May face resistance from other agents")
-        if 'unanimous' in content_lower:
-            resistance_mentions.append("Need unanimous approval")
+        if 'supermajority' in content_lower:
+            resistance_mentions.append("Need supermajority approval")
+        elif 'unanimous' in content_lower:
+            resistance_mentions.append("Mentions unanimity concern")
         result['anticipated_resistance'] = resistance_mentions
         
         return result
@@ -921,10 +1003,15 @@ Response format: Provide your analysis as structured strategic thinking."""
                 
                 return response
                 
-            except NonRetryableLLMError:
+            except (NonRetryableLLMError, ProviderKeyExhaustedError, ProviderTransientRetryExhaustedError):
                 raise
             except Exception as e:
-                self.logger.warning(f"Attempt {attempt + 1}/{self.config.max_retries} failed: {e}")
+                if is_deterministic_provider_failure(e):
+                    raise NonRetryableLLMError(str(e)) from e
+                self.logger.warning(
+                    f"Attempt {attempt + 1}/{self.config.max_retries} failed "
+                    f"({type(e).__name__}): {e}"
+                )
                 if attempt < self.config.max_retries - 1:
                     wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
                     wait_time = min(wait_time, 300.0)
@@ -1254,7 +1341,11 @@ Keep your response conversational and authentic. Respond as you would in a real 
                 
                 return response
                 
+            except (NonRetryableLLMError, ProviderKeyExhaustedError, ProviderTransientRetryExhaustedError):
+                raise
             except Exception as e:
+                if is_deterministic_provider_failure(e):
+                    raise NonRetryableLLMError(str(e)) from e
                 self.logger.error(f"Private reflection attempt {attempt + 1} failed: {e}")
                 if attempt == self.config.max_retries - 1:
                     raise
@@ -1313,13 +1404,16 @@ Keep your response conversational and authentic. Respond as you would in a real 
 class AnthropicAgent(BaseLLMAgent):
     """LLM agent using Anthropic's Claude models."""
     
-    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: Optional[str]):
         super().__init__(agent_id, config)
         
         if not ANTHROPIC_AVAILABLE:
             raise ImportError("anthropic package not available. Install with: pip install anthropic")
         
-        self.client = anthropic.AsyncAnthropic(api_key=api_key)
+        self.key_pool = ProviderKeyPool("anthropic", fallback_key=api_key)
+        self._active_key_label: Optional[str] = None
+        self.client = None
+        self._configure_client_key(self.key_pool.current())
         
         # Check if we have an actual model ID stored (for newer models)
         if hasattr(config, '_actual_model_id'):
@@ -1346,11 +1440,15 @@ class AnthropicAgent(BaseLLMAgent):
                 self.model_name = "claude-haiku-4-5-20251001"
             else:
                 raise ValueError(f"Unsupported Anthropic model: {config.model_type}")
+
+    def _configure_client_key(self, key: ProviderKey) -> None:
+        if self._active_key_label == key.label and self.client is not None:
+            return
+        self.client = anthropic.AsyncAnthropic(api_key=key.value)
+        self._active_key_label = key.label
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call Anthropic API with explicit rate limit handling."""
-        start_time = time.time()
-        
         # Extract system message
         system_message = None
         user_messages = []
@@ -1371,10 +1469,27 @@ class AnthropicAgent(BaseLLMAgent):
         filtered_custom_params = {k: v for k, v in self.config.custom_parameters.items()
                                   if k not in ["thinking", "thinking_budget_tokens"]}
 
+        max_tokens = self.config.max_tokens
+        thinking_min_max_tokens = None
+        if thinking_budget is not None:
+            # Anthropic requires max_tokens to be strictly greater than
+            # thinking.budget_tokens. Phase-specific token caps can be lower
+            # than the model's configured thinking budget, so enforce the API
+            # invariant at the final call site as well as in the agent factory.
+            thinking_min_max_tokens = int(thinking_budget) + 1024
+            if isinstance(max_tokens, int):
+                max_tokens = max(max_tokens, thinking_min_max_tokens)
+        if (
+            isinstance(max_tokens, int)
+            and max_tokens > 4096
+            and "claude-opus-4-6" not in self.model_name.lower()
+        ):
+            max_tokens = max(thinking_min_max_tokens or 4096, 4096)
+
         # Call Anthropic API (max_tokens is required)
         api_params = {
             "model": self.model_name,
-            "max_tokens": self.config.max_tokens,  # Required by Anthropic API
+            "max_tokens": max_tokens,  # Required by Anthropic API
             "system": system_message,
             "messages": user_messages,
             "stream": True,  # Enable streaming for long requests
@@ -1398,90 +1513,70 @@ class AnthropicAgent(BaseLLMAgent):
             # Only set temperature if no thinking mode is enabled.
             api_params["temperature"] = self.config.temperature
         
-        # Retry logic with explicit rate limit handling
-        max_retries = self.config.max_retries
-        for attempt in range(max_retries):
-            try:
-                # Use streaming to handle long requests
-                stream = await self.client.messages.create(**api_params)
-                
-                # Collect the streamed response
-                full_text = ""
-                input_tokens = 0
-                output_tokens = 0
-                thinking_tokens = 0  # For extended thinking models
-                stop_reason = None
+        async def request_with_key(key: ProviderKey) -> AgentResponse:
+            self._configure_client_key(key)
+            request_start = time.time()
 
-                async for event in stream:
-                    if hasattr(event, 'type'):
-                        if event.type == 'content_block_delta':
-                            # Handle both text and thinking content blocks
-                            if hasattr(event.delta, 'text'):
-                                full_text += event.delta.text
-                            elif hasattr(event.delta, 'thinking'):
-                                # Extended thinking content - count but don't include in output
-                                pass
-                        elif event.type == 'message_start':
-                            if hasattr(event.message, 'usage'):
-                                input_tokens = event.message.usage.input_tokens
-                        elif event.type == 'message_delta':
-                            if hasattr(event, 'usage'):
-                                output_tokens = event.usage.output_tokens
-                                # Extract thinking_tokens for extended thinking models
-                                if hasattr(event.usage, 'thinking_tokens'):
-                                    thinking_tokens = event.usage.thinking_tokens
-                            if hasattr(event.delta, 'stop_reason'):
-                                stop_reason = event.delta.stop_reason
+            # Use streaming to handle long requests
+            stream = await self.client.messages.create(**api_params)
 
-                response_time = time.time() - start_time
-                total_tokens = input_tokens + output_tokens
+            # Collect the streamed response
+            full_text = ""
+            input_tokens = 0
+            output_tokens = 0
+            thinking_tokens = 0  # For extended thinking models
+            stop_reason = None
 
-                return AgentResponse(
-                    content=full_text,
-                    model_used=self.model_name,
-                    response_time=response_time,
-                    tokens_used=total_tokens,
-                    cost_estimate=self._estimate_cost(input_tokens, output_tokens),
-                    metadata={
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                        "stop_reason": stop_reason,
-                        "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None
-                    }
-                )
-                
-            except anthropic.RateLimitError as e:
-                # Explicit handling of rate limit errors
-                self.logger.warning(
-                    f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
-                    f"Waiting before retry..."
+            async for event in stream:
+                if hasattr(event, 'type'):
+                    if event.type == 'content_block_delta':
+                        # Handle both text and thinking content blocks
+                        if hasattr(event.delta, 'text'):
+                            full_text += event.delta.text
+                        elif hasattr(event.delta, 'thinking'):
+                            # Extended thinking content - count but don't include in output
+                            pass
+                    elif event.type == 'message_start':
+                        if hasattr(event.message, 'usage'):
+                            input_tokens = event.message.usage.input_tokens
+                    elif event.type == 'message_delta':
+                        if hasattr(event, 'usage'):
+                            output_tokens = event.usage.output_tokens
+                            # Extract thinking_tokens for extended thinking models
+                            if hasattr(event.usage, 'thinking_tokens'):
+                                thinking_tokens = event.usage.thinking_tokens
+                        if hasattr(event.delta, 'stop_reason'):
+                            stop_reason = event.delta.stop_reason
+
+            response_time = time.time() - request_start
+            total_tokens = input_tokens + output_tokens
+            if not full_text.strip():
+                raise Exception(
+                    "Anthropic returned empty content "
+                    f"(stop_reason={stop_reason}, output_tokens={output_tokens})"
                 )
 
-                if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    wait_time = min(wait_time, 300.0)
-                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
-                    raise
+            return AgentResponse(
+                content=full_text,
+                model_used=self.model_name,
+                response_time=response_time,
+                tokens_used=total_tokens,
+                cost_estimate=self._estimate_cost(input_tokens, output_tokens),
+                metadata={
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "stop_reason": stop_reason,
+                    "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None
+                }
+            )
 
-            except anthropic.APIStatusError as e:
-                # Handle other API errors (500s, etc.)
-                self.logger.warning(
-                    f"API error (attempt {attempt + 1}/{max_retries}): {e}"
-                )
-                if attempt < max_retries - 1:
-                    wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    wait_time = min(wait_time, 300.0)
-                    await asyncio.sleep(wait_time)
-                else:
-                    raise
-
-            except Exception as e:
-                # Re-raise non-API exceptions immediately
-                self.logger.error(f"Unexpected error in Anthropic API call: {e}")
-                raise
+        return await call_with_key_rotation(
+            provider="anthropic",
+            model=self.model_name,
+            key_pool=self.key_pool,
+            request_coro_factory=request_with_key,
+            logger=self.logger,
+        )
     
     def _estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
         """Estimate cost based on Anthropic pricing (as of 2024)."""
@@ -1518,7 +1613,7 @@ class AnthropicAgent(BaseLLMAgent):
 class OpenAIAgent(BaseLLMAgent):
     """LLM agent using OpenAI models."""
     
-    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: Optional[str]):
         super().__init__(agent_id, config)
         
         if not OPENAI_AVAILABLE:
@@ -1538,11 +1633,11 @@ class OpenAIAgent(BaseLLMAgent):
         else:
             client_timeout = max(self.config.timeout, 180.0)
 
-        self.client = openai.AsyncOpenAI(
-            api_key=api_key,
-            timeout=client_timeout,
-            max_retries=0,
-        )
+        self._client_timeout = client_timeout
+        self.key_pool = ProviderKeyPool("openai", fallback_key=api_key)
+        self._active_key_label: Optional[str] = None
+        self.client = None
+        self._configure_client_key(self.key_pool.current())
         
         # Check if we have an actual model ID stored (for newer models)
         if hasattr(config, '_actual_model_id'):
@@ -1563,11 +1658,19 @@ class OpenAIAgent(BaseLLMAgent):
                 self.model_name = "o3"
             else:
                 raise ValueError(f"Unsupported OpenAI model: {config.model_type}")
+
+    def _configure_client_key(self, key: ProviderKey) -> None:
+        if self._active_key_label == key.label and self.client is not None:
+            return
+        self.client = openai.AsyncOpenAI(
+            api_key=key.value,
+            timeout=self._client_timeout,
+            max_retries=0,
+        )
+        self._active_key_label = key.label
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call OpenAI API once; outer agent layers handle retries."""
-        start_time = time.time()
-        
         # O3 models have specific parameter requirements
         api_params = {
             "model": self.model_name,
@@ -1582,42 +1685,80 @@ class OpenAIAgent(BaseLLMAgent):
         else:
             # Standard models - remove max_tokens for unlimited generation
             api_params["temperature"] = self.config.temperature
-        
-        # Add custom parameters but exclude any max_tokens variants
-        custom_params = {k: v for k, v in self.config.custom_parameters.items() 
-                        if k not in ['max_tokens', 'max_completion_tokens']}
 
-        response = await self.client.chat.completions.create(
-            **api_params,
-            **custom_params,
-            **kwargs
+        custom_params = {
+            key: value
+            for key, value in self.config.custom_parameters.items()
+            if key not in ['max_tokens', 'max_completion_tokens', 'phase_token_caps']
+        }
+        is_reasoning_model = (
+            "o3" in self.model_name.lower()
+            or "o1" in self.model_name.lower()
+            or "gpt-5" in self.model_name.lower()
         )
-        
-        response_time = time.time() - start_time
+        if is_reasoning_model and "reasoning_effort" not in custom_params:
+            # GPT-5-family calls can spend the entire output cap on hidden
+            # reasoning. Keep ordinary baseline calls on low effort unless a
+            # model config explicitly asks for medium/high.
+            custom_params["reasoning_effort"] = "low"
 
-        # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
-        reasoning_tokens = None
-        if response.usage:
-            # Direct field on usage
-            if hasattr(response.usage, 'reasoning_tokens') and response.usage.reasoning_tokens:
-                reasoning_tokens = response.usage.reasoning_tokens
-            # Or in completion_tokens_details
-            elif hasattr(response.usage, 'completion_tokens_details'):
-                details = response.usage.completion_tokens_details
-                if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
-                    reasoning_tokens = details.reasoning_tokens
+        max_tokens = getattr(self.config, "max_tokens", None)
+        if isinstance(max_tokens, int) and 0 < max_tokens < 999999:
+            if is_reasoning_model:
+                api_params["max_completion_tokens"] = min(max_tokens, 16384)
+            else:
+                api_params["max_tokens"] = min(max_tokens, 4096)
 
-        return AgentResponse(
-            content=response.choices[0].message.content,  # Keep original - no masking
-            model_used=self.model_name,
-            response_time=response_time,
-            tokens_used=response.usage.total_tokens if response.usage else None,
-            cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
-            metadata={
-                "finish_reason": response.choices[0].finish_reason,
-                "usage": response.usage.dict() if response.usage else None,
-                "reasoning_tokens": reasoning_tokens
-            }
+        async def request_with_key(key: ProviderKey) -> AgentResponse:
+            self._configure_client_key(key)
+            request_start = time.time()
+            response = await self.client.chat.completions.create(
+                **api_params,
+                **custom_params,
+                **kwargs
+            )
+
+            response_time = time.time() - request_start
+            choice = response.choices[0]
+            content = choice.message.content
+            if not isinstance(content, str) or not content.strip():
+                usage_payload = response.usage.dict() if response.usage else None
+                raise Exception(
+                    "OpenAI returned empty content "
+                    f"(finish_reason={choice.finish_reason}, usage={usage_payload})"
+                )
+
+            # Extract reasoning tokens from OpenAI response (O3, GPT-5.2, etc.)
+            reasoning_tokens = None
+            if response.usage:
+                # Direct field on usage
+                if hasattr(response.usage, 'reasoning_tokens') and response.usage.reasoning_tokens:
+                    reasoning_tokens = response.usage.reasoning_tokens
+                # Or in completion_tokens_details
+                elif hasattr(response.usage, 'completion_tokens_details'):
+                    details = response.usage.completion_tokens_details
+                    if details and hasattr(details, 'reasoning_tokens') and details.reasoning_tokens:
+                        reasoning_tokens = details.reasoning_tokens
+
+            return AgentResponse(
+                content=content,  # Keep original - no masking
+                model_used=self.model_name,
+                response_time=response_time,
+                tokens_used=response.usage.total_tokens if response.usage else None,
+                cost_estimate=self._estimate_cost(response.usage) if response.usage else None,
+                metadata={
+                    "finish_reason": choice.finish_reason,
+                    "usage": response.usage.dict() if response.usage else None,
+                    "reasoning_tokens": reasoning_tokens
+                }
+            )
+
+        return await call_with_key_rotation(
+            provider="openai",
+            model=self.model_name,
+            key_pool=self.key_pool,
+            request_coro_factory=request_with_key,
+            logger=self.logger,
         )
     
     def _estimate_cost(self, usage) -> float:
@@ -1856,7 +1997,7 @@ class XAIAgent(BaseLLMAgent):
 class GoogleAgent(BaseLLMAgent):
     """LLM agent using Google Gemini models via the Google AI API."""
 
-    def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
+    def __init__(self, agent_id: str, config: LLMConfig, api_key: Optional[str]):
         super().__init__(agent_id, config)
 
         try:
@@ -1867,8 +2008,8 @@ class GoogleAgent(BaseLLMAgent):
             self.GOOGLE_AVAILABLE = False
             raise ImportError("google-generativeai package not available. Install with: pip install google-generativeai")
 
-        # Configure the API key
-        self.genai.configure(api_key=api_key)
+        self.key_pool = ProviderKeyPool("google", fallback_key=api_key)
+        self._active_key_label: Optional[str] = None
 
         # Check if we have an actual model ID stored
         if hasattr(config, '_actual_model_id'):
@@ -1877,50 +2018,55 @@ class GoogleAgent(BaseLLMAgent):
             # Default model name
             self.model_name = "gemini-2.0-flash"
 
-        # Initialize the generative model
+        self.model = None
+
+    def _configure_model_key(self, key: ProviderKey) -> None:
+        if self._active_key_label == key.label and self.model is not None:
+            return
+        self.genai.configure(api_key=key.value)
         self.model = self.genai.GenerativeModel(model_name=self.model_name)
+        self._active_key_label = key.label
 
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call Google Gemini API with explicit rate limit handling."""
-        start_time = time.time()
+        prompt_text = self._messages_to_prompt(messages)
 
-        # Retry logic with explicit rate limit handling
-        max_retries = self.config.max_retries
-        for attempt in range(max_retries):
-            try:
-                # Convert messages to Gemini format
-                prompt_text = self._messages_to_prompt(messages)
+        # Create generation config
+        generation_config = self.genai.types.GenerationConfig(
+            temperature=self.config.temperature,
+            max_output_tokens=self.config.max_tokens,
+        )
 
-                # Create generation config
-                generation_config = self.genai.types.GenerationConfig(
-                    temperature=self.config.temperature,
-                    max_output_tokens=self.config.max_tokens,
-                )
+        # Configure safety settings to allow negotiation research prompts
+        # These settings reduce false positives for legitimate research use cases
+        # like multi-agent negotiation experiments
+        safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_ONLY_HIGH"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_ONLY_HIGH"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_ONLY_HIGH"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_ONLY_HIGH"
+            },
+        ]
 
-                # Configure safety settings to allow negotiation research prompts
-                # These settings reduce false positives for legitimate research use cases
-                # like multi-agent negotiation experiments
-                safety_settings = [
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "threshold": "BLOCK_ONLY_HIGH"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "threshold": "BLOCK_ONLY_HIGH"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "threshold": "BLOCK_ONLY_HIGH"
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "threshold": "BLOCK_ONLY_HIGH"
-                    },
-                ]
+        async def request_with_key(key: ProviderKey) -> AgentResponse:
+            request_start = time.time()
+            async with _GOOGLE_CONFIGURE_LOCK:
+                self._configure_model_key(key)
 
-                # Generate response synchronously (wrapped in async)
-                import asyncio
+                # Generate response synchronously (wrapped in async). Keep this
+                # under the lock because google.generativeai.configure is
+                # process-global.
                 response = await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda: self.model.generate_content(
@@ -1930,142 +2076,84 @@ class GoogleAgent(BaseLLMAgent):
                     )
                 )
 
-                response_time = time.time() - start_time
+            response_time = time.time() - request_start
 
-                # Extract token usage if available
-                tokens_used = None
-                token_metadata = {}
-                if hasattr(response, 'usage_metadata') and response.usage_metadata:
-                    prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
-                    completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
-                    total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
-                    # tokens_used should be an int, not a dict!
-                    tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
-                    # Store detailed breakdown in metadata instead
-                    token_metadata = {
-                        'prompt_tokens': prompt_tokens,
-                        'completion_tokens': completion_tokens,
-                        'total_tokens': tokens_used
-                    }
+            # Extract token usage if available
+            tokens_used = None
+            token_metadata = {}
+            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
+                completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+                total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
+                # tokens_used should be an int, not a dict!
+                tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
+                # Store detailed breakdown in metadata instead
+                token_metadata = {
+                    'prompt_tokens': prompt_tokens,
+                    'completion_tokens': completion_tokens,
+                    'total_tokens': tokens_used
+                }
 
-                # Handle various finish reasons and extract content
-                content = None
-                finish_reason = None
-                finish_reason_value = None
-                safety_ratings = []
+            # Handle various finish reasons and extract content
+            content = None
+            finish_reason = None
+            finish_reason_value = None
+            safety_ratings = []
 
-                if response.candidates:
-                    candidate = response.candidates[0]
-                    finish_reason = candidate.finish_reason.name if hasattr(candidate.finish_reason, 'name') else str(candidate.finish_reason)
-                    finish_reason_value = candidate.finish_reason.value if hasattr(candidate.finish_reason, 'value') else candidate.finish_reason
-                    safety_ratings = [str(r) for r in candidate.safety_ratings] if candidate.safety_ratings else []
+            if response.candidates:
+                candidate = response.candidates[0]
+                finish_reason = candidate.finish_reason.name if hasattr(candidate.finish_reason, 'name') else str(candidate.finish_reason)
+                finish_reason_value = candidate.finish_reason.value if hasattr(candidate.finish_reason, 'value') else candidate.finish_reason
+                safety_ratings = [str(r) for r in candidate.safety_ratings] if candidate.safety_ratings else []
 
-                    # Try to extract content from parts
-                    if candidate.content and candidate.content.parts:
-                        content = candidate.content.parts[0].text
+                # Try to extract content from parts
+                if candidate.content and candidate.content.parts:
+                    content = candidate.content.parts[0].text
 
-                # If no content from parts, try response.text accessor
-                if content is None:
-                    try:
-                        content = response.text
-                    except ValueError as ve:
-                        # response.text failed - determine the actual cause
-                        # finish_reason values: 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
-                        if finish_reason_value == 3:  # SAFETY
-                            raise Exception(
-                                f"Response blocked by safety filter. finish_reason={finish_reason}, "
-                                f"safety_ratings={safety_ratings}. Try adjusting safety settings or rephrasing."
-                            )
-                        elif finish_reason_value == 2:  # MAX_TOKENS
-                            raise Exception(
-                                f"Response truncated (MAX_TOKENS) with no content. "
-                                f"The prompt may be too long or max_output_tokens too low. "
-                                f"finish_reason={finish_reason}"
-                            )
-                        else:
-                            raise Exception(
-                                f"Could not extract content from response: {ve}. "
-                                f"finish_reason={finish_reason}, safety_ratings={safety_ratings}"
-                            )
-
-                return AgentResponse(
-                    content=content,
-                    model_used=self.model_name,
-                    response_time=response_time,
-                    tokens_used=tokens_used,  # Now an int, not a dict
-                    cost_estimate=None,
-                    metadata={
-                        "finish_reason": finish_reason,
-                        "safety_ratings": safety_ratings,
-                        "usage": token_metadata  # Detailed token info goes in metadata
-                    }
-                )
-
-            except Exception as e:
-                error_str = str(e).lower()
-                error_repr = repr(e)
-                
-                # Check for rate limit errors (429, RESOURCE_EXHAUSTED, quota exceeded)
-                is_rate_limit = (
-                    "429" in error_str or 
-                    "429" in error_repr or
-                    "resource_exhausted" in error_str or
-                    "rate limit" in error_str or
-                    "rate_limit" in error_str or
-                    "quota" in error_str
-                )
-                
-                # Check if it's a daily quota (don't retry these)
-                is_daily_quota = (
-                    "daily" in error_str or
-                    "free tier" in error_str or
-                    "quota exceeded" in error_str
-                )
-                
-                if is_rate_limit:
-                    if is_daily_quota:
-                        # Daily quota exceeded - don't retry
-                        self.logger.error(
-                            f"Daily quota exceeded: {e}. Stopping retries."
+            # If no content from parts, try response.text accessor
+            if content is None:
+                try:
+                    content = response.text
+                except ValueError as ve:
+                    # response.text failed - determine the actual cause
+                    # finish_reason values: 1=STOP, 2=MAX_TOKENS, 3=SAFETY, 4=RECITATION, 5=OTHER
+                    if finish_reason_value == 3:  # SAFETY
+                        raise Exception(
+                            f"Response blocked by safety filter. finish_reason={finish_reason}, "
+                            f"safety_ratings={safety_ratings}. Try adjusting safety settings or rephrasing."
                         )
-                        raise
-
-                    # Rate limit error - retry with exponential backoff
-                    self.logger.warning(
-                        f"Rate limit hit (attempt {attempt + 1}/{max_retries}): {e}. "
-                        f"Waiting before retry..."
-                    )
-
-                    if attempt < max_retries - 1:
-                        wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                        wait_time = min(wait_time, 300.0)
-                        self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
-                        await asyncio.sleep(wait_time)
-                    else:
-                        self.logger.error(f"Rate limit exceeded after {max_retries} attempts")
-                        raise
-                else:
-                    # Other errors - check if retryable (5xx errors)
-                    is_server_error = (
-                        "500" in error_str or
-                        "502" in error_str or
-                        "503" in error_str or
-                        "504" in error_str or
-                        "internal error" in error_str or
-                        "service unavailable" in error_str
-                    )
-
-                    if is_server_error and attempt < max_retries - 1:
-                        self.logger.warning(
-                            f"Server error (attempt {attempt + 1}/{max_retries}): {e}"
+                    elif finish_reason_value == 2:  # MAX_TOKENS
+                        raise Exception(
+                            f"Response truncated (MAX_TOKENS) with no content. "
+                            f"The prompt may be too long or max_output_tokens too low. "
+                            f"finish_reason={finish_reason}"
                         )
-                        wait_time = self.config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                        wait_time = min(wait_time, 300.0)
-                        await asyncio.sleep(wait_time)
                     else:
-                        # Non-retryable error or max retries exceeded
-                        self.logger.error(f"Error in Google API call: {e}")
-                        raise
+                        raise Exception(
+                            f"Could not extract content from response: {ve}. "
+                            f"finish_reason={finish_reason}, safety_ratings={safety_ratings}"
+                        )
+
+            return AgentResponse(
+                content=content,
+                model_used=self.model_name,
+                response_time=response_time,
+                tokens_used=tokens_used,  # Now an int, not a dict
+                cost_estimate=None,
+                metadata={
+                    "finish_reason": finish_reason,
+                    "safety_ratings": safety_ratings,
+                    "usage": token_metadata  # Detailed token info goes in metadata
+                }
+            )
+
+        return await call_with_key_rotation(
+            provider="google",
+            model=self.model_name,
+            key_pool=self.key_pool,
+            request_coro_factory=request_with_key,
+            logger=self.logger,
+        )
 
     def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
         """Convert OpenAI-style messages to Gemini prompt format."""

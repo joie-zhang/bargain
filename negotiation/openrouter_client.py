@@ -22,6 +22,11 @@ from pathlib import Path
 
 
 from .llm_agents import BaseLLMAgent, LLMConfig, ModelType, NonRetryableLLMError
+from .provider_key_rotation import (
+    ProviderKey,
+    ProviderKeyPool,
+    call_with_key_rotation,
+)
 
 
 # OpenRouter model mappings
@@ -71,7 +76,7 @@ class OpenRouterAgent(BaseLLMAgent):
     def __init__(self, 
                  agent_id: str,
                  llm_config: LLMConfig,
-                 api_key: str,
+                 api_key: Optional[str],
                  model_id: Optional[str] = None):
         """
         Initialize OpenRouter agent.
@@ -85,20 +90,11 @@ class OpenRouterAgent(BaseLLMAgent):
         super().__init__(agent_id, llm_config)
         self.llm_config = llm_config
         
-        # Validate API key
-        if not api_key:
-            raise ValueError(
-                f"OpenRouter API key is required but was not provided for agent {agent_id}. "
-                f"Please set OPENROUTER_API_KEY environment variable or pass api_key parameter."
-            )
-        if not isinstance(api_key, str) or len(api_key.strip()) == 0:
-            raise ValueError(
-                f"OpenRouter API key must be a non-empty string for agent {agent_id}. "
-                f"Got: {type(api_key).__name__} with length {len(api_key) if isinstance(api_key, str) else 'N/A'}"
-            )
-        if not api_key.startswith("sk-or-v1-"):
+        self.key_pool = ProviderKeyPool("openrouter", fallback_key=api_key)
+        initial_key = self.key_pool.current()
+        if not initial_key.value.startswith("sk-or-v1-"):
             self.logger.warning(
-                f"OpenRouter API key for agent {agent_id} doesn't start with 'sk-or-v1-'. "
+                f"OpenRouter API key {initial_key.label} for agent {agent_id} doesn't start with 'sk-or-v1-'. "
                 f"This might indicate an invalid key format."
             )
         
@@ -149,8 +145,19 @@ class OpenRouterAgent(BaseLLMAgent):
             )
             proxy_probe_timeout = 30.0
 
+        api_timeout_env = os.getenv("OPENROUTER_API_TIMEOUT", "300")
+        try:
+            api_timeout = max(1.0, float(api_timeout_env))
+        except ValueError:
+            self.logger.warning(
+                "Invalid OPENROUTER_API_TIMEOUT=%r; using 300",
+                api_timeout_env,
+            )
+            api_timeout = 300.0
+
         self.openrouter_config = OpenRouterConfig(
-            api_key=api_key.strip(),
+            api_key=initial_key.value.strip(),
+            timeout=api_timeout,
             transport=resolved_transport,
             proxy_poll_dir=proxy_poll_dir,
             proxy_poll_interval=proxy_poll_interval,
@@ -372,13 +379,6 @@ class OpenRouterAgent(BaseLLMAgent):
 
     async def _make_request(self, messages: List[Dict[str, str]]) -> tuple:
         """Make a request to OpenRouter API. Returns (content, usage)."""
-        headers = {
-            "Authorization": f"Bearer {self.openrouter_config.api_key}",
-            "Content-Type": "application/json",
-            "HTTP-Referer": self.openrouter_config.site_url or "",
-            "X-Title": self.openrouter_config.site_name or ""
-        }
-
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -390,60 +390,38 @@ class OpenRouterAgent(BaseLLMAgent):
 
         url = f"{self.openrouter_config.base_url}/chat/completions"
 
-        max_retries = self.openrouter_config.max_retries
-        for attempt in range(max_retries):
-            try:
-                if self.openrouter_config.transport == "proxy":
-                    result, error, usage = await self._send_request_via_proxy(
-                        url, headers, payload, self.openrouter_config.timeout
-                    )
-                    self._validate_request_result(result, error)
-                elif self.openrouter_config.transport == "direct":
-                    result, error, usage = await self._send_request_direct(
-                        url, headers, payload, self.openrouter_config.timeout
-                    )
-                    self._validate_request_result(result, error)
-                else:
-                    raise RuntimeError(
-                        f"Unsupported OpenRouter transport: {self.openrouter_config.transport}"
-                    )
-                return result, usage
-            except NonRetryableLLMError:
-                raise
-            except asyncio.TimeoutError:
-                self.logger.warning(
-                    f"Request timeout (attempt {attempt + 1}/{max_retries})"
+        async def request_with_key(key: ProviderKey) -> tuple:
+            self.openrouter_config.api_key = key.value.strip()
+            headers = {
+                "Authorization": f"Bearer {self.openrouter_config.api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": self.openrouter_config.site_url or "",
+                "X-Title": self.openrouter_config.site_name or ""
+            }
+
+            if self.openrouter_config.transport == "proxy":
+                result, error, usage = await self._send_request_via_proxy(
+                    url, headers, payload, self.openrouter_config.timeout
                 )
-                if attempt < max_retries - 1:
-                    wait_time = self.openrouter_config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                    wait_time = min(wait_time, 300.0)
-                    self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
-                    await asyncio.sleep(wait_time)
-                else:
-                    raise
-            except Exception as e:
-                error_str = str(e).lower()
-                is_rate_limit = "429" in error_str or "rate limit" in error_str or "rate_limit" in error_str
-                is_server_error = any(code in error_str for code in ["500", "502", "503", "504", "internal server error", "service unavailable"])
+                self._validate_request_result(result, error)
+            elif self.openrouter_config.transport == "direct":
+                result, error, usage = await self._send_request_direct(
+                    url, headers, payload, self.openrouter_config.timeout
+                )
+                self._validate_request_result(result, error)
+            else:
+                raise RuntimeError(
+                    f"Unsupported OpenRouter transport: {self.openrouter_config.transport}"
+                )
+            return result, usage
 
-                if is_rate_limit or is_server_error:
-                    self.logger.warning(
-                        f"{'Rate limit' if is_rate_limit else 'Server error'} "
-                        f"(attempt {attempt + 1}/{max_retries}): {e}"
-                    )
-                    if attempt < max_retries - 1:
-                        wait_time = self.openrouter_config.retry_delay * (2 ** attempt) + random.uniform(0, 1)
-                        wait_time = min(wait_time, 300.0)
-                        self.logger.info(f"Waiting {wait_time:.2f}s before retry...")
-                        await asyncio.sleep(wait_time)
-                    else:
-                        self.logger.error(f"Failed after {max_retries} attempts: {e}")
-                        raise
-                else:
-                    self.logger.error(f"Non-retryable error: {e}")
-                    raise
-
-        raise Exception(f"Failed after {max_retries} attempts")
+        return await call_with_key_rotation(
+            provider="openrouter",
+            model=self.model_id,
+            key_pool=self.key_pool,
+            request_coro_factory=request_with_key,
+            logger=self.logger,
+        )
     
     async def discuss(self, context: Any, prompt: str) -> str:
         """Participate in discussion phase."""

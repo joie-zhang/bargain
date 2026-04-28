@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from negotiation import AgentFactory, AgentConfiguration
 from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LocalModelAgent, GoogleAgent, LLMConfig
 from negotiation.openrouter_client import OpenRouterAgent
+from negotiation.provider_key_rotation import has_provider_keys
 from ..configs import STRONG_MODELS_CONFIG
 
 
@@ -47,10 +48,12 @@ class StrongModelAgentFactory:
         #   - strong_first: models = [reasoning, baseline] -> index 0 gets budget
         #   - weak_first: models = [baseline, reasoning] -> index 1 gets budget
         model_order = config.get("model_order", "weak_first")
-        if model_order == "weak_first":
-            reasoning_agent_index = 1  # Second agent (Agent_Beta) is reasoning
-        else:  # strong_first or random (random is handled earlier in experiment.py)
-            reasoning_agent_index = 0  # First agent (Agent_Alpha) is reasoning
+        if "reasoning_agent_index" in config:
+            reasoning_agent_index = int(config["reasoning_agent_index"])
+        elif model_order == "weak_first":
+            reasoning_agent_index = 1  # Second agent (legacy Agent_Beta) is reasoning
+        else:  # strong_first, random, or n-agent custom labels
+            reasoning_agent_index = 0  # First agent is reasoning by legacy default
         
         # # Use Greek letters for agent names to maintain anonymity
         # agent_names = [
@@ -145,8 +148,8 @@ class StrongModelAgentFactory:
             self.logger.error(error_msg)
             raise ValueError(error_msg)
 
-        if not api_key:
-            self.logger.warning(f"ANTHROPIC_API_KEY not set, skipping {model_name}")
+        if not has_provider_keys("anthropic", api_key):
+            self.logger.warning(f"No Anthropic API key pool configured, skipping {model_name}")
             return None
         
         # Map model names to ModelType enum values
@@ -176,6 +179,8 @@ class StrongModelAgentFactory:
         # Haiku models have a 4096 token limit, others can go higher
         if "haiku" in model_name.lower():
             actual_max_tokens = min(max_tokens, 4096)
+        elif "claude-opus-4-6" in model_name.lower():
+            actual_max_tokens = min(max_tokens, 32768)
         elif "opus" in model_name.lower():
             actual_max_tokens = min(max_tokens, 4096)
         else:
@@ -224,8 +229,8 @@ class StrongModelAgentFactory:
                 - 2000 < budget <= 5000: "medium"
                 - budget > 5000: "high"
         """
-        if not api_key:
-            self.logger.warning(f"OPENAI_API_KEY not set, skipping {model_name}")
+        if not has_provider_keys("openai", api_key):
+            self.logger.warning(f"No OpenAI API key pool configured, skipping {model_name}")
             return None
 
         # Determine correct model type
@@ -264,6 +269,7 @@ class StrongModelAgentFactory:
             model_type=model_type,
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
+            timeout=float(model_config.get("timeout", 30.0)),
             system_prompt=model_config["system_prompt"],
             custom_parameters=custom_params
         )
@@ -307,8 +313,8 @@ class StrongModelAgentFactory:
     def _create_google_agent(self, model_name: str, model_config: Dict,
                             agent_id: str, api_key: Optional[str], max_tokens: int = 999999) -> Optional[GoogleAgent]:
         """Create a Google Gemini agent."""
-        if not api_key:
-            self.logger.warning(f"GOOGLE_API_KEY not set, skipping {model_name}")
+        if not has_provider_keys("google", api_key):
+            self.logger.warning(f"No Google API key pool configured, skipping {model_name}")
             return None
 
         # Use GPT_4 as the base model type for configuration compatibility
@@ -386,10 +392,13 @@ class StrongModelAgentFactory:
             self.logger.error(error_msg)
             raise ValueError(error_msg)
 
-        if not api_key:
-            self.logger.warning(f"OPENROUTER_API_KEY not set, skipping {model_name}")
+        if not has_provider_keys("openrouter", api_key):
+            self.logger.warning(f"No OpenRouter API key pool configured, skipping {model_name}")
             return None
         
+        custom_parameters = dict(model_config.get("custom_parameters", {}))
+        custom_parameters["model_id"] = model_config["model_id"]
+
         agent_config = AgentConfiguration(
             agent_id=agent_id,
             model_type=ModelType.GEMMA_2_27B,  # Base type for OpenRouter
@@ -397,7 +406,7 @@ class StrongModelAgentFactory:
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={"model_id": model_config["model_id"]}
+            custom_parameters=custom_parameters
         )
         
         llm_config = agent_config.to_llm_config()
