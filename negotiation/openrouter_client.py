@@ -28,6 +28,8 @@ from .provider_key_rotation import (
     call_with_key_rotation,
 )
 
+DEFAULT_OPENROUTER_MAX_TOKENS_CAP = 10000
+
 
 # OpenRouter model mappings
 OPENROUTER_MODELS = {
@@ -68,6 +70,25 @@ class OpenRouterConfig:
 
 class ProxyMonitorUnavailableError(RuntimeError):
     """Raised when the shared OpenRouter proxy monitor appears unavailable."""
+
+
+def get_openrouter_max_tokens_cap(logger: Optional[logging.Logger] = None) -> int:
+    """Return the OpenRouter output cap applied to effectively unlimited configs."""
+    raw_cap = os.getenv(
+        "OPENROUTER_MAX_TOKENS_CAP",
+        str(DEFAULT_OPENROUTER_MAX_TOKENS_CAP),
+    )
+    try:
+        cap = int(raw_cap)
+    except (TypeError, ValueError):
+        if logger is not None:
+            logger.warning(
+                "Invalid OPENROUTER_MAX_TOKENS_CAP=%r; using default %s",
+                raw_cap,
+                DEFAULT_OPENROUTER_MAX_TOKENS_CAP,
+            )
+        cap = DEFAULT_OPENROUTER_MAX_TOKENS_CAP
+    return max(1, cap)
 
 
 class OpenRouterAgent(BaseLLMAgent):
@@ -398,11 +419,12 @@ class OpenRouterAgent(BaseLLMAgent):
 
     async def _make_request(self, messages: List[Dict[str, str]]) -> tuple:
         """Make a request to OpenRouter API. Returns (content, usage)."""
+        max_tokens_cap = get_openrouter_max_tokens_cap(self.logger)
         payload = {
             "model": self.model_id,
             "messages": messages,
             "temperature": self.llm_config.temperature,
-            "max_tokens": min(self.llm_config.max_tokens, 4000),
+            "max_tokens": min(self.llm_config.max_tokens, max_tokens_cap),
         }
         if self.llm_config.custom_parameters:
             payload.update(self.llm_config.custom_parameters)
