@@ -830,6 +830,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
                 "LLM_FAILURE_REPORT_PATH",
                 str(monitoring_dir / "provider_failures.md"),
             ),
+            "EXPERIMENT_RUN_METADATA_JSON": json.dumps(config, default=str),
         }
     )
     with log_path.open("w", encoding="utf-8") as handle:

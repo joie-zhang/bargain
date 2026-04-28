@@ -8,6 +8,7 @@ using a modular architecture for better maintainability and debugging.
 """
 
 import asyncio
+import json
 import os
 import sys
 import locale
@@ -565,6 +566,16 @@ async def main():
         "cofunding_enable_time_discount": not args.cofunding_disable_time_discount,
         "cofunding_time_discount": args.cofunding_time_discount,
     }
+
+    metadata_raw = os.getenv("EXPERIMENT_RUN_METADATA_JSON")
+    if metadata_raw:
+        try:
+            run_metadata = json.loads(metadata_raw)
+            if isinstance(run_metadata, dict):
+                for key, value in run_metadata.items():
+                    experiment_config.setdefault(key, value)
+        except json.JSONDecodeError as exc:
+            logging.warning("Ignoring invalid EXPERIMENT_RUN_METADATA_JSON: %s", exc)
     
     # Only add token limits if they're specified
     if args.max_tokens_discussion is not None:
@@ -642,6 +653,20 @@ async def main():
     # Default ad hoc provider-failure reports to the run output directory.
     # Batch wrappers can override this with a shared RUN_DIR-level path.
     if output_dir:
+        experiment_config["output_dir"] = output_dir
+        if args.job_id is not None:
+            experiment_config.setdefault("config_id", args.job_id)
+            experiment_config.setdefault("job_id", args.job_id)
+        if args.run_number is not None:
+            experiment_config.setdefault("run_number", args.run_number)
+        experiment_config.setdefault(
+            "game_label",
+            {
+                "item_allocation": "game1",
+                "diplomacy": "game2",
+                "co_funding": "game3",
+            }.get(args.game_type),
+        )
         os.environ.setdefault(
             "LLM_FAILURE_REPORT_PATH",
             str(Path(output_dir) / "monitoring" / "provider_failures.md"),

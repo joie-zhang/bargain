@@ -451,6 +451,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
                 **load_dotenv_env(),
                 "PYTHONUNBUFFERED": "1",
                 "LLM_FAILURE_REPORT_PATH": str(monitoring_dir / "provider_failures.md"),
+                "EXPERIMENT_RUN_METADATA_JSON": json.dumps(config, default=str),
             },
         )
         returncode = proc.wait()

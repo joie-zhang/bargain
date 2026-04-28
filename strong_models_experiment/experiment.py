@@ -13,6 +13,11 @@ from typing import Dict, List, Any, Optional
 
 import numpy as np
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - fcntl is available on the Linux cluster.
+    fcntl = None
+
 from .data_models import ExperimentResults, BatchResults
 from .configs import STRONG_MODELS_CONFIG
 from .agents import StrongModelAgentFactory
@@ -60,6 +65,7 @@ class StrongModelsExperiment:
         self.current_experiment_id = None
         self.current_batch_id = None
         self.current_run_number = None
+        self.current_config: Dict[str, Any] = {}
         self.externalize_prompts = os.getenv("EXPERIMENT_EXTERNALIZE_PROMPTS", "0").strip().lower() in {
             "1",
             "true",
@@ -162,6 +168,7 @@ class StrongModelsExperiment:
         # Preserve the realized model order. For n-agent experiments this is the
         # authoritative speaking/action order, regardless of the order label.
         config["models"] = list(models)
+        self.current_config = config
 
         self.logger.info(f"Starting experiment {experiment_id}")
         
@@ -966,6 +973,251 @@ class StrongModelsExperiment:
             prompt_chars,
             len(response or ""),
         )
+        try:
+            self._record_malformed_json_example_if_needed(interaction)
+        except Exception as exc:
+            self.logger.warning(
+                "Failed to record malformed JSON diagnostic for phase=%s agent=%s: %s",
+                phase,
+                agent_id,
+                exc,
+            )
+
+    def _record_malformed_json_example_if_needed(self, interaction: Dict[str, Any]) -> None:
+        """Mirror malformed JSON parse diagnostics into per-run and batch debug files."""
+        payload = self._decode_interaction_payload(interaction.get("response"))
+        if not payload or not self._should_record_malformed_payload(interaction, payload):
+            return
+
+        example = self._build_malformed_json_example(interaction, payload)
+        run_path, batch_jsonl_path = self._malformed_json_paths()
+        self._append_malformed_json_example(run_path, example)
+        self._append_malformed_jsonl_example(batch_jsonl_path, example)
+
+    @staticmethod
+    def _decode_interaction_payload(response: Any) -> Optional[Dict[str, Any]]:
+        if isinstance(response, dict):
+            return response
+        if not isinstance(response, str) or not response.strip():
+            return None
+        try:
+            payload = json.loads(response)
+        except (TypeError, json.JSONDecodeError):
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    @staticmethod
+    def _should_record_malformed_payload(
+        interaction: Dict[str, Any],
+        payload: Dict[str, Any],
+    ) -> bool:
+        if "parse_error" not in payload:
+            return False
+        if not (
+            payload.get("raw_response")
+            or payload.get("raw_proposal")
+            or payload.get("raw_proposal_response")
+        ):
+            return False
+
+        phase = str(interaction.get("phase") or "")
+        if "invalid_attempt" in phase:
+            return True
+        if payload.get("used_fallback") is True:
+            return True
+        if payload.get("synthetic_vote") is True:
+            return True
+        if payload.get("hard_failed") is True or payload.get("will_retry") is True:
+            return True
+        return False
+
+    def _build_malformed_json_example(
+        self,
+        interaction: Dict[str, Any],
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        config = dict(self.current_config or {})
+        run_dir = self._current_output_dir()
+        experiment_results_path = self._current_experiment_results_path(run_dir)
+        raw_response = (
+            payload.get("raw_response")
+            or payload.get("raw_proposal_response")
+            or payload.get("raw_proposal")
+            or ""
+        )
+        interaction_phase = str(interaction.get("phase") or "")
+        round_num = interaction.get("round", payload.get("round"))
+        phase_category = self._phase_category(interaction_phase)
+        turn = (
+            payload.get("turn")
+            if payload.get("turn") is not None
+            else payload.get("proposal_repair_attempt")
+        )
+
+        run_metadata_keys = [
+            "config_id",
+            "job_id",
+            "run_number",
+            "batch_type",
+            "experiment_family",
+            "experiment_type",
+            "game_label",
+            "game_type",
+            "competition_id",
+            "n_agents",
+            "competition_level",
+            "rho",
+            "theta",
+            "sigma",
+            "alpha",
+            "model_order",
+            "random_seed",
+            "seed",
+            "seed_replicate",
+            "heterogeneous_run_index",
+            "heterogeneous_draw_seed",
+            "adversary_model",
+            "adversary_position",
+            "access_k",
+            "curve_id",
+            "curve_label",
+            "scaled_model",
+            "scaled_position",
+            "k",
+        ]
+        run_metadata = {
+            key: config.get(key)
+            for key in run_metadata_keys
+            if config.get(key) is not None
+        }
+
+        return {
+            "schema_version": 1,
+            "recorded_at": datetime.now().isoformat(),
+            "timestamp": interaction.get("timestamp"),
+            "experiment_id": self.current_experiment_id,
+            "experiment_results_path": str(experiment_results_path),
+            "full_experiment_results_filepath": str(experiment_results_path),
+            "run_dir": str(run_dir),
+            "batch_root": str(self._infer_batch_root(run_dir) or run_dir),
+            "config_id": config.get("config_id") or config.get("job_id"),
+            "game": config.get("game_label") or config.get("game_type") or payload.get("game_type"),
+            "game_label": config.get("game_label"),
+            "game_type": config.get("game_type") or payload.get("game_type"),
+            "n_agents": config.get("n_agents"),
+            "N": config.get("n_agents"),
+            "competition_level": config.get("competition_level"),
+            "competition_id": config.get("competition_id"),
+            "rho": config.get("rho"),
+            "theta": config.get("theta"),
+            "sigma": config.get("sigma"),
+            "alpha": config.get("alpha"),
+            "model_name": interaction.get("model_name"),
+            "model": interaction.get("model_name"),
+            "agent_id": interaction.get("agent_id"),
+            "round": round_num,
+            "phase": phase_category,
+            "interaction_phase": interaction_phase,
+            "turn": turn,
+            "proposal_repair_attempt": payload.get("proposal_repair_attempt"),
+            "raw_malformed_json": raw_response,
+            "raw_response": raw_response,
+            "parse_error": payload.get("parse_error"),
+            "error_summary": payload.get("error_summary"),
+            "validation_error": payload.get("validation_error"),
+            "will_retry": payload.get("will_retry"),
+            "hard_failed": payload.get("hard_failed"),
+            "source_payload": payload,
+            "run_metadata": run_metadata,
+        }
+
+    @staticmethod
+    def _phase_category(interaction_phase: str) -> str:
+        if interaction_phase.startswith("proposal_round_"):
+            return "proposal"
+        if interaction_phase.startswith("voting_round_"):
+            return "voting"
+        if interaction_phase.startswith("private_thinking_round_"):
+            return "private_thinking"
+        if interaction_phase.startswith("discussion_round_"):
+            return "discussion"
+        if interaction_phase.startswith("reflection_round_"):
+            return "reflection"
+        if interaction_phase == "game_setup":
+            return "initialization"
+        return interaction_phase
+
+    def _current_experiment_results_path(self, run_dir: Path) -> Path:
+        if self.current_run_number is not None:
+            return run_dir / f"run_{self.current_run_number}_experiment_results.json"
+        return run_dir / "experiment_results.json"
+
+    def _malformed_json_paths(self) -> tuple[Path, Path]:
+        run_dir = self._current_output_dir()
+        run_monitoring_dir = run_dir / "monitoring"
+        run_monitoring_dir.mkdir(parents=True, exist_ok=True)
+        run_path = run_monitoring_dir / "malformed_json_examples.json"
+
+        batch_root = self._infer_batch_root(run_dir) or run_dir
+        batch_monitoring_dir = batch_root / "monitoring"
+        batch_monitoring_dir.mkdir(parents=True, exist_ok=True)
+        batch_jsonl_path = batch_monitoring_dir / "malformed_json_examples.jsonl"
+        return run_path, batch_jsonl_path
+
+    @staticmethod
+    def _infer_batch_root(run_dir: Path) -> Optional[Path]:
+        resolved_run_dir = run_dir.resolve()
+        if resolved_run_dir.parent.name == "runs":
+            return resolved_run_dir.parent.parent
+
+        report_path = os.getenv("LLM_FAILURE_REPORT_PATH")
+        if report_path:
+            report_parent = Path(report_path).expanduser().resolve().parent
+            if report_parent.name == "monitoring":
+                return report_parent.parent
+        return None
+
+    @staticmethod
+    def _append_malformed_json_example(path: Path, example: Dict[str, Any]) -> None:
+        if path.exists():
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                examples = payload.get("examples", [])
+                if not isinstance(examples, list):
+                    examples = []
+            except (OSError, json.JSONDecodeError, TypeError):
+                examples = []
+        else:
+            examples = []
+
+        examples.append(example)
+        output = {
+            "schema_version": 1,
+            "updated_at": datetime.now().isoformat(),
+            "count": len(examples),
+            "examples": examples,
+        }
+        tmp_path = path.with_suffix(path.suffix + ".tmp")
+        tmp_path.write_text(
+            json.dumps(output, indent=2, default=str, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(tmp_path, path)
+
+    @staticmethod
+    def _append_malformed_jsonl_example(path: Path, example: Dict[str, Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = path.with_suffix(path.suffix + ".lock")
+        with lock_path.open("a", encoding="utf-8") as lock_handle:
+            if fcntl is not None:
+                fcntl.flock(lock_handle.fileno(), fcntl.LOCK_EX)
+            try:
+                with path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(example, default=str, ensure_ascii=False) + "\n")
+                    handle.flush()
+            finally:
+                if fcntl is not None:
+                    fcntl.flock(lock_handle.fileno(), fcntl.LOCK_UN)
 
     def _current_output_dir(self) -> Path:
         """Return the directory used for streamed artifacts for the active run."""
