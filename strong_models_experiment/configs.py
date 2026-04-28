@@ -208,12 +208,13 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5-nano-high": {
         "name": "GPT-5 Nano (High Reasoning Effort)",
-        "model_id": "gpt-5-nano-2025-08-07",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "Strong tier, Closed-source, Reasoning",
+        "model_id": "openai/gpt-5-nano",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Strong tier, Closed-source, Reasoning; routed through OpenRouter with high reasoning effort after direct high-effort OpenAI calls repeatedly failed in Slurm.",
         "temperature": 1.0,
         "reasoning_effort": "high",
+        "custom_parameters": {"reasoning": {"effort": "high"}},
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -398,6 +399,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "Requested Mar 2026 run set, Closed-source (direct OpenAI API)",
         "temperature": 1.0,
+        "reasoning_effort": "medium",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -625,10 +627,10 @@ STRONG_MODELS_CONFIG = {
     },
     "claude-3-haiku": {
         "name": "Claude 3 Haiku",
-        "model_id": "claude-3-haiku-20240307",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Rank 26, Elo: 1262, Closed-source, Non-reasoning",
+        "model_id": "anthropic/claude-3-haiku",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Rank 26, Elo: 1262, Closed-source, Non-reasoning; routed through OpenRouter because the native Anthropic endpoint no longer accepts the dated Arena alias.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
@@ -970,10 +972,10 @@ STRONG_MODELS_CONFIG = {
     },
     "claude-3-haiku-20240307": {
         "name": "Claude 3 Haiku 2024-03-07",
-        "model_id": "claude-3-haiku-20240307",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Exact Arena-name alias.",
+        "model_id": "anthropic/claude-3-haiku",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias routed through OpenRouter because the native Anthropic endpoint no longer accepts this dated alias.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"

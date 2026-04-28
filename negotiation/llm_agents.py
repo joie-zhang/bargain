@@ -276,6 +276,76 @@ class BaseLLMAgent(ABC):
         else:
             self.config.max_tokens = max_tokens
             self.logger.debug(f"Updated max_tokens to {max_tokens} for {self.agent_id}")
+
+    @staticmethod
+    def _metadata_get(container: Any, *keys: str) -> Any:
+        """Read the first present key from dict-like or SDK object metadata."""
+        for key in keys:
+            if isinstance(container, dict):
+                value = container.get(key)
+            else:
+                value = getattr(container, key, None)
+            if value is not None:
+                return value
+        return None
+
+    @classmethod
+    def _extract_token_usage_from_response(cls, response: Optional[AgentResponse]) -> Optional[Dict[str, Any]]:
+        """Extract token usage from nested OpenAI-style or direct provider metadata."""
+        if not response:
+            return None
+
+        metadata = response.metadata or {}
+        usage = metadata.get("usage") if isinstance(metadata, dict) else None
+
+        input_tokens = cls._metadata_get(usage, "prompt_tokens", "input_tokens")
+        if input_tokens is None:
+            input_tokens = cls._metadata_get(metadata, "prompt_tokens", "input_tokens")
+
+        output_tokens = cls._metadata_get(usage, "completion_tokens", "output_tokens")
+        if output_tokens is None:
+            output_tokens = cls._metadata_get(metadata, "completion_tokens", "output_tokens")
+
+        total_tokens = cls._metadata_get(usage, "total_tokens")
+        if total_tokens is None:
+            total_tokens = cls._metadata_get(metadata, "total_tokens")
+        if total_tokens is None:
+            total_tokens = response.tokens_used
+        if total_tokens is None and input_tokens is not None and output_tokens is not None:
+            total_tokens = input_tokens + output_tokens
+
+        reasoning_tokens = cls._metadata_get(usage, "reasoning_tokens", "thinking_tokens")
+        if reasoning_tokens is None:
+            reasoning_tokens = cls._metadata_get(metadata, "reasoning_tokens", "thinking_tokens")
+
+        thinking_tokens = cls._metadata_get(usage, "thinking_tokens")
+        if thinking_tokens is None:
+            thinking_tokens = cls._metadata_get(metadata, "thinking_tokens")
+
+        token_usage = {
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+        }
+        if reasoning_tokens is not None:
+            token_usage["reasoning_tokens"] = reasoning_tokens
+        if thinking_tokens is not None:
+            token_usage["thinking_tokens"] = thinking_tokens
+
+        for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
+            access_value = cls._metadata_get(metadata, access_key)
+            if access_value is not None:
+                token_usage[access_key] = access_value
+
+        response_time = getattr(response, "response_time", None)
+        if response_time is not None:
+            token_usage["response_time_seconds"] = response_time
+
+        return {
+            key: value
+            for key, value in token_usage.items()
+            if value is not None
+        } or None
     
     def _build_system_prompt(self, context: NegotiationContext) -> str:
         """Build system prompt for the agent."""
@@ -517,19 +587,9 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                 thinking_result = self._parse_thinking_response(response.content)
                 
                 # Add token usage info to the result
-                if response.metadata and response.metadata.get("usage"):
-                    usage = response.metadata["usage"]
-                    thinking_result["_token_usage"] = {
-                        "input_tokens": usage.get("prompt_tokens"),
-                        "output_tokens": usage.get("completion_tokens"),
-                        "total_tokens": usage.get("total_tokens"),
-                        "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
-                    }
-                elif response.tokens_used:
-                    thinking_result["_token_usage"] = {
-                        "total_tokens": response.tokens_used,
-                        "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
-                    }
+                token_usage = self._extract_token_usage_from_response(response)
+                if token_usage:
+                    thinking_result["_token_usage"] = token_usage
                 
                 # Store in strategic memory
                 self.strategic_memory.append(f"Round {context.current_round} thinking: {thinking_result.get('strategy', '')}")
@@ -1074,20 +1134,7 @@ Use actual agent IDs as keys and item indices (0-{len(context.items)-1}) as valu
         response = await self.generate_response(context, prompt)
 
         # Extract token usage info
-        token_usage = None
-        if response.metadata and response.metadata.get("usage"):
-            usage = response.metadata["usage"]
-            token_usage = {
-                "input_tokens": usage.get("prompt_tokens"),
-                "output_tokens": usage.get("completion_tokens"),
-                "total_tokens": usage.get("total_tokens"),
-                "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
-            }
-        elif response.tokens_used:
-            token_usage = {
-                "total_tokens": response.tokens_used,
-                "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
-            }
+        token_usage = self._extract_token_usage_from_response(response)
 
         # Handle empty or None responses
         if not response.content or not response.content.strip():
@@ -1218,20 +1265,7 @@ Vote must be either "accept" or "reject"."""
         response = await self.generate_response(context, prompt)
 
         # Extract token usage info
-        token_usage = None
-        if response.metadata and response.metadata.get("usage"):
-            usage = response.metadata["usage"]
-            token_usage = {
-                "input_tokens": usage.get("prompt_tokens"),
-                "output_tokens": usage.get("completion_tokens"),
-                "total_tokens": usage.get("total_tokens"),
-                "reasoning_tokens": usage.get("reasoning_tokens") or response.metadata.get("reasoning_tokens")
-            }
-        elif response.tokens_used:
-            token_usage = {
-                "total_tokens": response.tokens_used,
-                "reasoning_tokens": response.metadata.get("reasoning_tokens") if response.metadata else None
-            }
+        token_usage = self._extract_token_usage_from_response(response)
 
         # Handle empty or None responses
         if not response.content or not response.content.strip():
@@ -1583,8 +1617,17 @@ class AnthropicAgent(BaseLLMAgent):
                 metadata={
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
                     "stop_reason": stop_reason,
-                    "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None
+                    "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None,
+                    "thinking_tokens": thinking_tokens if thinking_tokens > 0 else None,
+                    "usage": {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_tokens": total_tokens,
+                        "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None,
+                        "thinking_tokens": thinking_tokens if thinking_tokens > 0 else None,
+                    },
                 }
             )
 

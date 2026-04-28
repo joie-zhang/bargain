@@ -178,56 +178,7 @@ class PhaseHandler:
     
     def _extract_token_usage(self, agent_response) -> Optional[Dict[str, Any]]:
         """Extract token usage information from an AgentResponse object."""
-        if not agent_response:
-            return None
-
-        response_time = getattr(agent_response, "response_time", None)
-        token_usage = None
-        if agent_response.metadata and agent_response.metadata.get("usage"):
-            usage = agent_response.metadata["usage"]
-            input_tokens = usage.get("prompt_tokens")
-            if input_tokens is None:
-                input_tokens = usage.get("input_tokens")
-
-            output_tokens = usage.get("completion_tokens")
-            if output_tokens is None:
-                output_tokens = usage.get("output_tokens")
-
-            total_tokens = usage.get("total_tokens")
-            if total_tokens is None and input_tokens is not None and output_tokens is not None:
-                total_tokens = input_tokens + output_tokens
-
-            token_usage = {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "total_tokens": total_tokens
-            }
-            # Extract reasoning tokens if available
-            if agent_response.metadata.get("reasoning_tokens"):
-                token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
-            elif usage.get("reasoning_tokens"):
-                token_usage["reasoning_tokens"] = usage.get("reasoning_tokens")
-            for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
-                if agent_response.metadata.get(access_key) is not None:
-                    token_usage[access_key] = agent_response.metadata[access_key]
-        elif agent_response.tokens_used:
-            token_usage = {
-                "total_tokens": agent_response.tokens_used
-            }
-            # Check for reasoning tokens in metadata
-            if agent_response.metadata and agent_response.metadata.get("reasoning_tokens"):
-                token_usage["reasoning_tokens"] = agent_response.metadata["reasoning_tokens"]
-            if agent_response.metadata:
-                for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
-                    if agent_response.metadata.get(access_key) is not None:
-                        token_usage[access_key] = agent_response.metadata[access_key]
-
-        if response_time is not None:
-            if token_usage is None:
-                token_usage = {}
-            token_usage["response_time_seconds"] = response_time
-
-        return token_usage
+        return BaseLLMAgent._extract_token_usage_from_response(agent_response)
 
     @staticmethod
     def _looks_like_refusal(content: str) -> bool:

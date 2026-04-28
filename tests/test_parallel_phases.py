@@ -132,6 +132,31 @@ def test_extract_token_usage_preserves_response_time_seconds():
     }
 
 
+def test_extract_token_usage_preserves_direct_anthropic_metadata():
+    response = FakeAgentResponse(
+        content="ok",
+        metadata={
+            "input_tokens": 11,
+            "output_tokens": 13,
+            "total_tokens": 29,
+            "reasoning_tokens": 5,
+            "thinking_tokens": 5,
+        },
+        response_time=2.5,
+    )
+
+    token_usage = PhaseHandler()._extract_token_usage(response)
+
+    assert token_usage == {
+        "input_tokens": 11,
+        "output_tokens": 13,
+        "total_tokens": 29,
+        "reasoning_tokens": 5,
+        "thinking_tokens": 5,
+        "response_time_seconds": 2.5,
+    }
+
+
 def test_legacy_vote_parsers_repair_literal_newlines_inside_json_strings():
     handler = PhaseHandler()
     vote = handler._parse_vote_response(
