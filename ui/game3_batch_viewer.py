@@ -143,6 +143,24 @@ def _interactions_file(output_dir: Path) -> Optional[Path]:
     return None
 
 
+def _status_for_config(root: Path, experiment_id: int) -> Optional[str]:
+    status_path = root / "status" / f"config_{experiment_id:04d}.json"
+    if not status_path.exists():
+        return None
+    try:
+        status_payload = json.loads(status_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+    state = str(status_payload.get("state", "")).strip().lower()
+    if state == "success":
+        return "completed"
+    if state == "failed":
+        return "failed"
+    if state == "running":
+        return "in_progress"
+    return None
+
+
 def _load_partial_interactions(interactions_path: str) -> List[Dict[str, Any]]:
     path = Path(interactions_path)
     if not path.exists():
@@ -217,7 +235,10 @@ def load_batch_data(results_root: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.D
             output_dir = _resolve_output_dir(config_payload["output_dir"])
             result_path = _result_file(output_dir)
             interactions_path = _interactions_file(output_dir)
-            if result_path is not None:
+            status_override = _status_for_config(root, int(row["experiment_id"]))
+            if status_override is not None:
+                status = status_override
+            elif result_path is not None:
                 status = "completed"
             elif interactions_path is not None:
                 status = "in_progress"
@@ -387,8 +408,10 @@ def coverage_table(index_df: pd.DataFrame) -> pd.DataFrame:
         table["in_progress"] = 0
     if "pending" not in table.columns:
         table["pending"] = 0
+    if "failed" not in table.columns:
+        table["failed"] = 0
     table["adversary"] = table["model2"].map(model_short_name)
-    return table[["adversary", "model_order", "completed", "in_progress", "pending"]].sort_values(
+    return table[["adversary", "model_order", "completed", "in_progress", "pending", "failed"]].sort_values(
         ["adversary", "model_order"]
     )
 
@@ -663,9 +686,10 @@ def render_selected_config_table(selected_row: pd.Series) -> None:
 
 def render_partial_run(selected_row: pd.Series, show_prompts: bool, show_private: bool) -> None:
     interactions = _load_partial_interactions(str(selected_row["interactions_path"]))
-    st.info(
-        "This config is still running. Showing the partial exchange history saved so far."
-    )
+    if selected_row["status"] == "failed":
+        st.error("This config failed. Showing the partial exchange history saved before failure.")
+    else:
+        st.info("This config is still running. Showing the partial exchange history saved so far.")
     if not interactions:
         st.warning("No interaction payload is available yet for this in-progress config.")
         return
@@ -712,7 +736,7 @@ def render_selected_run(selected_row: pd.Series, show_prompts: bool, show_privat
     st.subheader("Selected Config")
     render_selected_config_table(selected_row)
 
-    if selected_row["status"] == "in_progress":
+    if selected_row["status"] in {"in_progress", "failed"} and selected_row["interactions_path"]:
         render_partial_run(selected_row, show_prompts, show_private)
         return
 

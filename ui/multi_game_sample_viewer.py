@@ -17,6 +17,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
+import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RESULTS_ROOT = PROJECT_ROOT / "experiments" / "results"
@@ -66,6 +67,7 @@ class SampleRun:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--results-dir", action="append", default=[])
+    parser.add_argument("--results-root", action="append", default=[])
     args, _ = parser.parse_known_args(sys.argv[1:])
     return args
 
@@ -89,6 +91,17 @@ def default_results_dirs() -> List[Path]:
         _latest_matching_dir("codex_n3_smoke_cofunding_*"),
     ]
     return [path for path in defaults if path is not None]
+
+
+def discover_result_dirs(candidate: Path) -> List[Path]:
+    if (candidate / "experiment_results.json").exists():
+        return [candidate]
+
+    runs_dir = candidate / "runs"
+    if runs_dir.exists():
+        return sorted(path.parent for path in runs_dir.glob("*/experiment_results.json"))
+
+    return sorted(path.parent for path in candidate.glob("*/experiment_results.json"))
 
 
 def _load_results_json(results_dir: Path) -> Dict:
@@ -118,14 +131,22 @@ def _build_sample_run(results_dir: Path) -> SampleRun:
     )
 
 
-def discover_runs(raw_results_dirs: List[str]) -> List[SampleRun]:
-    candidate_dirs = (
-        [resolve_results_dir(raw_dir) for raw_dir in raw_results_dirs]
-        if raw_results_dirs
-        else default_results_dirs()
-    )
+def discover_runs(raw_results_dirs: List[str], raw_results_roots: List[str]) -> List[SampleRun]:
+    if raw_results_dirs or raw_results_roots:
+        candidate_dirs: List[Path] = []
+        for raw_dir in raw_results_dirs:
+            candidate_dirs.extend(discover_result_dirs(resolve_results_dir(raw_dir)))
+        for raw_root in raw_results_roots:
+            candidate_dirs.extend(discover_result_dirs(resolve_results_dir(raw_root)))
+    else:
+        candidate_dirs = default_results_dirs()
+
     runs: List[SampleRun] = []
+    seen: set[Path] = set()
     for results_dir in candidate_dirs:
+        if results_dir in seen:
+            continue
+        seen.add(results_dir)
         if not results_dir.exists():
             continue
         try:
@@ -155,6 +176,91 @@ def render_sidebar_run_info(run: SampleRun) -> None:
     st.sidebar.write(f"- final_round: {run.final_round}")
 
 
+def utility_vs_elo_frame(results: Dict) -> pd.DataFrame:
+    config = results.get("config", {})
+    final_utilities = results.get("final_utilities") or {}
+    agent_elo_map = config.get("agent_elo_map") or {}
+    agent_model_map = config.get("agent_model_map") or {}
+    agent_role_map = config.get("agent_role_map") or {}
+    performance = results.get("agent_performance") or {}
+    agents = config.get("agents") or sorted(final_utilities.keys(), key=game1_viewer.agent_sort_key)
+
+    rows = []
+    for agent in agents:
+        if agent not in final_utilities or agent not in agent_elo_map:
+            continue
+        try:
+            utility = float(final_utilities[agent])
+            elo = float(agent_elo_map[agent])
+        except (TypeError, ValueError):
+            continue
+        rows.append({
+            "Agent": agent,
+            "Model": agent_model_map.get(agent) or performance.get(agent, {}).get("model", "?"),
+            "Role": agent_role_map.get(agent, "agent"),
+            "Elo": elo,
+            "Final Utility": utility,
+        })
+    return pd.DataFrame(rows)
+
+
+def render_utility_vs_elo(results: Dict, key_prefix: str) -> None:
+    frame = utility_vs_elo_frame(results)
+    if frame.empty:
+        st.info("No agent Elo metadata was found for this run.")
+        return
+
+    st.markdown("#### Final Utility vs Elo")
+    if exp_viewer.PLOTLY_AVAILABLE:
+        fig = exp_viewer.px.scatter(
+            frame,
+            x="Elo",
+            y="Final Utility",
+            color="Model",
+            symbol="Role",
+            text="Agent",
+            hover_data=["Agent", "Model", "Role", "Elo", "Final Utility"],
+            title=None,
+        )
+        fig.update_traces(textposition="top center", marker=dict(size=12, opacity=0.85))
+        if len(frame) >= 2 and frame["Elo"].nunique() >= 2:
+            x_values = frame["Elo"].astype(float).to_numpy()
+            y_values = frame["Final Utility"].astype(float).to_numpy()
+            slope, intercept = np.polyfit(x_values, y_values, 1)
+            x_fit = np.array([x_values.min(), x_values.max()])
+            y_fit = slope * x_fit + intercept
+            fig.add_trace(
+                exp_viewer.go.Scatter(
+                    x=x_fit,
+                    y=y_fit,
+                    mode="lines",
+                    name="Linear fit",
+                    line=dict(color="rgba(31, 41, 55, 0.45)", dash="dot", width=2),
+                    hovertemplate=(
+                        "Linear fit<br>"
+                        "Elo=%{x:.0f}<br>"
+                        "Fitted utility=%{y:.2f}<extra></extra>"
+                    ),
+                )
+            )
+        fig.update_layout(
+            height=420,
+            margin=dict(t=20, b=40, l=50, r=20),
+            xaxis_title="Model Elo",
+            yaxis_title="Final Utility",
+            legend_title_text="Model",
+        )
+        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_utility_vs_elo")
+    else:
+        st.scatter_chart(frame, x="Elo", y="Final Utility")
+
+    st.dataframe(
+        frame.sort_values(["Elo", "Agent"]).reset_index(drop=True),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+
 def render_item_allocation_view(results_dir: Path, show_prompts: bool, show_raw: bool) -> None:
     payload = game1_viewer.load_sample(str(results_dir))
     interactions = payload["interactions"]
@@ -182,6 +288,9 @@ def render_item_allocation_view(results_dir: Path, show_prompts: bool, show_raw:
     metric_columns[3].metric("Items", str(config.get("m_items")))
     metric_columns[4].metric("Competition", str(config.get("competition_level")))
     metric_columns[5].metric("Seed", str(config.get("random_seed")))
+
+    st.subheader("Final Outcome")
+    render_utility_vs_elo(results, f"game1_{results_dir.name}")
 
     hyperparameter_rows = [
         {
@@ -214,11 +323,11 @@ def render_item_allocation_view(results_dir: Path, show_prompts: bool, show_raw:
 
     st.subheader("Outcome Summary")
     if results.get("consensus_reached"):
-        st.success("A proposal reached unanimous support.")
+        st.success("A proposal reached the configured acceptance threshold.")
         st.json(results.get("final_allocation", {}))
         st.json(results.get("final_utilities", {}))
     else:
-        st.warning("No proposal reached unanimous support in this sample.")
+        st.warning("No proposal reached the configured acceptance threshold in this sample.")
 
     st.subheader("Full Rollout")
     round_numbers = [round_num for round_num in grouped_entries.keys() if round_num > 0]
@@ -277,6 +386,7 @@ def render_generic_view(
         st.markdown(f"**alpha** = {alpha} | **sigma** = {sigma}")
 
     exp_viewer.render_metrics_overview(results, game_type)
+    render_utility_vs_elo(results, f"{game_type}_{results_dir.name}")
     st.markdown("---")
 
     tab_labels = ["Timeline", "Agent Comparison", "Analytics", "Raw Data"]
@@ -322,7 +432,7 @@ def main() -> None:
 
     args = parse_args()
     ensure_multiagent_colors()
-    runs = discover_runs(args.results_dir)
+    runs = discover_runs(args.results_dir, args.results_root)
 
     if not runs:
         st.error(
@@ -332,6 +442,7 @@ def main() -> None:
         return
 
     st.sidebar.title("Multi-Game Samples")
+    st.sidebar.metric("Loaded Runs", len(runs))
     selected_label = st.sidebar.selectbox(
         "Run",
         options=[run.label for run in runs],

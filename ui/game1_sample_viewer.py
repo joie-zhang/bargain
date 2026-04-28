@@ -809,12 +809,12 @@ def main() -> None:
 
     st.subheader("Outcome Summary")
     if results.get("consensus_reached"):
-        st.success("A proposal reached unanimous support.")
+        st.success("A proposal reached the configured acceptance threshold.")
         st.json(results.get("final_allocation", {}))
         st.json(results.get("final_utilities", {}))
     else:
         st.warning(
-            "No proposal reached unanimous support. Under the Game 1 rules, this sample ends with no deal."
+            "No proposal reached the configured acceptance threshold. Under the Game 1 rules, this sample ends with no deal."
         )
 
     round_numbers = [round_num for round_num in grouped_entries.keys() if round_num > 0]
