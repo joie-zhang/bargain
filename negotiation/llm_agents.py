@@ -2109,11 +2109,13 @@ class GoogleAgent(BaseLLMAgent):
         """Call Google Gemini API with explicit rate limit handling."""
         prompt_text = self._messages_to_prompt(messages)
 
-        # Create generation config
-        generation_config = self.genai.types.GenerationConfig(
-            temperature=self.config.temperature,
-            max_output_tokens=self.config.max_tokens,
-        )
+        # Create generation config. The 999999 sentinel means "unlimited" in
+        # this codebase; omit max_output_tokens instead of sending it to Gemini.
+        generation_config_kwargs = {"temperature": self.config.temperature}
+        max_tokens = getattr(self.config, "max_tokens", None)
+        if isinstance(max_tokens, int) and 0 < max_tokens < 999999:
+            generation_config_kwargs["max_output_tokens"] = max_tokens
+        generation_config = self.genai.types.GenerationConfig(**generation_config_kwargs)
 
         # Configure safety settings to allow negotiation research prompts
         # These settings reduce false positives for legitimate research use cases

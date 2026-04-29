@@ -11,9 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from negotiation.provider_key_rotation import (
     ProviderKeyExhaustedError,
     ProviderKeyPool,
-    ProviderTransientRetryExhaustedError,
     _DISABLED_KEY_LABELS_BY_PROVIDER,
     call_with_key_rotation,
+    classify_key_scoped_failure,
     discover_provider_keys,
     is_deterministic_provider_failure,
 )
@@ -116,10 +116,12 @@ def test_all_keys_exhausted_fails_current_call(monkeypatch, tmp_path):
     assert "requeue after provider quota reset" in text
 
 
-def test_transient_error_retries_same_key(monkeypatch):
+def test_transient_error_rotates_to_next_key(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
     monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
+    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     sleep_calls = []
     attempts = []
 
@@ -128,7 +130,7 @@ def test_transient_error_retries_same_key(monkeypatch):
 
     async def request(key):
         attempts.append(key.label)
-        if len(attempts) == 1:
+        if key.label == "LEWIS_OPENROUTER_API_KEY_1":
             raise RuntimeError("HTTP 503: service unavailable")
         return "ok"
 
@@ -143,20 +145,24 @@ def test_transient_error_retries_same_key(monkeypatch):
     )
 
     assert result == "ok"
-    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1", "LEWIS_OPENROUTER_API_KEY_1"]
-    assert len(sleep_calls) == 1
+    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1", "JOIE_OPENROUTER_API_KEY_1"]
+    assert sleep_calls == []
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "provider_server_error" in text
+    assert "auto-rotated-to-JOIE_OPENROUTER_API_KEY_1" in text
 
 
-def test_transient_budget_exhaustion_fails_without_rotation(monkeypatch):
+def test_transient_error_exhausts_single_key_immediately(monkeypatch, tmp_path):
     clear_rotation_state()
     monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS")
     monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
     monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "0")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
 
     async def request(key):
         raise RuntimeError("HTTP 503: service unavailable")
 
-    with pytest.raises(ProviderTransientRetryExhaustedError):
+    with pytest.raises(ProviderKeyExhaustedError):
         asyncio.run(
             call_with_key_rotation(
                 provider="openai",
@@ -165,6 +171,84 @@ def test_transient_budget_exhaustion_fails_without_rotation(monkeypatch):
                 request_coro_factory=request,
             )
         )
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "provider_server_error" in text
+    assert "all-keys-exhausted" in text
+
+
+def test_anthropic_workspace_usage_limit_rotates_to_joie(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_ANTHROPIC_API_KEY_1", "sk-ant-lewis")
+    monkeypatch.setenv("JOIE_ANTHROPIC_API_KEY_1", "sk-ant-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    workspace_limit_error = RuntimeError(
+        "Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', "
+        "'message': 'You have reached your specified workspace API usage limits. "
+        "You will regain access on 2026-05-01 at 00:00 UTC.'}}"
+    )
+
+    assert classify_key_scoped_failure("anthropic", workspace_limit_error) == "rate_limit_or_quota"
+
+    async def request(key):
+        attempts.append(key.label)
+        if key.label == "LEWIS_ANTHROPIC_API_KEY_1":
+            raise workspace_limit_error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="anthropic",
+            model="claude-sonnet-4-20250514",
+            key_pool=ProviderKeyPool("anthropic"),
+            request_coro_factory=request,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["LEWIS_ANTHROPIC_API_KEY_1", "JOIE_ANTHROPIC_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "LEWIS_ANTHROPIC_API_KEY_1" in text
+    assert "auto-rotated-to-JOIE_ANTHROPIC_API_KEY_1" in text
+
+
+def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
+    monkeypatch.setenv("JOIE_OPENAI_API_KEY_1", "sk-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    connection_error = RuntimeError(
+        "openai.APIConnectionError: Connection error. "
+        "Server disconnected without sending a response."
+    )
+
+    assert classify_key_scoped_failure("openai", connection_error) == "provider_transient_error"
+
+    async def request(key):
+        attempts.append(key.label)
+        if key.label == "LEWIS_OPENAI_API_KEY_1":
+            raise connection_error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openai",
+            model="gpt-5.4-high",
+            key_pool=ProviderKeyPool("openai"),
+            request_coro_factory=request,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["LEWIS_OPENAI_API_KEY_1", "JOIE_OPENAI_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "provider_transient_error" in text
+    assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
 
 
 def test_deterministic_provider_failure_catches_output_limit_messages():
@@ -190,10 +274,12 @@ def test_google_configure_and_generate_are_serialized(monkeypatch):
     monkeypatch.setenv("TEST_GOOGLE_API_KEY_1", "test-google-key")
 
     active = {"count": 0, "max": 0}
+    generation_configs = []
 
     class FakeGenerationConfig:
         def __init__(self, **kwargs):
             self.kwargs = kwargs
+            generation_configs.append(kwargs)
 
     class FakePart:
         text = "ok"
@@ -256,3 +342,13 @@ def test_google_configure_and_generate_are_serialized(monkeypatch):
     asyncio.run(run_calls())
 
     assert active["max"] == 1
+    assert [config.get("max_output_tokens") for config in generation_configs] == [32, 32]
+
+    generation_configs.clear()
+    unlimited_agent = GoogleAgent(
+        "Agent_3",
+        LLMConfig(model_type=ModelType.GPT_4, max_tokens=999999),
+        None,
+    )
+    asyncio.run(unlimited_agent.generate_response(context, "hi"))
+    assert generation_configs == [{"temperature": 0.7}]

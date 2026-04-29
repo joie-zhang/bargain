@@ -335,8 +335,8 @@ async def main():
     parser.add_argument(
         "--max-tokens-per-phase",
         type=int,
-        default=10500,
-        help="Set max_tokens for EACH individual phase/API call (default: 10500)"
+        default=None,
+        help="Set max_tokens for EACH individual phase/API call (default: no per-phase cap)"
     )
 
     parser.add_argument(
@@ -506,6 +506,8 @@ async def main():
         token_limits.append(f"Thinking={args.max_tokens_thinking}")
     if args.max_tokens_default is not None:
         token_limits.append(f"Default={args.max_tokens_default}")
+    if args.max_tokens_per_phase is not None:
+        token_limits.append(f"MaxPerPhase={args.max_tokens_per_phase}")
     
     if token_limits:
         print(f"Token Limits: {', '.join(token_limits)}")
@@ -523,7 +525,8 @@ async def main():
             print(f"  - OpenAI O3/GPT-5: reasoning_effort={'low' if args.reasoning_token_budget <= 2000 else 'medium' if args.reasoning_token_budget <= 5000 else 'high'}")
             print(f"  - Others: Prompt instruction only")
         print(f"Reasoning Budget Phases: {', '.join(args.reasoning_budget_phases)}")
-        print(f"Max Tokens Per Phase: {args.max_tokens_per_phase}")
+        if args.max_tokens_per_phase is not None:
+            print(f"Max Tokens Per Phase: {args.max_tokens_per_phase}")
     
     print("=" * 60)
     

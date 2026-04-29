@@ -184,6 +184,8 @@ RATE_LIMIT_MARKERS = (
     "requests per minute",
     "tokens per minute",
     "generate_requests_per_model_per_day",
+    "workspace api usage limits",
+    "specified workspace api usage limits",
 )
 
 TRANSIENT_MARKERS = (
@@ -199,9 +201,30 @@ TRANSIENT_MARKERS = (
     "connection reset",
     "connection aborted",
     "connection refused",
+    "connection error",
     "read timeout",
     "timeout",
     "timed out",
+    "server disconnected without sending a response",
+    "upstream connect error",
+)
+
+INVALID_KEY_MARKERS = (
+    "api_key_invalid",
+    "api key not valid",
+    "invalid api key",
+    "invalid_api_key",
+    "incorrect api key",
+    "unauthorized",
+    "authentication",
+    "invalid x-api-key",
+)
+
+PROVIDER_RESPONSE_MARKERS = (
+    "empty content from model",
+    "anthropic returned empty content",
+    "response blocked by safety filter",
+    "could not extract content from response",
 )
 
 
@@ -219,6 +242,17 @@ def classify_key_scoped_failure(
         return "insufficient_funds"
     if status == 429 or any(marker in text for marker in RATE_LIMIT_MARKERS):
         return "rate_limit_or_quota"
+    if any(marker in text for marker in INVALID_KEY_MARKERS):
+        return "invalid_api_key"
+    if status is not None:
+        if 400 <= status < 500:
+            return "provider_client_error"
+        if 500 <= status < 600:
+            return "provider_server_error"
+    if is_transient_provider_failure(exc):
+        return "provider_transient_error"
+    if any(marker in text for marker in PROVIDER_RESPONSE_MARKERS):
+        return "provider_response_error"
     return None
 
 
@@ -347,6 +381,14 @@ def _solution_distance(
             return "all-keys-exhausted; requeue after provider quota reset"
         if failure_kind == "insufficient_funds":
             return "all-keys-exhausted; add funds or add another key"
+        if failure_kind == "invalid_api_key":
+            return "all-keys-exhausted; remove invalid key or add another key"
+        if failure_kind == "provider_client_error":
+            return "all-keys-exhausted; provider client error persisted on all keys"
+        if failure_kind == "provider_server_error":
+            return "all-keys-exhausted; provider server error persisted on all keys"
+        if failure_kind == "provider_transient_error":
+            return "all-keys-exhausted; transient provider error persisted on all keys"
         return "all-keys-exhausted; inspect provider error"
     if next_key_label:
         return f"auto-rotated-to-{next_key_label}"
@@ -517,7 +559,7 @@ async def call_with_key_rotation(
     logger: Optional[logging.Logger] = None,
     sleep_func: Callable[[float], Awaitable[None]] = asyncio.sleep,
 ) -> Any:
-    """Run one provider API call with key rotation and transient retries."""
+    """Run one provider API call, rotating keys on provider/client/server errors."""
 
     provider_name = _provider_name(provider)
     log = logger or logging.getLogger(__name__)
