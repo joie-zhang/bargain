@@ -8,6 +8,8 @@ Tests verify:
 - Core functionality preserved
 """
 
+import json
+
 import pytest
 import numpy as np
 from typing import List
@@ -544,6 +546,31 @@ class TestPromptGeneration:
 
         assert "allocation" in prompt.lower()
         assert "JSON" in prompt or "json" in prompt
+
+    def test_proposal_prompt_example_is_complete_for_n10_m25(self):
+        """Prompt example should be a structurally valid full allocation."""
+        game = create_game_environment(
+            "item_allocation", n_agents=10, t_rounds=5, m_items=25, random_seed=42
+        )
+        agents = create_test_agents(10)
+        agent_ids = [agent.agent_id for agent in agents]
+        state = {"items": [{"name": f"Item {item_index}"} for item_index in range(25)]}
+
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, agent_ids)
+        example_text = prompt.split("Respond with ONLY a JSON object in this exact format:\n", 1)[1]
+        example_text = example_text.split("\n\n**Rules:**", 1)[0]
+        example = json.loads(example_text)
+        allocation = example["allocation"]
+
+        assert set(allocation) == set(agent_ids)
+        allocated_items = [
+            item_index
+            for item_indices in allocation.values()
+            for item_index in item_indices
+        ]
+        assert sorted(allocated_items) == list(range(25))
+        assert "agreement" not in example_text.lower()
+        assert "contributions" not in example_text.lower()
 
 
 class TestBackwardCompatibility:

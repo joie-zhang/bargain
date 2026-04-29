@@ -123,7 +123,7 @@ def test_game2_later_phases_replay_positions_and_weights(monkeypatch, tmp_path):
 
         monkeypatch.setattr(experiment.agent_factory, "create_agents", fake_create_agents)
 
-        await experiment.run_single_experiment(
+        result = await experiment.run_single_experiment(
             models=["fake-model-a", "fake-model-b"],
             experiment_config={
                 "game_type": "diplomacy",
@@ -136,6 +136,8 @@ def test_game2_later_phases_replay_positions_and_weights(monkeypatch, tmp_path):
                 "discussion_turns": 1,
             },
         )
+        assert result.consensus_reached is False
+        assert result.final_utilities == {"Agent_1": 0.0, "Agent_2": 0.0}
 
         agent_1 = agents[0]
 

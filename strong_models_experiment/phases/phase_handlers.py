@@ -103,6 +103,87 @@ class PhaseHandler:
 
         return await asyncio.gather(*tasks, return_exceptions=True)
 
+    def _build_proposal_retry_prompts(
+        self,
+        *,
+        game_type: Optional[str],
+        proposal_prompt: str,
+        game_state: Dict[str, Any],
+        agent_id: str,
+        agent_ids: List[str],
+        items: List[Dict[str, Any]],
+    ) -> List[str]:
+        """Build schema-specific proposal repair prompts for each game."""
+        if game_type == "co_funding":
+            n_slots = int(game_state.get("m_projects") or len(items) or 1)
+            neutral_vector = ", ".join(["0.0"] * n_slots)
+            budget = game_state.get("agent_budgets", {}).get(agent_id, 0.0)
+            return [
+                (
+                    proposal_prompt
+                    + "\n\nYour previous response was invalid for this simulation. "
+                    "Return ONLY one JSON object with a contributions array of the exact required length, "
+                    "using non-negative numbers whose total does not exceed your budget "
+                    f"({budget}). Do not include prose outside the JSON object."
+                ),
+                (
+                    "JSON repair task for a fictional co-funding game. "
+                    "Output exactly one JSON object and no other text. "
+                    f"Use this shape: {{\"contributions\": [{neutral_vector}], "
+                    "\"reasoning\": \"brief funding rationale\"}}. "
+                    "You may change the numbers, but keep the same count and do not exceed the budget."
+                ),
+            ]
+
+        if game_type == "item_allocation":
+            n_items = len(game_state.get("items", items))
+            example_allocation = {aid: [] for aid in agent_ids}
+            for item_index in range(n_items):
+                example_allocation[agent_ids[item_index % len(agent_ids)]].append(item_index)
+            example_payload = json.dumps(
+                {
+                    "allocation": example_allocation,
+                    "reasoning": "brief allocation rationale",
+                },
+                indent=2,
+            )
+            return [
+                (
+                    proposal_prompt
+                    + "\n\nYour previous response was invalid for this simulation. "
+                    "Return ONLY one JSON object with an allocation object whose keys are the exact agent IDs "
+                    f"{agent_ids}. The values must be arrays of item indices. "
+                    f"Every item index from 0 to {n_items - 1} must appear exactly once across all agents. "
+                    "Do not include any vector-style proposal, utility vector, markdown, or prose outside the JSON object."
+                ),
+                (
+                    "JSON repair task for a fictional item-allocation negotiation game. "
+                    "Output exactly one JSON object and no other text. "
+                    "Use this exact schema, changing only which item indices each agent receives if needed:\n"
+                    f"{example_payload}\n"
+                    f"Every item index from 0 to {n_items - 1} must appear exactly once."
+                ),
+            ]
+
+        n_slots = int(game_state.get("n_issues") or len(items) or 1)
+        neutral_vector = ", ".join(["50"] * n_slots)
+        return [
+            (
+                proposal_prompt
+                + "\n\nYour previous response was invalid for this simulation. "
+                "Return ONLY one JSON object with an agreement array of the exact required length, "
+                "using integer percentages from 0 to 100. Do not include prose outside the JSON object. "
+                "If you are uncertain, choose a moderate compromise vector and explain it in the JSON reasoning field."
+            ),
+            (
+                "JSON repair task for a fictional negotiation game. "
+                "Output exactly one JSON object and no other text. "
+                f"Use this shape: {{\"agreement\": [{neutral_vector}], "
+                "\"reasoning\": \"brief compromise rationale\"}}. "
+                "You may change the numbers, but keep the same count and use only integers from 0 to 100."
+            ),
+        ]
+
     def reset_vote_integrity(self) -> None:
         """Reset per-experiment voting integrity audit state."""
         self.vote_integrity: Dict[str, Any] = {
@@ -570,9 +651,15 @@ class PhaseHandler:
         Returns:
             Dictionary representing the current game state
         """
+        game_type = None
+        if self.game_environment is not None:
+            raw_game_type = self.game_environment.get_game_type()
+            game_type = getattr(raw_game_type, "value", raw_game_type)
+
         return {
             "round": round_num,
             "max_rounds": max_rounds,
+            "game_type": game_type,
             "items": items,
             "agents": [a.agent_id for a in agents],
             "agent_id": agent_id,
@@ -1220,73 +1307,14 @@ class PhaseHandler:
 
                 game_type = game_state.get("game_type")
                 agent_ids = [a.agent_id for a in agents]
-                n_slots = game_state.get("n_issues") or game_state.get("m_projects") or len(items)
-                if game_type == "co_funding":
-                    neutral_vector = ", ".join(["0.0"] * int(n_slots or 1))
-                    budget = game_state.get("agent_budgets", {}).get(agent.agent_id, 0.0)
-                    proposal_retry_prompts = [
-                        (
-                            proposal_prompt
-                            + "\n\nYour previous response was invalid for this simulation. "
-                            "Return ONLY one JSON object with a contributions array of the exact required length, "
-                            "using non-negative numbers whose total does not exceed your budget "
-                            f"({budget}). Do not include prose outside the JSON object."
-                        ),
-                        (
-                            "JSON repair task for a fictional co-funding game. "
-                            "Output exactly one JSON object and no other text. "
-                            f"Use this shape: {{\"contributions\": [{neutral_vector}], "
-                            "\"reasoning\": \"brief funding rationale\"}}. "
-                            "You may change the numbers, but keep the same count and do not exceed the budget."
-                        ),
-                    ]
-                elif game_type == "item_allocation":
-                    n_items = len(game_state.get("items", items))
-                    example_allocation = {aid: [] for aid in agent_ids}
-                    for item_index in range(n_items):
-                        example_allocation[agent_ids[item_index % len(agent_ids)]].append(item_index)
-                    example_payload = json.dumps(
-                        {
-                            "allocation": example_allocation,
-                            "reasoning": "brief allocation rationale",
-                        },
-                        indent=2,
-                    )
-                    proposal_retry_prompts = [
-                        (
-                            proposal_prompt
-                            + "\n\nYour previous response was invalid for this simulation. "
-                            "Return ONLY one JSON object with an allocation object whose keys are the exact agent IDs "
-                            f"{agent_ids}. The values must be arrays of item indices. "
-                            f"Every item index from 0 to {n_items - 1} must appear exactly once across all agents. "
-                            "Do not include an agreement array, utility vector, markdown, or prose outside the JSON object."
-                        ),
-                        (
-                            "JSON repair task for a fictional item-allocation negotiation game. "
-                            "Output exactly one JSON object and no other text. "
-                            "Use this exact schema, changing only which item indices each agent receives if needed:\n"
-                            f"{example_payload}\n"
-                            f"Every item index from 0 to {n_items - 1} must appear exactly once."
-                        ),
-                    ]
-                else:
-                    neutral_vector = ", ".join(["50"] * int(n_slots or 1))
-                    proposal_retry_prompts = [
-                        (
-                            proposal_prompt
-                            + "\n\nYour previous response was invalid for this simulation. "
-                            "Return ONLY one JSON object with an agreement array of the exact required length, "
-                            "using integer percentages from 0 to 100. Do not include prose outside the JSON object. "
-                            "If you are uncertain, choose a moderate compromise vector and explain it in the JSON reasoning field."
-                        ),
-                        (
-                            "JSON repair task for a fictional negotiation game. "
-                            "Output exactly one JSON object and no other text. "
-                            f"Use this shape: {{\"agreement\": [{neutral_vector}], "
-                            "\"reasoning\": \"brief compromise rationale\"}}. "
-                            "You may change the numbers, but keep the same count and use only integers from 0 to 100."
-                        ),
-                    ]
+                proposal_retry_prompts = self._build_proposal_retry_prompts(
+                    game_type=game_type,
+                    proposal_prompt=proposal_prompt,
+                    game_state=game_state,
+                    agent_id=agent.agent_id,
+                    agent_ids=agent_ids,
+                    items=items,
+                )
                 for retry_index, retry_prompt in enumerate(proposal_retry_prompts, start=1):
                     if not proposal_needs_retry(proposal):
                         break

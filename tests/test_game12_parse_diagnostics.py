@@ -280,8 +280,8 @@ def test_item_allocation_proposal_repair_prompt_uses_allocation_schema():
         assert len(agents[0].prompts) == 2
         repair_prompt = agents[0].prompts[1]
         assert "allocation object" in repair_prompt
-        assert "agreement array" in repair_prompt
-        assert "\"agreement\"" not in repair_prompt
+        assert "\"allocation\"" in repair_prompt
+        assert "agreement" not in repair_prompt.lower()
         assert result["proposals"][0]["allocation"] == {"Agent_1": [0, 2], "Agent_2": [1]}
         invalid_response = json.loads(
             next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1_invalid_attempt_0")
@@ -299,6 +299,59 @@ def test_item_allocation_proposal_repair_prompt_uses_allocation_schema():
         assert saved_response["raw_response"] == bad_legacy_response
 
     asyncio.run(run_test())
+
+
+def test_proposal_repair_prompts_are_schema_isolated_by_game():
+    """Repair prompts should preserve each game's native proposal schema."""
+    handler = PhaseHandler()
+    agent_ids = ["Agent_1", "Agent_2"]
+    items = [{"name": f"Item {idx}"} for idx in range(3)]
+
+    game1_prompts = handler._build_proposal_retry_prompts(
+        game_type="item_allocation",
+        proposal_prompt="BASE PROMPT",
+        game_state={"game_type": "item_allocation", "items": items},
+        agent_id="Agent_1",
+        agent_ids=agent_ids,
+        items=items,
+    )
+    game1_text = "\n".join(game1_prompts).lower()
+    assert "allocation object" in game1_text
+    assert '"allocation"' in game1_text
+    assert "agreement" not in game1_text
+    assert "contributions" not in game1_text
+
+    game2_prompts = handler._build_proposal_retry_prompts(
+        game_type="diplomacy",
+        proposal_prompt="BASE PROMPT",
+        game_state={"game_type": "diplomacy", "n_issues": 3},
+        agent_id="Agent_1",
+        agent_ids=agent_ids,
+        items=items,
+    )
+    game2_text = "\n".join(game2_prompts).lower()
+    assert "agreement array" in game2_text
+    assert '"agreement"' in game2_text
+    assert "allocation object" not in game2_text
+    assert "contributions" not in game2_text
+
+    game3_prompts = handler._build_proposal_retry_prompts(
+        game_type="co_funding",
+        proposal_prompt="BASE PROMPT",
+        game_state={
+            "game_type": "co_funding",
+            "m_projects": 3,
+            "agent_budgets": {"Agent_1": 25.0},
+        },
+        agent_id="Agent_1",
+        agent_ids=agent_ids,
+        items=items,
+    )
+    game3_text = "\n".join(game3_prompts).lower()
+    assert "contributions array" in game3_text
+    assert '"contributions"' in game3_text
+    assert "agreement" not in game3_text
+    assert "allocation" not in game3_text
 
 
 def test_item_allocation_unrepaired_legacy_agreement_vector_hard_fails():
@@ -353,12 +406,71 @@ def test_item_allocation_unrepaired_legacy_agreement_vector_hard_fails():
             "proposal_round_1_invalid_attempt_1",
             "proposal_round_1_invalid_attempt_2",
         ]
+        saved_prompts = [args[2] for args, _kwargs in saved]
+        assert all("agreement" not in prompt.lower() for prompt in saved_prompts)
         final_diagnostic = json.loads(saved[-1][0][3])
         assert final_diagnostic["raw_proposal"] == bad_legacy_response
         assert final_diagnostic["raw_response"] == bad_legacy_response
         assert final_diagnostic["parse_error"]["type"] == "ValueError"
         assert final_diagnostic["will_retry"] is False
         assert final_diagnostic["hard_failed"] is True
+        assert "skipped" not in final_diagnostic
+
+    asyncio.run(run_test())
+
+
+def test_item_allocation_repair_prompt_without_persisted_game_state_stays_allocation_schema():
+    """Game 1 reconstructed game state should not fall back to Game 2 repair prompts."""
+
+    async def run_test():
+        game = create_game_environment(
+            "item_allocation",
+            n_agents=2,
+            t_rounds=3,
+            m_items=3,
+            random_seed=42,
+        )
+        bad_legacy_response = '{"agreement": [36, 0, 12], "reasoning": "old schema"}'
+        agents = [
+            FakeAgent("Agent_1", [bad_legacy_response, bad_legacy_response, bad_legacy_response]),
+            FakeAgent(
+                "Agent_2",
+                [
+                    json.dumps(
+                        {
+                            "allocation": {"Agent_1": [0], "Agent_2": [1, 2]},
+                            "reasoning": "valid first try",
+                        }
+                    )
+                ],
+            ),
+        ]
+        state = game.create_game_state(agents)
+        preferences = {
+            "agent_preferences": state["agent_preferences"],
+        }
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(save_interaction_callback=save_interaction, game_environment=game)
+
+        with pytest.raises(ValueError, match="item_allocation proposal from Agent_1 remained invalid"):
+            await handler.run_proposal_phase(
+                agents=agents,
+                items=state["items"],
+                preferences=preferences,
+                round_num=1,
+                max_rounds=3,
+            )
+
+        saved_prompts = [args[2] for args, _kwargs in saved]
+        assert len(saved_prompts) == 3
+        assert all("allocation" in prompt.lower() for prompt in saved_prompts)
+        assert all("agreement" not in prompt.lower() for prompt in saved_prompts)
+        final_diagnostic = json.loads(saved[-1][0][3])
+        assert final_diagnostic["game_type"] == "item_allocation"
 
     asyncio.run(run_test())
 

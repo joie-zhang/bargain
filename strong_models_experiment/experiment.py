@@ -686,7 +686,7 @@ class StrongModelsExperiment:
             # Calculate final utilities if no consensus (propose_and_vote only)
             elif not consensus_reached:
                 final_round = config["t_rounds"]
-                if game_type == "item_allocation":
+                if game_type in {"item_allocation", "diplomacy"}:
                     final_utilities = {agent.agent_id: 0.0 for agent in agents}
                 self.logger.info(f"No consensus after {config['t_rounds']} rounds")
         

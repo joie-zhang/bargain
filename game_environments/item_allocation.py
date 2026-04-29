@@ -226,10 +226,18 @@ In your response, just acknowledge the setup, summarize the game structure and r
         items = game_state["items"]
         item_names = [item['name'] for item in items]
 
-        # Build example allocation
-        example_alloc = {}
-        for i, aid in enumerate(agents):
-            example_alloc[aid] = [i] if i < len(items) else []
+        # Use a complete, structurally valid example so formatting guidance
+        # remains correct for N > 2 and M > N.
+        example_alloc = {aid: [] for aid in agents}
+        for item_index in range(len(items)):
+            example_alloc[agents[item_index % len(agents)]].append(item_index)
+        example_payload = json.dumps(
+            {
+                "allocation": example_alloc,
+                "reasoning": "Brief explanation of your proposed allocation",
+            },
+            indent=4,
+        )
 
         reasoning_instruction = ""
         if reasoning_token_budget:
@@ -244,13 +252,7 @@ In your response, just acknowledge the setup, summarize the game structure and r
 
 **Instructions:**
 Respond with ONLY a JSON object in this exact format:
-{{
-    "allocation": {{
-        "{agents[0]}": [0, 2],
-        "{agents[1]}": [1, 3, 4]
-    }},
-    "reasoning": "Brief explanation of your proposed allocation"
-}}
+{example_payload}
 
 **Rules:**
 - Use item INDICES (0-{len(items)-1}), not names
