@@ -8,11 +8,14 @@ must implement, enabling modular game types within the same experiment framework
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-import json
-import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from negotiation.json_repair import (
+    json_object_candidates,
+    parse_json_object,
+    repair_json_candidate,
+)
 
 
 class GameType(Enum):
@@ -137,120 +140,17 @@ class GameEnvironment(ABC):
     @staticmethod
     def _json_object_candidates(response: str) -> List[str]:
         """Return plausible JSON-object substrings from model output."""
-        text = response.strip()
-        if not text:
-            return []
-
-        candidates = [text] if text.startswith("{") else []
-        for fence_match in re.finditer(r"```(?:json)?\s*(.*?)```", text, re.DOTALL | re.IGNORECASE):
-            candidates.append(fence_match.group(1).strip())
-
-        for start_idx, char in enumerate(text):
-            if char != "{":
-                continue
-
-            stack = []
-            in_string = False
-            escaped = False
-            for end_idx in range(start_idx, len(text)):
-                current = text[end_idx]
-                if in_string:
-                    if escaped:
-                        escaped = False
-                    elif current == "\\":
-                        escaped = True
-                    elif current == '"':
-                        in_string = False
-                    continue
-
-                if current == '"':
-                    in_string = True
-                elif current == "{":
-                    stack.append("}")
-                elif current == "[":
-                    stack.append("]")
-                elif current in ("}", "]"):
-                    if stack and stack[-1] == current:
-                        stack.pop()
-                    if not stack:
-                        candidates.append(text[start_idx:end_idx + 1])
-                        break
-            else:
-                candidates.append(text[start_idx:])
-
-        unique_candidates = []
-        seen = set()
-        for candidate in candidates:
-            candidate = candidate.strip()
-            if candidate and candidate not in seen:
-                unique_candidates.append(candidate)
-                seen.add(candidate)
-        return unique_candidates
+        return json_object_candidates(response)
 
     @staticmethod
     def _repair_json_candidate(candidate: str) -> str:
         """Repair common model JSON issues without changing valid JSON."""
-        repaired = []
-        stack = []
-        in_string = False
-        escaped = False
-
-        for char in candidate.strip():
-            if in_string:
-                if escaped:
-                    repaired.append(char)
-                    escaped = False
-                elif char == "\\":
-                    repaired.append(char)
-                    escaped = True
-                elif char == '"':
-                    repaired.append(char)
-                    in_string = False
-                elif char == "\n":
-                    repaired.append("\\n")
-                elif char == "\r":
-                    repaired.append("\\r")
-                elif char == "\t":
-                    repaired.append("\\t")
-                elif ord(char) < 0x20:
-                    repaired.append(f"\\u{ord(char):04x}")
-                else:
-                    repaired.append(char)
-                continue
-
-            repaired.append(char)
-            if char == '"':
-                in_string = True
-            elif char == "{":
-                stack.append("}")
-            elif char == "[":
-                stack.append("]")
-            elif char in ("}", "]") and stack and stack[-1] == char:
-                stack.pop()
-
-        if in_string:
-            repaired.append('"')
-        repaired.extend(reversed(stack))
-        return re.sub(r",\s*([}\]])", r"\1", "".join(repaired))
+        return repair_json_candidate(candidate)
 
     @classmethod
     def _parse_json_object(cls, response: str, label: str) -> Dict[str, Any]:
         """Parse a JSON object from direct, fenced, embedded, or lightly malformed output."""
-        first_error: Optional[Exception] = None
-        for candidate in cls._json_object_candidates(response):
-            for attempt in (candidate, cls._repair_json_candidate(candidate)):
-                try:
-                    payload = json.loads(attempt)
-                    if isinstance(payload, dict):
-                        return payload
-                    raise ValueError(f"{label} JSON payload was not an object")
-                except (json.JSONDecodeError, ValueError) as exc:
-                    if first_error is None:
-                        first_error = exc
-
-        if first_error is not None:
-            raise first_error
-        raise ValueError(f"No JSON found in {label}")
+        return parse_json_object(response, label)
 
     @abstractmethod
     def create_game_state(self, agents: List[Any]) -> Dict[str, Any]:

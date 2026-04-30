@@ -220,10 +220,11 @@ INVALID_KEY_MARKERS = (
     "invalid x-api-key",
 )
 
-PROVIDER_RESPONSE_MARKERS = (
+MODEL_OUTPUT_RETRY_MARKERS = (
     "empty content from model",
     "anthropic returned empty content",
-    "response blocked by safety filter",
+    "openrouter returned empty content",
+    "model returned empty content string",
     "could not extract content from response",
 )
 
@@ -251,8 +252,6 @@ def classify_key_scoped_failure(
             return "provider_server_error"
     if is_transient_provider_failure(exc):
         return "provider_transient_error"
-    if any(marker in text for marker in PROVIDER_RESPONSE_MARKERS):
-        return "provider_response_error"
     return None
 
 
@@ -262,6 +261,21 @@ def is_transient_provider_failure(exc: BaseException) -> bool:
         return True
     text = _error_text(exc).lower()
     return any(marker in text for marker in TRANSIENT_MARKERS)
+
+
+def is_retryable_model_output_failure(exc: BaseException) -> bool:
+    """Return True for provider-success responses that contain no usable text.
+
+    These failures are not API-key scoped: rotating from Lewis to Joie will not
+    make a model that returned ``content=null`` more likely to answer. Treat
+    them like a short same-key transient retry unless the provider explicitly
+    says the response was truncated by a token/output limit.
+    """
+
+    if is_deterministic_provider_failure(exc):
+        return False
+    text = _error_text(exc).lower()
+    return any(marker in text for marker in MODEL_OUTPUT_RETRY_MARKERS)
 
 
 def is_deterministic_provider_failure(exc: BaseException) -> bool:
@@ -286,6 +300,7 @@ def is_deterministic_provider_failure(exc: BaseException) -> bool:
         "finish_reason=length",
         "native_finish_reason=length",
         "empty content from model. finish_reason=length",
+        "response blocked by safety filter",
     )
     normalized_markers = (
         "maxtokensmustbegreaterthanthinkingbudgettokens",
@@ -295,6 +310,7 @@ def is_deterministic_provider_failure(exc: BaseException) -> bool:
         "finishreasonlength",
         "nativefinishreasonlength",
         "emptycontentfrommodelfinishreasonlength",
+        "responseblockedbysafetyfilter",
     )
     return any(marker in text for marker in text_markers) or any(
         marker in normalized
@@ -389,7 +405,11 @@ def _solution_distance(
             return "all-keys-exhausted; provider server error persisted on all keys"
         if failure_kind == "provider_transient_error":
             return "all-keys-exhausted; transient provider error persisted on all keys"
+        if failure_kind == "provider_output_retry_exhausted":
+            return "retry budget exhausted; inspect model/provider output behavior"
         return "all-keys-exhausted; inspect provider error"
+    if failure_kind == "provider_output_retry_exhausted":
+        return "retry budget exhausted; inspect model/provider output behavior"
     if next_key_label:
         return f"auto-rotated-to-{next_key_label}"
     return "logged"
@@ -608,11 +628,21 @@ async def call_with_key_rotation(
                     "or add another key to the key pool."
                 ) from exc
 
-            if is_transient_provider_failure(exc):
+            retryable_model_output_failure = is_retryable_model_output_failure(exc)
+            if retryable_model_output_failure or is_transient_provider_failure(exc):
                 retry_budget = _transient_retry_budget_seconds()
                 elapsed = time.monotonic() - started
                 remaining = retry_budget - elapsed
                 if remaining <= 0:
+                    if retryable_model_output_failure:
+                        record_provider_failure(
+                            provider=provider_name,
+                            model=model,
+                            failure_kind="provider_output_retry_exhausted",
+                            key=key,
+                            exc=exc,
+                            exhausted=False,
+                        )
                     raise ProviderTransientRetryExhaustedError(
                         f"{provider_name} transient retry budget exhausted after "
                         f"{retry_budget:.1f}s for model {model}: {_safe_message(exc)}"
@@ -625,9 +655,14 @@ async def call_with_key_rotation(
                 )
                 transient_attempt += 1
                 log.warning(
-                    "%s transient API error for model %s on key %s; retrying in %.2fs "
+                    "%s %s for model %s on key %s; retrying same key in %.2fs "
                     "(elapsed %.2fs / %.2fs): %s",
                     provider_name,
+                    (
+                        "empty/invalid provider output"
+                        if retryable_model_output_failure
+                        else "transient API error"
+                    ),
                     model,
                     key.label,
                     wait_time,

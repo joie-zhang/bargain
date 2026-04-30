@@ -194,6 +194,57 @@ class PhaseHandler:
             ),
         ]
 
+    @staticmethod
+    def _truncate_repair_payload(text: Any, limit: int = 6000) -> str:
+        payload = str(text or "")
+        if len(payload) <= limit:
+            return payload
+        return payload[: limit - 120].rstrip() + "\n...[truncated for repair prompt]..."
+
+    def _build_targeted_json_repair_prompt(
+        self,
+        *,
+        base_repair_prompt: str,
+        raw_response: Any,
+        error_summary: str,
+        game_type: Optional[str],
+    ) -> str:
+        """Attach the exact invalid output and error to a schema repair prompt."""
+        schema_label = game_type or "negotiation"
+        return (
+            f"{base_repair_prompt}\n\n"
+            "TARGETED REPAIR CONTEXT\n"
+            f"- Game/schema: {schema_label}\n"
+            f"- Parser/validator error: {error_summary}\n"
+            "- Preserve the substantive intended proposal as much as possible, but fix the JSON syntax/schema.\n"
+            "- Change only what is needed to make the response valid for the required schema.\n"
+            "- Output exactly one JSON object and no markdown or prose outside it.\n\n"
+            "INVALID RAW RESPONSE:\n"
+            "```text\n"
+            f"{self._truncate_repair_payload(raw_response)}\n"
+            "```"
+        )
+
+    def _build_targeted_vote_repair_prompt(
+        self,
+        *,
+        base_repair_prompt: str,
+        raw_response: Any,
+        error_summary: str,
+    ) -> str:
+        """Attach the exact invalid vote output and error to a vote repair prompt."""
+        return (
+            f"{base_repair_prompt}\n\n"
+            "TARGETED VOTE REPAIR CONTEXT\n"
+            f"- Parser/validator error: {error_summary}\n"
+            "- Preserve the intended accept/reject decisions if they are clear.\n"
+            "- Output exactly one JSON object and no markdown or prose outside it.\n\n"
+            "INVALID RAW RESPONSE:\n"
+            "```text\n"
+            f"{self._truncate_repair_payload(raw_response)}\n"
+            "```"
+        )
+
     def reset_vote_integrity(self) -> None:
         """Reset per-experiment voting integrity audit state."""
         self.vote_integrity: Dict[str, Any] = {
@@ -1325,13 +1376,14 @@ class PhaseHandler:
                     agent_ids=agent_ids,
                     items=items,
                 )
-                for retry_index, retry_prompt in enumerate(proposal_retry_prompts, start=1):
+                last_attempt_prompt = proposal_prompt
+                for retry_index, retry_prompt_template in enumerate(proposal_retry_prompts, start=1):
                     if not proposal_needs_retry(proposal):
                         break
                     last_invalid_raw_response = response.content
                     last_invalid_summary = record_invalid_proposal_attempt(
                         attempt_index=retry_index - 1,
-                        attempt_prompt=proposal_prompt if retry_index == 1 else proposal_retry_prompts[retry_index - 2],
+                        attempt_prompt=last_attempt_prompt,
                         attempt_response=response,
                         candidate=proposal,
                         attempt_token_usage=token_usage,
@@ -1351,9 +1403,16 @@ class PhaseHandler:
                             f"retrying repair attempt {retry_index}/{len(proposal_retry_prompts)}...",
                         )
                     )
+                    retry_prompt = self._build_targeted_json_repair_prompt(
+                        base_repair_prompt=retry_prompt_template,
+                        raw_response=response.content,
+                        error_summary=last_invalid_summary,
+                        game_type=game_type,
+                    )
                     response = await self._generate_response_with_access(
                         agent, context, retry_prompt, phase="proposal"
                     )
+                    last_attempt_prompt = retry_prompt
                     token_usage = self._extract_token_usage(response)
                     proposal = self.game_environment.parse_proposal(
                         response.content, agent.agent_id, game_state,
@@ -1363,7 +1422,7 @@ class PhaseHandler:
                     last_invalid_raw_response = response.content
                     last_invalid_summary = record_invalid_proposal_attempt(
                         attempt_index=len(proposal_retry_prompts),
-                        attempt_prompt=proposal_retry_prompts[-1] if proposal_retry_prompts else proposal_prompt,
+                        attempt_prompt=last_attempt_prompt,
                         attempt_response=response,
                         candidate=proposal,
                         attempt_token_usage=token_usage,
@@ -1390,7 +1449,7 @@ class PhaseHandler:
                     last_invalid_raw_response = response.content
                     last_invalid_summary = record_invalid_proposal_attempt(
                         attempt_index=len(proposal_retry_prompts),
-                        attempt_prompt=proposal_retry_prompts[-1] if proposal_retry_prompts else proposal_prompt,
+                        attempt_prompt=last_attempt_prompt,
                         attempt_response=response,
                         candidate=proposal,
                         attempt_token_usage=token_usage,
@@ -1422,7 +1481,7 @@ class PhaseHandler:
                     last_invalid_raw_response = response.content
                     last_invalid_summary = record_invalid_proposal_attempt(
                         attempt_index=len(invalid_proposal_records),
-                        attempt_prompt=proposal_retry_prompts[-1] if invalid_proposal_records else proposal_prompt,
+                        attempt_prompt=last_attempt_prompt,
                         attempt_response=response,
                         candidate=proposal,
                         attempt_token_usage=token_usage,
@@ -1447,9 +1506,16 @@ class PhaseHandler:
                         "(negative values, over-budget, or wrong length). "
                         "Please resubmit a valid proposal.**"
                     )
+                    retry_prompt = self._build_targeted_json_repair_prompt(
+                        base_repair_prompt=retry_prompt,
+                        raw_response=response.content,
+                        error_summary=last_invalid_summary,
+                        game_type=game_type,
+                    )
                     response = await self._generate_response_with_access(
                         agent, context, retry_prompt, phase="proposal"
                     )
+                    last_attempt_prompt = retry_prompt
                     token_usage = self._extract_token_usage(response)
                     proposal = self.game_environment.parse_proposal(
                         response.content, agent.agent_id, game_state,
@@ -1484,7 +1550,7 @@ class PhaseHandler:
                     if not self.game_environment.validate_proposal(proposal, game_state):
                         record_invalid_proposal_attempt(
                             attempt_index=len(invalid_proposal_records),
-                            attempt_prompt=retry_prompt,
+                            attempt_prompt=last_attempt_prompt,
                             attempt_response=response,
                             candidate=proposal,
                             attempt_token_usage=token_usage,
@@ -1522,7 +1588,7 @@ class PhaseHandler:
 
             return {
                 "agent": agent,
-                "proposal_prompt": proposal_prompt,
+                "proposal_prompt": last_attempt_prompt if self.game_environment is not None else proposal_prompt,
                 "proposal": proposal,
                 "log_records": log_records,
                 "invalid_proposal_records": invalid_proposal_records,
@@ -1927,6 +1993,15 @@ class PhaseHandler:
                             "Do not omit any proposal. If unsure, choose reject and explain briefly. "
                             "No prose outside the JSON object."
                         )
+                        retry_prompt = self._build_targeted_vote_repair_prompt(
+                            base_repair_prompt=retry_prompt,
+                            raw_response=getattr(response, "content", "") if response is not None else "",
+                            error_summary=(
+                                str(last_vote_error)
+                                if last_vote_error is not None
+                                else f"missing or invalid votes for proposal numbers {missing_numbers}"
+                            ),
+                        )
                         try:
                             retry_response = await self._generate_response_with_generation_bounds(
                                 agent,
@@ -1959,6 +2034,10 @@ class PhaseHandler:
                             token_usage_by_proposal_number = {
                                 proposal_numbers[0]: token_usage
                             } if proposal_numbers and token_usage is not None else {}
+                            prompt_by_proposal_number = {
+                                proposal_number: retry_prompt
+                                for proposal_number in proposal_numbers
+                            }
                             missing_numbers = retry_missing_numbers
                         if missing_numbers:
                             self.logger.warning(
@@ -1975,6 +2054,15 @@ class PhaseHandler:
                                 f"The votes array must contain these proposal numbers exactly: {proposal_numbers}. "
                                 f"Use this shape: {{\"votes\": [{compact_entries}]}}. "
                                 "You may change votes to accept or reject, but every vote must be one of those two strings."
+                            )
+                            compact_retry_prompt = self._build_targeted_vote_repair_prompt(
+                                base_repair_prompt=compact_retry_prompt,
+                                raw_response=getattr(response, "content", "") if response is not None else "",
+                                error_summary=(
+                                    str(last_vote_error)
+                                    if last_vote_error is not None
+                                    else f"still missing or invalid votes for proposal numbers {missing_numbers}"
+                                ),
                             )
                             try:
                                 compact_retry_response = await self._generate_response_with_generation_bounds(
@@ -2008,6 +2096,10 @@ class PhaseHandler:
                                 token_usage_by_proposal_number = {
                                     proposal_numbers[0]: token_usage
                                 } if proposal_numbers and token_usage is not None else {}
+                                prompt_by_proposal_number = {
+                                    proposal_number: compact_retry_prompt
+                                    for proposal_number in proposal_numbers
+                                }
                                 missing_numbers = compact_retry_missing_numbers
                         if missing_numbers:
                             if round_num < max_rounds:

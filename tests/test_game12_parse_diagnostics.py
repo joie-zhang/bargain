@@ -281,7 +281,9 @@ def test_item_allocation_proposal_repair_prompt_uses_allocation_schema():
         repair_prompt = agents[0].prompts[1]
         assert "allocation object" in repair_prompt
         assert "\"allocation\"" in repair_prompt
-        assert "agreement" not in repair_prompt.lower()
+        assert "TARGETED REPAIR CONTEXT" in repair_prompt
+        assert "INVALID RAW RESPONSE" in repair_prompt
+        assert bad_legacy_response in repair_prompt
         assert result["proposals"][0]["allocation"] == {"Agent_1": [0, 2], "Agent_2": [1]}
         invalid_response = json.loads(
             next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1_invalid_attempt_0")
@@ -295,6 +297,8 @@ def test_item_allocation_proposal_repair_prompt_uses_allocation_schema():
         saved_response = json.loads(
             next(args[3] for args, _kwargs in saved if args[1] == "proposal_round_1")
         )
+        saved_final_prompt = next(args[2] for args, _kwargs in saved if args[1] == "proposal_round_1")
+        assert saved_final_prompt == repair_prompt
         assert saved_response["recovered_after_error"] == "parse error"
         assert saved_response["raw_response"] == bad_legacy_response
 
@@ -399,15 +403,18 @@ def test_item_allocation_unrepaired_legacy_agreement_vector_hard_fails():
                 preferences=preferences,
                 round_num=1,
                 max_rounds=3,
-            )
+        )
 
         assert [args[1] for args, _kwargs in saved] == [
             "proposal_round_1_invalid_attempt_0",
             "proposal_round_1_invalid_attempt_1",
             "proposal_round_1_invalid_attempt_2",
+            "proposal_round_1_invalid_attempt_3",
+            "proposal_round_1_invalid_attempt_4",
         ]
         saved_prompts = [args[2] for args, _kwargs in saved]
-        assert all("agreement" not in prompt.lower() for prompt in saved_prompts)
+        assert all("\"allocation\"" in prompt for prompt in saved_prompts[1:])
+        assert all("INVALID RAW RESPONSE" in prompt for prompt in saved_prompts[1:])
         final_diagnostic = json.loads(saved[-1][0][3])
         assert final_diagnostic["raw_proposal"] == bad_legacy_response
         assert final_diagnostic["raw_response"] == bad_legacy_response
@@ -466,9 +473,9 @@ def test_item_allocation_repair_prompt_without_persisted_game_state_stays_alloca
             )
 
         saved_prompts = [args[2] for args, _kwargs in saved]
-        assert len(saved_prompts) == 3
+        assert len(saved_prompts) == 5
         assert all("allocation" in prompt.lower() for prompt in saved_prompts)
-        assert all("agreement" not in prompt.lower() for prompt in saved_prompts)
+        assert all("INVALID RAW RESPONSE" in prompt for prompt in saved_prompts[1:])
         final_diagnostic = json.loads(saved[-1][0][3])
         assert final_diagnostic["game_type"] == "item_allocation"
 
@@ -566,3 +573,70 @@ Second line."
     assert votes[0]["vote"] == "reject"
     assert "parse_error" not in votes[0]
     assert "Second line" in votes[0]["reasoning"]
+
+
+def test_item_allocation_repairs_comments_in_json():
+    """Game 1 should parse JSON comments before schema validation."""
+    game = create_game_environment(
+        "item_allocation",
+        n_agents=2,
+        t_rounds=3,
+        m_items=3,
+        random_seed=42,
+    )
+    state = game.create_game_state([FakeAgent("Agent_1", ["unused"]), FakeAgent("Agent_2", ["unused"])])
+
+    response = """{
+      "allocation": {
+        "Agent_1": [0, 2], // high value items
+        "Agent_2": [1]
+      },
+      "reasoning": "comment should be stripped"
+    }"""
+    parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+
+    assert parsed["allocation"] == {"Agent_1": [0, 2], "Agent_2": [1]}
+    assert "parse_error" not in parsed
+
+
+def test_item_allocation_batch_vote_repairs_comments():
+    """Game 1 batch vote parsing should tolerate comments in JSON arrays."""
+    game = create_game_environment(
+        "item_allocation",
+        n_agents=2,
+        t_rounds=3,
+        m_items=3,
+        random_seed=42,
+    )
+
+    response = """{
+      "votes": [
+        {"proposal_number": 1, "vote": "accept", "reasoning": "ok"}, // vote one
+        {"proposal_number": 2, "vote": "reject", "reasoning": "no"}
+      ]
+    }"""
+    votes = game.parse_batch_voting_response(response, [1, 2], "Agent_1", 1)
+
+    assert [vote["vote"] for vote in votes] == ["accept", "reject"]
+    assert all("parse_error" not in vote for vote in votes)
+
+
+def test_cofunding_repairs_markdown_numbers_and_missing_comma():
+    """Game 3 proposals should parse common markdown and comma issues."""
+    game = create_game_environment(
+        "co_funding",
+        n_agents=2,
+        t_rounds=3,
+        m_projects=3,
+        random_seed=42,
+    )
+    state = game.create_game_state([FakeAgent("Agent_1", ["unused"]), FakeAgent("Agent_2", ["unused"])])
+
+    response = """{
+      "contributions": [0.0, **10.0**, 5.0]
+      "reasoning": "missing comma before reasoning"
+    }"""
+    parsed = game.parse_proposal(response, "Agent_1", state, ["Agent_1", "Agent_2"])
+
+    assert parsed["contributions"] == [0.0, 10.0, 5.0]
+    assert "parse_error" not in parsed

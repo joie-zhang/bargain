@@ -145,7 +145,7 @@ def test_private_voting_phase_batches_diplomatic_treaty_votes():
         assert len(agent_2.prompts) == 1
         assert "PROPOSAL #1" in agent_1.prompts[0]
         assert "PROPOSAL #2" in agent_1.prompts[0]
-        assert "AI chip export quota" in agent_1.prompts[0]
+        assert state["issues"][0] in agent_1.prompts[0]
         assert "REASONING:" not in agent_1.prompts[0]
         assert "Proposal one" not in agent_1.prompts[0]
         assert "Proposal two" not in agent_1.prompts[0]

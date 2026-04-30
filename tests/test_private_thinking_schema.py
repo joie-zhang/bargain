@@ -35,10 +35,7 @@ def test_thinking_response_normalizes_shared_schema():
 def test_thinking_parse_fallback_preserves_raw_response_and_metadata():
     """JSON parse fallbacks should retain full raw output for provenance."""
     agent = DummyAgent("test_agent", LLMConfig(model_type=ModelType.GPT_4O))
-    raw_response = """{
-  "reasoning": "I should fund Apple"
-  "strategy": "Missing comma before this key"
-}"""
+    raw_response = '{"reasoning": invalid token, "strategy": "Cannot repair bare identifiers"}'
 
     parsed = agent._parse_thinking_response(raw_response)
 
@@ -53,3 +50,18 @@ def test_thinking_parse_fallback_preserves_raw_response_and_metadata():
     reloaded = json.loads(saved_payload)
     assert reloaded["raw_response"] == raw_response
     assert reloaded["parsed_or_fallback_response"]["reasoning"] == parsed["reasoning"]
+
+
+def test_thinking_parser_repairs_missing_comma():
+    """Private thinking parsing should repair simple syntax issues locally."""
+    agent = DummyAgent("test_agent", LLMConfig(model_type=ModelType.GPT_4O))
+    raw_response = """{
+  "reasoning": "I should fund Apple"
+  "strategy": "Missing comma before this key"
+}"""
+
+    parsed = agent._parse_thinking_response(raw_response)
+
+    assert parsed["reasoning"] == "I should fund Apple"
+    assert parsed["strategy"] == "Missing comma before this key"
+    assert "used_fallback" not in parsed

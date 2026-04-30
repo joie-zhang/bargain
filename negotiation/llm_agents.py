@@ -26,6 +26,17 @@ from .provider_key_rotation import (
     call_with_key_rotation,
     is_deterministic_provider_failure,
 )
+from .context_compaction import (
+    ContextCompactionMetadata,
+    ContextWindowPreflightError,
+    compact_public_history_entries,
+    compactable_rounds,
+    context_threshold,
+    estimate_messages_tokens,
+    reserved_output_tokens,
+    resolve_context_limit,
+)
+from .json_repair import parse_json_object as parse_repaired_json_object
 
 try:
     import httpx
@@ -463,15 +474,34 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
             total_chars += note_chars
         return list(reversed(selected))
 
-    def _append_context_blocks(
-        self, messages: List[Dict[str, str]], context: NegotiationContext
-    ) -> None:
-        """Append accumulated public and private context to a message list."""
+    def _bounded_context_parts(
+        self, context: NegotiationContext
+    ) -> Tuple[List[Dict[str, Any]], List[str]]:
+        """Return bounded public history and private notes for prompt building."""
         conversation_history = self._bounded_history_entries(
             context.conversation_history,
             max_entries_env="NEGOTIATION_CONTEXT_HISTORY_MAX_ENTRIES",
             max_chars_env="NEGOTIATION_CONTEXT_HISTORY_MAX_CHARS",
         )
+        strategic_notes = self._bounded_strategic_notes(context.strategic_notes)
+        return conversation_history, strategic_notes
+
+    def _append_context_blocks(
+        self,
+        messages: List[Dict[str, str]],
+        context: NegotiationContext,
+        *,
+        conversation_history: Optional[List[Dict[str, Any]]] = None,
+        strategic_notes: Optional[List[str]] = None,
+    ) -> None:
+        """Append accumulated public and private context to a message list."""
+        if conversation_history is None or strategic_notes is None:
+            bounded_history, bounded_notes = self._bounded_context_parts(context)
+            if conversation_history is None:
+                conversation_history = bounded_history
+            if strategic_notes is None:
+                strategic_notes = bounded_notes
+
         for entry in conversation_history:
             sender, serialized = self._serialize_history_entry(entry)
             if sender == self.agent_id:
@@ -497,7 +527,6 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                 ),
             })
 
-        strategic_notes = self._bounded_strategic_notes(context.strategic_notes)
         if strategic_notes:
             messages.append({
                 "role": "user",
@@ -506,6 +535,133 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     + "\n\n".join(str(note) for note in strategic_notes)
                 ),
             })
+
+    def _compose_context_messages(
+        self,
+        context: NegotiationContext,
+        prompt: str,
+        *,
+        system_prompt: str,
+        conversation_history: List[Dict[str, Any]],
+        strategic_notes: List[str],
+    ) -> List[Dict[str, str]]:
+        messages = [{"role": "system", "content": system_prompt}]
+        self._append_context_blocks(
+            messages,
+            context,
+            conversation_history=conversation_history,
+            strategic_notes=strategic_notes,
+        )
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
+    def _context_model_names(self) -> List[str]:
+        names: List[str] = []
+        try:
+            model_info = self.get_model_info()
+        except Exception:
+            model_info = {}
+        if isinstance(model_info, dict):
+            for key in ("model_name", "model_id", "model_type"):
+                value = model_info.get(key)
+                if value:
+                    names.append(str(value))
+        if hasattr(self.config, "_actual_model_id"):
+            names.append(str(getattr(self.config, "_actual_model_id")))
+        model_type = getattr(self.config, "model_type", None)
+        if model_type is not None:
+            names.append(str(getattr(model_type, "value", model_type)))
+        return list(dict.fromkeys(names))
+
+    def _maybe_compact_context_messages(
+        self,
+        *,
+        context: NegotiationContext,
+        prompt: str,
+        system_prompt: str,
+        conversation_history: List[Dict[str, Any]],
+        strategic_notes: List[str],
+        messages: List[Dict[str, str]],
+    ) -> Tuple[List[Dict[str, str]], Optional[ContextCompactionMetadata]]:
+        """Compact older public history if this model call is near context limit."""
+        if os.getenv("NEGOTIATION_DISABLE_CONTEXT_COMPACTION", "").lower() in {"1", "true", "yes"}:
+            return messages, None
+
+        model_names = self._context_model_names()
+        context_limit = resolve_context_limit(model_names)
+        if context_limit is None:
+            return messages, None
+
+        threshold = context_threshold()
+        reserve = reserved_output_tokens(getattr(self.config, "max_tokens", None), context_limit)
+        input_budget = max(1, int(context_limit * threshold) - reserve)
+        before_tokens = estimate_messages_tokens(messages)
+        if before_tokens <= input_budget:
+            return messages, None
+
+        rounds = compactable_rounds(conversation_history)
+        compacted_rounds: List[int] = []
+        best_history = list(conversation_history)
+        best_tokens = before_tokens
+
+        for round_num in rounds:
+            compacted_rounds.append(round_num)
+            candidate_history = compact_public_history_entries(
+                conversation_history,
+                set(compacted_rounds),
+            )
+            candidate_messages = self._compose_context_messages(
+                context,
+                prompt,
+                system_prompt=system_prompt,
+                conversation_history=candidate_history,
+                strategic_notes=strategic_notes,
+            )
+            candidate_tokens = estimate_messages_tokens(candidate_messages)
+            best_history = candidate_history
+            best_tokens = candidate_tokens
+            if candidate_tokens <= input_budget:
+                metadata = ContextCompactionMetadata(
+                    model_names=model_names,
+                    context_limit_tokens=context_limit,
+                    threshold=threshold,
+                    reserved_output_tokens=reserve,
+                    input_budget_tokens=input_budget,
+                    estimated_input_tokens_before=before_tokens,
+                    estimated_input_tokens_after=candidate_tokens,
+                    compacted_rounds=list(compacted_rounds),
+                    original_public_history_entries=len(conversation_history),
+                    compacted_public_history_entries=len(candidate_history),
+                )
+                self.logger.info(
+                    "CONTEXT_COMPACTION agent=%s model=%s round=%s phase=%s "
+                    "before_tokens=%s after_tokens=%s input_budget=%s limit=%s compacted_rounds=%s",
+                    self.agent_id,
+                    ",".join(model_names),
+                    context.current_round,
+                    context.turn_type,
+                    before_tokens,
+                    candidate_tokens,
+                    input_budget,
+                    context_limit,
+                    compacted_rounds,
+                )
+                return candidate_messages, metadata
+
+        message = (
+            "context_length_exceeded preflight: "
+            f"agent={self.agent_id} model_aliases={model_names} "
+            f"round={context.current_round} phase={context.turn_type} "
+            f"estimated_input_tokens_before={before_tokens} "
+            f"estimated_input_tokens_after={best_tokens} "
+            f"input_budget_tokens={input_budget} "
+            f"context_limit_tokens={context_limit} "
+            f"reserved_output_tokens={reserve} "
+            f"compacted_rounds={compacted_rounds} "
+            f"original_public_history_entries={len(conversation_history)} "
+            f"compacted_public_history_entries={len(best_history)}"
+        )
+        raise ContextWindowPreflightError(message)
     
     def _format_preferences(self, preferences: Any, items: List[Any]) -> str:
         """Format preferences for display in prompt."""
@@ -568,7 +724,7 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
         await self.rate_limiter.wait_if_needed()
         
         # Build messages for thinking prompt
-        thinking_messages = self._build_thinking_messages(context, prompt)
+        thinking_messages, compaction_metadata = self._build_thinking_messages_with_metadata(context, prompt)
         
         # Call LLM for strategic thinking
         for attempt in range(self.config.max_retries):
@@ -583,6 +739,11 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     self.total_cost += response.cost_estimate
                 self.response_times.append(response.response_time)
                 
+                if compaction_metadata is not None:
+                    metadata = dict(response.metadata or {})
+                    metadata["context_compaction"] = compaction_metadata.__dict__
+                    response.metadata = metadata
+
                 # Parse strategic thinking response
                 thinking_result = self._parse_thinking_response(response.content)
                 
@@ -614,7 +775,9 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
         # Should not reach here
         return {}
     
-    def _build_thinking_messages(self, context: NegotiationContext, prompt: str) -> List[Dict[str, str]]:
+    def _build_thinking_messages_with_metadata(
+        self, context: NegotiationContext, prompt: str
+    ) -> Tuple[List[Dict[str, str]], Optional[ContextCompactionMetadata]]:
         """Build messages for private thinking."""
         system_prompt = f"""You are {context.agent_id}, a strategic negotiation agent engaged in private strategic planning.
 
@@ -635,9 +798,27 @@ STRATEGIC MINDSET:
 
 Response format: Provide your analysis as structured strategic thinking."""
 
-        messages = [{"role": "system", "content": system_prompt}]
-        self._append_context_blocks(messages, context)
-        messages.append({"role": "user", "content": prompt})
+        conversation_history, strategic_notes = self._bounded_context_parts(context)
+        messages = self._compose_context_messages(
+            context,
+            prompt,
+            system_prompt=system_prompt,
+            conversation_history=conversation_history,
+            strategic_notes=strategic_notes,
+        )
+        messages, compaction_metadata = self._maybe_compact_context_messages(
+            context=context,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            conversation_history=conversation_history,
+            strategic_notes=strategic_notes,
+            messages=messages,
+        )
+        return messages, compaction_metadata
+
+    def _build_thinking_messages(self, context: NegotiationContext, prompt: str) -> List[Dict[str, str]]:
+        """Build messages for private thinking."""
+        messages, _metadata = self._build_thinking_messages_with_metadata(context, prompt)
 
         return messages
     
@@ -673,38 +854,11 @@ Response format: Provide your analysis as structured strategic thinking."""
                 try:
                     return self._normalize_thinking_response(json.loads(response_content))
                 except json.JSONDecodeError as json_err:
-                    # If JSON parsing fails, try several recovery strategies
-                    import re
-                    
-                    # Strategy 1: Extract JSON from markdown code blocks
-                    # Some models wrap JSON in ```json ... ``` blocks
-                    json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_content, re.DOTALL)
-                    if json_match:
-                        try:
-                            return self._normalize_thinking_response(json.loads(json_match.group(1)))
-                        except json.JSONDecodeError:
-                            pass
-                    
-                    # Strategy 2: Try to find the largest valid JSON object
-                    # This handles cases where there's extra text before/after JSON
-                    json_objects = re.findall(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_content)
-                    for json_obj in sorted(json_objects, key=len, reverse=True):
-                        try:
-                            return self._normalize_thinking_response(json.loads(json_obj))
-                        except json.JSONDecodeError:
-                            continue
-                    
-                    # Strategy 3: Try to fix common issues - unescaped newlines in strings
-                    # Replace unescaped \n with \\n inside string values
-                    fixed_content = response_content
-                    # This is a simple heuristic - look for \n not preceded by \
-                    fixed_content = re.sub(r'(?<!\\)\n', '\\n', fixed_content)
-                    # But we need to be careful not to break already-escaped sequences
-                    # So revert double-escapes
-                    fixed_content = fixed_content.replace('\\\\n', '\\n')
                     try:
-                        return self._normalize_thinking_response(json.loads(fixed_content))
-                    except json.JSONDecodeError:
+                        return self._normalize_thinking_response(
+                            parse_repaired_json_object(response_content, "thinking response")
+                        )
+                    except (json.JSONDecodeError, ValueError):
                         pass
                     
                     # Log the problematic section for debugging
@@ -1034,20 +1188,33 @@ Response format: Provide your analysis as structured strategic thinking."""
         
         return None
     
+    def _build_context_messages_with_metadata(
+        self, context: NegotiationContext, prompt: str
+    ) -> Tuple[List[Dict[str, str]], Optional[ContextCompactionMetadata]]:
+        """Build conversation context for the LLM."""
+        system_prompt = self._build_system_prompt(context)
+        conversation_history, strategic_notes = self._bounded_context_parts(context)
+        messages = self._compose_context_messages(
+            context,
+            prompt,
+            system_prompt=system_prompt,
+            conversation_history=conversation_history,
+            strategic_notes=strategic_notes,
+        )
+        messages, compaction_metadata = self._maybe_compact_context_messages(
+            context=context,
+            prompt=prompt,
+            system_prompt=system_prompt,
+            conversation_history=conversation_history,
+            strategic_notes=strategic_notes,
+            messages=messages,
+        )
+        return messages, compaction_metadata
+
     def _build_context_messages(self, context: NegotiationContext, 
                                prompt: str) -> List[Dict[str, str]]:
         """Build conversation context for the LLM."""
-        messages = []
-        
-        # Add system message
-        system_prompt = self._build_system_prompt(context)
-        messages.append({"role": "system", "content": system_prompt})
-        
-        self._append_context_blocks(messages, context)
-        
-        # Add current prompt
-        messages.append({"role": "user", "content": prompt})
-        
+        messages, _metadata = self._build_context_messages_with_metadata(context, prompt)
         return messages
     
     async def generate_response(self, context: NegotiationContext, 
@@ -1057,12 +1224,16 @@ Response format: Provide your analysis as structured strategic thinking."""
         await self.rate_limiter.wait_if_needed()
         
         # Build messages
-        messages = self._build_context_messages(context, prompt)
+        messages, compaction_metadata = self._build_context_messages_with_metadata(context, prompt)
         
         # Call LLM with retries
         for attempt in range(self.config.max_retries):
             try:
                 response = await self._call_llm_api(messages)
+                if compaction_metadata is not None:
+                    metadata = dict(response.metadata or {})
+                    metadata["context_compaction"] = compaction_metadata.__dict__
+                    response.metadata = metadata
 
                 # Update tracking
                 self.total_requests += 1

@@ -11,11 +11,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from negotiation.provider_key_rotation import (
     ProviderKeyExhaustedError,
     ProviderKeyPool,
+    ProviderTransientRetryExhaustedError,
     _DISABLED_KEY_LABELS_BY_PROVIDER,
     call_with_key_rotation,
     classify_key_scoped_failure,
     discover_provider_keys,
     is_deterministic_provider_failure,
+    is_retryable_model_output_failure,
 )
 
 
@@ -251,6 +253,78 @@ def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_p
     assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
 
 
+def test_empty_model_output_retries_same_key_without_rotating(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
+    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "30")
+    sleep_calls = []
+    attempts = []
+
+    async def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+
+    async def request(key):
+        attempts.append(key.label)
+        if len(attempts) == 1:
+            raise RuntimeError(
+                "Empty content from model. finish_reason=stop, "
+                "message keys=['role', 'content']"
+            )
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="amazon/nova-micro-v1",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+            sleep_func=fake_sleep,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1", "LEWIS_OPENROUTER_API_KEY_1"]
+    assert len(sleep_calls) == 1
+    assert not (tmp_path / "provider_failures.md").exists()
+
+
+def test_empty_model_output_retry_exhaustion_does_not_disable_next_key(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
+    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "0")
+    attempts = []
+
+    output_error = RuntimeError("Empty content from model. finish_reason=stop")
+    assert classify_key_scoped_failure("openrouter", output_error) is None
+    assert is_retryable_model_output_failure(output_error)
+
+    async def request(key):
+        attempts.append(key.label)
+        raise output_error
+
+    with pytest.raises(ProviderTransientRetryExhaustedError):
+        asyncio.run(
+            call_with_key_rotation(
+                provider="openrouter",
+                model="amazon/nova-micro-v1",
+                key_pool=ProviderKeyPool("openrouter"),
+                request_coro_factory=request,
+            )
+        )
+
+    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1"]
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "provider_output_retry_exhausted" in text
+    assert "JOIE_OPENROUTER_API_KEY_1" not in text
+
+
 def test_deterministic_provider_failure_catches_output_limit_messages():
     assert is_deterministic_provider_failure(
         RuntimeError(
@@ -265,6 +339,12 @@ def test_deterministic_provider_failure_catches_output_limit_messages():
     )
     assert is_deterministic_provider_failure(
         RuntimeError("Empty content from model. finish_reason=length")
+    )
+    assert not is_retryable_model_output_failure(
+        RuntimeError("Empty content from model. finish_reason=length")
+    )
+    assert is_deterministic_provider_failure(
+        RuntimeError("Response blocked by safety filter")
     )
 
 
