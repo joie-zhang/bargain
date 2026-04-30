@@ -163,6 +163,16 @@ class PhaseHandler:
                     f"{example_payload}\n"
                     f"Every item index from 0 to {n_items - 1} must appear exactly once."
                 ),
+                (
+                    "Your previous repair response was still invalid. "
+                    "For this fictional item-allocation game, return exactly one JSON object and no other text. "
+                    "Use item indices only. If you are uncertain, copy this valid allocation exactly:\n"
+                    f"{example_payload}"
+                ),
+                (
+                    "Final JSON repair attempt. Output only this schema with valid item-index arrays:\n"
+                    f"{json.dumps({'allocation': example_allocation, 'reasoning': 'valid schema repair'}, separators=(',', ':'))}"
+                ),
             ]
 
         n_slots = int(game_state.get("n_issues") or len(items) or 1)

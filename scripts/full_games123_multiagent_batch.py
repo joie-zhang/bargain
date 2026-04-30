@@ -16,6 +16,9 @@ import shlex
 import subprocess
 import sys
 from collections import Counter, defaultdict
+from dataclasses import dataclass
+from functools import lru_cache
+from itertools import combinations
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -37,8 +40,10 @@ ADVERSARY_MODELS = [
     "gpt-4o-mini-2024-07-18",
     "claude-sonnet-4-20250514",
     "gemini-2.5-pro",
-    "claude-opus-4-6-thinking",
+    "gpt-5.4-high",
 ]
+GEMINI_MODEL = "gemini-2.5-pro"
+GEMINI_MODELS = {"gemini-2.5-pro", "gemini-3.1-pro"}
 N_VALUES = [2, 4, 6, 8, 10]
 MAX_AGENT_COLUMNS = max(N_VALUES)
 GAME1_COMPETITION_LEVELS = [0.0, 0.25, 0.5, 0.75, 1.0]
@@ -47,7 +52,21 @@ GAME3_SIGMAS = [0.2, 0.5]
 GAME3_ALPHAS = [0.2, 0.8]
 HOMOGENEOUS_SEED_REPLICATES = [1, 2]
 HETEROGENEOUS_RUNS_PER_CELL = 20
-HETEROGENEOUS_EXCLUDED_MODELS = {"qwq-32b"}
+HETEROGENEOUS_POOL_SIZE = 24
+HETEROGENEOUS_EXCLUDED_MODELS = {"qwq-32b", "gemini-3-pro"}
+HETEROGENEOUS_STRATA_COUNT = 5
+HETEROGENEOUS_RUNS_PER_STRATUM = HETEROGENEOUS_RUNS_PER_CELL // HETEROGENEOUS_STRATA_COUNT
+HETEROGENEOUS_STRATUM_LABELS = ["very_low", "low", "mid", "high", "very_high"]
+HETEROGENEOUS_STRATEGY_PURE_RANDOM = "pure_random"
+HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH = "elo_stddev_equal_width_stratified"
+HETEROGENEOUS_SAMPLING_STRATEGY = HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH
+HETEROGENEOUS_SAMPLING_STRATEGIES = [
+    HETEROGENEOUS_STRATEGY_PURE_RANDOM,
+    HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH,
+]
+HETEROGENEOUS_SUBSET_MAP_DIRNAME = "heterogeneous_subset_maps"
+if HETEROGENEOUS_RUNS_PER_CELL % HETEROGENEOUS_STRATA_COUNT != 0:
+    raise ValueError("HETEROGENEOUS_RUNS_PER_CELL must divide evenly across strata")
 ELO_BUCKET_COUNT = 3
 MAX_ROUNDS = 10
 DISCUSSION_TURNS = 2
@@ -58,15 +77,24 @@ MAX_CONCURRENT = 50
 MASTER_SEED = 20260427
 JOB_NAME = "fg123"
 MAX_ARRAY_TASKS_PER_SUBMISSION = 2000
+SELECTION_PRESETS = [
+    "all",
+    "extended_derisk_n10_amazon_gpt4o",
+    "non_gemini_homogeneous",
+    "gemini_homogeneous",
+    "non_gemini_heterogeneous",
+    "gemini_heterogeneous",
+]
 EXCLUDED_MODEL_REFERENCE_PATTERNS = tuple(
     sorted({
         model.lower()
         for model in HETEROGENEOUS_EXCLUDED_MODELS
-    } | {
-        model.split("-", 1)[0].lower()
-        for model in HETEROGENEOUS_EXCLUDED_MODELS
     })
 )
+EXCLUDED_MODEL_REFERENCE_ALLOWED_KEYS = {
+    "heterogeneous_excluded_model_count",
+    "heterogeneous_excluded_models",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -81,6 +109,15 @@ def parse_args() -> argparse.Namespace:
     generate.add_argument("--max-rounds", type=int, default=MAX_ROUNDS)
     generate.add_argument("--discussion-turns", type=int, default=DISCUSSION_TURNS)
     generate.add_argument("--max-tokens-voting", type=int, default=MAX_TOKENS_VOTING)
+    generate.add_argument(
+        "--heterogeneous-sampling-strategy",
+        choices=HETEROGENEOUS_SAMPLING_STRATEGIES,
+        default=HETEROGENEOUS_SAMPLING_STRATEGY,
+        help=(
+            "Heterogeneous roster sampler. Default uses equal-width Elo-stddev "
+            "stratification; pure_random preserves the older behavior."
+        ),
+    )
 
     validate = subparsers.add_parser("validate")
     validate.add_argument("--results-root", type=str, required=True)
@@ -91,6 +128,28 @@ def parse_args() -> argparse.Namespace:
 
     submit = subparsers.add_parser("submit")
     submit.add_argument("--results-root", type=str, required=True)
+
+    select = subparsers.add_parser("select")
+    select.add_argument("--results-root", type=str, required=True)
+    select.add_argument("--selection-name", type=str, required=True)
+    select.add_argument("--preset", choices=SELECTION_PRESETS, default=None)
+    select.add_argument("--game-label", action="append", default=[])
+    select.add_argument("--experiment-family", action="append", default=[])
+    select.add_argument("--n-agents", action="append", type=int, default=[])
+    select.add_argument("--adversary-model", action="append", default=[])
+    select.add_argument("--adversary-position", action="append", default=[])
+    select.add_argument("--seed-replicate", action="append", type=int, default=[])
+    select.add_argument("--contains-model", action="append", default=[])
+    select.add_argument("--exclude-model", action="append", default=[])
+    select.add_argument("--config-id", action="append", type=int, default=[])
+
+    submit_selection = subparsers.add_parser("submit-selection")
+    submit_selection.add_argument("--results-root", type=str, required=True)
+    submit_selection.add_argument("--selection-name", type=str, default=None)
+    submit_selection.add_argument("--selection-file", type=str, default=None)
+    submit_selection.add_argument("--max-concurrent", type=int, default=None)
+    submit_selection.add_argument("--rerun-existing", action="store_true")
+    submit_selection.add_argument("--dry-run", action="store_true")
 
     summary = subparsers.add_parser("summary")
     summary.add_argument("--results-root", type=str, required=True)
@@ -142,6 +201,20 @@ def relative_or_absolute(path: Path) -> str:
         return str(path.relative_to(PROJECT_ROOT))
     except ValueError:
         return str(path)
+
+
+def split_csv_values(values: Iterable[Any]) -> List[str]:
+    tokens: List[str] = []
+    for value in values:
+        for token in str(value).split(","):
+            token = token.strip()
+            if token:
+                tokens.append(token)
+    return tokens
+
+
+def split_csv_int_values(values: Iterable[Any]) -> List[int]:
+    return [int(value) for value in split_csv_values(values)]
 
 
 def config_output_dir(config: Dict[str, Any]) -> Path:
@@ -233,6 +306,210 @@ def stable_seed(master_seed: int, *parts: Any) -> int:
     return int.from_bytes(digest[:8], "big") % (2**31 - 1)
 
 
+@dataclass(frozen=True, slots=True)
+class HeterogeneousSubset:
+    n_agents: int
+    subset_key: str
+    models: Tuple[str, ...]
+    model_elos: Tuple[int, ...]
+    elo_mean: float
+    elo_variance: float
+    elo_stddev: float
+    subset_rank_by_stddev: int
+    subset_rank_within_stratum: int
+    stratum_index: int
+    stratum_label: str
+    stratum_population_size: int
+    stratum_stddev_min: float
+    stratum_stddev_max: float
+    stratum_variance_min: float
+    stratum_variance_max: float
+
+
+@dataclass(frozen=True, slots=True)
+class HeterogeneousSubsetMap:
+    pool: Tuple[str, ...]
+    rows_by_n: Dict[int, Tuple[HeterogeneousSubset, ...]]
+    rows_by_n_stratum: Dict[Tuple[int, int], Tuple[HeterogeneousSubset, ...]]
+
+
+def validate_heterogeneous_sampling_strategy(strategy: str) -> str:
+    if strategy not in HETEROGENEOUS_SAMPLING_STRATEGIES:
+        raise ValueError(
+            f"Unknown heterogeneous sampling strategy {strategy!r}; "
+            f"expected one of {HETEROGENEOUS_SAMPLING_STRATEGIES}"
+        )
+    return strategy
+
+
+def model_elo_values(models: Iterable[str]) -> Tuple[int, ...]:
+    elos: List[int] = []
+    for model in models:
+        elo = elo_for_model(model)
+        if elo is None:
+            raise ValueError(f"Missing Elo for model {model!r}")
+        elos.append(int(elo))
+    return tuple(elos)
+
+
+def elo_summary_for_elos(elos: Iterable[int | float]) -> Dict[str, float]:
+    values = [float(value) for value in elos]
+    if not values:
+        raise ValueError("Cannot summarize Elo values for an empty model set")
+    mean = sum(values) / len(values)
+    variance = sum((value - mean) ** 2 for value in values) / len(values)
+    return {
+        "elo_mean": mean,
+        "elo_variance": variance,
+        "elo_stddev": math.sqrt(variance),
+    }
+
+
+def subset_key_for_models(models: Iterable[str]) -> str:
+    return "+".join(models)
+
+
+@lru_cache(maxsize=None)
+def random_state_start_hash(seed: int) -> str:
+    rng = random.Random(int(seed))
+    state_json = json.dumps(rng.getstate(), separators=(",", ":"))
+    return hashlib.sha256(state_json.encode("utf-8")).hexdigest()
+
+
+def random_state_start_metadata(seed: int) -> Dict[str, Any]:
+    rng = random.Random(int(seed))
+    state = rng.getstate()
+    state_json = json.dumps(state, separators=(",", ":"))
+    return {
+        "rng": "python_random.Random",
+        "python_version": sys.version,
+        "seed": int(seed),
+        "state": state,
+        "state_sha256": hashlib.sha256(state_json.encode("utf-8")).hexdigest(),
+    }
+
+
+def heterogeneous_generation_seed(master_seed: int, strategy: str) -> int:
+    return stable_seed(master_seed, "heterogeneous_generation_rng", strategy)
+
+
+@lru_cache(maxsize=8)
+def build_heterogeneous_subset_map(pool: Tuple[str, ...]) -> HeterogeneousSubsetMap:
+    rows_by_n: Dict[int, Tuple[HeterogeneousSubset, ...]] = {}
+    rows_by_n_stratum: Dict[Tuple[int, int], Tuple[HeterogeneousSubset, ...]] = {}
+    pool_elos = model_elo_values(pool)
+
+    for n_agents in N_VALUES:
+        raw_rows: List[Tuple[Tuple[str, ...], Tuple[int, ...], float, float, float, str]] = []
+        for indices in combinations(range(len(pool)), n_agents):
+            models = tuple(pool[index] for index in indices)
+            elos = tuple(pool_elos[index] for index in indices)
+            summary = elo_summary_for_elos(elos)
+            raw_rows.append(
+                (
+                    models,
+                    elos,
+                    summary["elo_mean"],
+                    summary["elo_variance"],
+                    summary["elo_stddev"],
+                    subset_key_for_models(models),
+                )
+            )
+
+        raw_rows.sort(key=lambda row: (row[4], row[5]))
+        min_stddev = raw_rows[0][4]
+        max_stddev = raw_rows[-1][4]
+        width = (max_stddev - min_stddev) / HETEROGENEOUS_STRATA_COUNT
+        bins: List[List[Tuple[int, Tuple[str, ...], Tuple[int, ...], float, float, float, str]]] = [
+            [] for _ in range(HETEROGENEOUS_STRATA_COUNT)
+        ]
+
+        for rank, (models, elos, mean, variance, stddev, subset_key) in enumerate(raw_rows, start=1):
+            if width <= 0:
+                stratum_index = 0
+            elif stddev >= max_stddev:
+                stratum_index = HETEROGENEOUS_STRATA_COUNT - 1
+            else:
+                stratum_index = min(
+                    HETEROGENEOUS_STRATA_COUNT - 1,
+                    int((stddev - min_stddev) / width),
+                )
+            bins[stratum_index].append((rank, models, elos, mean, variance, stddev, subset_key))
+
+        empty_bins = [index for index, rows in enumerate(bins) if not rows]
+        if empty_bins:
+            raise ValueError(
+                f"Equal-width Elo-stddev strata are empty for N={n_agents}: {empty_bins}"
+            )
+
+        finalized: List[HeterogeneousSubset] = []
+        for stratum_index, bin_rows in enumerate(bins):
+            stddev_min = min_stddev + width * stratum_index
+            stddev_max = (
+                max_stddev
+                if stratum_index == HETEROGENEOUS_STRATA_COUNT - 1
+                else min_stddev + width * (stratum_index + 1)
+            )
+            stratum_population_size = len(bin_rows)
+            finalized_bin: List[HeterogeneousSubset] = []
+            for within_rank, (rank, models, elos, mean, variance, stddev, subset_key) in enumerate(
+                sorted(bin_rows, key=lambda row: (row[5], row[6])),
+                start=1,
+            ):
+                finalized_bin.append(
+                    HeterogeneousSubset(
+                        n_agents=n_agents,
+                        subset_key=subset_key,
+                        models=models,
+                        model_elos=elos,
+                        elo_mean=mean,
+                        elo_variance=variance,
+                        elo_stddev=stddev,
+                        subset_rank_by_stddev=rank,
+                        subset_rank_within_stratum=within_rank,
+                        stratum_index=stratum_index,
+                        stratum_label=HETEROGENEOUS_STRATUM_LABELS[stratum_index],
+                        stratum_population_size=stratum_population_size,
+                        stratum_stddev_min=stddev_min,
+                        stratum_stddev_max=stddev_max,
+                        stratum_variance_min=stddev_min ** 2,
+                        stratum_variance_max=stddev_max ** 2,
+                    )
+                )
+            rows_by_n_stratum[(n_agents, stratum_index)] = tuple(finalized_bin)
+            finalized.extend(finalized_bin)
+
+        finalized.sort(key=lambda row: row.subset_rank_by_stddev)
+        rows_by_n[n_agents] = tuple(finalized)
+
+    return HeterogeneousSubsetMap(
+        pool=pool,
+        rows_by_n=rows_by_n,
+        rows_by_n_stratum=rows_by_n_stratum,
+    )
+
+
+def candidate_metadata(candidate: HeterogeneousSubset) -> Dict[str, Any]:
+    return {
+        "subset_key": candidate.subset_key,
+        "subset_rank_by_stddev": candidate.subset_rank_by_stddev,
+        "subset_rank_within_stratum": candidate.subset_rank_within_stratum,
+        "stratum_index": candidate.stratum_index,
+        "stratum_label": candidate.stratum_label,
+        "stratum_method": "equal_width_stddev",
+        "stratum_population_size": candidate.stratum_population_size,
+        "stratum_stddev_min": candidate.stratum_stddev_min,
+        "stratum_stddev_max": candidate.stratum_stddev_max,
+        "stratum_variance_min": candidate.stratum_variance_min,
+        "stratum_variance_max": candidate.stratum_variance_max,
+        "subset_model_ids_unordered": list(candidate.models),
+        "subset_model_elos_unordered": list(candidate.model_elos),
+        "elo_mean": candidate.elo_mean,
+        "elo_variance": candidate.elo_variance,
+        "elo_stddev": candidate.elo_stddev,
+    }
+
+
 def agent_ids(n_agents: int) -> List[str]:
     return [f"Agent_{idx}" for idx in range(1, n_agents + 1)]
 
@@ -263,8 +540,10 @@ def filtered_heterogeneous_pool() -> List[str]:
         for model in context_filtered_model_pool()
         if model not in HETEROGENEOUS_EXCLUDED_MODELS
     ]
-    if len(pool) != 24:
-        raise ValueError(f"Expected 24 heterogeneous models after exclusions, got {len(pool)}")
+    if len(pool) != HETEROGENEOUS_POOL_SIZE:
+        raise ValueError(
+            f"Expected {HETEROGENEOUS_POOL_SIZE} heterogeneous models after exclusions, got {len(pool)}"
+        )
     return pool
 
 
@@ -279,6 +558,8 @@ def find_excluded_model_references(value: Any, path: str = "$") -> List[str]:
     if isinstance(value, dict):
         for key, child in value.items():
             key_path = f"{path}.{key}"
+            if str(key) in EXCLUDED_MODEL_REFERENCE_ALLOWED_KEYS:
+                continue
             matches.extend(find_excluded_model_references(str(key), f"{key_path}<key>"))
             matches.extend(find_excluded_model_references(child, key_path))
         return matches
@@ -361,6 +642,9 @@ def common_config(
     adversary_position: Optional[str] = None,
     heterogeneous_model_pool: Optional[List[str]] = None,
     heterogeneous_draw_seed: Optional[int] = None,
+    heterogeneous_order_seed: Optional[int] = None,
+    heterogeneous_sampling_strategy: str = HETEROGENEOUS_SAMPLING_STRATEGY,
+    heterogeneous_metadata: Optional[Dict[str, Any]] = None,
     elo_bucket_map: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     n_agents = len(models)
@@ -414,13 +698,22 @@ def common_config(
         config["model_pool"] = heterogeneous_model_pool
         config["model_pool_size"] = len(heterogeneous_model_pool)
         config["heterogeneous_excluded_model_count"] = len(HETEROGENEOUS_EXCLUDED_MODELS)
+        config["heterogeneous_excluded_models"] = sorted(HETEROGENEOUS_EXCLUDED_MODELS)
+        config["heterogeneous_sampling_strategy"] = heterogeneous_sampling_strategy
         config["heterogeneous_sampling"] = {
+            "strategy": heterogeneous_sampling_strategy,
             "without_replacement_within_run": True,
             "with_replacement_across_runs": True,
+            "sampling_with_replacement": True,
+            "planned_roster_replication": False,
             "random_order": True,
         }
     if heterogeneous_draw_seed is not None:
         config["heterogeneous_draw_seed"] = int(heterogeneous_draw_seed)
+    if heterogeneous_order_seed is not None:
+        config["heterogeneous_order_seed"] = int(heterogeneous_order_seed)
+    if heterogeneous_metadata:
+        config.update(heterogeneous_metadata)
     if elo_bucket_map is not None:
         config["elo_bucket_method"] = "quantile_terciles_after_explicit_exclusions"
         config["model_elo_bucket_map"] = elo_bucket_map
@@ -438,22 +731,36 @@ def build_configs(
     max_rounds: int,
     discussion_turns: int,
     max_tokens_voting: Optional[int],
+    heterogeneous_sampling_strategy: str = HETEROGENEOUS_SAMPLING_STRATEGY,
 ) -> List[Dict[str, Any]]:
+    heterogeneous_sampling_strategy = validate_heterogeneous_sampling_strategy(
+        heterogeneous_sampling_strategy
+    )
     configs: List[Dict[str, Any]] = []
     config_id = 1
     hetero_pool = filtered_heterogeneous_pool()
+    hetero_pool_tuple = tuple(hetero_pool)
+    subset_map = (
+        build_heterogeneous_subset_map(hetero_pool_tuple)
+        if heterogeneous_sampling_strategy == HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH
+        else None
+    )
     elo_bucket_map = quantile_elo_bucket_map(hetero_pool, n_buckets=ELO_BUCKET_COUNT)
+    generation_seed = heterogeneous_generation_seed(master_seed, heterogeneous_sampling_strategy)
+    generation_rng_state_start_hash = random_state_start_hash(generation_seed)
+    subset_reuse_global: Counter[str] = Counter()
 
     for game_label in ["game1", "game2", "game3"]:
         for n_agents in N_VALUES:
             for game_params in game_parameter_grid(game_label, n_agents):
+                competition_id = game_params["competition_id"]
                 for seed_replicate in HOMOGENEOUS_SEED_REPLICATES:
                     random_seed = stable_seed(
                         master_seed,
                         "homogeneous_control",
                         game_label,
                         n_agents,
-                        game_params["competition_id"],
+                        competition_id,
                         seed_replicate,
                     )
                     configs.append(
@@ -487,7 +794,7 @@ def build_configs(
                                 "homogeneous_adversary",
                                 game_label,
                                 n_agents,
-                                game_params["competition_id"],
+                                competition_id,
                                 adversary,
                                 position,
                                 seed_replicate,
@@ -512,48 +819,323 @@ def build_configs(
                             )
                             config_id += 1
 
-                for run_index in range(1, HETEROGENEOUS_RUNS_PER_CELL + 1):
-                    draw_seed = stable_seed(
-                        master_seed,
-                        "heterogeneous_draw",
-                        game_label,
-                        n_agents,
-                        game_params["competition_id"],
-                        run_index,
-                    )
-                    rng = random.Random(draw_seed)
-                    models = rng.sample(hetero_pool, n_agents)
-                    rng.shuffle(models)
-                    random_seed = stable_seed(
-                        master_seed,
-                        "heterogeneous_environment",
-                        game_label,
-                        n_agents,
-                        game_params["competition_id"],
-                        run_index,
-                    )
-                    configs.append(
-                        common_config(
-                            config_id=config_id,
-                            results_root=results_root,
-                            game_label=game_label,
-                            family="heterogeneous_random",
-                            models=models,
-                            model_order="sampled_random_order",
-                            random_seed=random_seed,
-                            max_rounds=max_rounds,
-                            discussion_turns=discussion_turns,
-                            max_tokens_voting=max_tokens_voting,
-                            game_params=game_params,
-                            heterogeneous_run_index=run_index,
-                            heterogeneous_model_pool=hetero_pool,
-                            heterogeneous_draw_seed=draw_seed,
-                            elo_bucket_map=elo_bucket_map,
+                subset_reuse_within_cell: Counter[str] = Counter()
+                if heterogeneous_sampling_strategy == HETEROGENEOUS_STRATEGY_PURE_RANDOM:
+                    for run_index in range(1, HETEROGENEOUS_RUNS_PER_CELL + 1):
+                        draw_seed = stable_seed(
+                            master_seed,
+                            "heterogeneous_draw",
+                            heterogeneous_sampling_strategy,
+                            game_label,
+                            n_agents,
+                            competition_id,
+                            run_index,
                         )
-                    )
-                    config_id += 1
+                        order_seed = stable_seed(
+                            master_seed,
+                            "heterogeneous_order",
+                            heterogeneous_sampling_strategy,
+                            game_label,
+                            n_agents,
+                            competition_id,
+                            run_index,
+                        )
+                        draw_rng = random.Random(draw_seed)
+                        order_rng = random.Random(order_seed)
+                        drawn_models = set(draw_rng.sample(hetero_pool, n_agents))
+                        unordered_models = tuple(model for model in hetero_pool if model in drawn_models)
+                        models = list(unordered_models)
+                        order_rng.shuffle(models)
+                        elos = model_elo_values(unordered_models)
+                        elo_summary = elo_summary_for_elos(elos)
+                        subset_key = subset_key_for_models(unordered_models)
+                        global_before = subset_reuse_global[subset_key]
+                        cell_before = subset_reuse_within_cell[subset_key]
+                        subset_reuse_global[subset_key] += 1
+                        subset_reuse_within_cell[subset_key] += 1
+                        metadata = {
+                            "generation_rng_state_start_hash": generation_rng_state_start_hash,
+                            "sampling_rng_state_start_hash": random_state_start_hash(draw_seed),
+                            "order_rng_state_start_hash": random_state_start_hash(order_seed),
+                            "sampling_with_replacement": True,
+                            "planned_roster_replication": False,
+                            "subset_key": subset_key,
+                            "subset_model_ids_unordered": list(unordered_models),
+                            "subset_model_elos_unordered": list(elos),
+                            "subset_reuse_count_global_before_this_draw": global_before,
+                            "subset_reuse_count_global_after_this_draw": subset_reuse_global[subset_key],
+                            "subset_reuse_count_within_cell_before_this_draw": cell_before,
+                            "subset_reuse_count_within_cell_after_this_draw": subset_reuse_within_cell[subset_key],
+                            **elo_summary,
+                        }
+                        random_seed = stable_seed(
+                            master_seed,
+                            "heterogeneous_environment",
+                            game_label,
+                            n_agents,
+                            competition_id,
+                            run_index,
+                        )
+                        configs.append(
+                            common_config(
+                                config_id=config_id,
+                                results_root=results_root,
+                                game_label=game_label,
+                                family="heterogeneous_random",
+                                models=models,
+                                model_order="sampled_random_order",
+                                random_seed=random_seed,
+                                max_rounds=max_rounds,
+                                discussion_turns=discussion_turns,
+                                max_tokens_voting=max_tokens_voting,
+                                game_params=game_params,
+                                heterogeneous_run_index=run_index,
+                                heterogeneous_model_pool=hetero_pool,
+                                heterogeneous_draw_seed=draw_seed,
+                                heterogeneous_order_seed=order_seed,
+                                heterogeneous_sampling_strategy=heterogeneous_sampling_strategy,
+                                heterogeneous_metadata=metadata,
+                                elo_bucket_map=elo_bucket_map,
+                            )
+                        )
+                        config_id += 1
+                else:
+                    if subset_map is None:
+                        raise AssertionError("subset_map must be built for stratified sampling")
+                    run_index = 1
+                    for stratum_index in range(HETEROGENEOUS_STRATA_COUNT):
+                        candidates = subset_map.rows_by_n_stratum[(n_agents, stratum_index)]
+                        for stratum_draw_index in range(1, HETEROGENEOUS_RUNS_PER_STRATUM + 1):
+                            draw_seed = stable_seed(
+                                master_seed,
+                                "heterogeneous_draw",
+                                heterogeneous_sampling_strategy,
+                                game_label,
+                                n_agents,
+                                competition_id,
+                                stratum_index,
+                                stratum_draw_index,
+                            )
+                            order_seed = stable_seed(
+                                master_seed,
+                                "heterogeneous_order",
+                                heterogeneous_sampling_strategy,
+                                game_label,
+                                n_agents,
+                                competition_id,
+                                run_index,
+                            )
+                            draw_rng = random.Random(draw_seed)
+                            order_rng = random.Random(order_seed)
+                            candidate = draw_rng.choice(candidates)
+                            models = list(candidate.models)
+                            order_rng.shuffle(models)
+                            global_before = subset_reuse_global[candidate.subset_key]
+                            cell_before = subset_reuse_within_cell[candidate.subset_key]
+                            subset_reuse_global[candidate.subset_key] += 1
+                            subset_reuse_within_cell[candidate.subset_key] += 1
+                            metadata = {
+                                **candidate_metadata(candidate),
+                                "stratum_draw_index": stratum_draw_index,
+                                "generation_rng_state_start_hash": generation_rng_state_start_hash,
+                                "sampling_rng_state_start_hash": random_state_start_hash(draw_seed),
+                                "order_rng_state_start_hash": random_state_start_hash(order_seed),
+                                "sampling_with_replacement": True,
+                                "planned_roster_replication": False,
+                                "subset_reuse_count_global_before_this_draw": global_before,
+                                "subset_reuse_count_global_after_this_draw": subset_reuse_global[candidate.subset_key],
+                                "subset_reuse_count_within_cell_before_this_draw": cell_before,
+                                "subset_reuse_count_within_cell_after_this_draw": subset_reuse_within_cell[candidate.subset_key],
+                            }
+                            random_seed = stable_seed(
+                                master_seed,
+                                "heterogeneous_environment",
+                                game_label,
+                                n_agents,
+                                competition_id,
+                                run_index,
+                            )
+                            configs.append(
+                                common_config(
+                                    config_id=config_id,
+                                    results_root=results_root,
+                                    game_label=game_label,
+                                    family="heterogeneous_random",
+                                    models=models,
+                                    model_order="sampled_random_order",
+                                    random_seed=random_seed,
+                                    max_rounds=max_rounds,
+                                    discussion_turns=discussion_turns,
+                                    max_tokens_voting=max_tokens_voting,
+                                    game_params=game_params,
+                                    heterogeneous_run_index=run_index,
+                                    heterogeneous_model_pool=hetero_pool,
+                                    heterogeneous_draw_seed=draw_seed,
+                                    heterogeneous_order_seed=order_seed,
+                                    heterogeneous_sampling_strategy=heterogeneous_sampling_strategy,
+                                    heterogeneous_metadata=metadata,
+                                    elo_bucket_map=elo_bucket_map,
+                                )
+                            )
+                            config_id += 1
+                            run_index += 1
 
     return configs
+
+
+def format_float(value: float) -> str:
+    return f"{float(value):.12g}"
+
+
+def write_heterogeneous_subset_maps(
+    output_dir: Path,
+    subset_map: HeterogeneousSubsetMap,
+    *,
+    master_seed: int,
+    strategy: str,
+) -> Dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    generation_seed = heterogeneous_generation_seed(master_seed, strategy)
+    generation_state = random_state_start_metadata(generation_seed)
+    map_manifest = {
+        "generated_at": dt.datetime.now().isoformat(),
+        "strategy": strategy,
+        "stratum_method": "equal_width_stddev",
+        "n_strata": HETEROGENEOUS_STRATA_COUNT,
+        "stratum_labels": HETEROGENEOUS_STRATUM_LABELS,
+        "n_values": N_VALUES,
+        "master_seed": int(master_seed),
+        "generation_rng_state_start": generation_state,
+        "model_pool_size": len(subset_map.pool),
+        "model_pool_file": f"model_pool_{len(subset_map.pool)}.csv",
+        "excluded_models": sorted(HETEROGENEOUS_EXCLUDED_MODELS),
+        "source_files": [
+            "scripts/full_games123_multiagent_batch.py",
+            "strong_models_experiment/analysis/active_model_roster.py",
+        ],
+    }
+    write_json(output_dir / "manifest.json", map_manifest)
+
+    with (output_dir / f"model_pool_{len(subset_map.pool)}.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["pool_index", "model", "arena_elo"])
+        writer.writeheader()
+        for index, model in enumerate(subset_map.pool):
+            writer.writerow({
+                "pool_index": index,
+                "model": model,
+                "arena_elo": elo_for_model(model),
+            })
+
+    boundary_fieldnames = [
+        "n_agents",
+        "stratum_index",
+        "stratum_label",
+        "stratum_method",
+        "stratum_population_size",
+        "stratum_stddev_min",
+        "stratum_stddev_max",
+        "stratum_variance_min",
+        "stratum_variance_max",
+        "observed_stddev_min",
+        "observed_stddev_max",
+    ]
+    with (output_dir / "strata_boundaries.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=boundary_fieldnames)
+        writer.writeheader()
+        for n_agents in N_VALUES:
+            for stratum_index in range(HETEROGENEOUS_STRATA_COUNT):
+                rows = subset_map.rows_by_n_stratum[(n_agents, stratum_index)]
+                first = rows[0]
+                writer.writerow({
+                    "n_agents": n_agents,
+                    "stratum_index": stratum_index,
+                    "stratum_label": first.stratum_label,
+                    "stratum_method": "equal_width_stddev",
+                    "stratum_population_size": len(rows),
+                    "stratum_stddev_min": format_float(first.stratum_stddev_min),
+                    "stratum_stddev_max": format_float(first.stratum_stddev_max),
+                    "stratum_variance_min": format_float(first.stratum_variance_min),
+                    "stratum_variance_max": format_float(first.stratum_variance_max),
+                    "observed_stddev_min": format_float(rows[0].elo_stddev),
+                    "observed_stddev_max": format_float(rows[-1].elo_stddev),
+                })
+
+    summary_fieldnames = [
+        "n_agents",
+        "subset_count",
+        "elo_stddev_min",
+        "elo_stddev_max",
+        "elo_variance_min",
+        "elo_variance_max",
+        "stratum_population_sizes",
+    ]
+    with (output_dir / "exact_subset_summary.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=summary_fieldnames)
+        writer.writeheader()
+        for n_agents in N_VALUES:
+            rows = subset_map.rows_by_n[n_agents]
+            writer.writerow({
+                "n_agents": n_agents,
+                "subset_count": len(rows),
+                "elo_stddev_min": format_float(min(row.elo_stddev for row in rows)),
+                "elo_stddev_max": format_float(max(row.elo_stddev for row in rows)),
+                "elo_variance_min": format_float(min(row.elo_variance for row in rows)),
+                "elo_variance_max": format_float(max(row.elo_variance for row in rows)),
+                "stratum_population_sizes": "+".join(
+                    str(len(subset_map.rows_by_n_stratum[(n_agents, stratum_index)]))
+                    for stratum_index in range(HETEROGENEOUS_STRATA_COUNT)
+                ),
+            })
+
+    subset_fieldnames = [
+        "n_agents",
+        "subset_key",
+        "subset_rank_by_stddev",
+        "subset_rank_within_stratum",
+        "stratum_index",
+        "stratum_label",
+        "stratum_method",
+        "stratum_population_size",
+        "stratum_stddev_min",
+        "stratum_stddev_max",
+        "stratum_variance_min",
+        "stratum_variance_max",
+        "model_ids_unordered",
+        "model_elos_unordered",
+        "elo_mean",
+        "elo_variance",
+        "elo_stddev",
+    ]
+    for n_agents in N_VALUES:
+        with (output_dir / f"n_{n_agents:02d}_subsets.csv").open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=subset_fieldnames)
+            writer.writeheader()
+            for row in subset_map.rows_by_n[n_agents]:
+                writer.writerow({
+                    "n_agents": row.n_agents,
+                    "subset_key": row.subset_key,
+                    "subset_rank_by_stddev": row.subset_rank_by_stddev,
+                    "subset_rank_within_stratum": row.subset_rank_within_stratum,
+                    "stratum_index": row.stratum_index,
+                    "stratum_label": row.stratum_label,
+                    "stratum_method": "equal_width_stddev",
+                    "stratum_population_size": row.stratum_population_size,
+                    "stratum_stddev_min": format_float(row.stratum_stddev_min),
+                    "stratum_stddev_max": format_float(row.stratum_stddev_max),
+                    "stratum_variance_min": format_float(row.stratum_variance_min),
+                    "stratum_variance_max": format_float(row.stratum_variance_max),
+                    "model_ids_unordered": "+".join(row.models),
+                    "model_elos_unordered": "+".join(str(elo) for elo in row.model_elos),
+                    "elo_mean": format_float(row.elo_mean),
+                    "elo_variance": format_float(row.elo_variance),
+                    "elo_stddev": format_float(row.elo_stddev),
+                })
+
+    return {
+        "subset_map_dir": str(output_dir),
+        "subset_map_manifest": str(output_dir / "manifest.json"),
+        "generation_rng_state_start_hash": generation_state["state_sha256"],
+    }
 
 
 def write_generated_files(results_root: Path, manifest: Dict[str, Any], configs: List[Dict[str, Any]]) -> None:
@@ -563,8 +1145,23 @@ def write_generated_files(results_root: Path, manifest: Dict[str, Any], configs:
     (results_root / "logs").mkdir(exist_ok=True)
     (results_root / "status").mkdir(exist_ok=True)
     (results_root / "slurm").mkdir(exist_ok=True)
+    (results_root / "selections").mkdir(exist_ok=True)
+    (results_root / "submissions").mkdir(exist_ok=True)
 
     write_json(results_root / "manifest.json", manifest)
+    if manifest.get("write_heterogeneous_subset_maps"):
+        strategy = validate_heterogeneous_sampling_strategy(
+            str(manifest.get("heterogeneous_sampling_strategy", HETEROGENEOUS_SAMPLING_STRATEGY))
+        )
+        if strategy == HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH:
+            subset_map_info = write_heterogeneous_subset_maps(
+                config_dir / HETEROGENEOUS_SUBSET_MAP_DIRNAME,
+                build_heterogeneous_subset_map(tuple(filtered_heterogeneous_pool())),
+                master_seed=int(manifest.get("master_seed", MASTER_SEED)),
+                strategy=strategy,
+            )
+            manifest["heterogeneous_subset_map"] = subset_map_info
+            write_json(results_root / "manifest.json", manifest)
     for config in configs:
         write_json(config_dir / f"config_{config['config_id']:04d}.json", config)
 
@@ -588,8 +1185,21 @@ def write_generated_files(results_root: Path, manifest: Dict[str, Any], configs:
         "n_agents", "num_items", "n_issues", "m_projects", "competition_level",
         "rho", "theta", "sigma", "alpha", "adversary_model", "adversary_position",
         "seed_replicate", "random_seed", "seed", "model_order", "models",
-        "heterogeneous_run_index", "heterogeneous_draw_seed", "model_pool_size",
-        "model_pool", "heterogeneous_sampling", "elo_bucket_method",
+        "heterogeneous_run_index", "heterogeneous_draw_seed", "heterogeneous_order_seed",
+        "heterogeneous_sampling_strategy", "generation_rng_state_start_hash",
+        "sampling_rng_state_start_hash", "order_rng_state_start_hash",
+        "model_pool_size", "model_pool", "heterogeneous_excluded_models",
+        "heterogeneous_sampling", "sampling_with_replacement", "planned_roster_replication",
+        "subset_key", "subset_rank_by_stddev", "subset_rank_within_stratum",
+        "subset_reuse_count_global_before_this_draw",
+        "subset_reuse_count_global_after_this_draw",
+        "subset_reuse_count_within_cell_before_this_draw",
+        "subset_reuse_count_within_cell_after_this_draw",
+        "stratum_index", "stratum_label", "stratum_method", "stratum_draw_index",
+        "stratum_population_size", "stratum_stddev_min", "stratum_stddev_max",
+        "stratum_variance_min", "stratum_variance_max",
+        "subset_model_ids_unordered", "subset_model_elos_unordered",
+        "elo_mean", "elo_variance", "elo_stddev", "elo_bucket_method",
         "output_dir",
     ] + agent_fieldnames
     with (config_dir / "experiment_index.csv").open("w", newline="", encoding="utf-8") as handle:
@@ -600,6 +1210,15 @@ def write_generated_files(results_root: Path, manifest: Dict[str, Any], configs:
             row["models"] = "+".join(config["models"])
             model_pool = config.get("model_pool") or []
             row["model_pool"] = "+".join(model_pool)
+            row["heterogeneous_excluded_models"] = "+".join(
+                config.get("heterogeneous_excluded_models") or []
+            )
+            row["subset_model_ids_unordered"] = "+".join(
+                config.get("subset_model_ids_unordered") or []
+            )
+            row["subset_model_elos_unordered"] = "+".join(
+                str(elo) for elo in (config.get("subset_model_elos_unordered") or [])
+            )
             heterogeneous_sampling = config.get("heterogeneous_sampling")
             row["heterogeneous_sampling"] = (
                 json.dumps(heterogeneous_sampling, sort_keys=True)
@@ -645,6 +1264,258 @@ def result_path_for(config: Dict[str, Any]) -> Optional[Path]:
         if candidate.exists():
             return candidate
     return None
+
+
+def validate_result_file(config: Dict[str, Any], result_path: Path) -> Optional[str]:
+    """Return None when a result file is complete enough to count as success."""
+    try:
+        payload = json.loads(result_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return f"invalid result JSON: {exc}"
+    except OSError as exc:
+        return f"result file unreadable: {exc}"
+
+    if not isinstance(payload, dict):
+        return "result payload is not a JSON object"
+
+    final_utilities = payload.get("final_utilities")
+    if not isinstance(final_utilities, dict):
+        return "missing or non-dict final_utilities"
+
+    try:
+        n_agents = int(config.get("n_agents") or len(config.get("models") or []))
+    except (TypeError, ValueError):
+        return "cannot infer expected agent count"
+    expected_agents = agent_ids(n_agents)
+    if not expected_agents:
+        return "cannot infer expected agent IDs"
+
+    missing_agents = [agent_id for agent_id in expected_agents if agent_id not in final_utilities]
+    if missing_agents:
+        return "missing final_utilities for " + ", ".join(missing_agents[:5])
+
+    for agent_id in expected_agents:
+        try:
+            float(final_utilities[agent_id])
+        except (TypeError, ValueError):
+            return f"non-numeric final_utility for {agent_id}: {final_utilities[agent_id]!r}"
+
+    payload_config = payload.get("config", {})
+    if payload_config is None:
+        payload_config = {}
+    if not isinstance(payload_config, dict):
+        return "result config is not a JSON object"
+
+    for key in ("config_id", "random_seed"):
+        if key not in payload_config or payload_config[key] is None or key not in config:
+            continue
+        try:
+            if int(payload_config[key]) != int(config[key]):
+                return f"result config {key} mismatch: {payload_config[key]!r} != {config[key]!r}"
+        except (TypeError, ValueError):
+            return f"result config {key} is non-integer: {payload_config[key]!r}"
+
+    if payload_config.get("game_type") is not None and payload_config.get("game_type") != config.get("game_type"):
+        return f"result config game_type mismatch: {payload_config.get('game_type')!r} != {config.get('game_type')!r}"
+
+    return None
+
+
+def selection_slug(selection_name: str) -> str:
+    slug = sanitize_token(selection_name)
+    if not slug:
+        raise ValueError("Selection name cannot be empty after sanitization")
+    return slug
+
+
+def selection_ids_path(results_root: Path, selection_name: str) -> Path:
+    return results_root / "selections" / f"{selection_slug(selection_name)}_config_ids.txt"
+
+
+def selection_manifest_path(results_root: Path, selection_name: str) -> Path:
+    return results_root / "selections" / f"{selection_slug(selection_name)}_selection.json"
+
+
+def read_config_id_file(path: Path) -> List[int]:
+    ids: List[int] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped:
+            ids.append(int(stripped))
+    return ids
+
+
+def config_succeeded(config: Dict[str, Any]) -> bool:
+    result_path = result_path_for(config)
+    return result_path is not None and validate_result_file(config, result_path) is None
+
+
+def chunked(values: List[int], chunk_size: int = MAX_ARRAY_TASKS_PER_SUBMISSION) -> List[List[int]]:
+    return [values[idx:idx + chunk_size] for idx in range(0, len(values), chunk_size)]
+
+
+def selection_preset_criteria(preset: Optional[str]) -> Dict[str, set]:
+    if not preset or preset == "all":
+        return {}
+    if preset == "extended_derisk_n10_amazon_gpt4o":
+        return {
+            "experiment_families": {"homogeneous_adversary"},
+            "n_agents": {10},
+            "adversary_models": {
+                "amazon-nova-micro-v1.0",
+                "gpt-4o-mini-2024-07-18",
+            },
+            "adversary_positions": {"first", "last"},
+            "seed_replicates": {1},
+        }
+    if preset == "non_gemini_homogeneous":
+        return {
+            "experiment_families": {"homogeneous_control", "homogeneous_adversary"},
+            "exclude_models": set(GEMINI_MODELS),
+        }
+    if preset == "gemini_homogeneous":
+        return {
+            "experiment_families": {"homogeneous_adversary"},
+            "contains_models": set(GEMINI_MODELS),
+        }
+    if preset == "non_gemini_heterogeneous":
+        return {
+            "experiment_families": {"heterogeneous_random"},
+            "exclude_models": set(GEMINI_MODELS),
+        }
+    if preset == "gemini_heterogeneous":
+        return {
+            "experiment_families": {"heterogeneous_random"},
+            "contains_models": set(GEMINI_MODELS),
+        }
+    raise ValueError(f"Unknown selection preset: {preset}")
+
+
+def merge_selection_criteria(base: Dict[str, set], extra: Dict[str, set]) -> Dict[str, set]:
+    merged = {key: set(value) for key, value in base.items()}
+    intersect_keys = {
+        "config_ids",
+        "game_labels",
+        "experiment_families",
+        "n_agents",
+        "adversary_models",
+        "adversary_positions",
+        "seed_replicates",
+    }
+    union_keys = {"contains_models", "exclude_models"}
+    for key, values in extra.items():
+        if not values:
+            continue
+        incoming = set(values)
+        if key in union_keys:
+            merged[key] = set(merged.get(key, set())) | incoming
+        elif key in intersect_keys and merged.get(key):
+            merged[key] = set(merged[key]) & incoming
+        else:
+            merged[key] = incoming
+    return merged
+
+
+def config_matches_selection(config: Dict[str, Any], criteria: Dict[str, set]) -> bool:
+    models = set(config.get("models") or [])
+    checks = [
+        ("config_ids", int(config["config_id"])),
+        ("game_labels", config.get("game_label")),
+        ("experiment_families", config.get("experiment_family")),
+        ("n_agents", int(config.get("n_agents", 0))),
+        ("adversary_models", config.get("adversary_model")),
+        ("adversary_positions", config.get("adversary_position")),
+        ("seed_replicates", config.get("seed_replicate")),
+    ]
+    for key, value in checks:
+        allowed = criteria.get(key)
+        if allowed and value not in allowed:
+            return False
+    contains_models = criteria.get("contains_models") or set()
+    if contains_models and not (models & contains_models):
+        return False
+    exclude_models = criteria.get("exclude_models") or set()
+    if exclude_models and models & exclude_models:
+        return False
+    return True
+
+
+def select_config_ids(configs: List[Dict[str, Any]], criteria: Dict[str, set]) -> List[int]:
+    return [
+        int(config["config_id"])
+        for config in configs
+        if config_matches_selection(config, criteria)
+    ]
+
+
+def selection_breakdown(configs: List[Dict[str, Any]], config_ids: List[int]) -> Dict[str, Dict[str, int]]:
+    selected = {int(config_id) for config_id in config_ids}
+    counters: Dict[str, Counter] = {
+        "by_game_family": Counter(),
+        "by_game": Counter(),
+        "by_family": Counter(),
+        "by_n_agents": Counter(),
+        "by_adversary_model": Counter(),
+        "by_contains_gemini": Counter(),
+    }
+    for config in configs:
+        if int(config["config_id"]) not in selected:
+            continue
+        counters["by_game_family"][f"{config['game_label']}:{config['experiment_family']}"] += 1
+        counters["by_game"][str(config["game_label"])] += 1
+        counters["by_family"][str(config["experiment_family"])] += 1
+        counters["by_n_agents"][str(config["n_agents"])] += 1
+        if config.get("adversary_model"):
+            counters["by_adversary_model"][str(config["adversary_model"])] += 1
+        counters["by_contains_gemini"][str(bool(GEMINI_MODELS & set(config.get("models") or [])))] += 1
+    return {key: dict(counter) for key, counter in counters.items()}
+
+
+def write_selection_files(
+    results_root: Path,
+    configs: List[Dict[str, Any]],
+    selection_name: str,
+    criteria: Dict[str, set],
+    config_ids: List[int],
+) -> Dict[str, Any]:
+    selections_dir = results_root / "selections"
+    selections_dir.mkdir(parents=True, exist_ok=True)
+    ids_path = selection_ids_path(results_root, selection_name)
+    ids_path.write_text(
+        "\n".join(str(config_id) for config_id in config_ids) + ("\n" if config_ids else ""),
+        encoding="utf-8",
+    )
+    selected = {int(config_id) for config_id in config_ids}
+    csv_path = selections_dir / f"{selection_slug(selection_name)}_index.csv"
+    fieldnames = [
+        "config_id", "game_label", "experiment_family", "n_agents",
+        "competition_id", "adversary_model", "adversary_position",
+        "seed_replicate", "heterogeneous_run_index", "contains_gemini",
+        "models",
+    ]
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for config in configs:
+            if int(config["config_id"]) not in selected:
+                continue
+            row = {field: config.get(field) for field in fieldnames if field != "models"}
+            row["models"] = "+".join(config.get("models") or [])
+            row["contains_gemini"] = bool(GEMINI_MODELS & set(config.get("models") or []))
+            writer.writerow(row)
+    manifest = {
+        "selection_name": selection_slug(selection_name),
+        "created_at": dt.datetime.now().isoformat(),
+        "results_root": str(results_root),
+        "count": len(config_ids),
+        "config_ids_file": str(ids_path),
+        "index_csv": str(csv_path),
+        "criteria": {key: sorted(value) for key, value in criteria.items()},
+        "breakdown": selection_breakdown(configs, config_ids),
+        "config_ids": config_ids,
+    }
+    write_json(selection_manifest_path(results_root, selection_name), manifest)
+    return manifest
 
 
 def load_dotenv_env() -> Dict[str, str]:
@@ -747,8 +1618,21 @@ def enrich_result_metadata(config: Dict[str, Any]) -> None:
         "models", "agent_model_map", "agent_elo_map", "agent_role_map",
         "model_order", "adversary_model", "adversary_position",
         "seed_replicate", "heterogeneous_run_index", "heterogeneous_draw_seed",
-        "model_pool", "model_pool_size",
-        "heterogeneous_sampling", "heterogeneous_excluded_model_count",
+        "heterogeneous_order_seed", "model_pool", "model_pool_size",
+        "heterogeneous_sampling", "heterogeneous_sampling_strategy",
+        "heterogeneous_excluded_model_count", "heterogeneous_excluded_models",
+        "generation_rng_state_start_hash", "sampling_rng_state_start_hash",
+        "order_rng_state_start_hash", "sampling_with_replacement",
+        "planned_roster_replication", "subset_key", "subset_rank_by_stddev",
+        "subset_rank_within_stratum", "subset_reuse_count_global_before_this_draw",
+        "subset_reuse_count_global_after_this_draw",
+        "subset_reuse_count_within_cell_before_this_draw",
+        "subset_reuse_count_within_cell_after_this_draw",
+        "stratum_index", "stratum_label", "stratum_method", "stratum_draw_index",
+        "stratum_population_size", "stratum_stddev_min", "stratum_stddev_max",
+        "stratum_variance_min", "stratum_variance_max",
+        "subset_model_ids_unordered", "subset_model_elos_unordered",
+        "elo_mean", "elo_variance", "elo_stddev",
         "elo_bucket_method", "model_elo_bucket_map",
         "agent_elo_bucket_map", "max_tokens_voting", "parallel_phases",
     ]
@@ -769,7 +1653,8 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     attempts = legacy_attempts_from_status(previous_status)
 
     existing = result_path_for(config)
-    if existing is not None:
+    existing_result_error = validate_result_file(config, existing) if existing is not None else None
+    if existing is not None and existing_result_error is None:
         enrich_result_metadata(config)
         status = {
             "config_id": config_id,
@@ -777,6 +1662,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
             "returncode": 0,
             "skipped_existing": True,
             "result_path": str(existing),
+            "result_validation_error": None,
             "log_path": str(latest_log_path),
             "attempts": attempts,
             "updated_at": dt.datetime.now().isoformat(),
@@ -851,7 +1737,8 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
 
     end = dt.datetime.now()
     result_path = result_path_for(config)
-    state = "SUCCESS" if returncode == 0 and result_path is not None else "FAILED"
+    result_error = validate_result_file(config, result_path) if result_path is not None else "missing result file"
+    state = "SUCCESS" if returncode == 0 and result_path is not None and result_error is None else "FAILED"
     if state == "SUCCESS":
         enrich_result_metadata(config)
     attempts[-1].update(
@@ -861,6 +1748,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
             "finished_at": end.isoformat(),
             "duration_seconds": (end - start).total_seconds(),
             "result_path": str(result_path) if result_path else None,
+            "result_validation_error": result_error,
         }
     )
     status = {
@@ -874,6 +1762,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
         "log_path": str(latest_log_path),
         "attempt_log_path": str(log_path),
         "result_path": str(result_path) if result_path else None,
+        "result_validation_error": result_error,
         "attempts": attempts,
         "updated_at": end.isoformat(),
     }
@@ -917,8 +1806,20 @@ fi
 
 : "${{RUN_DIR:?RUN_DIR is required}}"
 : "${{SLURM_ARRAY_TASK_ID:?SLURM_ARRAY_TASK_ID is required}}"
-CONFIG_OFFSET="${{CONFIG_OFFSET:-0}}"
-CONFIG_ID=$((SLURM_ARRAY_TASK_ID + CONFIG_OFFSET))
+if [[ -n "${{SELECTED_CONFIG_IDS_FILE:-}}" ]]; then
+  if [[ ! -f "$SELECTED_CONFIG_IDS_FILE" ]]; then
+    echo "Missing SELECTED_CONFIG_IDS_FILE: $SELECTED_CONFIG_IDS_FILE" >&2
+    exit 2
+  fi
+  CONFIG_ID="$(sed -n "${{SLURM_ARRAY_TASK_ID}}p" "$SELECTED_CONFIG_IDS_FILE" | tr -d '[:space:]')"
+  if [[ -z "$CONFIG_ID" ]]; then
+    echo "No config ID for task $SLURM_ARRAY_TASK_ID in $SELECTED_CONFIG_IDS_FILE" >&2
+    exit 2
+  fi
+else
+  CONFIG_OFFSET="${{CONFIG_OFFSET:-0}}"
+  CONFIG_ID=$((SLURM_ARRAY_TASK_ID + CONFIG_OFFSET))
+fi
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
 export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
@@ -961,8 +1862,12 @@ def validate_configs(configs: List[Dict[str, Any]]) -> Dict[str, Any]:
         errors.append(f"Expected 2730 configs, got {len(configs)}")
 
     hetero_pool = filtered_heterogeneous_pool()
-    if "qwq-32b" in hetero_pool:
-        errors.append("qwq-32b remains in heterogeneous pool")
+    for excluded_model in HETEROGENEOUS_EXCLUDED_MODELS:
+        if excluded_model in hetero_pool:
+            errors.append(f"{excluded_model} remains in heterogeneous pool")
+    hetero_cell_counts: Counter[Tuple[str, int, str]] = Counter()
+    hetero_cell_stratum_counts: Counter[Tuple[str, int, str, int]] = Counter()
+    hetero_cell_strategies: Dict[Tuple[str, int, str], set] = defaultdict(set)
 
     for config in configs:
         n_agents = int(config["n_agents"])
@@ -987,12 +1892,86 @@ def validate_configs(configs: List[Dict[str, Any]]) -> Dict[str, Any]:
             )
 
         if config["experiment_family"] == "heterogeneous_random":
+            hetero_cell = (config["game_label"], n_agents, config["competition_id"])
+            hetero_cell_counts[hetero_cell] += 1
             if len(set(config["models"])) != len(config["models"]):
                 errors.append(f"config_{config['config_id']:04d}: heterogeneous models are not unique")
             if any(model in HETEROGENEOUS_EXCLUDED_MODELS for model in config["models"]):
                 errors.append(f"config_{config['config_id']:04d}: contains excluded heterogeneous model")
-            if int(config.get("model_pool_size", 0)) != 24:
-                errors.append(f"config_{config['config_id']:04d}: model_pool_size is not 24")
+            if int(config.get("model_pool_size", 0)) != HETEROGENEOUS_POOL_SIZE:
+                errors.append(
+                    f"config_{config['config_id']:04d}: model_pool_size is not {HETEROGENEOUS_POOL_SIZE}"
+                )
+            strategy = config.get("heterogeneous_sampling_strategy")
+            hetero_cell_strategies[hetero_cell].add(strategy)
+            if strategy not in HETEROGENEOUS_SAMPLING_STRATEGIES:
+                errors.append(f"config_{config['config_id']:04d}: invalid heterogeneous sampling strategy")
+            if not config.get("sampling_with_replacement", False):
+                errors.append(f"config_{config['config_id']:04d}: sampling_with_replacement is not true")
+            if config.get("planned_roster_replication", True):
+                errors.append(f"config_{config['config_id']:04d}: planned_roster_replication is not false")
+            unordered_models = config.get("subset_model_ids_unordered") or config["models"]
+            try:
+                logged_elos = [int(value) for value in config.get("subset_model_elos_unordered", [])]
+                computed_elos = list(model_elo_values(tuple(unordered_models)))
+                if logged_elos and logged_elos != computed_elos:
+                    errors.append(f"config_{config['config_id']:04d}: subset Elo list does not match model IDs")
+                summary = elo_summary_for_elos(computed_elos)
+                for key, expected in summary.items():
+                    if key not in config or not math.isclose(
+                        float(config[key]),
+                        float(expected),
+                        rel_tol=0.0,
+                        abs_tol=1e-9,
+                    ):
+                        errors.append(f"config_{config['config_id']:04d}: {key} does not round-trip from model IDs")
+            except (TypeError, ValueError) as exc:
+                errors.append(f"config_{config['config_id']:04d}: failed Elo metadata validation: {exc}")
+            for reuse_key in [
+                "subset_reuse_count_global_before_this_draw",
+                "subset_reuse_count_global_after_this_draw",
+                "subset_reuse_count_within_cell_before_this_draw",
+                "subset_reuse_count_within_cell_after_this_draw",
+            ]:
+                if reuse_key not in config:
+                    errors.append(f"config_{config['config_id']:04d}: missing {reuse_key}")
+            if strategy == HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH:
+                required_keys = [
+                    "stratum_index",
+                    "stratum_label",
+                    "stratum_method",
+                    "stratum_population_size",
+                    "stratum_stddev_min",
+                    "stratum_stddev_max",
+                    "stratum_variance_min",
+                    "stratum_variance_max",
+                    "subset_rank_by_stddev",
+                    "subset_rank_within_stratum",
+                    "generation_rng_state_start_hash",
+                    "sampling_rng_state_start_hash",
+                    "order_rng_state_start_hash",
+                ]
+                for key in required_keys:
+                    if key not in config:
+                        errors.append(f"config_{config['config_id']:04d}: missing {key}")
+                try:
+                    stratum_index = int(config["stratum_index"])
+                    hetero_cell_stratum_counts[(*hetero_cell, stratum_index)] += 1
+                    stddev = float(config["elo_stddev"])
+                    lower = float(config["stratum_stddev_min"])
+                    upper = float(config["stratum_stddev_max"])
+                    if not (lower - 1e-9 <= stddev <= upper + 1e-9):
+                        errors.append(
+                            f"config_{config['config_id']:04d}: elo_stddev outside stratum boundaries"
+                        )
+                    if config.get("stratum_method") != "equal_width_stddev":
+                        errors.append(f"config_{config['config_id']:04d}: invalid stratum_method")
+                    if not (0 <= stratum_index < HETEROGENEOUS_STRATA_COUNT):
+                        errors.append(f"config_{config['config_id']:04d}: invalid stratum_index")
+                    if int(config.get("stratum_population_size", 0)) <= 0:
+                        errors.append(f"config_{config['config_id']:04d}: empty stratum_population_size")
+                except (KeyError, TypeError, ValueError) as exc:
+                    errors.append(f"config_{config['config_id']:04d}: invalid stratum metadata: {exc}")
 
         if config["game_label"] == "game1":
             if int(config["num_items"]) != int(2.5 * n_agents):
@@ -1013,6 +1992,21 @@ def validate_configs(configs: List[Dict[str, Any]]) -> Dict[str, Any]:
                 errors.append(f"config_{config['config_id']:04d}: invalid Game 3 sigma")
             if float(config["alpha"]) not in GAME3_ALPHAS:
                 errors.append(f"config_{config['config_id']:04d}: invalid Game 3 alpha")
+
+    for cell, count in hetero_cell_counts.items():
+        if count != HETEROGENEOUS_RUNS_PER_CELL:
+            errors.append(f"heterogeneous cell {cell} expected {HETEROGENEOUS_RUNS_PER_CELL}, got {count}")
+    for cell in hetero_cell_counts:
+        if HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH not in hetero_cell_strategies.get(cell, set()):
+            continue
+        for stratum_index in range(HETEROGENEOUS_STRATA_COUNT):
+            key = (*cell, stratum_index)
+            count = hetero_cell_stratum_counts.get(key, 0)
+            if count != HETEROGENEOUS_RUNS_PER_STRATUM:
+                errors.append(
+                    f"heterogeneous cell {cell} stratum {stratum_index} "
+                    f"expected {HETEROGENEOUS_RUNS_PER_STRATUM}, got {count}"
+                )
 
     return {
         "valid": not errors,
@@ -1047,14 +2041,23 @@ def load_submission_records(results_root: Path) -> List[Dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("job_id"):
         return [{"job_id": str(payload["job_id"]), "config_offset": 0}]
-    return [
-        {
+    records = []
+    for row in payload.get("submissions", []):
+        if not row.get("job_id"):
+            continue
+        record = {
             "job_id": str(row["job_id"]),
             "config_offset": int(row.get("config_offset", 0)),
         }
-        for row in payload.get("submissions", [])
-        if row.get("job_id")
-    ]
+        selected_file = row.get("selected_config_ids_file")
+        if selected_file:
+            selected_path = Path(selected_file)
+            if not selected_path.is_absolute():
+                selected_path = results_root / selected_path
+            if selected_path.exists():
+                record["config_ids"] = read_config_id_file(selected_path)
+        records.append(record)
+    return records
 
 
 def load_pending_submission_ranges(results_root: Path) -> List[Tuple[int, int]]:
@@ -1102,7 +2105,13 @@ def squeue_array_states(submission_records: Iterable[Dict[str, Any]]) -> Dict[in
                 task_id = int(slurm_id.rsplit("_", 1)[1])
             except ValueError:
                 continue
-            config_id = task_id + config_offset
+            config_ids = record.get("config_ids") or []
+            if config_ids:
+                if task_id < 1 or task_id > len(config_ids):
+                    continue
+                config_id = int(config_ids[task_id - 1])
+            else:
+                config_id = task_id + config_offset
             states[config_id] = {
                 "state": state,
                 "elapsed": elapsed,
@@ -1148,6 +2157,7 @@ def validate_result_payload(config: Dict[str, Any], result_path: Path) -> Dict[s
         if log.get("phase") == "vote_tabulation"
     ]
     return {
+        "result_validation_error": validate_result_file(config, result_path),
         "parallel_phases": bool(cfg.get("parallel_phases")),
         "max_tokens_voting": cfg.get("max_tokens_voting"),
         "pairwise_cosine_summary": cfg.get("pairwise_cosine_summary"),
@@ -1176,15 +2186,18 @@ def collect_summary(results_root: Path) -> Dict[str, Any]:
         config_id = int(config["config_id"])
         status = read_status(results_root, config_id)
         result_path = result_path_for(config)
+        result_error = validate_result_file(config, result_path) if result_path is not None else None
         queue_state = queue_states.get(config_id, {})
         raw_state = status.get("state") or queue_state.get("state") or "NOT_STARTED"
 
-        if result_path is not None and raw_state != "FAILED":
+        if result_path is not None and result_error is None and raw_state != "FAILED":
             state = "FINISHED"
         elif raw_state == "RUNNING" or queue_state.get("state") == "RUNNING":
             state = "IN_PROGRESS"
         elif queue_state.get("state") == "PENDING":
             state = "QUEUED"
+        elif result_path is not None and result_error is not None:
+            state = "ERRORED"
         elif raw_state in {"FAILED", "TIMEOUT", "CANCELLED", "NODE_FAIL", "OUT_OF_MEMORY", "STATUS_PARSE_ERROR"}:
             state = "ERRORED"
         elif is_pending_submission(config_id, pending_ranges):
@@ -1214,6 +2227,7 @@ def collect_summary(results_root: Path) -> Dict[str, Any]:
             "queue_state": queue_state.get("state"),
             "phase": phase,
             "result_path": str(result_path) if result_path else None,
+            "result_validation_error": result_error,
             "log_path": str(log_path),
         }
         rows.append(row)
@@ -1321,6 +2335,11 @@ def cmd_generate(args: argparse.Namespace) -> int:
         max_rounds=args.max_rounds,
         discussion_turns=args.discussion_turns,
         max_tokens_voting=args.max_tokens_voting,
+        heterogeneous_sampling_strategy=args.heterogeneous_sampling_strategy,
+    )
+    generation_seed = heterogeneous_generation_seed(
+        args.master_seed,
+        args.heterogeneous_sampling_strategy,
     )
     manifest = {
         "results_root": str(results_root),
@@ -1339,9 +2358,18 @@ def cmd_generate(args: argparse.Namespace) -> int:
         "game3_m_projects": "int(2.5 * n_agents)",
         "homogeneous_seed_replicates": HOMOGENEOUS_SEED_REPLICATES,
         "heterogeneous_runs_per_cell": HETEROGENEOUS_RUNS_PER_CELL,
+        "heterogeneous_runs_per_stratum": HETEROGENEOUS_RUNS_PER_STRATUM,
+        "heterogeneous_strata_count": HETEROGENEOUS_STRATA_COUNT,
+        "heterogeneous_stratum_labels": HETEROGENEOUS_STRATUM_LABELS,
+        "heterogeneous_sampling_strategy": args.heterogeneous_sampling_strategy,
+        "heterogeneous_generation_rng_state_start": random_state_start_metadata(generation_seed),
+        "write_heterogeneous_subset_maps": (
+            args.heterogeneous_sampling_strategy == HETEROGENEOUS_STRATEGY_ELO_STDDEV_EQUAL_WIDTH
+        ),
         "heterogeneous_pool": filtered_heterogeneous_pool(),
         "heterogeneous_pool_count": len(filtered_heterogeneous_pool()),
         "heterogeneous_excluded_model_count": len(HETEROGENEOUS_EXCLUDED_MODELS),
+        "heterogeneous_excluded_models": sorted(HETEROGENEOUS_EXCLUDED_MODELS),
         "elo_bucket_count": ELO_BUCKET_COUNT,
         "master_seed": int(args.master_seed),
         "max_rounds": int(args.max_rounds),
@@ -1374,6 +2402,203 @@ def cmd_run_one(args: argparse.Namespace) -> int:
     status = run_config(results_root, config)
     print(json.dumps(status, indent=2, default=str))
     return 0 if status["state"] == "SUCCESS" else 1
+
+
+def selection_criteria_from_args(args: argparse.Namespace) -> Dict[str, set]:
+    criteria = selection_preset_criteria(args.preset)
+    explicit = {
+        "config_ids": set(split_csv_int_values(args.config_id)),
+        "game_labels": set(split_csv_values(args.game_label)),
+        "experiment_families": set(split_csv_values(args.experiment_family)),
+        "n_agents": set(split_csv_int_values(args.n_agents)),
+        "adversary_models": set(split_csv_values(args.adversary_model)),
+        "adversary_positions": set(split_csv_values(args.adversary_position)),
+        "seed_replicates": set(split_csv_int_values(args.seed_replicate)),
+        "contains_models": set(split_csv_values(args.contains_model)),
+        "exclude_models": set(split_csv_values(args.exclude_model)),
+    }
+    return merge_selection_criteria(criteria, explicit)
+
+
+def cmd_select(args: argparse.Namespace) -> int:
+    results_root = resolve_results_root(args.results_root)
+    configs = load_configs(results_root)
+    validation = validate_configs(configs)
+    if not validation["valid"]:
+        raise RuntimeError("Refusing to select from invalid configs: " + "; ".join(validation["errors"][:10]))
+    criteria = selection_criteria_from_args(args)
+    config_ids = select_config_ids(configs, criteria)
+    manifest = write_selection_files(
+        results_root=results_root,
+        configs=configs,
+        selection_name=args.selection_name,
+        criteria=criteria,
+        config_ids=config_ids,
+    )
+    print(f"selection_name={manifest['selection_name']}")
+    print(f"count={manifest['count']}")
+    print(f"config_ids_file={manifest['config_ids_file']}")
+    print(f"index_csv={manifest['index_csv']}")
+    return 0
+
+
+def resolve_selection_file(results_root: Path, selection_name: Optional[str], selection_file: Optional[str]) -> Path:
+    if selection_file and selection_name:
+        raise ValueError("Use either --selection-name or --selection-file, not both")
+    if selection_file:
+        path = Path(selection_file)
+        if not path.is_absolute():
+            path = (PROJECT_ROOT / path).resolve()
+        return path
+    if selection_name:
+        return selection_ids_path(results_root, selection_name)
+    raise ValueError("submit-selection requires --selection-name or --selection-file")
+
+
+def append_submission_records(
+    results_root: Path,
+    new_submissions: List[Dict[str, Any]],
+    metadata: Dict[str, Any],
+) -> Dict[str, Any]:
+    path = results_root / "submissions.json"
+    existing = read_json_file(path)
+    existing_submissions = list(existing.get("submissions") or [])
+    if existing.get("job_id") and not existing_submissions:
+        existing_submissions.append({
+            "job_id": existing.get("job_id"),
+            "config_offset": int(existing.get("config_offset", 0)),
+            "array_spec": existing.get("array_spec"),
+            "submitted_at": existing.get("submitted_at"),
+        })
+    submissions = existing_submissions + new_submissions
+    payload = {
+        "updated_at": dt.datetime.now().isoformat(),
+        "submissions": submissions,
+        "job_ids": [row["job_id"] for row in submissions if row.get("job_id")],
+        "array_specs": [row["array_spec"] for row in submissions if row.get("array_spec")],
+        **metadata,
+    }
+    write_json(path, payload)
+    return payload
+
+
+def cmd_submit_selection(args: argparse.Namespace) -> int:
+    results_root = resolve_results_root(args.results_root)
+    configs = load_configs(results_root)
+    configs_by_id = {int(config["config_id"]): config for config in configs}
+    manifest = json.loads((results_root / "manifest.json").read_text(encoding="utf-8"))
+    validation = validate_configs(configs)
+    if not validation["valid"]:
+        raise RuntimeError("Refusing to submit invalid configs: " + "; ".join(validation["errors"][:10]))
+
+    selected_file = resolve_selection_file(results_root, args.selection_name, args.selection_file)
+    if not selected_file.exists():
+        raise FileNotFoundError(f"Missing selection config-id file: {selected_file}")
+    selected_ids = read_config_id_file(selected_file)
+    missing_ids = [config_id for config_id in selected_ids if config_id not in configs_by_id]
+    if missing_ids:
+        raise ValueError(f"Selection contains unknown config IDs: {missing_ids[:10]}")
+
+    skipped_existing = [
+        config_id
+        for config_id in selected_ids
+        if not args.rerun_existing and config_succeeded(configs_by_id[config_id])
+    ]
+    skipped_existing_set = set(skipped_existing)
+    submit_ids = [
+        config_id
+        for config_id in selected_ids
+        if args.rerun_existing or config_id not in skipped_existing_set
+    ]
+    print(f"selection_file={selected_file}")
+    print(f"selected={len(selected_ids)}")
+    print(f"skipped_existing={len(skipped_existing)}")
+    print(f"to_submit={len(submit_ids)}")
+    if not submit_ids:
+        print("No configs to submit.")
+        return 0
+
+    max_concurrent = int(args.max_concurrent or manifest.get("max_concurrent") or MAX_CONCURRENT)
+    submit_chunks = chunked(submit_ids)
+    per_chunk_concurrency = max(1, max_concurrent // len(submit_chunks))
+    sbatch_path = write_slurm_file(results_root, manifest)
+    submissions_dir = results_root / "submissions"
+    submissions_dir.mkdir(parents=True, exist_ok=True)
+    stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_name = selection_slug(args.selection_name or selected_file.stem)
+    submissions = []
+
+    for chunk_idx, chunk in enumerate(submit_chunks, start=1):
+        chunk_ids_path = submissions_dir / f"{base_name}_{stamp}_{chunk_idx:02d}_config_ids.txt"
+        chunk_ids_path.write_text("\n".join(str(config_id) for config_id in chunk) + "\n", encoding="utf-8")
+        array_range = f"1-{len(chunk)}" if len(chunk) > 1 else "1"
+        array_spec = f"{array_range}%{per_chunk_concurrency}"
+        if args.dry_run:
+            output = "DRY RUN: sbatch not called"
+            job_id = None
+        else:
+            output = subprocess.check_output(
+                [
+                    "sbatch",
+                    "--export=ALL,RUN_DIR=" + str(results_root) + f",SELECTED_CONFIG_IDS_FILE={chunk_ids_path}",
+                    "--array",
+                    array_spec,
+                    str(sbatch_path),
+                ],
+                text=True,
+                cwd=str(PROJECT_ROOT),
+            )
+            job_id = parse_job_id(output)
+        submission = {
+            "job_id": job_id,
+            "sbatch_output": output.strip(),
+            "array_spec": array_spec,
+            "selection_name": base_name,
+            "selection_source_file": str(selected_file),
+            "selected_config_ids_file": str(chunk_ids_path),
+            "config_count": len(chunk),
+            "max_concurrent": per_chunk_concurrency,
+            "rerun_existing": bool(args.rerun_existing),
+            "dry_run": bool(args.dry_run),
+            "submitted_at": dt.datetime.now().isoformat(),
+        }
+        submissions.append(submission)
+        print(output.strip())
+        print(f"array_spec={array_spec}")
+        print(f"selected_config_ids_file={chunk_ids_path}")
+
+    per_selection_payload = {
+        "created_at": dt.datetime.now().isoformat(),
+        "selection_name": base_name,
+        "selection_source_file": str(selected_file),
+        "selected_count": len(selected_ids),
+        "skipped_existing_count": len(skipped_existing),
+        "submitted_count": len(submit_ids),
+        "skipped_existing_config_ids": skipped_existing,
+        "submitted_config_ids": submit_ids,
+        "submissions": submissions,
+        "slurm_time": manifest["slurm_time"],
+        "max_concurrent": max_concurrent,
+        "per_chunk_concurrency": per_chunk_concurrency,
+        "sbatch_path": str(sbatch_path),
+    }
+    per_selection_path = submissions_dir / f"{base_name}_{stamp}_submission.json"
+    write_json(per_selection_path, per_selection_payload)
+    if not args.dry_run:
+        append_submission_records(
+            results_root,
+            submissions,
+            {
+                "last_submission_file": str(per_selection_path),
+                "last_selection_name": base_name,
+                "slurm_time": manifest["slurm_time"],
+                "max_concurrent": max_concurrent,
+                "per_chunk_concurrency": per_chunk_concurrency,
+                "sbatch_path": str(sbatch_path),
+            },
+        )
+    print(f"submission_manifest={per_selection_path}")
+    return 0
 
 
 def cmd_submit(args: argparse.Namespace) -> int:
@@ -1421,13 +2646,11 @@ def cmd_submit(args: argparse.Namespace) -> int:
         )
         print(output.strip())
         print(f"array_spec={array_spec}")
-    write_json(
-        results_root / "submissions.json",
+    append_submission_records(
+        results_root,
+        submissions,
         {
-            "submitted_at": dt.datetime.now().isoformat(),
-            "submissions": submissions,
-            "job_ids": [row["job_id"] for row in submissions],
-            "array_specs": [row["array_spec"] for row in submissions],
+            "last_submission_type": "full_contiguous",
             "slurm_time": manifest["slurm_time"],
             "max_concurrent": manifest["max_concurrent"],
             "per_chunk_concurrency": per_chunk_concurrency,
@@ -1497,6 +2720,10 @@ def main() -> int:
         return cmd_run_one(args)
     if args.command == "submit":
         return cmd_submit(args)
+    if args.command == "select":
+        return cmd_select(args)
+    if args.command == "submit-selection":
+        return cmd_submit_selection(args)
     if args.command == "summary":
         return cmd_summary(args)
     if args.command == "report":

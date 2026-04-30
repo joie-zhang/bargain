@@ -253,18 +253,24 @@ class OpenRouterAgent(BaseLLMAgent):
     def _is_non_retryable_error_message(cls, message: str) -> bool:
         lowered = message.lower()
         normalized = re.sub(r"[^a-z0-9]+", "", lowered)
-        match = re.search(r"http\s+(\d{3})", lowered)
-        if match:
+        for pattern in (
+            r"http\s+(\d{3})",
+            r"error code:\s*(\d{3})",
+            r"\bcode[\"']?\s*[:=]\s*(\d{3})",
+        ):
+            match = re.search(pattern, lowered)
+            if not match:
+                continue
             status = int(match.group(1))
             if cls._is_non_retryable_http_status(status):
                 return True
+            return False
         return any(
             marker in lowered
             for marker in (
                 "invalid model identifier",
                 "no endpoints found",
                 "not_found_error",
-                "provider returned error",
                 "empty content from model. finish_reason=length",
                 "finish_reason=length",
                 "native_finish_reason=length",

@@ -83,10 +83,10 @@ STRONG_MODELS_CONFIG = {
     # Google strong models
     "gemini-2-5-pro": {
         "name": "Gemini 2.5 Pro",
-        "model_id": "gemini-2.5-pro",
-        "provider": "Google",
-        "api_type": "google",
-        "description": "Strong tier, Closed-source, Non-reasoning",
+        "model_id": "google/gemini-2.5-pro",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Strong tier, Closed-source, Non-reasoning; routed through OpenRouter for Slurm proxy execution.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -276,12 +276,22 @@ STRONG_MODELS_CONFIG = {
     # 36 models ranked by Elo score for comprehensive evaluation
     
     # STRONG TIER - Elo ≥ 1415 (12 models)
+    "gemini-3.1-pro": {
+        "name": "Gemini 3.1 Pro",
+        "model_id": "google/gemini-3.1-pro-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Rank 3, Elo: 1494, Closed-source; routed through OpenRouter for Slurm proxy execution.",
+        "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "gemini-3-pro": {
-        "name": "Gemini 3 Pro",
-        "model_id": "gemini-3-pro-preview",  # Use preview model name for v1beta API
-        "provider": "Google",
-        "api_type": "google",
-        "description": "Rank 1, Elo: 1490, Closed-source",
+        "name": "Gemini 3 Pro (legacy label; use gemini-3.1-pro)",
+        "model_id": "google/gemini-3.1-pro-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Legacy compatibility alias routed through OpenRouter. Previous gemini-3-pro-labeled runs are treated as Gemini 3.1 Pro.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -849,10 +859,10 @@ STRONG_MODELS_CONFIG = {
     },
     "gemini-2.5-pro": {
         "name": "Gemini 2.5 Pro",
-        "model_id": "gemini-2.5-pro",
-        "provider": "Google",
-        "api_type": "google",
-        "description": "Exact Arena-name alias.",
+        "model_id": "google/gemini-2.5-pro",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Exact Arena-name alias routed through OpenRouter for Slurm proxy execution.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
@@ -1014,12 +1024,18 @@ STRONG_MODELS_CONFIG = {
     },
     "gpt-5.4-high": {
         "name": "GPT-5.4 High",
-        "model_id": "gpt-5.4",
-        "provider": "OpenAI",
-        "api_type": "openai",
-        "description": "Arena-name alias for GPT-5.4 with high reasoning effort.",
+        "model_id": "openai/gpt-5.4",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Arena-name alias for GPT-5.4 with high reasoning effort, routed through OpenRouter for Slurm proxy execution.",
         "temperature": 1.0,
         "reasoning_effort": "high",
+        "custom_parameters": {
+            "reasoning": {
+                "effort": "high",
+                "exclude": True,
+            }
+        },
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
