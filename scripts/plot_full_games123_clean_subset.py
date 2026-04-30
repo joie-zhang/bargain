@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Export preliminary plots for full Games 1-3 multi-agent results.
-
-The `--clean-152-subset` flag uses the saved salvageability audit when it is
-available. That audit's strict subset means: successful result, no saved
-synthetic vote markers, and no voting/token-limit/retry warning markers in the
-Slurm log. The exact count can differ from 152 as the results root changes; the
-flag name preserves the analysis intent from the April 2026 audit thread.
-"""
+"""Export all-success preliminary plots for full Games 1-3 multi-agent results."""
 
 from __future__ import annotations
 
@@ -16,7 +9,6 @@ import json
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -31,9 +23,9 @@ import matplotlib.pyplot as plt
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RESULTS_ROOT = (
-    PROJECT_ROOT / "experiments" / "results" / "full_games123_multiagent_20260427_040554"
+    PROJECT_ROOT / "experiments" / "results" / "full_games123_multiagent_production_20260428_085255"
 )
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "analysis" / "full_games123_clean_subset_20260428"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "analysis" / "full_games123_all_success_preliminary_20260428"
 
 GPT5_NANO_ELO = 1337
 DEFAULT_MODEL_ELOS: Dict[str, int] = {
@@ -123,47 +115,27 @@ COLORS = [
     "#8c564b",
     "#7f7f7f",
 ]
-
-
-@dataclass
-class AuditFlags:
-    strict_ids: set[int]
-    rows_by_config_id: Dict[int, Dict[str, Any]]
-    source_path: Optional[Path]
+GINI_SMALL_N_CORRECTION_THRESHOLD = 8
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot preliminary full Games 1-3 clean-subset metrics."
+        description="Plot preliminary full Games 1-3 all-success metrics."
     )
     parser.add_argument("--results-root", type=Path, default=DEFAULT_RESULTS_ROOT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument(
-        "--clean-152-subset",
-        action="store_true",
-        help=(
-            "Restrict outputs and plots to the audit-backed strict clean subset "
-            "from the April 2026 full-batch audit."
-        ),
-    )
     parser.add_argument(
         "--exclude-synthetic-proposals",
         action="store_true",
         help=(
             "Further exclude runs with proposal parse/validation fallback markers. "
-            "This is stricter than the original voting-clean subset."
+            "This keeps all-success outputs but drops proposal-fallback runs."
         ),
     )
     parser.add_argument(
         "--exclude-controls",
         action="store_true",
         help="Exclude homogeneous control runs from the exported subset CSVs.",
-    )
-    parser.add_argument(
-        "--audit-json",
-        type=Path,
-        default=None,
-        help="Optional explicit salvageability audit JSON path.",
     )
     return parser.parse_args()
 
@@ -193,25 +165,6 @@ def maybe_read_text(path: Path) -> str:
 def count_any(text: str, patterns: Sequence[str]) -> int:
     lowered = text.lower()
     return sum(lowered.count(pattern.lower()) for pattern in patterns)
-
-
-def load_audit_flags(results_root: Path, audit_json: Optional[Path]) -> AuditFlags:
-    candidates: List[Path] = []
-    if audit_json is not None:
-        candidates.append(audit_json)
-    candidates.extend(sorted((results_root / "monitoring").glob("salvageability_audit_*.json")))
-    for candidate in candidates:
-        if not candidate.exists():
-            continue
-        payload = load_json(candidate)
-        strict_ids = {int(value) for value in payload.get("strict_config_ids", [])}
-        rows_by_id = {
-            int(row["cid"]): row
-            for row in payload.get("rows", [])
-            if row.get("cid") is not None
-        }
-        return AuditFlags(strict_ids=strict_ids, rows_by_config_id=rows_by_id, source_path=candidate)
-    return AuditFlags(strict_ids=set(), rows_by_config_id={}, source_path=None)
 
 
 def load_status(results_root: Path, config_id: int) -> Dict[str, Any]:
@@ -250,6 +203,56 @@ def gini(values: Sequence[float]) -> float:
     return float(np.mean(diffs) / (2.0 * mean_value))
 
 
+def gini_small_n_correction_factor(value_count: int) -> float:
+    if 1 < value_count < GINI_SMALL_N_CORRECTION_THRESHOLD:
+        return float(value_count / (value_count - 1))
+    return 1.0
+
+
+def linear_fit_stats(xs: Sequence[float], ys: Sequence[float]) -> Dict[str, float]:
+    pairs = [
+        (float(x), float(y))
+        for x, y in zip(xs, ys)
+        if x is not None
+        and y is not None
+        and math.isfinite(float(x))
+        and math.isfinite(float(y))
+    ]
+    if len(pairs) < 2:
+        return {
+            "slope": math.nan,
+            "intercept": math.nan,
+            "r_squared": math.nan,
+            "correlation": math.nan,
+            "fit_count": float(len(pairs)),
+        }
+
+    x_arr = np.asarray([pair[0] for pair in pairs], dtype=float)
+    y_arr = np.asarray([pair[1] for pair in pairs], dtype=float)
+    if np.allclose(x_arr, x_arr[0]):
+        return {
+            "slope": math.nan,
+            "intercept": math.nan,
+            "r_squared": math.nan,
+            "correlation": math.nan,
+            "fit_count": float(len(pairs)),
+        }
+
+    slope, intercept = np.polyfit(x_arr, y_arr, deg=1)
+    fitted = slope * x_arr + intercept
+    ss_res = float(np.sum((y_arr - fitted) ** 2))
+    ss_tot = float(np.sum((y_arr - np.mean(y_arr)) ** 2))
+    r_squared = 1.0 - (ss_res / ss_tot) if not math.isclose(ss_tot, 0.0) else 1.0
+    correlation = 0.0 if np.allclose(y_arr, y_arr[0]) else float(np.corrcoef(x_arr, y_arr)[0, 1])
+    return {
+        "slope": float(slope),
+        "intercept": float(intercept),
+        "r_squared": float(r_squared),
+        "correlation": correlation,
+        "fit_count": float(len(pairs)),
+    }
+
+
 def resolve_elo(agent_id: str, model: Optional[str], agent_elo_map: Dict[str, Any]) -> Optional[int]:
     value = agent_elo_map.get(agent_id)
     if value is not None and value != "":
@@ -261,27 +264,27 @@ def resolve_elo(agent_id: str, model: Optional[str], agent_elo_map: Dict[str, An
 
 def competition_key(config: Dict[str, Any]) -> str:
     game = config.get("game_label") or config.get("game_type") or "unknown"
-    if game == "game1" or "competition_level" in config:
-        return f"comp={float(config.get('competition_level', 0.0)):.2f}"
-    if game == "game2" or ("rho" in config and "theta" in config):
+    if game == "game2" or (game == "unknown" and "rho" in config and "theta" in config):
         rho = float(config.get("rho", 0.0))
         theta = float(config.get("theta", 0.0))
         return f"rho={rho:.3f}, theta={theta:.2f}"
-    if game == "game3" or ("sigma" in config and "alpha" in config):
+    if game == "game3" or (game == "unknown" and "sigma" in config and "alpha" in config):
         sigma = float(config.get("sigma", 0.0))
         alpha = float(config.get("alpha", 0.0))
         return f"sigma={sigma:.2f}, alpha={alpha:.2f}"
+    if game == "game1" or "competition_level" in config:
+        return f"comp={float(config.get('competition_level', 0.0)):.2f}"
     return "unknown"
 
 
 def numeric_competition_value(config: Dict[str, Any]) -> Optional[float]:
-    if config.get("competition_level") is not None:
-        return float(config["competition_level"])
     game = config.get("game_label")
     if game == "game2" and config.get("rho") is not None and config.get("theta") is not None:
         return float(config["rho"]) * float(config["theta"])
     if game == "game3" and config.get("sigma") is not None and config.get("alpha") is not None:
         return float(config["sigma"]) * float(config["alpha"])
+    if config.get("competition_level") is not None:
+        return float(config["competition_level"])
     return None
 
 
@@ -290,10 +293,8 @@ def row_base(
     result_path: Path,
     payload: Dict[str, Any],
     status: Dict[str, Any],
-    audit_row: Optional[Dict[str, Any]],
     interaction_text: str,
     log_text: str,
-    audit_strict: bool,
 ) -> Dict[str, Any]:
     config = payload.get("config") or {}
     token_limit_count = count_any(log_text, TOKEN_LIMIT_PATTERNS)
@@ -309,9 +310,6 @@ def row_base(
         and token_limit_count == 0
         and vote_fallback_log_count == 0
     )
-    if audit_row is not None:
-        recomputed_strict = bool(audit_strict)
-
     return {
         "config_id": config_id,
         "result_path": str(result_path),
@@ -345,10 +343,7 @@ def row_base(
         "parallel_phases": config.get("parallel_phases"),
         "consensus_reached": payload.get("consensus_reached"),
         "final_round": payload.get("final_round"),
-        "audit_strict_voting_clean": bool(audit_strict),
         "strict_voting_clean": bool(recomputed_strict),
-        "audit_synthetic_vote_count": (audit_row or {}).get("synthetic"),
-        "audit_strict_bad_count": (audit_row or {}).get("strict_bad"),
         "token_limit_marker_count": token_limit_count,
         "vote_fallback_log_marker_count": vote_fallback_log_count,
         "synthetic_vote_marker_count": synthetic_vote_count,
@@ -357,7 +352,7 @@ def row_base(
     }
 
 
-def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def build_tables(results_root: Path) -> Tuple[pd.DataFrame, pd.DataFrame]:
     run_rows: List[Dict[str, Any]] = []
     agent_rows: List[Dict[str, Any]] = []
 
@@ -368,7 +363,6 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
         payload = load_json(result_path)
         config = payload.get("config") or {}
         status = load_status(results_root, config_id)
-        audit_row = audit.rows_by_config_id.get(config_id)
         interaction_path = result_path.with_name("all_interactions.json")
         log_path = results_root / "logs" / f"config_{config_id:04d}.log"
         interaction_text = maybe_read_text(interaction_path)
@@ -379,10 +373,8 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
             result_path=result_path,
             payload=payload,
             status=status,
-            audit_row=audit_row,
             interaction_text=interaction_text,
             log_text=log_text,
-            audit_strict=config_id in audit.strict_ids,
         )
 
         final_utilities = payload.get("final_utilities") or {}
@@ -397,6 +389,8 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
 
         utilities: List[float] = []
         elos: List[int] = []
+        payoff_fit_elos: List[float] = []
+        payoff_fit_utilities: List[float] = []
         adversary_utilities: List[float] = []
         baseline_utilities: List[float] = []
         adversary_elos: List[int] = []
@@ -414,6 +408,9 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
             elo = resolve_elo(agent_id, model, agent_elo_map)
             if elo is not None:
                 elos.append(int(elo))
+            if utility is not None and elo is not None:
+                payoff_fit_elos.append(float(elo))
+                payoff_fit_utilities.append(float(utility))
             if model:
                 model_counts[model] += 1
             if role == "adversary":
@@ -437,14 +434,50 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
             }
             agent_rows.append(agent_row)
 
+        utility_count = len(utilities)
+        utility_gini_raw = gini(utilities)
+        utility_gini_correction_factor = gini_small_n_correction_factor(utility_count)
+        utility_gini_corrected = (
+            utility_gini_raw * utility_gini_correction_factor
+            if math.isfinite(utility_gini_raw)
+            else math.nan
+        )
+        payoff_elo_fit = linear_fit_stats(payoff_fit_elos, payoff_fit_utilities)
+        payoff_elo_slope = payoff_elo_fit["slope"]
+        payoff_elo_abs_slope = abs(payoff_elo_slope) if math.isfinite(payoff_elo_slope) else math.nan
+
         base.update(
             {
                 "agent_count_in_result": len(agent_ids),
                 "model_list": "+".join(config.get("models") or []),
                 "unique_model_count": len(model_counts),
+                "utility_count": utility_count,
+                "utility_min": min(utilities) if utilities else math.nan,
+                "utility_max": max(utilities) if utilities else math.nan,
+                "utility_range": (max(utilities) - min(utilities)) if utilities else math.nan,
                 "mean_utility": mean(utilities) if utilities else math.nan,
                 "sum_utility": sum(utilities) if utilities else math.nan,
-                "utility_gini": gini(utilities),
+                "utility_variance": float(np.var(utilities)) if utilities else math.nan,
+                "utility_std": float(np.std(utilities)) if utilities else math.nan,
+                "utility_gini": utility_gini_corrected,
+                "utility_gini_raw": utility_gini_raw,
+                "utility_gini_corrected": utility_gini_corrected,
+                "utility_gini_correction_factor": utility_gini_correction_factor,
+                "utility_gini_small_n_corrected": utility_gini_correction_factor != 1.0,
+                "payoff_elo_fit_agent_count": int(payoff_elo_fit["fit_count"]),
+                "payoff_elo_slope": payoff_elo_slope,
+                "payoff_elo_slope_per_100_elo": (
+                    payoff_elo_slope * 100.0 if math.isfinite(payoff_elo_slope) else math.nan
+                ),
+                "payoff_elo_abs_slope": payoff_elo_abs_slope,
+                "payoff_elo_abs_slope_per_100_elo": (
+                    payoff_elo_abs_slope * 100.0
+                    if math.isfinite(payoff_elo_abs_slope)
+                    else math.nan
+                ),
+                "payoff_elo_intercept": payoff_elo_fit["intercept"],
+                "payoff_elo_r_squared": payoff_elo_fit["r_squared"],
+                "payoff_elo_correlation": payoff_elo_fit["correlation"],
                 "elo_variance": float(np.var(elos)) if elos else math.nan,
                 "elo_std": float(np.std(elos)) if elos else math.nan,
                 "elo_min": min(elos) if elos else math.nan,
@@ -470,13 +503,10 @@ def build_tables(results_root: Path, audit: AuditFlags) -> Tuple[pd.DataFrame, p
 def filter_subset(
     runs: pd.DataFrame,
     agents: pd.DataFrame,
-    clean_152_subset: bool,
     exclude_synthetic_proposals: bool,
     exclude_controls: bool,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     mask = pd.Series(True, index=runs.index)
-    if clean_152_subset:
-        mask &= runs["strict_voting_clean"].fillna(False)
     if exclude_synthetic_proposals:
         mask &= runs["synthetic_proposal_marker_count"].fillna(0).astype(int).eq(0)
     if exclude_controls:
@@ -644,8 +674,26 @@ def aggregate_heterogeneous_gini(
             run_count=("config_id", "count"),
             elo_variance_mean=("elo_variance", "mean"),
             elo_variance_std=("elo_variance", "std"),
+            elo_std_mean=("elo_std", "mean"),
+            elo_std_std=("elo_std", "std"),
             utility_gini_mean=("utility_gini", "mean"),
             utility_gini_std=("utility_gini", "std"),
+            utility_gini_raw_mean=("utility_gini_raw", "mean"),
+            utility_gini_raw_std=("utility_gini_raw", "std"),
+            utility_gini_correction_factor_mean=("utility_gini_correction_factor", "mean"),
+            utility_std_mean=("utility_std", "mean"),
+            utility_std_std=("utility_std", "std"),
+            utility_variance_mean=("utility_variance", "mean"),
+            utility_variance_std=("utility_variance", "std"),
+            utility_range_mean=("utility_range", "mean"),
+            utility_range_std=("utility_range", "std"),
+            payoff_elo_slope_mean=("payoff_elo_slope_per_100_elo", "mean"),
+            payoff_elo_slope_std=("payoff_elo_slope_per_100_elo", "std"),
+            payoff_elo_abs_slope_mean=("payoff_elo_abs_slope_per_100_elo", "mean"),
+            payoff_elo_abs_slope_std=("payoff_elo_abs_slope_per_100_elo", "std"),
+            payoff_elo_r_squared_mean=("payoff_elo_r_squared", "mean"),
+            payoff_elo_correlation_mean=("payoff_elo_correlation", "mean"),
+            payoff_elo_fit_agent_count_mean=("payoff_elo_fit_agent_count", "mean"),
             mean_utility=("mean_utility", "mean"),
             consensus_rate=("consensus_reached", "mean"),
         )
@@ -653,7 +701,14 @@ def aggregate_heterogeneous_gini(
     )
     counts = summary["run_count"].clip(lower=1).astype(float)
     summary["elo_variance_sem"] = summary["elo_variance_std"] / np.sqrt(counts)
+    summary["elo_std_sem"] = summary["elo_std_std"] / np.sqrt(counts)
     summary["utility_gini_sem"] = summary["utility_gini_std"] / np.sqrt(counts)
+    summary["utility_gini_raw_sem"] = summary["utility_gini_raw_std"] / np.sqrt(counts)
+    summary["utility_std_sem"] = summary["utility_std_std"] / np.sqrt(counts)
+    summary["utility_variance_sem"] = summary["utility_variance_std"] / np.sqrt(counts)
+    summary["utility_range_sem"] = summary["utility_range_std"] / np.sqrt(counts)
+    summary["payoff_elo_slope_sem"] = summary["payoff_elo_slope_std"] / np.sqrt(counts)
+    summary["payoff_elo_abs_slope_sem"] = summary["payoff_elo_abs_slope_std"] / np.sqrt(counts)
     return summary.sort_values(effective_group_cols)
 
 
@@ -1040,8 +1095,14 @@ def error_scatter_summary_plot(
     output_path: Path,
     title: str,
     group_col: Optional[str] = None,
+    x_mean_col: str = "elo_variance_mean",
+    x_sem_col: str = "elo_variance_sem",
+    x_label: str = "Mean within-run Elo variance",
+    y_mean_col: str = "utility_gini_mean",
+    y_sem_col: str = "utility_gini_sem",
+    y_label: str = "Mean final utility Gini coefficient",
 ) -> None:
-    plot_df = summary.dropna(subset=["elo_variance_mean", "utility_gini_mean"]).copy()
+    plot_df = summary.dropna(subset=[x_mean_col, y_mean_col]).copy()
     if plot_df.empty:
         return
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1058,10 +1119,10 @@ def error_scatter_summary_plot(
         marker = MARKERS_BY_N.get(int(value), "o") if group_col == "n_agents" else "o"
         label = label_for_group(group_col, value) if group_col else None
         ax.errorbar(
-            group["elo_variance_mean"],
-            group["utility_gini_mean"],
-            xerr=group["elo_variance_sem"].fillna(0.0),
-            yerr=group["utility_gini_sem"].fillna(0.0),
+            group[x_mean_col],
+            group[y_mean_col],
+            xerr=group[x_sem_col].fillna(0.0),
+            yerr=group[y_sem_col].fillna(0.0),
             fmt=marker,
             markersize=6,
             alpha=0.82,
@@ -1075,15 +1136,15 @@ def error_scatter_summary_plot(
             if "run_count" in row and int(row["run_count"]) > 1:
                 ax.annotate(
                     f"n={int(row['run_count'])}",
-                    (row["elo_variance_mean"], row["utility_gini_mean"]),
+                    (row[x_mean_col], row[y_mean_col]),
                     textcoords="offset points",
                     xytext=(4, 4),
                     fontsize=7,
                     alpha=0.75,
                 )
     ax.set_title(title, fontsize=14)
-    ax.set_xlabel("Mean within-run Elo variance", fontsize=12)
-    ax.set_ylabel("Mean final utility Gini coefficient", fontsize=12)
+    ax.set_xlabel(x_label, fontsize=12)
+    ax.set_ylabel(y_label, fontsize=12)
     ax.grid(True, alpha=0.22)
     if group_col:
         ax.legend(fontsize=8, frameon=False, loc="best")
@@ -1120,42 +1181,83 @@ def grouped_elo_line_plot(
     plt.close(fig)
 
 
+def iter_game_groups(frame: pd.DataFrame):
+    if frame.empty or "game_label" not in frame.columns:
+        return []
+    return frame.groupby("game_label", dropna=False)
+
+
 def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, prefix: str) -> List[Path]:
     plot_paths: List[Path] = []
 
     hetero = runs[runs["experiment_family"].eq("heterogeneous_random")].copy()
+    hetero_x_specs = [
+        ("elo_stddev", "elo_std", "within-run Elo stddev", "Within-run Elo stddev"),
+        ("elo_variance", "elo_variance", "within-run Elo variance", "Within-run Elo variance"),
+    ]
+    hetero_y_specs = [
+        (
+            "gini",
+            "utility_gini",
+            "utility Gini (small-N corrected)",
+            "Final utility Gini coefficient (small-N corrected)",
+        ),
+        (
+            "utility_std",
+            "utility_std",
+            "utility stddev",
+            "Final utility stddev",
+        ),
+        (
+            "payoff_elo_slope",
+            "payoff_elo_slope_per_100_elo",
+            "payoff-vs-Elo slope",
+            "Final utility slope per 100 Elo",
+        ),
+        (
+            "payoff_elo_abs_slope",
+            "payoff_elo_abs_slope_per_100_elo",
+            "absolute payoff-vs-Elo slope",
+            "Absolute final utility slope per 100 Elo",
+        ),
+    ]
     for game_label, game_df in hetero.groupby("game_label", dropna=False):
-        path = output_dir / f"{prefix}_{game_label}_heterogeneous_gini_vs_elo_variance.png"
-        scatter_by_setting(
-            game_df,
-            path,
-            x_col="elo_variance",
-            y_col="utility_gini",
-            title=f"{game_label}: utility Gini vs within-run Elo variance",
-            x_label="Within-run Elo variance",
-            y_label="Final utility Gini coefficient",
-        )
-        if path.exists():
-            plot_paths.append(path)
+        for y_slug, y_col, y_title_label, y_axis_label in hetero_y_specs:
+            for metric_slug, x_col, title_label, axis_label in hetero_x_specs:
+                path = output_dir / f"{prefix}_{game_label}_heterogeneous_{y_slug}_vs_{metric_slug}.png"
+                scatter_by_setting(
+                    game_df,
+                    path,
+                    x_col=x_col,
+                    y_col=y_col,
+                    title=f"{game_label}: {y_title_label} vs {title_label}",
+                    x_label=axis_label,
+                    y_label=y_axis_label,
+                )
+                if path.exists():
+                    plot_paths.append(path)
 
-        for mode, suffix in [
-            ("n_comp_grid", "faceted_n_by_competition"),
-            ("by_n", "faceted_by_n"),
-            ("by_competition", "faceted_by_competition"),
-        ]:
-            path = output_dir / f"{prefix}_{game_label}_heterogeneous_gini_vs_elo_variance_{suffix}.png"
-            faceted_scatter_plot(
-                game_df,
-                path,
-                x_col="elo_variance",
-                y_col="utility_gini",
-                title=f"{game_label}: utility Gini vs within-run Elo variance",
-                x_label="Within-run Elo variance",
-                y_label="Final utility Gini coefficient",
-                mode=mode,
-            )
-            if path.exists():
-                plot_paths.append(path)
+                for mode, suffix in [
+                    ("n_comp_grid", "faceted_n_by_competition"),
+                    ("by_n", "faceted_by_n"),
+                    ("by_competition", "faceted_by_competition"),
+                ]:
+                    path = (
+                        output_dir
+                        / f"{prefix}_{game_label}_heterogeneous_{y_slug}_vs_{metric_slug}_{suffix}.png"
+                    )
+                    faceted_scatter_plot(
+                        game_df,
+                        path,
+                        x_col=x_col,
+                        y_col=y_col,
+                        title=f"{game_label}: {y_title_label} vs {title_label}",
+                        x_label=axis_label,
+                        y_label=y_axis_label,
+                        mode=mode,
+                    )
+                    if path.exists():
+                        plot_paths.append(path)
 
     hetero_gini_by_n_comp = aggregate_heterogeneous_gini(
         runs,
@@ -1167,45 +1269,100 @@ def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, pre
         ["game_label", "competition_key", "competition_value"],
     )
     hetero_gini_overall = aggregate_heterogeneous_gini(runs, ["game_label"])
-    for game_label, game_df in hetero_gini_by_n_comp.groupby("game_label", dropna=False):
-        path = output_dir / f"{prefix}_{game_label}_heterogeneous_mean_gini_vs_mean_elo_variance_by_n_competition.png"
-        error_scatter_summary_plot(
-            game_df,
-            path,
-            title=f"{game_label}: mean utility Gini vs mean Elo variance by N and competition",
-            group_col="n_agents",
-        )
-        if path.exists():
-            plot_paths.append(path)
-    for game_label, game_df in hetero_gini_by_n.groupby("game_label", dropna=False):
-        path = output_dir / f"{prefix}_{game_label}_heterogeneous_mean_gini_vs_mean_elo_variance_avg_over_competition_by_n.png"
-        error_scatter_summary_plot(
-            game_df,
-            path,
-            title=f"{game_label}: mean utility Gini vs mean Elo variance averaged over competition",
-            group_col="n_agents",
-        )
-        if path.exists():
-            plot_paths.append(path)
-    for game_label, game_df in hetero_gini_by_comp.groupby("game_label", dropna=False):
-        path = output_dir / f"{prefix}_{game_label}_heterogeneous_mean_gini_vs_mean_elo_variance_avg_over_n_by_competition.png"
-        error_scatter_summary_plot(
-            game_df,
-            path,
-            title=f"{game_label}: mean utility Gini vs mean Elo variance averaged over N",
-            group_col="competition_key",
-        )
-        if path.exists():
-            plot_paths.append(path)
-    for game_label, game_df in hetero_gini_overall.groupby("game_label", dropna=False):
-        path = output_dir / f"{prefix}_{game_label}_heterogeneous_mean_gini_vs_mean_elo_variance_avg_over_n_and_competition.png"
-        error_scatter_summary_plot(
-            game_df,
-            path,
-            title=f"{game_label}: mean utility Gini vs mean Elo variance averaged over N and competition",
-        )
-        if path.exists():
-            plot_paths.append(path)
+    summary_x_specs = [
+        (
+            "elo_stddev",
+            "elo_std_mean",
+            "elo_std_sem",
+            "mean Elo stddev",
+            "Mean within-run Elo stddev",
+        ),
+        (
+            "elo_variance",
+            "elo_variance_mean",
+            "elo_variance_sem",
+            "mean Elo variance",
+            "Mean within-run Elo variance",
+        ),
+    ]
+    summary_y_specs = [
+        (
+            "gini",
+            "utility_gini_mean",
+            "utility_gini_sem",
+            "mean utility Gini (small-N corrected)",
+            "Mean final utility Gini coefficient (small-N corrected)",
+        ),
+        (
+            "utility_std",
+            "utility_std_mean",
+            "utility_std_sem",
+            "mean utility stddev",
+            "Mean final utility stddev",
+        ),
+        (
+            "payoff_elo_slope",
+            "payoff_elo_slope_mean",
+            "payoff_elo_slope_sem",
+            "mean payoff-vs-Elo slope",
+            "Mean final utility slope per 100 Elo",
+        ),
+        (
+            "payoff_elo_abs_slope",
+            "payoff_elo_abs_slope_mean",
+            "payoff_elo_abs_slope_sem",
+            "mean absolute payoff-vs-Elo slope",
+            "Mean absolute final utility slope per 100 Elo",
+        ),
+    ]
+    summary_frames = [
+        (
+            hetero_gini_by_n_comp,
+            "by_n_competition",
+            "by N and competition",
+            "n_agents",
+        ),
+        (
+            hetero_gini_by_n,
+            "avg_over_competition_by_n",
+            "averaged over competition",
+            "n_agents",
+        ),
+        (
+            hetero_gini_by_comp,
+            "avg_over_n_by_competition",
+            "averaged over N",
+            "competition_key",
+        ),
+        (
+            hetero_gini_overall,
+            "avg_over_n_and_competition",
+            "averaged over N and competition",
+            None,
+        ),
+    ]
+    for y_slug, y_mean_col, y_sem_col, title_y, y_axis_label in summary_y_specs:
+        for metric_slug, x_mean_col, x_sem_col, title_metric, x_axis_label in summary_x_specs:
+            for summary, suffix, title_suffix, group_col in summary_frames:
+                for game_label, game_df in iter_game_groups(summary):
+                    path = (
+                        output_dir
+                        / f"{prefix}_{game_label}_heterogeneous_mean_{y_slug}_vs_{metric_slug}_{suffix}.png"
+                    )
+                    error_scatter_summary_plot(
+                        game_df,
+                        path,
+                        title=f"{game_label}: {title_y} vs {title_metric} {title_suffix}",
+                        group_col=group_col,
+                        x_mean_col=x_mean_col,
+                        x_sem_col=x_sem_col,
+                        x_label=x_axis_label,
+                        y_mean_col=y_mean_col,
+                        y_sem_col=y_sem_col,
+                        y_label=y_axis_label,
+                    )
+                    if path.exists():
+                        plot_paths.append(path)
 
     hom = runs[runs["experiment_family"].eq("homogeneous_adversary")].copy()
     hom_summary = aggregate_homogeneous_adversary_pooled_positions(hom)
@@ -1269,7 +1426,7 @@ def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, pre
             if path.exists():
                 plot_paths.append(path)
 
-    for game_label, game_df in hom_summary.groupby("game_label", dropna=False):
+    for game_label, game_df in iter_game_groups(hom_summary):
         path = output_dir / f"{prefix}_{game_label}_hom_adversary_payoff_vs_elo_mean.png"
         line_summary_plot(
             game_df,
@@ -1342,7 +1499,7 @@ def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, pre
     ]:
         if summary.empty:
             continue
-        for game_label, game_df in summary.groupby("game_label", dropna=False):
+        for game_label, game_df in iter_game_groups(summary):
             path = output_dir / f"{prefix}_{game_label}_hom_adversary_payoff_vs_elo_mean_{suffix}.png"
             grouped_elo_line_plot(
                 game_df,
@@ -1370,7 +1527,7 @@ def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, pre
                 plot_paths.append(path)
 
     hetero_agent_summary = aggregate_heterogeneous_agents(agents)
-    for game_label, game_df in hetero_agent_summary.groupby("game_label", dropna=False):
+    for game_label, game_df in iter_game_groups(hetero_agent_summary):
         path = output_dir / f"{prefix}_{game_label}_heterogeneous_agent_payoff_vs_elo_mean.png"
         line_summary_plot(
             game_df,
@@ -1431,7 +1588,7 @@ def plot_outputs(runs: pd.DataFrame, agents: pd.DataFrame, output_dir: Path, pre
     ]:
         if summary.empty:
             continue
-        for game_label, game_df in summary.groupby("game_label", dropna=False):
+        for game_label, game_df in iter_game_groups(summary):
             path = output_dir / f"{prefix}_{game_label}_heterogeneous_agent_payoff_vs_elo_mean_{suffix}.png"
             grouped_elo_line_plot(
                 game_df,
@@ -1459,7 +1616,6 @@ def write_report(
     output_dir: Path,
     prefix: str,
     results_root: Path,
-    audit: AuditFlags,
     all_runs: pd.DataFrame,
     runs: pd.DataFrame,
     agents: pd.DataFrame,
@@ -1483,11 +1639,9 @@ def write_report(
     plot_rel = runs[runs["experiment_family"].isin(["homogeneous_adversary", "heterogeneous_random"])]
 
     lines = [
-        "# Full Games 1-3 Clean-Subset Preliminary Analysis",
+        "# Full Games 1-3 All-Success Preliminary Analysis",
         "",
         f"- Results root: `{results_root}`",
-        f"- Audit source: `{audit.source_path}`" if audit.source_path else "- Audit source: none",
-        f"- Mode: `clean_152_subset={args.clean_152_subset}`",
         f"- Exclude synthetic proposals: `{args.exclude_synthetic_proposals}`",
         f"- Exclude controls: `{args.exclude_controls}`",
         f"- Total successful result rows loaded: `{len(all_runs)}`",
@@ -1495,6 +1649,8 @@ def write_report(
         f"- Plot-relevant non-control rows: `{len(plot_rel)}`",
         f"- Rows with zero proposal fallback markers: `{proposal_clean_count}`",
         f"- Rows with proposal fallback markers: `{synthetic_proposal_count}`",
+        f"- Gini small-N correction: `raw_gini * N/(N-1)` for complete runs with `N < {GINI_SMALL_N_CORRECTION_THRESHOLD}`; raw and correction factor columns are also exported.",
+        "- Payoff-vs-Elo slope: per-run OLS fit of `final_utility ~ elo`; signed and absolute slopes are exported per 100 Elo points.",
         "",
         "## Composition",
         "",
@@ -1521,14 +1677,12 @@ def main() -> int:
     output_dir = args.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    audit = load_audit_flags(results_root, args.audit_json)
-    all_runs, all_agents = build_tables(results_root, audit)
-    prefix = "clean_152" if args.clean_152_subset else "all_success"
+    all_runs, all_agents = build_tables(results_root)
+    prefix = "all_success"
 
     runs, agents = filter_subset(
         all_runs,
         all_agents,
-        clean_152_subset=args.clean_152_subset,
         exclude_synthetic_proposals=args.exclude_synthetic_proposals,
         exclude_controls=args.exclude_controls,
     )
@@ -1602,6 +1756,56 @@ def main() -> int:
         aggregate_heterogeneous_gini(runs, ["game_label"]),
     )
     write_csv(
+        output_dir / f"{prefix}_heterogeneous_utility_dispersion_summary_by_n_competition.csv",
+        aggregate_heterogeneous_gini(
+            runs,
+            ["game_label", "n_agents", "competition_key", "competition_value"],
+        ),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_utility_dispersion_summary_averaged_over_competition_by_n.csv",
+        aggregate_heterogeneous_gini(runs, ["game_label", "n_agents"]),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_utility_dispersion_summary_averaged_over_n_by_competition.csv",
+        aggregate_heterogeneous_gini(
+            runs,
+            ["game_label", "competition_key", "competition_value"],
+        ),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_utility_dispersion_summary_averaged_over_n_and_competition.csv",
+        aggregate_heterogeneous_gini(runs, ["game_label"]),
+    )
+    write_csv(
+        output_dir / f"{prefix}_heterogeneous_payoff_elo_slope_summary_by_n_competition.csv",
+        aggregate_heterogeneous_gini(
+            runs,
+            ["game_label", "n_agents", "competition_key", "competition_value"],
+        ),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_payoff_elo_slope_summary_averaged_over_competition_by_n.csv",
+        aggregate_heterogeneous_gini(runs, ["game_label", "n_agents"]),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_payoff_elo_slope_summary_averaged_over_n_by_competition.csv",
+        aggregate_heterogeneous_gini(
+            runs,
+            ["game_label", "competition_key", "competition_value"],
+        ),
+    )
+    write_csv(
+        output_dir
+        / f"{prefix}_heterogeneous_payoff_elo_slope_summary_averaged_over_n_and_competition.csv",
+        aggregate_heterogeneous_gini(runs, ["game_label"]),
+    )
+    write_csv(
         output_dir / f"{prefix}_homogeneous_adversary_summary_averaged_over_competition_by_n.csv",
         aggregate_homogeneous_adversary_custom(runs, ["n_agents"]),
     )
@@ -1618,12 +1822,11 @@ def main() -> int:
     )
 
     plot_paths = plot_outputs(runs, agents, output_dir, prefix)
-    write_report(output_dir, prefix, results_root, audit, all_runs, runs, agents, plot_paths, args)
+    write_report(output_dir, prefix, results_root, all_runs, runs, agents, plot_paths, args)
 
     print(f"loaded_success_results={len(all_runs)}")
     print(f"selected_runs={len(runs)}")
     print(f"selected_agents={len(agents)}")
-    print(f"audit_source={audit.source_path}")
     print(f"output_dir={output_dir}")
     for path in plot_paths:
         print(f"wrote_plot={path}")
