@@ -13,6 +13,7 @@ from abc import ABC, abstractmethod
 import asyncio
 import json
 import os
+import re
 import time
 import random
 from pathlib import Path
@@ -24,6 +25,8 @@ from .provider_key_rotation import (
     ProviderKeyPool,
     ProviderTransientRetryExhaustedError,
     call_with_key_rotation,
+    discover_provider_keys,
+    has_provider_keys,
     is_deterministic_provider_failure,
 )
 from .context_compaction import (
@@ -150,6 +153,149 @@ def _coerce_positive_int(value: Any) -> Optional[int]:
     except (TypeError, ValueError):
         return None
     return coerced if coerced > 0 else None
+
+
+OPENROUTER_PROVIDER_FALLBACK_ENV = "OPENROUTER_PROVIDER_FALLBACK"
+
+_OPENROUTER_FALLBACK_ROUTES: Dict[Tuple[str, str], str] = {
+    ("openai", "gpt-3.5-turbo-0125"): "openai/gpt-3.5-turbo",
+    ("openai", "gpt-4.1-nano-2025-04-14"): "openai/gpt-4.1-nano",
+    ("openai", "gpt-4o-2024-05-13"): "openai/gpt-4o-2024-05-13",
+    ("openai", "gpt-4o-2024-11-20"): "openai/gpt-4o-2024-11-20",
+    ("openai", "gpt-4o-mini-2024-07-18"): "openai/gpt-4o-mini-2024-07-18",
+    ("openai", "gpt-5-2025-08-07"): "openai/gpt-5",
+    ("openai", "gpt-5-mini-2025-08-07"): "openai/gpt-5-mini",
+    ("openai", "gpt-5-nano-2025-08-07"): "openai/gpt-5-nano",
+    ("openai", "gpt-5.1-2025-11-13"): "openai/gpt-5.1",
+    ("openai", "gpt-5.2-2025-12-11"): "openai/gpt-5.2",
+    ("openai", "gpt-5.2-chat-latest"): "openai/gpt-5.2-chat",
+    ("openai", "o1-2024-12-17"): "openai/o1",
+    ("openai", "o3-2025-04-16"): "openai/o3",
+    ("openai", "o3-mini-2025-01-31"): "openai/o3-mini",
+    ("anthropic", "claude-3-haiku-20240307"): "anthropic/claude-3-haiku",
+    ("anthropic", "claude-3-5-haiku-20241022"): "anthropic/claude-3.5-haiku",
+    ("anthropic", "claude-3-5-sonnet-20241022"): "anthropic/claude-3.5-sonnet",
+    ("anthropic", "claude-3-7-sonnet-20250219"): "anthropic/claude-3.7-sonnet",
+    ("anthropic", "claude-haiku-4-5-20251001"): "anthropic/claude-haiku-4.5",
+    ("anthropic", "claude-sonnet-4-20250514"): "anthropic/claude-sonnet-4",
+    ("anthropic", "claude-sonnet-4-5-20250929"): "anthropic/claude-sonnet-4.5",
+    ("anthropic", "claude-opus-4-1-20250805"): "anthropic/claude-opus-4.1",
+    ("anthropic", "claude-opus-4-5-20251101"): "anthropic/claude-opus-4.5",
+    ("anthropic", "claude-opus-4-6"): "anthropic/claude-opus-4.6",
+    ("google", "gemini-2.0-flash"): "google/gemini-2.0-flash-001",
+    ("google", "gemini-2.0-flash-lite"): "google/gemini-2.0-flash-lite-001",
+    ("google", "gemini-2.5-flash"): "google/gemini-2.5-flash",
+    ("google", "gemini-2.5-pro"): "google/gemini-2.5-pro",
+    ("google", "gemini-3.1-pro-preview"): "google/gemini-3.1-pro-preview",
+}
+
+
+def _truthy_env_default_true(name: str) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return True
+    return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def infer_openrouter_fallback_model_id(
+    provider: str,
+    model_name: str,
+    custom_parameters: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """Return the OpenRouter route for a native provider model when known."""
+
+    custom_parameters = custom_parameters or {}
+    explicit = custom_parameters.get("openrouter_fallback_model_id")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+
+    provider_name = provider.strip().lower()
+    model = model_name.strip()
+    if "/" in model and model.split("/", 1)[0] in {"openai", "anthropic", "google"}:
+        return model
+
+    route = _OPENROUTER_FALLBACK_ROUTES.get((provider_name, model))
+    if route:
+        return route
+
+    if provider_name == "openai":
+        undated = re.sub(r"-\d{4}-\d{2}-\d{2}$", "", model)
+        return f"openai/{undated}"
+
+    if provider_name == "anthropic":
+        undated = re.sub(r"-\d{8}$", "", model)
+        undated = undated.replace("claude-3-5-", "claude-3.5-")
+        undated = undated.replace("claude-3-7-", "claude-3.7-")
+        undated = undated.replace("claude-opus-4-1", "claude-opus-4.1")
+        undated = undated.replace("claude-opus-4-5", "claude-opus-4.5")
+        undated = undated.replace("claude-opus-4-6", "claude-opus-4.6")
+        undated = undated.replace("claude-sonnet-4-5", "claude-sonnet-4.5")
+        undated = undated.replace("claude-haiku-4-5", "claude-haiku-4.5")
+        return f"anthropic/{undated}"
+
+    if provider_name == "google":
+        if model.startswith("gemini-"):
+            return f"google/{model}"
+        return None
+
+    return None
+
+
+def build_openrouter_fallback_custom_parameters(
+    provider: str,
+    source_custom_parameters: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Translate native-provider controls into OpenRouter-safe payload extras."""
+
+    source_custom_parameters = source_custom_parameters or {}
+    explicit = source_custom_parameters.get("openrouter_fallback_custom_parameters")
+    if isinstance(explicit, dict):
+        return dict(explicit)
+
+    provider_name = provider.strip().lower()
+    fallback_parameters: Dict[str, Any] = {}
+
+    if provider_name == "openai":
+        reasoning_effort = source_custom_parameters.get("reasoning_effort")
+        if reasoning_effort:
+            fallback_parameters["reasoning"] = {
+                "effort": reasoning_effort,
+                "exclude": True,
+            }
+    elif provider_name == "anthropic":
+        thinking_budget = _coerce_positive_int(
+            source_custom_parameters.get("thinking_budget_tokens")
+        )
+        if thinking_budget is not None:
+            fallback_parameters["reasoning"] = {
+                "max_tokens": thinking_budget,
+                "exclude": True,
+            }
+        else:
+            extra_body = source_custom_parameters.get("extra_body")
+            output_config = (
+                extra_body.get("output_config")
+                if isinstance(extra_body, dict)
+                else None
+            )
+            effort = (
+                output_config.get("effort")
+                if isinstance(output_config, dict)
+                else None
+            )
+            thinking = source_custom_parameters.get("thinking")
+            if effort:
+                fallback_parameters["reasoning"] = {
+                    "effort": effort,
+                    "exclude": True,
+                }
+            elif isinstance(thinking, dict) and thinking.get("type") == "adaptive":
+                fallback_parameters["reasoning"] = {
+                    "effort": "high",
+                    "exclude": True,
+                }
+
+    return fallback_parameters
 
 
 @dataclass 
@@ -287,6 +433,220 @@ class BaseLLMAgent(ABC):
         else:
             self.config.max_tokens = max_tokens
             self.logger.debug(f"Updated max_tokens to {max_tokens} for {self.agent_id}")
+
+    async def _call_openrouter_last_resort(
+        self,
+        *,
+        messages: List[Dict[str, str]],
+        source_provider: str,
+        source_model: str,
+        source_error: BaseException,
+        openrouter_key: Optional[ProviderKey] = None,
+        **kwargs: Any,
+    ) -> AgentResponse:
+        """Use OpenRouter only after a native provider path has failed."""
+
+        if not _truthy_env_default_true(OPENROUTER_PROVIDER_FALLBACK_ENV):
+            raise source_error
+
+        source_custom_parameters = dict(self.config.custom_parameters or {})
+        fallback_model_id = infer_openrouter_fallback_model_id(
+            source_provider,
+            source_model,
+            source_custom_parameters,
+        )
+        if not fallback_model_id:
+            self.logger.warning(
+                "OpenRouter fallback unavailable for %s model %s: no route mapping",
+                source_provider,
+                source_model,
+            )
+            raise source_error
+
+        if openrouter_key is None and not has_provider_keys("openrouter"):
+            self.logger.warning(
+                "OpenRouter fallback unavailable for %s model %s: no OpenRouter keys configured",
+                source_provider,
+                source_model,
+            )
+            raise source_error
+
+        fallback_custom_parameters = build_openrouter_fallback_custom_parameters(
+            source_provider,
+            source_custom_parameters,
+        )
+        fallback_config = LLMConfig(
+            model_type=ModelType.GEMMA_2_27B,
+            temperature=self.config.temperature,
+            max_tokens=self.config.max_tokens,
+            timeout=max(float(getattr(self.config, "timeout", 30.0)), 300.0),
+            requests_per_minute=self.config.requests_per_minute,
+            tokens_per_minute=self.config.tokens_per_minute,
+            max_retries=self.config.max_retries,
+            retry_delay=self.config.retry_delay,
+            system_prompt=self.config.system_prompt,
+            custom_parameters=fallback_custom_parameters,
+        )
+
+        from .openrouter_client import OpenRouterAgent
+
+        fallback_key_pool = (
+            ProviderKeyPool("openrouter", keys=[openrouter_key])
+            if openrouter_key is not None
+            else None
+        )
+        fallback_agent = OpenRouterAgent(
+            agent_id=f"{self.agent_id}_openrouter_fallback",
+            llm_config=fallback_config,
+            api_key=openrouter_key.value if openrouter_key is not None else os.getenv("OPENROUTER_API_KEY"),
+            model_id=fallback_model_id,
+            key_pool=fallback_key_pool,
+            rotate_unclassified_failures=True,
+        )
+        self.logger.warning(
+            "Native %s call failed for %s with %s; falling back to OpenRouter route %s",
+            source_provider,
+            source_model,
+            type(source_error).__name__,
+            fallback_model_id,
+        )
+
+        try:
+            response = await fallback_agent._call_llm_api(messages, **kwargs)
+        finally:
+            close = getattr(fallback_agent, "close", None)
+            if close is not None:
+                await close()
+
+        metadata = dict(response.metadata or {})
+        metadata["provider_fallback"] = {
+            "used": True,
+            "from_provider": source_provider,
+            "from_model": source_model,
+            "to_provider": "openrouter",
+            "to_model": fallback_model_id,
+            "trigger_type": type(source_error).__name__,
+            "trigger_message": str(source_error)[:1000],
+        }
+        response.metadata = metadata
+        return response
+
+    def _provider_openrouter_route_steps(
+        self,
+        source_provider: str,
+    ) -> List[Tuple[str, ProviderKey]]:
+        source_provider = source_provider.strip().lower()
+        native_keys = discover_provider_keys(source_provider)
+        openrouter_keys = (
+            discover_provider_keys("openrouter")
+            if _truthy_env_default_true(OPENROUTER_PROVIDER_FALLBACK_ENV)
+            else []
+        )
+        steps: List[Tuple[str, ProviderKey]] = []
+        used_labels: set[Tuple[str, str]] = set()
+
+        def add_group(provider: str, keys: List[ProviderKey], group: str) -> None:
+            for key in keys:
+                if key.group != group:
+                    continue
+                marker = (provider, key.label)
+                if marker in used_labels:
+                    continue
+                steps.append((provider, key))
+                used_labels.add(marker)
+
+        if source_provider in {"openai", "anthropic"}:
+            add_group(source_provider, native_keys, "LEWIS")
+            add_group("openrouter", openrouter_keys, "LEWIS")
+            add_group(source_provider, native_keys, "JOIE")
+            add_group("openrouter", openrouter_keys, "JOIE")
+        elif source_provider == "google":
+            add_group("google", native_keys, "LEWIS")
+            add_group("google", native_keys, "POLARIS")
+            add_group("openrouter", openrouter_keys, "LEWIS")
+            add_group("openrouter", openrouter_keys, "JOIE")
+        else:
+            for key in native_keys:
+                steps.append((source_provider, key))
+                used_labels.add((source_provider, key.label))
+
+        for key in native_keys:
+            marker = (source_provider, key.label)
+            if marker not in used_labels:
+                steps.append((source_provider, key))
+                used_labels.add(marker)
+        for key in openrouter_keys:
+            marker = ("openrouter", key.label)
+            if marker not in used_labels:
+                steps.append(("openrouter", key))
+                used_labels.add(marker)
+
+        return steps
+
+    async def _call_provider_route_sequence(
+        self,
+        *,
+        source_provider: str,
+        source_model: str,
+        messages: List[Dict[str, str]],
+        native_request_coro_factory: Callable[[ProviderKey], Any],
+        **kwargs: Any,
+    ) -> AgentResponse:
+        """Try native and OpenRouter keys in the configured cross-provider order."""
+
+        steps = self._provider_openrouter_route_steps(source_provider)
+        if not steps:
+            raise ProviderKeyExhaustedError(
+                f"No {source_provider} or OpenRouter keys configured for model {source_model}"
+            )
+
+        last_error: Optional[BaseException] = None
+        fallback_model_id = infer_openrouter_fallback_model_id(
+            source_provider,
+            source_model,
+            dict(self.config.custom_parameters or {}),
+        )
+
+        for step_provider, key in steps:
+            if step_provider == source_provider:
+                try:
+                    return await call_with_key_rotation(
+                        provider=source_provider,
+                        model=source_model,
+                        key_pool=ProviderKeyPool(source_provider, keys=[key]),
+                        request_coro_factory=native_request_coro_factory,
+                        logger=self.logger,
+                        rotate_unclassified_failures=True,
+                    )
+                except Exception as exc:
+                    last_error = exc
+                    continue
+
+            if step_provider != "openrouter":
+                continue
+            if not fallback_model_id:
+                continue
+            try:
+                return await self._call_openrouter_last_resort(
+                    messages=messages,
+                    source_provider=source_provider,
+                    source_model=source_model,
+                    source_error=last_error
+                    or ProviderKeyExhaustedError(
+                        f"{source_provider} route unavailable before OpenRouter fallback"
+                    ),
+                    openrouter_key=key,
+                    **kwargs,
+                )
+            except Exception as exc:
+                last_error = exc
+                continue
+
+        if last_error is not None:
+            raise last_error
+        raise ProviderKeyExhaustedError(
+            f"No usable {source_provider} or OpenRouter route for model {source_model}"
+        )
 
     @staticmethod
     def _metadata_get(container: Any, *keys: str) -> Any:
@@ -1819,12 +2179,12 @@ class AnthropicAgent(BaseLLMAgent):
                 }
             )
 
-        return await call_with_key_rotation(
-            provider="anthropic",
-            model=self.model_name,
-            key_pool=self.key_pool,
-            request_coro_factory=request_with_key,
-            logger=self.logger,
+        return await self._call_provider_route_sequence(
+            source_provider="anthropic",
+            source_model=self.model_name,
+            messages=messages,
+            native_request_coro_factory=request_with_key,
+            **kwargs,
         )
     
     def _estimate_cost(self, input_tokens: int, output_tokens: int) -> float:
@@ -2002,12 +2362,12 @@ class OpenAIAgent(BaseLLMAgent):
                 }
             )
 
-        return await call_with_key_rotation(
-            provider="openai",
-            model=self.model_name,
-            key_pool=self.key_pool,
-            request_coro_factory=request_with_key,
-            logger=self.logger,
+        return await self._call_provider_route_sequence(
+            source_provider="openai",
+            source_model=self.model_name,
+            messages=messages,
+            native_request_coro_factory=request_with_key,
+            **kwargs,
         )
     
     def _estimate_cost(self, usage) -> float:
@@ -2398,12 +2758,12 @@ class GoogleAgent(BaseLLMAgent):
                 }
             )
 
-        return await call_with_key_rotation(
-            provider="google",
-            model=self.model_name,
-            key_pool=self.key_pool,
-            request_coro_factory=request_with_key,
-            logger=self.logger,
+        return await self._call_provider_route_sequence(
+            source_provider="google",
+            source_model=self.model_name,
+            messages=messages,
+            native_request_coro_factory=request_with_key,
+            **kwargs,
         )
 
     def _messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:

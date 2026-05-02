@@ -98,7 +98,9 @@ class OpenRouterAgent(BaseLLMAgent):
                  agent_id: str,
                  llm_config: LLMConfig,
                  api_key: Optional[str],
-                 model_id: Optional[str] = None):
+                 model_id: Optional[str] = None,
+                 key_pool: Optional[ProviderKeyPool] = None,
+                 rotate_unclassified_failures: bool = False):
         """
         Initialize OpenRouter agent.
         
@@ -110,8 +112,9 @@ class OpenRouterAgent(BaseLLMAgent):
         """
         super().__init__(agent_id, llm_config)
         self.llm_config = llm_config
+        self.rotate_unclassified_failures = rotate_unclassified_failures
         
-        self.key_pool = ProviderKeyPool("openrouter", fallback_key=api_key)
+        self.key_pool = key_pool or ProviderKeyPool("openrouter", fallback_key=api_key)
         initial_key = self.key_pool.current()
         if not initial_key.value.startswith("sk-or-v1-"):
             self.logger.warning(
@@ -468,6 +471,7 @@ class OpenRouterAgent(BaseLLMAgent):
             key_pool=self.key_pool,
             request_coro_factory=request_with_key,
             logger=self.logger,
+            rotate_unclassified_failures=self.rotate_unclassified_failures,
         )
     
     async def discuss(self, context: Any, prompt: str) -> str:

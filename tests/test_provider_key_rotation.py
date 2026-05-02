@@ -253,6 +253,62 @@ def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_p
     assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
 
 
+def test_rotate_unclassified_failures_exhausts_all_openai_keys(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
+    monkeypatch.setenv("JOIE_OPENAI_API_KEY_1", "sk-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    async def request(key):
+        attempts.append(key.label)
+        raise RuntimeError("unexpected provider failure without a recognizable status")
+
+    with pytest.raises(ProviderKeyExhaustedError):
+        asyncio.run(
+            call_with_key_rotation(
+                provider="openai",
+                model="gpt-5.2-2025-12-11",
+                key_pool=ProviderKeyPool("openai"),
+                request_coro_factory=request,
+                rotate_unclassified_failures=True,
+            )
+        )
+
+    assert attempts == ["LEWIS_OPENAI_API_KEY_1", "JOIE_OPENAI_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "unclassified_provider_error" in text
+    assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
+    assert "all-keys-exhausted" in text
+
+
+def test_unclassified_failures_do_not_rotate_by_default(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
+    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
+    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    async def request(key):
+        attempts.append(key.label)
+        raise RuntimeError("unexpected local client bug")
+
+    with pytest.raises(RuntimeError, match="unexpected local client bug"):
+        asyncio.run(
+            call_with_key_rotation(
+                provider="openrouter",
+                model="openai/gpt-5.2",
+                key_pool=ProviderKeyPool("openrouter"),
+                request_coro_factory=request,
+            )
+        )
+
+    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1"]
+    assert not (tmp_path / "provider_failures.md").exists()
+
+
 def test_empty_model_output_retries_same_key_without_rotating(monkeypatch, tmp_path):
     clear_rotation_state()
     monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")

@@ -339,9 +339,18 @@ class ProviderKeyPool:
         self,
         provider: str,
         fallback_key: Optional[str] = None,
+        keys: Optional[List[ProviderKey]] = None,
     ):
         self.provider = _provider_name(provider)
-        self.keys = discover_provider_keys(self.provider, fallback_key=fallback_key)
+        if keys is None:
+            self.keys = discover_provider_keys(self.provider, fallback_key=fallback_key)
+        else:
+            self.keys = list(keys)
+            for key in self.keys:
+                if key.provider != self.provider:
+                    raise ValueError(
+                        f"Key {key.label} belongs to {key.provider}, not {self.provider}"
+                    )
         if not self.keys:
             raise ValueError(f"No API keys configured for provider {self.provider}")
         self.index = 0
@@ -578,6 +587,7 @@ async def call_with_key_rotation(
     request_coro_factory: Callable[[ProviderKey], Awaitable[Any]],
     logger: Optional[logging.Logger] = None,
     sleep_func: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    rotate_unclassified_failures: bool = False,
 ) -> Any:
     """Run one provider API call, rotating keys on provider/client/server errors."""
 
@@ -593,7 +603,11 @@ async def call_with_key_rotation(
         try:
             return await request_coro_factory(key)
         except Exception as exc:
+            if type(exc).__name__ == "NonRetryableLLMError" and not rotate_unclassified_failures:
+                raise
             key_failure_kind = classify_key_scoped_failure(provider_name, exc)
+            if key_failure_kind is None and rotate_unclassified_failures:
+                key_failure_kind = "unclassified_provider_error"
             if key_failure_kind is not None:
                 next_key = key_pool.rotate_after_failure(key)
                 record_provider_failure(

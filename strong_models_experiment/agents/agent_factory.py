@@ -4,9 +4,19 @@ import os
 import logging
 from typing import List, Dict, Any, Optional
 from negotiation import AgentFactory, AgentConfiguration
-from negotiation.llm_agents import ModelType, BaseLLMAgent, AnthropicAgent, OpenAIAgent, LocalModelAgent, GoogleAgent, LLMConfig
+from negotiation.llm_agents import (
+    ModelType,
+    BaseLLMAgent,
+    AnthropicAgent,
+    OpenAIAgent,
+    LocalModelAgent,
+    GoogleAgent,
+    LLMConfig,
+    build_openrouter_fallback_custom_parameters,
+    infer_openrouter_fallback_model_id,
+)
 from negotiation.openrouter_client import OpenRouterAgent
-from negotiation.provider_key_rotation import has_provider_keys
+from negotiation.provider_key_rotation import ProviderKeyExhaustedError, has_provider_keys
 from ..configs import STRONG_MODELS_CONFIG
 
 
@@ -119,18 +129,128 @@ class StrongModelAgentFactory:
                 - For others: No API-level control available
         """
 
+        native_provider_keys = {
+            "anthropic": anthropic_key,
+            "openai": openai_key,
+            "google": google_key,
+        }
+        if api_type in native_provider_keys and not has_provider_keys(api_type, native_provider_keys[api_type]):
+            return self._create_provider_openrouter_fallback_agent(
+                api_type,
+                model_name,
+                model_config,
+                agent_id,
+                openrouter_key,
+                max_tokens,
+                reason=f"no {api_type} API key pool configured",
+            )
+
         if api_type == "anthropic":
-            return self._create_anthropic_agent(model_name, model_config, agent_id, anthropic_key, max_tokens, reasoning_token_budget)
+            try:
+                return self._create_anthropic_agent(model_name, model_config, agent_id, anthropic_key, max_tokens, reasoning_token_budget)
+            except ProviderKeyExhaustedError as exc:
+                return self._create_provider_openrouter_fallback_agent(
+                    api_type,
+                    model_name,
+                    model_config,
+                    agent_id,
+                    openrouter_key,
+                    max_tokens,
+                    reason=str(exc),
+                )
         elif api_type == "openai":
-            return self._create_openai_agent(model_name, model_config, agent_id, openai_key, max_tokens, reasoning_token_budget)
+            try:
+                return self._create_openai_agent(model_name, model_config, agent_id, openai_key, max_tokens, reasoning_token_budget)
+            except ProviderKeyExhaustedError as exc:
+                return self._create_provider_openrouter_fallback_agent(
+                    api_type,
+                    model_name,
+                    model_config,
+                    agent_id,
+                    openrouter_key,
+                    max_tokens,
+                    reason=str(exc),
+                )
         elif api_type == "xai":
             return self._create_xai_agent(model_name, model_config, agent_id, xai_key, max_tokens)
         elif api_type == "google":
-            return self._create_google_agent(model_name, model_config, agent_id, google_key, max_tokens)
+            try:
+                return self._create_google_agent(model_name, model_config, agent_id, google_key, max_tokens)
+            except ProviderKeyExhaustedError as exc:
+                return self._create_provider_openrouter_fallback_agent(
+                    api_type,
+                    model_name,
+                    model_config,
+                    agent_id,
+                    openrouter_key,
+                    max_tokens,
+                    reason=str(exc),
+                )
         elif api_type == "princeton_cluster":
             return self._create_local_model_agent(model_name, model_config, agent_id, max_tokens)
         else:  # openrouter
             return self._create_openrouter_agent(model_name, model_config, agent_id, openrouter_key, max_tokens)
+
+    def _create_provider_openrouter_fallback_agent(
+        self,
+        api_type: str,
+        model_name: str,
+        model_config: Dict,
+        agent_id: str,
+        openrouter_key: Optional[str],
+        max_tokens: int,
+        reason: str,
+    ) -> Optional[OpenRouterAgent]:
+        source_custom_parameters = dict(model_config.get("custom_parameters", {}))
+        if "reasoning_effort" in model_config:
+            source_custom_parameters.setdefault(
+                "reasoning_effort",
+                model_config["reasoning_effort"],
+            )
+
+        source_model_id = model_config.get("model_id", model_name)
+        fallback_model_id = infer_openrouter_fallback_model_id(
+            api_type,
+            source_model_id,
+            source_custom_parameters,
+        )
+        if not fallback_model_id:
+            self.logger.warning(
+                "No %s keys for %s and no OpenRouter fallback route is known; skipping",
+                api_type,
+                model_name,
+            )
+            return None
+
+        if not has_provider_keys("openrouter", openrouter_key):
+            self.logger.warning(
+                "No %s keys for %s and no OpenRouter key pool configured for fallback; skipping",
+                api_type,
+                model_name,
+            )
+            return None
+
+        fallback_config = dict(model_config)
+        fallback_config["api_type"] = "openrouter"
+        fallback_config["provider"] = "OpenRouter"
+        fallback_config["model_id"] = fallback_model_id
+        fallback_config["custom_parameters"] = build_openrouter_fallback_custom_parameters(
+            api_type,
+            source_custom_parameters,
+        )
+        self.logger.warning(
+            "Creating %s via OpenRouter fallback route %s because %s",
+            model_name,
+            fallback_model_id,
+            reason,
+        )
+        return self._create_openrouter_agent(
+            model_name,
+            fallback_config,
+            agent_id,
+            openrouter_key,
+            max_tokens,
+        )
     
     def _create_anthropic_agent(self, model_name: str, model_config: Dict,
                                agent_id: str, api_key: Optional[str], max_tokens: int = 999999,
