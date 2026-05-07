@@ -146,9 +146,15 @@ def _extract_status_code(exc: BaseException) -> Optional[int]:
             return value
 
     text = _error_text(exc).lower()
-    match = re.search(r"\b(?:http\s*)?([45]\d{2})\b", text)
-    if match:
-        return int(match.group(1))
+    for pattern in (
+        r"\bhttp\s+([45]\d{2})\b",
+        r"\berror\s+code:\s*([45]\d{2})\b",
+        r"\bstatus(?:_code)?[\"']?\s*[:=]\s*([45]\d{2})\b",
+        r"\bcode[\"']?\s*[:=]\s*([45]\d{2})\b",
+    ):
+        match = re.search(pattern, text)
+        if match:
+            return int(match.group(1))
     return None
 
 
@@ -175,6 +181,7 @@ RATE_LIMIT_MARKERS = (
     "429",
     "rate limit",
     "rate_limit",
+    "key limit exceeded",
     "resource_exhausted",
     "resource exhausted",
     "quota exceeded",
@@ -189,10 +196,6 @@ RATE_LIMIT_MARKERS = (
 )
 
 TRANSIENT_MARKERS = (
-    "500",
-    "502",
-    "503",
-    "504",
     "internal server error",
     "service unavailable",
     "temporarily unavailable",
@@ -208,6 +211,8 @@ TRANSIENT_MARKERS = (
     "server disconnected without sending a response",
     "upstream connect error",
 )
+
+TRANSIENT_STATUS_MARKERS = ("500", "502", "503", "504")
 
 INVALID_KEY_MARKERS = (
     "api_key_invalid",
@@ -228,6 +233,22 @@ MODEL_OUTPUT_RETRY_MARKERS = (
     "could not extract content from response",
 )
 
+LOCAL_RESOURCE_MARKERS = (
+    "disk quota exceeded",
+    "no space left on device",
+    "errno 122",
+    "errno 28",
+    "proxy queue is not writable",
+)
+
+OPENROUTER_UPSTREAM_RATE_LIMIT_MARKERS = (
+    "temporarily rate-limited upstream",
+    "provider returned error",
+    '"provider_name":"deepinfra"',
+    "'provider_name': 'deepinfra'",
+    "add your own key to accumulate your rate limits",
+)
+
 
 def classify_key_scoped_failure(
     provider: str,
@@ -239,6 +260,8 @@ def classify_key_scoped_failure(
     text = _error_text(exc).lower()
     status = _extract_status_code(exc)
 
+    if any(marker in text for marker in LOCAL_RESOURCE_MARKERS):
+        return None
     if status == 402 or any(marker in text for marker in FUNDS_MARKERS):
         return "insufficient_funds"
     if status == 429 or any(marker in text for marker in RATE_LIMIT_MARKERS):
@@ -248,11 +271,33 @@ def classify_key_scoped_failure(
     if status is not None:
         if 400 <= status < 500:
             return "provider_client_error"
-        if 500 <= status < 600:
-            return "provider_server_error"
-    if is_transient_provider_failure(exc):
-        return "provider_transient_error"
     return None
+
+
+def is_upstream_provider_rate_limit(
+    provider: str,
+    model: str,
+    exc: BaseException,
+) -> bool:
+    """Return True for upstream capacity 429s that key rotation cannot fix.
+
+    OpenRouter can return a 429 from the selected upstream provider, for
+    example DeepInfra, even when the OpenRouter key itself is valid. Rotating
+    across our OpenRouter keys just burns the whole key pool and fails the job;
+    these should instead use the transient retry/backoff path.
+    """
+
+    if _provider_name(provider) != "openrouter":
+        return False
+    if "deepseek/deepseek-chat" not in model.lower():
+        return False
+
+    status = _extract_status_code(exc)
+    if status != 429:
+        return False
+
+    text = _error_text(exc).lower()
+    return any(marker in text for marker in OPENROUTER_UPSTREAM_RATE_LIMIT_MARKERS)
 
 
 def is_transient_provider_failure(exc: BaseException) -> bool:
@@ -260,13 +305,15 @@ def is_transient_provider_failure(exc: BaseException) -> bool:
     if status is not None and 500 <= status < 600:
         return True
     text = _error_text(exc).lower()
+    if any(re.search(rf"(?<!\d){status_marker}(?!\d)", text) for status_marker in TRANSIENT_STATUS_MARKERS):
+        return True
     return any(marker in text for marker in TRANSIENT_MARKERS)
 
 
 def is_retryable_model_output_failure(exc: BaseException) -> bool:
     """Return True for provider-success responses that contain no usable text.
 
-    These failures are not API-key scoped: rotating from Lewis to Joie will not
+    These failures are not API-key scoped: rotating from primary to secondary will not
     make a model that returned ``content=null`` more likely to answer. Treat
     them like a short same-key transient retry unless the provider explicitly
     says the response was truncated by a token/output limit.
@@ -281,10 +328,15 @@ def is_retryable_model_output_failure(exc: BaseException) -> bool:
 def is_deterministic_provider_failure(exc: BaseException) -> bool:
     """Return True for provider/config failures that should fail fast."""
 
+    text = _error_text(exc).lower()
+    if any(marker in text for marker in LOCAL_RESOURCE_MARKERS):
+        return True
+    if any(marker in text for marker in FUNDS_MARKERS + RATE_LIMIT_MARKERS):
+        return False
+
     status = _extract_status_code(exc)
     if status is not None:
         return 400 <= status < 500 and status not in {402, 408, 409, 429}
-    text = _error_text(exc).lower()
     normalized = re.sub(r"[^a-z0-9]+", "", text)
     text_markers = (
         "max_tokens must be greater than thinking.budget_tokens",
@@ -297,9 +349,12 @@ def is_deterministic_provider_failure(exc: BaseException) -> bool:
         "could not finish the message because max_tokens or model output limit was reached",
         "response truncated (max_tokens) with no content",
         "finish_reason=max_tokens",
+        "stop_reason=max_tokens",
         "finish_reason=length",
         "native_finish_reason=length",
         "empty content from model. finish_reason=length",
+        "empty content from model. stop_reason=max_tokens",
+        "anthropic returned empty content (stop_reason=max_tokens",
         "response blocked by safety filter",
     )
     normalized_markers = (
@@ -307,9 +362,12 @@ def is_deterministic_provider_failure(exc: BaseException) -> bool:
         "couldnotfinishthemessagebecausemaxtokensormodeloutputlimitwasreached",
         "responsetruncatedmaxtokenswithnocontent",
         "finishreasonmaxtokens",
+        "stopreasonmaxtokens",
         "finishreasonlength",
         "nativefinishreasonlength",
         "emptycontentfrommodelfinishreasonlength",
+        "emptycontentfrommodelstopreasonmaxtokens",
+        "anthropicreturnedemptycontentstopreasonmaxtokens",
         "responseblockedbysafetyfilter",
     )
     return any(marker in text for marker in text_markers) or any(
@@ -416,9 +474,13 @@ def _solution_distance(
             return "all-keys-exhausted; transient provider error persisted on all keys"
         if failure_kind == "provider_output_retry_exhausted":
             return "retry budget exhausted; inspect model/provider output behavior"
+        if failure_kind == "provider_transient_retry_exhausted":
+            return "retry budget exhausted; provider/proxy transient persisted"
         return "all-keys-exhausted; inspect provider error"
     if failure_kind == "provider_output_retry_exhausted":
         return "retry budget exhausted; inspect model/provider output behavior"
+    if failure_kind == "provider_transient_retry_exhausted":
+        return "retry budget exhausted; provider/proxy transient persisted"
     if next_key_label:
         return f"auto-rotated-to-{next_key_label}"
     return "logged"
@@ -603,9 +665,32 @@ async def call_with_key_rotation(
         try:
             return await request_coro_factory(key)
         except Exception as exc:
-            if type(exc).__name__ == "NonRetryableLLMError" and not rotate_unclassified_failures:
+            is_nonretryable = type(exc).__name__ == "NonRetryableLLMError"
+            upstream_rate_limit = is_upstream_provider_rate_limit(
+                provider_name,
+                model,
+                exc,
+            )
+            key_failure_kind = (
+                None
+                if upstream_rate_limit
+                else classify_key_scoped_failure(provider_name, exc)
+            )
+            if (
+                is_nonretryable
+                and not rotate_unclassified_failures
+                and not upstream_rate_limit
+                and key_failure_kind
+                not in {"insufficient_funds", "rate_limit_or_quota", "invalid_api_key"}
+            ):
                 raise
-            key_failure_kind = classify_key_scoped_failure(provider_name, exc)
+            if (
+                is_nonretryable
+                and not rotate_unclassified_failures
+                and not upstream_rate_limit
+                and key_failure_kind is None
+            ):
+                raise
             if key_failure_kind is None and rotate_unclassified_failures:
                 key_failure_kind = "unclassified_provider_error"
             if key_failure_kind is not None:
@@ -643,7 +728,12 @@ async def call_with_key_rotation(
                 ) from exc
 
             retryable_model_output_failure = is_retryable_model_output_failure(exc)
-            if retryable_model_output_failure or is_transient_provider_failure(exc):
+            transient_provider_failure = is_transient_provider_failure(exc)
+            if (
+                retryable_model_output_failure
+                or upstream_rate_limit
+                or transient_provider_failure
+            ):
                 retry_budget = _transient_retry_budget_seconds()
                 elapsed = time.monotonic() - started
                 remaining = retry_budget - elapsed
@@ -653,6 +743,24 @@ async def call_with_key_rotation(
                             provider=provider_name,
                             model=model,
                             failure_kind="provider_output_retry_exhausted",
+                            key=key,
+                            exc=exc,
+                            exhausted=False,
+                        )
+                    if upstream_rate_limit:
+                        record_provider_failure(
+                            provider=provider_name,
+                            model=model,
+                            failure_kind="upstream_rate_limit_retry_exhausted",
+                            key=key,
+                            exc=exc,
+                            exhausted=False,
+                        )
+                    if transient_provider_failure:
+                        record_provider_failure(
+                            provider=provider_name,
+                            model=model,
+                            failure_kind="provider_transient_retry_exhausted",
                             key=key,
                             exc=exc,
                             exhausted=False,
@@ -675,6 +783,8 @@ async def call_with_key_rotation(
                     (
                         "empty/invalid provider output"
                         if retryable_model_output_failure
+                        else "upstream provider rate limit"
+                        if upstream_rate_limit
                         else "transient API error"
                     ),
                     model,

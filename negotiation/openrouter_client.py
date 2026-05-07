@@ -28,7 +28,9 @@ from .provider_key_rotation import (
     call_with_key_rotation,
 )
 
-DEFAULT_OPENROUTER_MAX_TOKENS_CAP = 10000
+DEFAULT_OPENROUTER_MAX_TOKENS_CAP = 16384
+OPENROUTER_CLAUDE_OPUS_4_6_MAX_TOKENS_CAP = DEFAULT_OPENROUTER_MAX_TOKENS_CAP * 4
+OPENROUTER_GPT_5_4_MAX_TOKENS_CAP = DEFAULT_OPENROUTER_MAX_TOKENS_CAP * 4
 
 
 # OpenRouter model mappings
@@ -62,7 +64,7 @@ class OpenRouterConfig:
     max_retries: int = 12
     retry_delay: float = 2.0
     transport: str = "auto"  # direct | proxy | auto (proxy-first)
-    proxy_poll_dir: str = "/home/jz4391/openrouter_proxy"
+    proxy_poll_dir: str = "bargain/openrouter_proxy"
     proxy_poll_interval: float = 0.1
     proxy_timeout: float = 6000.0
     proxy_probe_timeout: float = 30.0
@@ -72,11 +74,43 @@ class ProxyMonitorUnavailableError(RuntimeError):
     """Raised when the shared OpenRouter proxy monitor appears unavailable."""
 
 
-def get_openrouter_max_tokens_cap(logger: Optional[logging.Logger] = None) -> int:
+def _is_claude_opus_4_6_model(model_id: Optional[str]) -> bool:
+    model = (model_id or "").lower()
+    return any(
+        marker in model
+        for marker in (
+            "claude-opus-4.6",
+            "claude-opus-4-6",
+            "claude-4.6-opus",
+        )
+    )
+
+
+def _is_gpt_5_4_model(model_id: Optional[str]) -> bool:
+    model = (model_id or "").lower()
+    return any(
+        marker in model
+        for marker in (
+            "gpt-5.4",
+            "gpt-5-4",
+        )
+    )
+
+
+def get_openrouter_max_tokens_cap(
+    logger: Optional[logging.Logger] = None,
+    model_id: Optional[str] = None,
+) -> int:
     """Return the OpenRouter output cap applied to effectively unlimited configs."""
+    if _is_claude_opus_4_6_model(model_id):
+        default_cap = OPENROUTER_CLAUDE_OPUS_4_6_MAX_TOKENS_CAP
+    elif _is_gpt_5_4_model(model_id):
+        default_cap = OPENROUTER_GPT_5_4_MAX_TOKENS_CAP
+    else:
+        default_cap = DEFAULT_OPENROUTER_MAX_TOKENS_CAP
     raw_cap = os.getenv(
         "OPENROUTER_MAX_TOKENS_CAP",
-        str(DEFAULT_OPENROUTER_MAX_TOKENS_CAP),
+        str(default_cap),
     )
     try:
         cap = int(raw_cap)
@@ -85,10 +119,58 @@ def get_openrouter_max_tokens_cap(logger: Optional[logging.Logger] = None) -> in
             logger.warning(
                 "Invalid OPENROUTER_MAX_TOKENS_CAP=%r; using default %s",
                 raw_cap,
-                DEFAULT_OPENROUTER_MAX_TOKENS_CAP,
+                default_cap,
             )
-        cap = DEFAULT_OPENROUTER_MAX_TOKENS_CAP
+        cap = default_cap
     return max(1, cap)
+
+
+def _usage_get(container: Any, key: str) -> Any:
+    if isinstance(container, dict):
+        return container.get(key)
+    return getattr(container, key, None)
+
+
+def _usage_get_nested(container: Any, *path: str) -> Any:
+    value = container
+    for key in path:
+        value = _usage_get(value, key)
+        if value is None:
+            return None
+    return value
+
+
+def normalize_openrouter_usage(usage: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Promote nested provider reasoning-token fields to stable top-level keys."""
+    normalized = dict(usage or {})
+    reasoning_tokens = normalized.get("reasoning_tokens")
+    if reasoning_tokens is None:
+        for path in (
+            ("completion_tokens_details", "reasoning_tokens"),
+            ("output_tokens_details", "reasoning_tokens"),
+            ("completion_tokens_details", "thinking_tokens"),
+            ("output_tokens_details", "thinking_tokens"),
+        ):
+            reasoning_tokens = _usage_get_nested(normalized, *path)
+            if reasoning_tokens is not None:
+                break
+    if reasoning_tokens is not None:
+        normalized["reasoning_tokens"] = reasoning_tokens
+
+    thinking_tokens = normalized.get("thinking_tokens")
+    if thinking_tokens is None:
+        for path in (
+            ("completion_tokens_details", "thinking_tokens"),
+            ("output_tokens_details", "thinking_tokens"),
+            ("completion_tokens_details", "reasoning_tokens"),
+            ("output_tokens_details", "reasoning_tokens"),
+        ):
+            thinking_tokens = _usage_get_nested(normalized, *path)
+            if thinking_tokens is not None:
+                break
+    if thinking_tokens is not None:
+        normalized["thinking_tokens"] = thinking_tokens
+    return normalized
 
 
 class OpenRouterAgent(BaseLLMAgent):
@@ -113,6 +195,7 @@ class OpenRouterAgent(BaseLLMAgent):
         super().__init__(agent_id, llm_config)
         self.llm_config = llm_config
         self.rotate_unclassified_failures = rotate_unclassified_failures
+        self.session: Optional[aiohttp.ClientSession] = None
         
         self.key_pool = key_pool or ProviderKeyPool("openrouter", fallback_key=api_key)
         initial_key = self.key_pool.current()
@@ -137,7 +220,7 @@ class OpenRouterAgent(BaseLLMAgent):
             resolved_transport = requested_transport
         self.requested_transport = requested_transport
 
-        proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy")
+        proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "bargain/openrouter_proxy")
 
         poll_env = os.getenv("OPENROUTER_PROXY_CLIENT_POLL_INTERVAL", "0.1")
         try:
@@ -188,8 +271,6 @@ class OpenRouterAgent(BaseLLMAgent):
             proxy_timeout=proxy_timeout,
             proxy_probe_timeout=proxy_probe_timeout,
         )
-        self.session: Optional[aiohttp.ClientSession] = None
-        
         # Initialize message history (required by BaseLLMAgent)
         self.message_history = []
         self._last_usage = None  # Store last usage data for access
@@ -364,7 +445,7 @@ class OpenRouterAgent(BaseLLMAgent):
 
             data = await response.json(encoding="utf-8")
             result = self._extract_content_from_openrouter_response(data)
-            usage = data.get("usage", {}) or {}
+            usage = normalize_openrouter_usage(data.get("usage", {}) or {})
             return result, None, usage
 
     async def _send_request_via_proxy(self, url: str, headers: dict, payload: dict, timeout: float) -> tuple:
@@ -391,8 +472,13 @@ class OpenRouterAgent(BaseLLMAgent):
             "payload": payload,
             "timeout": timeout,
         }
-        with open(request_path, "w") as f:
-            json.dump(request_data, f)
+        try:
+            with open(request_path, "w") as f:
+                json.dump(request_data, f)
+        except OSError as exc:
+            raise ProxyMonitorUnavailableError(
+                f"OpenRouter proxy queue is not writable at {poll_dir}: {exc}"
+            ) from exc
         self.logger.debug(f"[client] Wrote {request_path.name}")
 
         start = time.time()
@@ -417,7 +503,7 @@ class OpenRouterAgent(BaseLLMAgent):
                 await asyncio.sleep(poll_interval)
 
         result, error = response_data["result"], response_data["error"]
-        usage = response_data.get("usage", {}) or {}
+        usage = normalize_openrouter_usage(response_data.get("usage", {}) or {})
         self.logger.debug(
             f"[client] Got response for {timestamp}: {'error' if error else 'success'}"
         )
@@ -428,7 +514,7 @@ class OpenRouterAgent(BaseLLMAgent):
 
     async def _make_request(self, messages: List[Dict[str, str]]) -> tuple:
         """Make a request to OpenRouter API. Returns (content, usage)."""
-        max_tokens_cap = get_openrouter_max_tokens_cap(self.logger)
+        max_tokens_cap = get_openrouter_max_tokens_cap(self.logger, self.model_id)
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -436,7 +522,10 @@ class OpenRouterAgent(BaseLLMAgent):
             "max_tokens": min(self.llm_config.max_tokens, max_tokens_cap),
         }
         if self.llm_config.custom_parameters:
-            payload.update(self.llm_config.custom_parameters)
+            for key, value in self.llm_config.custom_parameters.items():
+                if key in {"phase_token_caps", "phase_token_cap_policy"}:
+                    continue
+                payload[key] = value
 
         url = f"{self.openrouter_config.base_url}/chat/completions"
 

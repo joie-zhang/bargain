@@ -25,6 +25,7 @@ from .provider_key_rotation import (
     ProviderKeyPool,
     ProviderTransientRetryExhaustedError,
     call_with_key_rotation,
+    classify_key_scoped_failure,
     discover_provider_keys,
     has_provider_keys,
     is_deterministic_provider_failure,
@@ -156,6 +157,25 @@ def _coerce_positive_int(value: Any) -> Optional[int]:
 
 
 OPENROUTER_PROVIDER_FALLBACK_ENV = "OPENROUTER_PROVIDER_FALLBACK"
+OPENROUTER_REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+DEFAULT_OPENAI_MAX_TOKENS_CAP = 16384
+OPENAI_GPT_5_4_MAX_TOKENS_CAP = DEFAULT_OPENAI_MAX_TOKENS_CAP * 4
+OPENAI_MODEL_MAX_TOKENS_CAPS = {
+    "gpt-4o-2024-05-13": 4096,
+}
+
+
+def _is_openai_gpt_5_4_model(model_name: Optional[str]) -> bool:
+    normalized = (model_name or "").lower()
+    return "gpt-5.4" in normalized or "gpt-5-4" in normalized
+
+
+def _get_openai_max_tokens_cap(model_name: Optional[str]) -> int:
+    if model_name in OPENAI_MODEL_MAX_TOKENS_CAPS:
+        return OPENAI_MODEL_MAX_TOKENS_CAPS[model_name]
+    if _is_openai_gpt_5_4_model(model_name):
+        return OPENAI_GPT_5_4_MAX_TOKENS_CAP
+    return DEFAULT_OPENAI_MAX_TOKENS_CAP
 
 _OPENROUTER_FALLBACK_ROUTES: Dict[Tuple[str, str], str] = {
     ("openai", "gpt-3.5-turbo-0125"): "openai/gpt-3.5-turbo",
@@ -195,6 +215,24 @@ def _truthy_env_default_true(name: str) -> bool:
     if value is None:
         return True
     return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+ROUTE_CONTINUABLE_FAILURE_KINDS = {
+    "insufficient_funds",
+    "invalid_api_key",
+    "provider_server_error",
+    "provider_transient_error",
+    "rate_limit_or_quota",
+}
+
+
+def _should_continue_provider_route(provider: str, exc: BaseException) -> bool:
+    """Return True when a native failure should try the next configured route."""
+
+    failure_kind = classify_key_scoped_failure(provider, exc)
+    if failure_kind in ROUTE_CONTINUABLE_FAILURE_KINDS:
+        return True
+    return not is_deterministic_provider_failure(exc)
 
 
 def infer_openrouter_fallback_model_id(
@@ -296,6 +334,32 @@ def build_openrouter_fallback_custom_parameters(
                 }
 
     return fallback_parameters
+
+
+def openrouter_fallback_unsupported_reason(
+    provider: str,
+    source_custom_parameters: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
+    """Return a reason when native controls cannot be represented on OpenRouter."""
+
+    source_custom_parameters = source_custom_parameters or {}
+    provider_name = provider.strip().lower()
+    if provider_name != "anthropic":
+        return None
+
+    extra_body = source_custom_parameters.get("extra_body")
+    output_config = extra_body.get("output_config") if isinstance(extra_body, dict) else None
+    effort = output_config.get("effort") if isinstance(output_config, dict) else None
+    if effort is None:
+        return None
+
+    effort_value = str(effort).strip().lower()
+    if effort_value not in OPENROUTER_REASONING_EFFORTS:
+        return (
+            f"Anthropic output_config.effort={effort_value!r} has no equivalent "
+            "OpenRouter reasoning.effort value"
+        )
+    return None
 
 
 @dataclass 
@@ -471,6 +535,19 @@ class BaseLLMAgent(ABC):
             )
             raise source_error
 
+        unsupported_reason = openrouter_fallback_unsupported_reason(
+            source_provider,
+            source_custom_parameters,
+        )
+        if unsupported_reason:
+            self.logger.warning(
+                "OpenRouter fallback unavailable for %s model %s: %s",
+                source_provider,
+                source_model,
+                unsupported_reason,
+            )
+            raise source_error
+
         fallback_custom_parameters = build_openrouter_fallback_custom_parameters(
             source_provider,
             source_custom_parameters,
@@ -556,15 +633,16 @@ class BaseLLMAgent(ABC):
                 used_labels.add(marker)
 
         if source_provider in {"openai", "anthropic"}:
-            add_group(source_provider, native_keys, "LEWIS")
-            add_group("openrouter", openrouter_keys, "LEWIS")
-            add_group(source_provider, native_keys, "JOIE")
-            add_group("openrouter", openrouter_keys, "JOIE")
+            add_group(source_provider, native_keys, "PRIMARY")
+            add_group(source_provider, native_keys, "SECONDARY")
+            add_group("openrouter", openrouter_keys, "PRIMARY")
+            add_group("openrouter", openrouter_keys, "SECONDARY")
         elif source_provider == "google":
-            add_group("google", native_keys, "LEWIS")
-            add_group("google", native_keys, "POLARIS")
-            add_group("openrouter", openrouter_keys, "LEWIS")
-            add_group("openrouter", openrouter_keys, "JOIE")
+            add_group("google", native_keys, "PRIMARY")
+            add_group("google", native_keys, "GROUP_A")
+            add_group("google", native_keys, "SECONDARY")
+            add_group("openrouter", openrouter_keys, "PRIMARY")
+            add_group("openrouter", openrouter_keys, "SECONDARY")
         else:
             for key in native_keys:
                 steps.append((source_provider, key))
@@ -620,6 +698,8 @@ class BaseLLMAgent(ABC):
                     )
                 except Exception as exc:
                     last_error = exc
+                    if not _should_continue_provider_route(source_provider, exc):
+                        raise
                     continue
 
             if step_provider != "openrouter":
@@ -661,6 +741,15 @@ class BaseLLMAgent(ABC):
         return None
 
     @classmethod
+    def _metadata_get_nested(cls, container: Any, path: Tuple[str, ...]) -> Any:
+        value = container
+        for key in path:
+            value = cls._metadata_get(value, key)
+            if value is None:
+                return None
+        return value
+
+    @classmethod
     def _extract_token_usage_from_response(cls, response: Optional[AgentResponse]) -> Optional[Dict[str, Any]]:
         """Extract token usage from nested OpenAI-style or direct provider metadata."""
         if not response:
@@ -685,23 +774,65 @@ class BaseLLMAgent(ABC):
         if total_tokens is None and input_tokens is not None and output_tokens is not None:
             total_tokens = input_tokens + output_tokens
 
+        context_metadata = None
+        if isinstance(metadata, dict):
+            context_metadata = metadata.get("context_compaction")
+            if context_metadata is None:
+                context_metadata = metadata.get("context_budget")
+
         reasoning_tokens = cls._metadata_get(usage, "reasoning_tokens", "thinking_tokens")
         if reasoning_tokens is None:
             reasoning_tokens = cls._metadata_get(metadata, "reasoning_tokens", "thinking_tokens")
+        if reasoning_tokens is None:
+            for path in (
+                ("completion_tokens_details", "reasoning_tokens"),
+                ("output_tokens_details", "reasoning_tokens"),
+                ("completion_tokens_details", "thinking_tokens"),
+                ("output_tokens_details", "thinking_tokens"),
+            ):
+                reasoning_tokens = cls._metadata_get_nested(usage, path)
+                if reasoning_tokens is not None:
+                    break
 
         thinking_tokens = cls._metadata_get(usage, "thinking_tokens")
         if thinking_tokens is None:
             thinking_tokens = cls._metadata_get(metadata, "thinking_tokens")
+        if thinking_tokens is None:
+            for path in (
+                ("completion_tokens_details", "thinking_tokens"),
+                ("output_tokens_details", "thinking_tokens"),
+                ("completion_tokens_details", "reasoning_tokens"),
+                ("output_tokens_details", "reasoning_tokens"),
+            ):
+                thinking_tokens = cls._metadata_get_nested(usage, path)
+                if thinking_tokens is not None:
+                    break
 
         token_usage = {
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "total_tokens": total_tokens,
         }
+        if input_tokens is not None:
+            token_usage["provider_input_tokens"] = input_tokens
         if reasoning_tokens is not None:
             token_usage["reasoning_tokens"] = reasoning_tokens
         if thinking_tokens is not None:
             token_usage["thinking_tokens"] = thinking_tokens
+        if isinstance(context_metadata, dict):
+            for source_key, target_key in (
+                ("phase_prompt_chars", "phase_prompt_chars"),
+                ("estimated_provider_input_tokens", "estimated_provider_input_tokens"),
+                ("context_limit_tokens", "context_limit_tokens"),
+                ("input_budget_tokens", "input_budget_tokens"),
+                ("context_compacted", "context_compacted"),
+                ("estimated_input_tokens_before", "estimated_input_tokens_before"),
+                ("estimated_input_tokens_after", "estimated_input_tokens_after"),
+                ("compacted_rounds", "compacted_rounds"),
+            ):
+                value = context_metadata.get(source_key)
+                if value is not None:
+                    token_usage[target_key] = value
 
         for access_key in ("access_k", "access_candidate_count", "access_total_calls"):
             access_value = cls._metadata_get(metadata, access_key)
@@ -933,6 +1064,15 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
             names.append(str(getattr(model_type, "value", model_type)))
         return list(dict.fromkeys(names))
 
+    @staticmethod
+    def _should_retry_deepseek_terse_compaction(
+        model_names: List[str],
+        context_limit: Optional[int],
+    ) -> bool:
+        if context_limit is None or context_limit > 32_768:
+            return False
+        return any("deepseek" in str(name).lower() for name in model_names)
+
     def _maybe_compact_context_messages(
         self,
         *,
@@ -949,15 +1089,45 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
 
         model_names = self._context_model_names()
         context_limit = resolve_context_limit(model_names)
-        if context_limit is None:
-            return messages, None
-
         threshold = context_threshold()
+        before_tokens = estimate_messages_tokens(messages)
+        if context_limit is None:
+            metadata = ContextCompactionMetadata(
+                model_names=model_names,
+                context_limit_tokens=None,
+                threshold=threshold,
+                reserved_output_tokens=None,
+                input_budget_tokens=None,
+                estimated_input_tokens_before=before_tokens,
+                estimated_input_tokens_after=before_tokens,
+                compacted_rounds=[],
+                original_public_history_entries=len(conversation_history),
+                compacted_public_history_entries=len(conversation_history),
+                phase_prompt_chars=len(prompt or ""),
+                estimated_provider_input_tokens=before_tokens,
+                context_compacted=False,
+            )
+            return messages, metadata
+
         reserve = reserved_output_tokens(getattr(self.config, "max_tokens", None), context_limit)
         input_budget = max(1, int(context_limit * threshold) - reserve)
-        before_tokens = estimate_messages_tokens(messages)
         if before_tokens <= input_budget:
-            return messages, None
+            metadata = ContextCompactionMetadata(
+                model_names=model_names,
+                context_limit_tokens=context_limit,
+                threshold=threshold,
+                reserved_output_tokens=reserve,
+                input_budget_tokens=input_budget,
+                estimated_input_tokens_before=before_tokens,
+                estimated_input_tokens_after=before_tokens,
+                compacted_rounds=[],
+                original_public_history_entries=len(conversation_history),
+                compacted_public_history_entries=len(conversation_history),
+                phase_prompt_chars=len(prompt or ""),
+                estimated_provider_input_tokens=before_tokens,
+                context_compacted=False,
+            )
+            return messages, metadata
 
         rounds = compactable_rounds(conversation_history)
         compacted_rounds: List[int] = []
@@ -992,6 +1162,9 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     compacted_rounds=list(compacted_rounds),
                     original_public_history_entries=len(conversation_history),
                     compacted_public_history_entries=len(candidate_history),
+                    phase_prompt_chars=len(prompt or ""),
+                    estimated_provider_input_tokens=candidate_tokens,
+                    context_compacted=True,
                 )
                 self.logger.info(
                     "CONTEXT_COMPACTION agent=%s model=%s round=%s phase=%s "
@@ -1007,6 +1180,57 @@ IMPORTANT: Your goal is to get the items you value most highly. Act in your own 
                     compacted_rounds,
                 )
                 return candidate_messages, metadata
+
+        if self._should_retry_deepseek_terse_compaction(model_names, context_limit):
+            terse_compacted_rounds: List[int] = []
+            for round_num in rounds:
+                terse_compacted_rounds.append(round_num)
+                candidate_history = compact_public_history_entries(
+                    conversation_history,
+                    set(terse_compacted_rounds),
+                    terse=True,
+                )
+                candidate_messages = self._compose_context_messages(
+                    context,
+                    prompt,
+                    system_prompt=system_prompt,
+                    conversation_history=candidate_history,
+                    strategic_notes=strategic_notes,
+                )
+                candidate_tokens = estimate_messages_tokens(candidate_messages)
+                best_history = candidate_history
+                best_tokens = candidate_tokens
+                if candidate_tokens <= input_budget:
+                    metadata = ContextCompactionMetadata(
+                        model_names=model_names,
+                        context_limit_tokens=context_limit,
+                        threshold=threshold,
+                        reserved_output_tokens=reserve,
+                        input_budget_tokens=input_budget,
+                        estimated_input_tokens_before=before_tokens,
+                        estimated_input_tokens_after=candidate_tokens,
+                        compacted_rounds=list(terse_compacted_rounds),
+                        original_public_history_entries=len(conversation_history),
+                        compacted_public_history_entries=len(candidate_history),
+                        phase_prompt_chars=len(prompt or ""),
+                        estimated_provider_input_tokens=candidate_tokens,
+                        context_compacted=True,
+                    )
+                    self.logger.info(
+                        "CONTEXT_COMPACTION_DEEPSEEK_TERSE agent=%s model=%s round=%s phase=%s "
+                        "before_tokens=%s after_tokens=%s input_budget=%s limit=%s compacted_rounds=%s",
+                        self.agent_id,
+                        ",".join(model_names),
+                        context.current_round,
+                        context.turn_type,
+                        before_tokens,
+                        candidate_tokens,
+                        input_budget,
+                        context_limit,
+                        terse_compacted_rounds,
+                    )
+                    return candidate_messages, metadata
+            compacted_rounds = terse_compacted_rounds
 
         message = (
             "context_length_exceeded preflight: "
@@ -1552,6 +1776,10 @@ Response format: Provide your analysis as structured strategic thinking."""
         self, context: NegotiationContext, prompt: str
     ) -> Tuple[List[Dict[str, str]], Optional[ContextCompactionMetadata]]:
         """Build conversation context for the LLM."""
+        custom_builder = type(self).__dict__.get("_build_context_messages")
+        if custom_builder is not None and custom_builder is not BaseLLMAgent._build_context_messages:
+            return custom_builder(self, context, prompt), None
+
         system_prompt = self._build_system_prompt(context)
         conversation_history, strategic_notes = self._bounded_context_parts(context)
         messages = self._compose_context_messages(
@@ -2061,7 +2289,12 @@ class AnthropicAgent(BaseLLMAgent):
 
         # Build API params - filter out our custom keys that aren't direct API params
         filtered_custom_params = {k: v for k, v in self.config.custom_parameters.items()
-                                  if k not in ["thinking", "thinking_budget_tokens"]}
+                                  if k not in [
+                                      "thinking",
+                                      "thinking_budget_tokens",
+                                      "phase_token_caps",
+                                      "phase_token_cap_policy",
+                                  ]}
 
         max_tokens = self.config.max_tokens
         thinking_min_max_tokens = None
@@ -2075,10 +2308,10 @@ class AnthropicAgent(BaseLLMAgent):
                 max_tokens = max(max_tokens, thinking_min_max_tokens)
         if (
             isinstance(max_tokens, int)
-            and max_tokens > 4096
+            and max_tokens > 16384
             and "claude-opus-4-6" not in self.model_name.lower()
         ):
-            max_tokens = max(thinking_min_max_tokens or 4096, 4096)
+            max_tokens = max(thinking_min_max_tokens or 16384, 16384)
 
         # Call Anthropic API (max_tokens is required)
         api_params = {
@@ -2298,7 +2531,12 @@ class OpenAIAgent(BaseLLMAgent):
         custom_params = {
             key: value
             for key, value in self.config.custom_parameters.items()
-            if key not in ['max_tokens', 'max_completion_tokens', 'phase_token_caps']
+            if key not in [
+                'max_tokens',
+                'max_completion_tokens',
+                'phase_token_caps',
+                'phase_token_cap_policy',
+            ]
         }
         is_reasoning_model = (
             "o3" in self.model_name.lower()
@@ -2313,10 +2551,11 @@ class OpenAIAgent(BaseLLMAgent):
 
         max_tokens = getattr(self.config, "max_tokens", None)
         if isinstance(max_tokens, int) and 0 < max_tokens < 999999:
+            output_cap = _get_openai_max_tokens_cap(self.model_name)
             if is_reasoning_model:
-                api_params["max_completion_tokens"] = min(max_tokens, 16384)
+                api_params["max_completion_tokens"] = min(max_tokens, output_cap)
             else:
-                api_params["max_tokens"] = min(max_tokens, 4096)
+                api_params["max_tokens"] = min(max_tokens, output_cap)
 
         async def request_with_key(key: ProviderKey) -> AgentResponse:
             self._configure_client_key(key)
@@ -2498,7 +2737,7 @@ class LocalModelAgent(BaseLLMAgent):
 class XAIAgent(BaseLLMAgent):
     """LLM agent using XAI Grok models via file-based proxy."""
 
-    POLL_DIR = Path("/home/jz4391/xai_proxy")
+    POLL_DIR = Path("bargain/xai_proxy")
     PROCESSED_DIR = POLL_DIR / "processed"
 
     def __init__(self, agent_id: str, config: LLMConfig, api_key: str):
@@ -2581,7 +2820,7 @@ class XAIAgent(BaseLLMAgent):
         # response = await self.client.chat.completions.create(
         #     model=self.model_name, messages=messages,
         #     temperature=self.config.temperature,
-        #     max_tokens=min(self.config.max_tokens, 4096),
+        #     max_tokens=min(self.config.max_tokens, 16384),
         # )
         # content = response.choices[0].message.content or ""
         # tokens_used = response.usage.total_tokens if response.usage else None

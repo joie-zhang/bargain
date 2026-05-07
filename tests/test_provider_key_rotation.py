@@ -8,6 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from negotiation.llm_agents import NonRetryableLLMError
 from negotiation.provider_key_rotation import (
     ProviderKeyExhaustedError,
     ProviderKeyPool,
@@ -18,6 +19,7 @@ from negotiation.provider_key_rotation import (
     discover_provider_keys,
     is_deterministic_provider_failure,
     is_retryable_model_output_failure,
+    is_upstream_provider_rate_limit,
 )
 
 
@@ -27,21 +29,21 @@ def clear_rotation_state():
 
 def test_discovers_grouped_keys_before_legacy(monkeypatch):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_GOOGLE_API_KEY_2", "lewis-2")
-    monkeypatch.setenv("LEWIS_GOOGLE_API_KEY_1", "lewis-1")
-    monkeypatch.setenv("JOIE_GOOGLE_API_KEY_1", "joie-1")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_GOOGLE_API_KEY_2", "primary-2")
+    monkeypatch.setenv("PRIMARY_GOOGLE_API_KEY_1", "primary-1")
+    monkeypatch.setenv("SECONDARY_GOOGLE_API_KEY_1", "secondary-1")
     monkeypatch.setenv("GOOGLE_API_KEY", "legacy")
 
     keys = discover_provider_keys("google")
 
     assert [key.label for key in keys] == [
-        "LEWIS_GOOGLE_API_KEY_1",
-        "LEWIS_GOOGLE_API_KEY_2",
-        "JOIE_GOOGLE_API_KEY_1",
+        "PRIMARY_GOOGLE_API_KEY_1",
+        "PRIMARY_GOOGLE_API_KEY_2",
+        "SECONDARY_GOOGLE_API_KEY_1",
         "GOOGLE_API_KEY",
     ]
-    assert [key.value for key in keys] == ["lewis-1", "lewis-2", "joie-1", "legacy"]
+    assert [key.value for key in keys] == ["primary-1", "primary-2", "secondary-1", "legacy"]
 
 
 def test_legacy_key_is_supported_without_group_order(monkeypatch):
@@ -58,9 +60,9 @@ def test_legacy_key_is_supported_without_group_order(monkeypatch):
 
 def test_rate_limit_rotates_immediately_and_writes_report(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_GOOGLE_API_KEY_1", "lewis")
-    monkeypatch.setenv("JOIE_GOOGLE_API_KEY_1", "joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_GOOGLE_API_KEY_1", "primary")
+    monkeypatch.setenv("SECONDARY_GOOGLE_API_KEY_1", "secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     sleep_calls = []
     attempts = []
@@ -70,7 +72,7 @@ def test_rate_limit_rotates_immediately_and_writes_report(monkeypatch, tmp_path)
 
     async def request(key):
         attempts.append(key.label)
-        if key.label == "LEWIS_GOOGLE_API_KEY_1":
+        if key.label == "PRIMARY_GOOGLE_API_KEY_1":
             raise RuntimeError("ResourceExhausted: 429 quota exceeded for generate_requests_per_model_per_day")
         return key.label
 
@@ -84,20 +86,20 @@ def test_rate_limit_rotates_immediately_and_writes_report(monkeypatch, tmp_path)
         )
     )
 
-    assert result == "JOIE_GOOGLE_API_KEY_1"
-    assert attempts == ["LEWIS_GOOGLE_API_KEY_1", "JOIE_GOOGLE_API_KEY_1"]
+    assert result == "SECONDARY_GOOGLE_API_KEY_1"
+    assert attempts == ["PRIMARY_GOOGLE_API_KEY_1", "SECONDARY_GOOGLE_API_KEY_1"]
     assert sleep_calls == []
     report = tmp_path / "provider_failures.md"
     assert report.exists()
     text = report.read_text(encoding="utf-8")
-    assert "LEWIS_GOOGLE_API_KEY_1" in text
-    assert "auto-rotated-to-JOIE_GOOGLE_API_KEY_1" in text
+    assert "PRIMARY_GOOGLE_API_KEY_1" in text
+    assert "auto-rotated-to-SECONDARY_GOOGLE_API_KEY_1" in text
 
 
 def test_all_keys_exhausted_fails_current_call(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS")
-    monkeypatch.setenv("LEWIS_ANTHROPIC_API_KEY_1", "lewis")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY")
+    monkeypatch.setenv("PRIMARY_ANTHROPIC_API_KEY_1", "primary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
 
     async def request(key):
@@ -118,12 +120,13 @@ def test_all_keys_exhausted_fails_current_call(monkeypatch, tmp_path):
     assert "requeue after provider quota reset" in text
 
 
-def test_transient_error_rotates_to_next_key(monkeypatch, tmp_path):
+def test_transient_error_retries_same_key(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
-    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "30")
     sleep_calls = []
     attempts = []
 
@@ -132,9 +135,11 @@ def test_transient_error_rotates_to_next_key(monkeypatch, tmp_path):
 
     async def request(key):
         attempts.append(key.label)
-        if key.label == "LEWIS_OPENROUTER_API_KEY_1":
+        if len(attempts) == 1:
             raise RuntimeError("HTTP 503: service unavailable")
         return "ok"
+
+    assert classify_key_scoped_failure("openrouter", RuntimeError("HTTP 503: service unavailable")) is None
 
     result = asyncio.run(
         call_with_key_rotation(
@@ -147,24 +152,211 @@ def test_transient_error_rotates_to_next_key(monkeypatch, tmp_path):
     )
 
     assert result == "ok"
-    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1", "JOIE_OPENROUTER_API_KEY_1"]
-    assert sleep_calls == []
-    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
-    assert "provider_server_error" in text
-    assert "auto-rotated-to-JOIE_OPENROUTER_API_KEY_1" in text
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "PRIMARY_OPENROUTER_API_KEY_1"]
+    assert len(sleep_calls) == 1
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
+    assert not (tmp_path / "provider_failures.md").exists()
 
 
-def test_transient_error_exhausts_single_key_immediately(monkeypatch, tmp_path):
+def test_openrouter_nonretryable_insufficient_credits_rotates_to_secondary(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS")
-    monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 402: {"error":{"message":"Insufficient credits. '
+        'Add more using https://openrouter.ai/settings/credits","code":402}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", error) == "insufficient_funds"
+
+    async def request(key):
+        attempts.append(key.label)
+        if key.label == "PRIMARY_OPENROUTER_API_KEY_1":
+            raise error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="deepseek/deepseek-r1-0528",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "SECONDARY_OPENROUTER_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "insufficient_funds" in text
+    assert "auto-rotated-to-SECONDARY_OPENROUTER_API_KEY_1" in text
+
+
+def test_openrouter_nonretryable_key_limit_rotates_to_secondary(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 403: {"error":{"message":"Key limit exceeded '
+        '(total limit). Manage it using https://openrouter.ai/settings/keys","code":403}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", error) == "rate_limit_or_quota"
+
+    async def request(key):
+        attempts.append(key.label)
+        if key.label == "PRIMARY_OPENROUTER_API_KEY_1":
+            raise error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="amazon/nova-micro-v1",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "SECONDARY_OPENROUTER_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "rate_limit_or_quota" in text
+    assert "auto-rotated-to-SECONDARY_OPENROUTER_API_KEY_1" in text
+
+
+def test_openrouter_deepseek_upstream_429_retries_same_key(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "30")
+    attempts = []
+    sleep_calls = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 429: {"error":{"message":"Provider returned error",'
+        '"code":429,"metadata":{"raw":"deepseek/deepseek-chat is temporarily '
+        'rate-limited upstream. Please retry shortly, or add your own key to '
+        'accumulate your rate limits","provider_name":"DeepInfra","is_byok":false}}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", error) == "rate_limit_or_quota"
+    assert is_upstream_provider_rate_limit("openrouter", "deepseek/deepseek-chat", error)
+
+    async def fake_sleep(seconds):
+        sleep_calls.append(seconds)
+
+    async def request(key):
+        attempts.append(key.label)
+        if len(attempts) == 1:
+            raise error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="deepseek/deepseek-chat",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+            sleep_func=fake_sleep,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "PRIMARY_OPENROUTER_API_KEY_1"]
+    assert len(sleep_calls) == 1
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
+    assert not (tmp_path / "provider_failures.md").exists()
+
+
+def test_openrouter_deepseek_upstream_429_exhausts_retry_budget_without_disabling_keys(
+    monkeypatch,
+    tmp_path,
+):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "0")
+    attempts = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 429: {"error":{"message":"Provider returned error",'
+        '"code":429,"metadata":{"raw":"deepseek/deepseek-chat is temporarily '
+        'rate-limited upstream. Please retry shortly","provider_name":"DeepInfra"}}}'
+    )
+
+    async def request(key):
+        attempts.append(key.label)
+        raise error
+
+    with pytest.raises(ProviderTransientRetryExhaustedError):
+        asyncio.run(
+            call_with_key_rotation(
+                provider="openrouter",
+                model="deepseek/deepseek-chat",
+                key_pool=ProviderKeyPool("openrouter"),
+                request_coro_factory=request,
+            )
+        )
+
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1"]
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "upstream_rate_limit_retry_exhausted" in text
+    assert "SECONDARY_OPENROUTER_API_KEY_1" not in text
+
+
+def test_openrouter_nonretryable_invalid_model_still_fails_fast(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    async def request(key):
+        attempts.append(key.label)
+        raise NonRetryableLLMError(
+            'Exception: HTTP 400: {"error":{"message":"The provided model '
+            'identifier is invalid.","code":400}}'
+        )
+
+    with pytest.raises(NonRetryableLLMError, match="provided model identifier is invalid"):
+        asyncio.run(
+            call_with_key_rotation(
+                provider="openrouter",
+                model="bad/model",
+                key_pool=ProviderKeyPool("openrouter"),
+                request_coro_factory=request,
+            )
+        )
+
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1"]
+    assert not (tmp_path / "provider_failures.md").exists()
+
+
+def test_transient_error_exhausts_retry_budget_without_disabling_key(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY")
+    monkeypatch.setenv("PRIMARY_OPENAI_API_KEY_1", "sk-primary")
     monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "0")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
 
     async def request(key):
         raise RuntimeError("HTTP 503: service unavailable")
 
-    with pytest.raises(ProviderKeyExhaustedError):
+    with pytest.raises(ProviderTransientRetryExhaustedError):
         asyncio.run(
             call_with_key_rotation(
                 provider="openai",
@@ -174,15 +366,16 @@ def test_transient_error_exhausts_single_key_immediately(monkeypatch, tmp_path):
             )
         )
     text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
-    assert "provider_server_error" in text
-    assert "all-keys-exhausted" in text
+    assert "provider_transient_retry_exhausted" in text
+    assert "all-keys-exhausted" not in text
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openai", set()) == set()
 
 
-def test_anthropic_workspace_usage_limit_rotates_to_joie(monkeypatch, tmp_path):
+def test_anthropic_workspace_usage_limit_rotates_to_secondary(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_ANTHROPIC_API_KEY_1", "sk-ant-lewis")
-    monkeypatch.setenv("JOIE_ANTHROPIC_API_KEY_1", "sk-ant-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_ANTHROPIC_API_KEY_1", "sk-ant-primary")
+    monkeypatch.setenv("SECONDARY_ANTHROPIC_API_KEY_1", "sk-ant-secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     attempts = []
 
@@ -196,7 +389,7 @@ def test_anthropic_workspace_usage_limit_rotates_to_joie(monkeypatch, tmp_path):
 
     async def request(key):
         attempts.append(key.label)
-        if key.label == "LEWIS_ANTHROPIC_API_KEY_1":
+        if key.label == "PRIMARY_ANTHROPIC_API_KEY_1":
             raise workspace_limit_error
         return "ok"
 
@@ -210,17 +403,28 @@ def test_anthropic_workspace_usage_limit_rotates_to_joie(monkeypatch, tmp_path):
     )
 
     assert result == "ok"
-    assert attempts == ["LEWIS_ANTHROPIC_API_KEY_1", "JOIE_ANTHROPIC_API_KEY_1"]
+    assert attempts == ["PRIMARY_ANTHROPIC_API_KEY_1", "SECONDARY_ANTHROPIC_API_KEY_1"]
     text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
-    assert "LEWIS_ANTHROPIC_API_KEY_1" in text
-    assert "auto-rotated-to-JOIE_ANTHROPIC_API_KEY_1" in text
+    assert "PRIMARY_ANTHROPIC_API_KEY_1" in text
+    assert "auto-rotated-to-SECONDARY_ANTHROPIC_API_KEY_1" in text
 
 
-def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_path):
+def test_anthropic_empty_max_tokens_is_not_key_scoped_transient():
+    error = RuntimeError(
+        "Anthropic returned empty content (stop_reason=max_tokens, output_tokens=10500)"
+    )
+
+    assert classify_key_scoped_failure("anthropic", error) is None
+    assert not is_retryable_model_output_failure(error)
+    assert is_deterministic_provider_failure(error)
+
+
+def test_provider_connection_error_retries_same_openai_key(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
-    monkeypatch.setenv("JOIE_OPENAI_API_KEY_1", "sk-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENAI_API_KEY_1", "sk-primary")
+    monkeypatch.setenv("SECONDARY_OPENAI_API_KEY_1", "sk-secondary")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     attempts = []
 
@@ -229,11 +433,11 @@ def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_p
         "Server disconnected without sending a response."
     )
 
-    assert classify_key_scoped_failure("openai", connection_error) == "provider_transient_error"
+    assert classify_key_scoped_failure("openai", connection_error) is None
 
     async def request(key):
         attempts.append(key.label)
-        if key.label == "LEWIS_OPENAI_API_KEY_1":
+        if len(attempts) == 1:
             raise connection_error
         return "ok"
 
@@ -247,17 +451,17 @@ def test_provider_connection_error_rotates_across_openai_keys(monkeypatch, tmp_p
     )
 
     assert result == "ok"
-    assert attempts == ["LEWIS_OPENAI_API_KEY_1", "JOIE_OPENAI_API_KEY_1"]
-    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
-    assert "provider_transient_error" in text
-    assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
+    assert attempts == ["PRIMARY_OPENAI_API_KEY_1", "PRIMARY_OPENAI_API_KEY_1"]
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openai", set()) == set()
+    assert not (tmp_path / "provider_failures.md").exists()
 
 
 def test_rotate_unclassified_failures_exhausts_all_openai_keys(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENAI_API_KEY_1", "sk-lewis")
-    monkeypatch.setenv("JOIE_OPENAI_API_KEY_1", "sk-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENAI_API_KEY_1", "sk-primary")
+    monkeypatch.setenv("SECONDARY_OPENAI_API_KEY_1", "sk-secondary")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     attempts = []
 
@@ -276,18 +480,18 @@ def test_rotate_unclassified_failures_exhausts_all_openai_keys(monkeypatch, tmp_
             )
         )
 
-    assert attempts == ["LEWIS_OPENAI_API_KEY_1", "JOIE_OPENAI_API_KEY_1"]
+    assert attempts == ["PRIMARY_OPENAI_API_KEY_1", "SECONDARY_OPENAI_API_KEY_1"]
     text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
     assert "unclassified_provider_error" in text
-    assert "auto-rotated-to-JOIE_OPENAI_API_KEY_1" in text
+    assert "auto-rotated-to-SECONDARY_OPENAI_API_KEY_1" in text
     assert "all-keys-exhausted" in text
 
 
 def test_unclassified_failures_do_not_rotate_by_default(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
-    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     attempts = []
 
@@ -305,15 +509,15 @@ def test_unclassified_failures_do_not_rotate_by_default(monkeypatch, tmp_path):
             )
         )
 
-    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1"]
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1"]
     assert not (tmp_path / "provider_failures.md").exists()
 
 
 def test_empty_model_output_retries_same_key_without_rotating(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
-    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "30")
     sleep_calls = []
@@ -342,16 +546,16 @@ def test_empty_model_output_retries_same_key_without_rotating(monkeypatch, tmp_p
     )
 
     assert result == "ok"
-    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1", "LEWIS_OPENROUTER_API_KEY_1"]
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "PRIMARY_OPENROUTER_API_KEY_1"]
     assert len(sleep_calls) == 1
     assert not (tmp_path / "provider_failures.md").exists()
 
 
 def test_empty_model_output_retry_exhaustion_does_not_disable_next_key(monkeypatch, tmp_path):
     clear_rotation_state()
-    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "LEWIS,JOIE")
-    monkeypatch.setenv("LEWIS_OPENROUTER_API_KEY_1", "sk-or-v1-lewis")
-    monkeypatch.setenv("JOIE_OPENROUTER_API_KEY_1", "sk-or-v1-joie")
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
     monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
     monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "0")
     attempts = []
@@ -374,11 +578,30 @@ def test_empty_model_output_retry_exhaustion_does_not_disable_next_key(monkeypat
             )
         )
 
-    assert attempts == ["LEWIS_OPENROUTER_API_KEY_1"]
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1"]
     assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
     text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
     assert "provider_output_retry_exhausted" in text
-    assert "JOIE_OPENROUTER_API_KEY_1" not in text
+    assert "SECONDARY_OPENROUTER_API_KEY_1" not in text
+
+
+def test_empty_model_output_with_token_counts_is_not_key_scoped():
+    output_error = RuntimeError(
+        'Exception: Empty content from model. finish_reason=None, '
+        'full response: {"choices": [{"finish_reason": null, '
+        '"message": {"content": null}}], "usage": {"prompt_tokens": 41068, '
+        '"completion_tokens": 0, "total_tokens": 41068}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", output_error) is None
+    assert is_retryable_model_output_failure(output_error)
+
+
+def test_local_disk_quota_is_not_provider_key_scoped():
+    error = OSError("[Errno 122] Disk quota exceeded")
+
+    assert classify_key_scoped_failure("openrouter", error) is None
+    assert is_deterministic_provider_failure(error)
 
 
 def test_deterministic_provider_failure_catches_output_limit_messages():

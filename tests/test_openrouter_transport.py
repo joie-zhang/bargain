@@ -89,7 +89,7 @@ def test_auto_transport_outside_slurm_uses_direct_only(monkeypatch):
 def test_openrouter_max_tokens_cap_defaults_to_raised_limit(monkeypatch):
     monkeypatch.delenv("OPENROUTER_MAX_TOKENS_CAP", raising=False)
 
-    assert DEFAULT_OPENROUTER_MAX_TOKENS_CAP == 10000
+    assert DEFAULT_OPENROUTER_MAX_TOKENS_CAP == 16384
     assert get_openrouter_max_tokens_cap() == DEFAULT_OPENROUTER_MAX_TOKENS_CAP
 
 
@@ -133,6 +133,24 @@ def test_openrouter_request_preserves_lower_explicit_max_tokens(monkeypatch):
     asyncio.run(agent._make_request([{"role": "user", "content": "hi"}]))
 
     assert payloads[0]["max_tokens"] == 512
+
+
+def test_openrouter_request_does_not_send_local_phase_token_caps(monkeypatch):
+    agent = make_agent(monkeypatch, transport="direct", max_tokens=512)
+    agent.llm_config.custom_parameters["phase_token_caps"] = {"default": 4096}
+    agent.llm_config.custom_parameters["reasoning"] = {"effort": "low", "exclude": True}
+    payloads = []
+
+    async def fake_direct(url, headers, payload, timeout):
+        payloads.append(payload)
+        return "ok", None, {"total_tokens": 1}
+
+    monkeypatch.setattr(agent, "_send_request_direct", fake_direct)
+
+    asyncio.run(agent._make_request([{"role": "user", "content": "hi"}]))
+
+    assert "phase_token_caps" not in payloads[0]
+    assert payloads[0]["reasoning"] == {"effort": "low", "exclude": True}
 
 
 def test_proxy_provider_error_is_non_retryable(monkeypatch):
