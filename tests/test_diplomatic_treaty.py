@@ -13,6 +13,7 @@ Tests cover:
 """
 
 import re
+import json
 from typing import List
 
 import numpy as np
@@ -725,7 +726,36 @@ class TestPromptGeneration:
         )
 
         assert "integer percentage between 0 and 100" in prompt
-        assert '"agreement": [30, 70, 50' in prompt
+        example_text = prompt.split(
+            "Respond with ONLY a JSON object in this exact format:\n",
+            1,
+        )[1].split("\n\n**Rules:**", 1)[0]
+        example_payload = json.loads(example_text)
+        assert example_payload["agreement"] == [30, 70, 50]
+        assert_no_decimal_numbers(prompt)
+
+    def test_proposal_prompt_example_uses_exact_issue_count(self):
+        game = create_game_environment(
+            "diplomacy", n_agents=2, t_rounds=5, n_issues=10, random_seed=42
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_proposal_prompt(
+            "Agent_1",
+            state,
+            round_num=1,
+            agents=["Agent_1", "Agent_2"],
+        )
+        example_text = prompt.split(
+            "Respond with ONLY a JSON object in this exact format:\n",
+            1,
+        )[1].split("\n\n**Rules:**", 1)[0]
+        example_payload = json.loads(example_text)
+
+        assert len(example_payload["agreement"]) == 10
+        assert all(isinstance(value, int) for value in example_payload["agreement"])
+        assert all(0 <= value <= 100 for value in example_payload["agreement"])
         assert_no_decimal_numbers(prompt)
 
     def test_voting_prompt_uses_integer_percentages(self):

@@ -6,10 +6,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-import pytest
-
 from game_environments import create_game_environment
-from strong_models_experiment.phases.phase_handlers import PhaseHandler, VoteIntegrityError
+from strong_models_experiment.phases.phase_handlers import PhaseHandler
 
 
 @dataclass
@@ -268,10 +266,21 @@ def test_invalid_final_round_batch_vote_uses_audited_synthetic_rejects_without_s
         agent_1_interactions = [
             entry for entry in saved_interactions if entry["agent_id"] == "Agent_1"
         ]
-        assert len(agent_1_interactions) == 2
+        assert [entry["phase"] for entry in agent_1_interactions] == [
+            "voting_round_2_batch_invalid_attempt_0",
+            "voting_round_2_batch_invalid_attempt_1",
+            "voting_round_2_batch_invalid_attempt_2",
+            "voting_round_2_proposal_1",
+            "voting_round_2_proposal_2",
+        ]
         agent_1_payloads = [json.loads(entry["response"]) for entry in agent_1_interactions]
-        assert all(payload["synthetic_vote"] is True for payload in agent_1_payloads)
-        assert all("parse_error" in payload for payload in agent_1_payloads)
+        invalid_payloads = agent_1_payloads[:3]
+        synthetic_payloads = agent_1_payloads[3:]
+        assert all(payload["raw_response"] == "!!!!!!!!!!!!!!!!!!!!!!!!" for payload in invalid_payloads)
+        assert [payload["will_retry"] for payload in invalid_payloads] == [True, True, False]
+        assert all(payload["hard_failed"] is False for payload in invalid_payloads)
+        assert all(payload["synthetic_vote"] is True for payload in synthetic_payloads)
+        assert all("parse_error" in payload for payload in synthetic_payloads)
         integrity = result["voting_summary"]["vote_integrity"]
         assert integrity["contaminated"] is True
         assert integrity["synthetic_vote_count"] == 2
@@ -280,8 +289,8 @@ def test_invalid_final_round_batch_vote_uses_audited_synthetic_rejects_without_s
     asyncio.run(run_test())
 
 
-def test_invalid_prefinal_batch_vote_hard_fails_without_synthetic_votes():
-    """Pre-final invalid structured voting should fail the run instead of inventing votes."""
+def test_invalid_prefinal_batch_vote_uses_audited_synthetic_rejects():
+    """Pre-final invalid structured voting should now default to audited rejects."""
 
     async def run_test():
         game = create_game_environment(
@@ -339,20 +348,29 @@ def test_invalid_prefinal_batch_vote_hard_fails_without_synthetic_votes():
         ]
 
         handler = PhaseHandler(game_environment=game)
-        with pytest.raises(VoteIntegrityError):
-            await handler.run_private_voting_phase(
-                agents=agents,
-                items=items,
-                preferences=preferences,
-                round_num=1,
-                max_rounds=3,
-                proposals=proposals,
-                enumerated_proposals=enumerated_proposals,
-            )
+        result = await handler.run_private_voting_phase(
+            agents=agents,
+            items=items,
+            preferences=preferences,
+            round_num=1,
+            max_rounds=3,
+            proposals=proposals,
+            enumerated_proposals=enumerated_proposals,
+        )
+
+        assert [
+            (vote["voter_id"], vote["proposal_number"], vote["vote"])
+            for vote in result["private_votes"]
+        ] == [
+            ("Agent_1", 1, "reject"),
+            ("Agent_1", 2, "reject"),
+            ("Agent_2", 1, "accept"),
+            ("Agent_2", 2, "reject"),
+        ]
 
         integrity = handler.get_vote_integrity()
-        assert integrity["hard_failed"] is True
-        assert integrity["synthetic_vote_count"] == 0
-        assert integrity["contaminated"] is False
+        assert integrity["hard_failed"] is False
+        assert integrity["synthetic_vote_count"] == 2
+        assert integrity["contaminated"] is True
 
     asyncio.run(run_test())

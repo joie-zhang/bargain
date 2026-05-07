@@ -12,13 +12,12 @@ Tests cover:
 
 import asyncio
 import json
-import pytest
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
 from game_environments import CoFundingConfig
 from game_environments.co_funding import CoFundingGame
-from strong_models_experiment.phases.phase_handlers import PhaseHandler, VoteIntegrityError
+from strong_models_experiment.phases.phase_handlers import PhaseHandler
 
 
 # ---- Fake agent for testing ----
@@ -79,6 +78,17 @@ class FakeThinkingAgent(FakeAgent):
         return dict(self._thinking_response)
 
 
+class RaisingThinkingAgent(FakeAgent):
+    """Fake agent that raises during private thinking."""
+
+    def __init__(self, agent_id: str, error: Exception):
+        super().__init__(agent_id)
+        self._error = error
+
+    async def think_strategy(self, prompt, context) -> Dict[str, Any]:
+        raise self._error
+
+
 def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5, pledge_mode="individual"):
     """Helper to create a game and its state."""
     config = CoFundingConfig(
@@ -94,6 +104,41 @@ def make_game_and_state(n_agents=2, m_projects=3, seed=42, sigma=0.5, alpha=0.5,
     agents = [FakeAgent(f"Agent_{i+1}") for i in range(n_agents)]
     state = game.create_game_state(agents)
     return game, agents, state
+
+
+class SingleProposalVotingGame:
+    """Minimal game environment that exercises the non-batch vote path."""
+
+    class _GameType:
+        value = "single_proposal"
+
+    def get_game_type(self):
+        return self._GameType()
+
+    def get_voting_prompt(self, agent_id, proposal, game_state, round_num, reasoning_token_budget=None):
+        return (
+            f"Agent {agent_id}, vote on proposal {proposal.get('proposal_number', 1)}. "
+            'Return {"vote": "accept", "reasoning": "brief reason"}.'
+        )
+
+
+def save_interactions_to(records: List[Dict[str, Any]]):
+    """Create a PhaseHandler-compatible interaction capture callback."""
+
+    def _save(agent_id, phase, prompt, response, round_num, token_usage, model_name=None):
+        records.append(
+            {
+                "agent_id": agent_id,
+                "phase": phase,
+                "prompt": prompt,
+                "response": response,
+                "round_num": round_num,
+                "token_usage": token_usage,
+                "model_name": model_name,
+            }
+        )
+
+    return _save
 
 
 class TestProposalValidation:
@@ -158,6 +203,45 @@ class TestProposalValidation:
         assert saved_response["raw_response"] == raw_response
         assert saved_response["parse_error"]["type"] == "JSONDecodeError"
         assert saved_response["parsed_or_fallback_response"]["strategy"] == "Basic preference-driven approach"
+
+    def test_run_private_thinking_phase_saves_parse_exception_and_continues(self):
+        """Private-thinking JSON parse exceptions should be non-fatal and persisted."""
+        game, _, state = make_game_and_state(n_agents=2, m_projects=3)
+        raw_response = '{"reasoning": "missing comma" "strategy": "fallback"}'
+        parse_error = json.JSONDecodeError("Expecting ',' delimiter", raw_response, 29)
+        agents = [RaisingThinkingAgent("Agent_1", parse_error)]
+        preferences = {
+            "agent_preferences": state["agent_valuations"],
+            "game_state": state,
+        }
+        saved = []
+
+        def save_interaction(*args, **kwargs):
+            saved.append((args, kwargs))
+
+        handler = PhaseHandler(
+            save_interaction_callback=save_interaction,
+            game_environment=game,
+        )
+
+        result = asyncio.run(
+            handler.run_private_thinking_phase(
+                agents=agents,
+                items=state["projects"],
+                preferences=preferences,
+                round_num=1,
+                max_rounds=game.config.t_rounds,
+                discussion_messages=[],
+            )
+        )
+
+        saved_response = json.loads(saved[0][0][3])
+        assert saved[0][0][1] == "private_thinking_round_1"
+        assert saved_response["used_fallback"] is True
+        assert saved_response["raw_response"] == raw_response
+        assert saved_response["parse_error"]["type"] == "JSONDecodeError"
+        assert result["thinking_results"][0]["used_fallback"] is True
+        assert result["thinking_results"][0]["raw_response"] == raw_response
 
     def test_pledge_parse_and_validate(self):
         """Pledges should be parsed and validated correctly."""
@@ -254,8 +338,8 @@ Second line with detail."
         assert saved_response["raw_proposal"] == bad_response
         assert saved_response["parse_error"]["type"] == "ValueError"
 
-    def test_run_proposal_phase_hard_fails_unrepaired_parse_failure(self):
-        """Game 3 parse failures should not silently become zero contribution vectors."""
+    def test_run_proposal_phase_defaults_unrepaired_parse_failure_to_zero_contributions(self):
+        """Game 3 parse failures should become audited zero contribution vectors."""
         game, _, state = make_game_and_state(m_projects=3)
         items = state["projects"]
         preferences = {
@@ -277,27 +361,31 @@ Second line with detail."
             game_environment=game,
         )
 
-        with pytest.raises(ValueError, match="co_funding proposal from Agent_1 remained invalid"):
-            asyncio.run(
-                handler.run_proposal_phase(
-                    agents=agents,
-                    items=items,
-                    preferences=preferences,
-                    round_num=1,
-                    max_rounds=game.config.t_rounds,
-                )
+        result = asyncio.run(
+            handler.run_proposal_phase(
+                agents=agents,
+                items=items,
+                preferences=preferences,
+                round_num=1,
+                max_rounds=game.config.t_rounds,
             )
+        )
 
-        assert [args[1] for args, _kwargs in saved] == [
+        invalid_saved = [(args, kwargs) for args, kwargs in saved if "_invalid_attempt_" in args[1]]
+        assert [args[1] for args, _kwargs in invalid_saved] == [
             "proposal_round_1_invalid_attempt_0",
             "proposal_round_1_invalid_attempt_1",
             "proposal_round_1_invalid_attempt_2",
         ]
-        final_diagnostic = json.loads(saved[-1][0][3])
+        final_diagnostic = json.loads(invalid_saved[-1][0][3])
         assert final_diagnostic["raw_response"] == bad_response
         assert final_diagnostic["parse_error"]["type"] == "ValueError"
         assert final_diagnostic["will_retry"] is False
-        assert final_diagnostic["hard_failed"] is True
+        assert final_diagnostic["hard_failed"] is False
+        proposal = result["proposals"][0]
+        assert proposal["contributions"] == [0.0, 0.0, 0.0]
+        assert proposal["synthetic_proposal"] is True
+        assert proposal["fallback_policy_version"] == "invalid-output-default-v1"
 
     def test_run_proposal_phase_saves_validation_failure_diagnostics(self):
         """Saved proposal interactions should keep the last invalid raw response."""
@@ -439,6 +527,98 @@ class TestEarlyTerminationIntegration:
 class TestVotingPhases:
     """Tests for the active propose-and-vote flow."""
 
+    def test_single_proposal_vote_parse_failure_is_logged_and_repaired(self):
+        bad_vote = '{"vote" "accept", "reasoning": "missing colon"}'
+        repaired_vote = '{"vote": "accept", "reasoning": "fixed json"}'
+        agent = FakeAgent("Agent_1", [bad_vote, repaired_vote])
+        saved: List[Dict[str, Any]] = []
+        handler = PhaseHandler(
+            game_environment=SingleProposalVotingGame(),
+            save_interaction_callback=save_interactions_to(saved),
+        )
+        enumerated_proposals = [
+            {
+                "proposal_number": 1,
+                "proposer": "Agent_2",
+                "reasoning": "test proposal",
+                "original_proposal": {"proposal_number": 1, "contributions_by_agent": {"Agent_1": [1.0]}},
+                "contributions_by_agent": {"Agent_1": [1.0]},
+            }
+        ]
+
+        result = asyncio.run(
+            handler.run_private_voting_phase(
+                agents=[agent],
+                items=[{"name": "Project A"}],
+                preferences={"agent_preferences": {"Agent_1": [1.0]}, "game_state": {}},
+                proposals=[enumerated_proposals[0]["original_proposal"]],
+                enumerated_proposals=enumerated_proposals,
+                round_num=1,
+                max_rounds=3,
+            )
+        )
+
+        assert result["private_votes"][0]["vote"] == "accept"
+        assert saved[0]["phase"] == "voting_round_1_proposal_1_invalid_attempt_0"
+        invalid_payload = json.loads(saved[0]["response"])
+        assert invalid_payload["raw_vote_response"] == bad_vote
+        assert invalid_payload["will_retry"] is True
+        assert invalid_payload["hard_failed"] is False
+        assert saved[1]["phase"] == "voting_round_1_proposal_1"
+        assert "TARGETED VOTE REPAIR CONTEXT" in saved[1]["prompt"]
+        repaired_payload = json.loads(saved[1]["response"])
+        assert repaired_payload["vote_decision"] == "accept"
+        assert repaired_payload["raw_response"] == repaired_vote
+        assert repaired_payload["raw_invalid_response"] == bad_vote
+        assert repaired_payload["recovered_after_error"]["type"] == "ValueError"
+
+    def test_single_proposal_vote_repair_failure_defaults_to_reject_after_logging_raw_attempts(self):
+        bad_vote = '{"vote" "accept", "reasoning": "missing colon"}'
+        bad_repair = '{"vote": "accept", "reasoning" "still broken"}'
+        agent = FakeAgent("Agent_1", [bad_vote, bad_repair])
+        saved: List[Dict[str, Any]] = []
+        handler = PhaseHandler(
+            game_environment=SingleProposalVotingGame(),
+            save_interaction_callback=save_interactions_to(saved),
+        )
+        enumerated_proposals = [
+            {
+                "proposal_number": 1,
+                "proposer": "Agent_2",
+                "reasoning": "test proposal",
+                "original_proposal": {"proposal_number": 1, "contributions_by_agent": {"Agent_1": [1.0]}},
+                "contributions_by_agent": {"Agent_1": [1.0]},
+            }
+        ]
+
+        result = asyncio.run(
+            handler.run_private_voting_phase(
+                agents=[agent],
+                items=[{"name": "Project A"}],
+                preferences={"agent_preferences": {"Agent_1": [1.0]}, "game_state": {}},
+                proposals=[enumerated_proposals[0]["original_proposal"]],
+                enumerated_proposals=enumerated_proposals,
+                round_num=1,
+                max_rounds=3,
+            )
+        )
+
+        assert [record["phase"] for record in saved] == [
+            "voting_round_1_proposal_1_invalid_attempt_0",
+            "voting_round_1_proposal_1_invalid_attempt_1",
+            "voting_round_1_proposal_1",
+        ]
+        first_payload = json.loads(saved[0]["response"])
+        second_payload = json.loads(saved[1]["response"])
+        assert first_payload["raw_vote_response"] == bad_vote
+        assert first_payload["hard_failed"] is False
+        assert second_payload["raw_vote_response"] == bad_repair
+        assert second_payload["will_retry"] is False
+        assert second_payload["hard_failed"] is False
+        assert result["private_votes"][0]["vote"] == "reject"
+        assert result["private_votes"][0]["synthetic_vote"] is True
+        assert result["voting_summary"]["vote_integrity"]["synthetic_vote_count"] == 1
+
     def test_all_accept_records_accepted_joint_proposal(self):
         game, _, state = make_game_and_state(m_projects=3)
         items = state["projects"]
@@ -551,7 +731,7 @@ class TestVotingPhases:
         assert result["consensus_reached"] is False
         assert state["accepted_proposal"] is None
 
-    def test_prefinal_commit_vote_failure_hard_fails_without_synthetic_nay(self):
+    def test_prefinal_commit_vote_failure_defaults_to_synthetic_nay(self):
         game, _, state = make_game_and_state(m_projects=3)
         preferences = {
             "agent_preferences": state["agent_valuations"],
@@ -561,23 +741,38 @@ class TestVotingPhases:
             FakeAgent("Agent_1", ["not json"]),
             FakeAgent("Agent_2", ['{"commit_vote": "yay", "reasoning": "ok"}']),
         ]
-        handler = PhaseHandler(game_environment=game)
+        saved: List[Dict[str, Any]] = []
+        handler = PhaseHandler(
+            game_environment=game,
+            save_interaction_callback=save_interactions_to(saved),
+        )
 
-        with pytest.raises(VoteIntegrityError):
-            asyncio.run(
-                handler.run_cofunding_commit_vote_phase(
-                    agents=agents,
-                    items=state["projects"],
-                    preferences=preferences,
-                    round_num=1,
-                    max_rounds=3,
-                )
+        result = asyncio.run(
+            handler.run_cofunding_commit_vote_phase(
+                agents=agents,
+                items=state["projects"],
+                preferences=preferences,
+                round_num=1,
+                max_rounds=3,
             )
+        )
 
         integrity = handler.get_vote_integrity()
-        assert integrity["hard_failed"] is True
-        assert integrity["synthetic_vote_count"] == 0
-        assert integrity["contaminated"] is False
+        assert integrity["hard_failed"] is False
+        assert integrity["synthetic_vote_count"] == 1
+        assert integrity["contaminated"] is True
+        assert [record["phase"] for record in saved] == [
+            "commit_vote_round_1_invalid_attempt_0",
+            "commit_vote_round_1",
+            "commit_vote_round_1",
+        ]
+        diagnostic = json.loads(saved[0]["response"])
+        assert diagnostic["raw_vote_response"] == "not json"
+        assert diagnostic["raw_response"] == "not json"
+        assert diagnostic["will_retry"] is False
+        assert diagnostic["hard_failed"] is False
+        assert result["commit_votes"][0]["commit_vote"] == "nay"
+        assert result["commit_votes"][0]["synthetic_vote"] is True
 
     def test_final_commit_vote_failure_uses_audited_synthetic_nay(self):
         game, _, state = make_game_and_state(m_projects=3)

@@ -114,6 +114,34 @@ class CoFundingGame(GameEnvironment):
         return f"{numeric_value:.2f}"
 
     @staticmethod
+    def _example_contribution_vector(
+        m_projects: int,
+        budget: Optional[float] = None,
+        pattern: Optional[List[float]] = None,
+    ) -> List[float]:
+        """Build a valid prompt example with exactly one entry per project."""
+        m = max(0, int(m_projects))
+        vector = [0.0] * m
+        if not vector:
+            return vector
+
+        # Keep the example small and feasible across scarce-budget settings.
+        base = pattern or [1.0, 1.0, 0.0, 1.0, 0.0]
+        for idx, value in enumerate(base[:m]):
+            vector[idx] = value
+
+        if budget is None:
+            return vector
+
+        budget_value = max(0.0, float(budget))
+        if sum(vector) <= budget_value + 1e-9:
+            return vector
+
+        vector = [0.0] * m
+        vector[0] = budget_value
+        return vector
+
+    @staticmethod
     def _round_to_integer_values(
         values: np.ndarray,
         total: Optional[int] = None,
@@ -792,13 +820,31 @@ In your response, just acknowledge the setup, summarize the game structure and r
 
         if pledge_mode == "joint":
             # Legacy joint mode: agents submit contribution vectors for all participants
-            # Build example JSON with all agent IDs
-            agent_example_entries = []
-            for aid in sorted(all_budgets.keys()):
-                agent_example_entries.append(
-                    f'        "{aid}": [5.0, 10.0, 0.0, 8.0, 2.0]'
-                )
-            example_contributions = ",\n".join(agent_example_entries)
+            # Build example JSON with all agent IDs and the exact project count.
+            example_payload = json.dumps(
+                {
+                    "contributions": {
+                        aid: self._example_contribution_vector(m, all_budgets[aid])
+                        for aid in sorted(all_budgets.keys())
+                    },
+                    "reasoning": "Brief explanation of your joint funding plan",
+                },
+                indent=4,
+            )
+            alternate_payload = json.dumps(
+                {
+                    "contributions": {
+                        aid: self._example_contribution_vector(
+                            m,
+                            all_budgets[aid],
+                            pattern=[0.0, 1.0, 1.0, 0.0, 1.0],
+                        )
+                        for aid in sorted(all_budgets.keys())
+                    },
+                    "reasoning": "Another brief joint funding rationale using the same schema",
+                },
+                indent=4,
+            )
 
             budget_lines = "\n".join(
                 f"  - {aid}: {self._format_display_number(b)}"
@@ -816,21 +862,39 @@ If it is not accepted by a two-thirds supermajority, nothing is committed and th
 {budget_lines}
 
 Respond with ONLY a JSON object in this exact format:
-{{
-    "contributions": {{
-{example_contributions}
-    }},
-    "reasoning": "Brief explanation of your joint funding plan"
-}}
+{example_payload}
 
 **Rules:**
 - "contributions" must be a dictionary with one entry per participant
 - Each entry must be an array of exactly {m} non-negative values (one per project)
 - Each participant's total contributions must not exceed their budget
 - Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
-- Contributions to unfunded projects will be refunded"""
+- Contributions to unfunded projects will be refunded
+
+Additional valid JSON example using the same schema:
+{alternate_payload}
+
+{self.json_format_requirements()}"""
         else:
             # Individual mode (default): each agent submits only their own contribution vector
+            example_payload = json.dumps(
+                {
+                    "contributions": self._example_contribution_vector(m, budget),
+                    "reasoning": "Brief explanation of your contribution strategy",
+                },
+                indent=4,
+            )
+            alternate_payload = json.dumps(
+                {
+                    "contributions": self._example_contribution_vector(
+                        m,
+                        budget,
+                        pattern=[0.0, 1.0, 1.0, 0.0, 1.0],
+                    ),
+                    "reasoning": "Another brief contribution rationale using the same schema",
+                },
+                indent=4,
+            )
             format_section = f"""**Instructions:**
 Submit a contribution vector specifying how much YOU propose contributing to each project in THIS ROUND'S candidate final outcome.
 All participants' submitted vectors will be combined into one JOINT PROPOSAL before voting.
@@ -838,17 +902,19 @@ If at least {threshold} out of {self.config.n_agents} participants accept that j
 If it is not accepted by a two-thirds supermajority, nothing is committed and the next round starts from scratch with the same fixed budgets.
 
 Respond with ONLY a JSON object in this exact format:
-{{
-    "contributions": [5.0, 10.0, 0.0, 8.0, 2.0],
-    "reasoning": "Brief explanation of your contribution strategy"
-}}
+{example_payload}
 
 **Rules:**
 - The "contributions" array must have exactly {m} values (one per project)
 - Each value must be non-negative (>= 0)
 - The sum of all contributions must not exceed your budget ({budget_text})
 - Any project below its full cost in an accepted proposal is UNFUNDED and gives zero value
-- Contributions to unfunded projects will not reduce your utility"""
+- Contributions to unfunded projects will not reduce your utility
+
+Additional valid JSON example using the same schema:
+{alternate_payload}
+
+{self.json_format_requirements()}"""
 
         return f"""Please submit your proposal for Round {round_num}/{self.config.t_rounds}.
 
@@ -936,10 +1002,7 @@ Last round's proposal did not carry over or accumulate with this round.{reasonin
                 "reasoning": "Failed to parse response - defaulting to zero contributions",
                 "proposed_by": agent_id,
                 "raw_response": response,
-                "parse_error": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                },
+                "parse_error": self.parse_error_payload(exc),
             }
 
     def validate_proposal(
@@ -1231,7 +1294,9 @@ Respond with ONLY a JSON object in this exact format:
     "reasoning": "Brief explanation of your vote"
 }}
 
-Vote must be either "accept" or "reject"."""
+Vote must be either "accept" or "reject".
+
+{self.json_format_requirements()}"""
 
     def get_commit_vote_prompt(
         self,
@@ -1275,7 +1340,9 @@ Respond with ONLY JSON:
 {{
     "commit_vote": "yay",
     "reasoning": "brief explanation"
-}}"""
+}}
+
+{self.json_format_requirements()}"""
 
     def get_thinking_prompt(
         self,
@@ -1350,6 +1417,8 @@ Respond with a JSON object:
     "key_priorities": ["Project you want funded most", "..."],
     "potential_concessions": ["Project you might reduce contributions to", "..."]
 }}
+
+{self.json_format_requirements()}
 
 Remember: This analysis is completely private."""
 

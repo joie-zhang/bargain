@@ -265,6 +265,12 @@ class DiplomaticTreatyGame(GameEnvironment):
         return f"{int(round(numeric_value * 100))}%"
 
     @staticmethod
+    def _example_agreement_vector(n_issues: int) -> List[int]:
+        """Build a valid prompt example with exactly one entry per issue."""
+        pattern = [30, 70, 50, 20, 80]
+        return [pattern[idx % len(pattern)] for idx in range(max(0, int(n_issues)))]
+
+    @staticmethod
     def _is_integer_percentage(value: Any) -> bool:
         """Check whether a value is an integer percentage point in [0, 100]."""
         try:
@@ -775,6 +781,20 @@ In your response, just acknowledge the setup, summarize the game structure and r
         if reasoning_token_budget:
             reasoning_instruction = f"\n\n**REASONING DEPTH:** Please use approximately {reasoning_token_budget} tokens in your internal reasoning before outputting your response for this stage."
         threshold = self.supermajority_threshold(self.config.n_agents)
+        example_payload = json.dumps(
+            {
+                "agreement": self._example_agreement_vector(n_issues),
+                "reasoning": "Brief explanation of your proposed compromise",
+            },
+            indent=4,
+        )
+        alternate_payload = json.dumps(
+            {
+                "agreement": [50] * n_issues,
+                "reasoning": "Another brief compromise rationale using the same schema",
+            },
+            indent=4,
+        )
 
         return f"""Please propose a treaty.
 
@@ -788,16 +808,18 @@ In your response, just acknowledge the setup, summarize the game structure and r
 Propose a resolution for each issue as an integer percentage between 0 and 100.
 
 Respond with ONLY a JSON object in this exact format:
-{{
-    "agreement": [30, 70, 50, 20, 80],
-    "reasoning": "Brief explanation of your proposed compromise"
-}}
+{example_payload}
 
 **Rules:**
 - The "agreement" array must have exactly {n_issues} values (one per issue)
 - Each value must be an integer between 0 and 100
 - Each value is a policy rate on that issue's scale, not an importance weight
-- Consider what would be acceptable to enough parties to earn supermajority support ({threshold}/{self.config.n_agents} parties)"""
+- Consider what would be acceptable to enough parties to earn supermajority support ({threshold}/{self.config.n_agents} parties)
+
+Additional valid JSON example using the same schema:
+{alternate_payload}
+
+{self.json_format_requirements()}"""
 
     def parse_proposal(
         self,
@@ -841,10 +863,7 @@ Respond with ONLY a JSON object in this exact format:
                 "reasoning": "Proposed neutral compromise on all issues",
                 "proposed_by": agent_id,
                 "raw_response": response,
-                "parse_error": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                },
+                "parse_error": self.parse_error_payload(exc),
             }
 
     def validate_proposal(
@@ -1087,7 +1106,9 @@ Respond with ONLY a JSON object in this exact format:
 }}
 
 Include exactly one vote entry for each proposal shown above.
-Each vote must be either "accept" or "reject"."""
+Each vote must be either "accept" or "reject".
+
+{self.json_format_requirements()}"""
 
     @staticmethod
     def _parse_vote_transcript_response(
@@ -1179,10 +1200,7 @@ Each vote must be either "accept" or "reject"."""
                 raise ValueError("Batch vote response did not contain a votes list")
         except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
             raw_votes = []
-            parse_error = {
-                "type": type(exc).__name__,
-                "message": str(exc),
-            }
+            parse_error = self.parse_error_payload(exc)
 
         proposal_number_set = set(proposal_numbers)
         parsed_votes = {}
@@ -1199,17 +1217,37 @@ Each vote must be either "accept" or "reject"."""
             if proposal_number not in proposal_number_set:
                 continue
 
-            vote_value = str(raw_vote.get("vote", "reject")).strip().lower()
+            raw_vote_value = raw_vote.get("vote")
+            vote_parse_error = None
+            if raw_vote_value is None:
+                vote_value = "reject"
+                vote_parse_error = {
+                    "type": "MissingVoteField",
+                    "message": "Missing vote field; defaulted to reject",
+                }
+            else:
+                vote_value = str(raw_vote_value).strip().lower()
             if vote_value not in ("accept", "reject"):
+                vote_parse_error = {
+                    "type": "InvalidVoteValue",
+                    "message": f"Invalid vote value {raw_vote_value!r}; defaulted to reject",
+                }
                 vote_value = "reject"
 
-            parsed_votes[proposal_number] = {
+            vote_entry = {
                 "proposal_number": proposal_number,
                 "vote": vote_value,
                 "reasoning": raw_vote.get("reasoning", ""),
                 "voter": agent_id,
                 "round": round_num,
             }
+            if vote_parse_error is not None:
+                vote_entry["synthetic_vote"] = True
+                vote_entry["fallback_policy_version"] = "invalid-output-default-v1"
+                vote_entry["raw_response"] = response
+                vote_entry["parse_error"] = vote_parse_error
+
+            parsed_votes[proposal_number] = vote_entry
 
         parsed_votes.update(
             {
@@ -1307,6 +1345,8 @@ Respond with a JSON object:
     "key_priorities": ["Issue you care most about", "..."],
     "potential_concessions": ["Issue you could concede on", "..."]
 }}
+
+{self.json_format_requirements()}
 
 Remember: This analysis is completely private."""
 

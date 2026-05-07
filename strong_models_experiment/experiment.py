@@ -19,7 +19,7 @@ except ImportError:  # pragma: no cover - fcntl is available on the Linux cluste
     fcntl = None
 
 from .data_models import ExperimentResults, BatchResults
-from .configs import STRONG_MODELS_CONFIG
+from .configs import DEFAULT_MAX_TOKENS_PER_PHASE, STRONG_MODELS_CONFIG
 from .agents import StrongModelAgentFactory
 from .phases import PhaseHandler
 from .analysis import ExperimentAnalyzer
@@ -32,6 +32,22 @@ from .utils import ExperimentUtils, FileManager
 
 # Import game environment factory
 from game_environments import create_game_environment, GameEnvironment
+
+
+def build_phase_token_config(config: Dict[str, Any]) -> Dict[str, Optional[int]]:
+    """Return effective per-phase output caps for one experiment config."""
+    default_phase_max_tokens = config.get("max_tokens_per_phase")
+    if default_phase_max_tokens is None:
+        default_phase_max_tokens = DEFAULT_MAX_TOKENS_PER_PHASE
+
+    return {
+        "discussion": config.get("max_tokens_discussion", default_phase_max_tokens),
+        "proposal": config.get("max_tokens_proposal", default_phase_max_tokens),
+        "voting": config.get("max_tokens_voting", default_phase_max_tokens),
+        "reflection": config.get("max_tokens_reflection", default_phase_max_tokens),
+        "thinking": config.get("max_tokens_thinking", default_phase_max_tokens),
+        "default": config.get("max_tokens_default", default_phase_max_tokens),
+    }
 
 
 class StrongModelsExperiment:
@@ -172,16 +188,10 @@ class StrongModelsExperiment:
 
         self.logger.info(f"Starting experiment {experiment_id}")
         
-        # Extract token configuration from config
-        # Use None (unlimited) as default if not specified
-        token_config = {
-            "discussion": config.get("max_tokens_discussion", None),
-            "proposal": config.get("max_tokens_proposal", None),
-            "voting": config.get("max_tokens_voting", None),
-            "reflection": config.get("max_tokens_reflection", None),
-            "thinking": config.get("max_tokens_thinking", None),
-            "default": config.get("max_tokens_default", None)
-        }
+        # Extract token configuration from config. Future runs default to an
+        # explicit 16k output budget so provider defaults cannot silently fall
+        # back to lower phase caps.
+        token_config = build_phase_token_config(config)
 
         # Create GameEnvironment based on game_type
         game_type = config.get("game_type", "item_allocation")
@@ -911,6 +921,7 @@ class StrongModelsExperiment:
         prompt_text = prompt or ""
         prompt_sha256 = hashlib.sha256(prompt_text.encode("utf-8")).hexdigest() if prompt_text else None
         prompt_chars = len(prompt_text)
+        phase_prompt_chars = prompt_chars
         prompt_storage_path = None
         stored_prompt = prompt
         if self.externalize_prompts and prompt_text:
@@ -934,6 +945,7 @@ class StrongModelsExperiment:
             "round": round_num,
             "prompt": stored_prompt,
             "prompt_chars": prompt_chars,
+            "phase_prompt_chars": phase_prompt_chars,
             "prompt_sha256": prompt_sha256,
             "prompt_storage_path": prompt_storage_path,
             "response": response,
@@ -943,6 +955,18 @@ class StrongModelsExperiment:
         # Add token usage information if provided
         if token_usage:
             interaction["token_usage"] = token_usage
+            for field in (
+                "provider_input_tokens",
+                "estimated_provider_input_tokens",
+                "context_limit_tokens",
+                "input_budget_tokens",
+                "context_compacted",
+                "estimated_input_tokens_before",
+                "estimated_input_tokens_after",
+                "compacted_rounds",
+            ):
+                if field in token_usage:
+                    interaction[field] = token_usage[field]
             # Also save reasoning_tokens at top level for easy access
             if "reasoning_tokens" in token_usage and token_usage["reasoning_tokens"]:
                 interaction["reasoning_tokens"] = token_usage["reasoning_tokens"]
@@ -964,13 +988,22 @@ class StrongModelsExperiment:
         self._stream_save_json(changed_agent_id=agent_id)
         self._write_progress_checkpoint(interaction)
         self.logger.info(
-            "PROGRESS interaction=%s round=%s phase=%s agent=%s model=%s prompt_chars=%s response_chars=%s",
+            "PROGRESS interaction=%s round=%s phase=%s agent=%s model=%s "
+            "prompt_chars=%s phase_prompt_chars=%s provider_input_tokens=%s "
+            "estimated_provider_input_tokens=%s context_limit_tokens=%s "
+            "input_budget_tokens=%s context_compacted=%s response_chars=%s",
             len(self.all_interactions),
             round_num,
             phase,
             agent_id,
             model_name,
             prompt_chars,
+            phase_prompt_chars,
+            interaction.get("provider_input_tokens"),
+            interaction.get("estimated_provider_input_tokens"),
+            interaction.get("context_limit_tokens"),
+            interaction.get("input_budget_tokens"),
+            interaction.get("context_compacted"),
             len(response or ""),
         )
         try:
@@ -1026,6 +1059,8 @@ class StrongModelsExperiment:
         if payload.get("used_fallback") is True:
             return True
         if payload.get("synthetic_vote") is True:
+            return True
+        if payload.get("synthetic_proposal") is True or payload.get("synthetic_action") is True:
             return True
         if payload.get("hard_failed") is True or payload.get("will_retry") is True:
             return True
@@ -1123,6 +1158,7 @@ class StrongModelsExperiment:
             "raw_malformed_json": raw_response,
             "raw_response": raw_response,
             "parse_error": payload.get("parse_error"),
+            "parse_error_reason": GameEnvironment.parse_error_summary(payload.get("parse_error")),
             "error_summary": payload.get("error_summary"),
             "validation_error": payload.get("validation_error"),
             "will_retry": payload.get("will_retry"),
@@ -1309,14 +1345,24 @@ class StrongModelsExperiment:
         # Estimate tokens if not provided (approximately 4 chars per token)
         CHARS_PER_TOKEN = 4.0
 
-        if token_usage:
+        has_actual_usage = bool(
+            token_usage
+            and any(
+                token_usage.get(key) is not None
+                for key in ("input_tokens", "output_tokens", "total_tokens")
+            )
+        )
+        if has_actual_usage:
             input_tokens = token_usage.get('input_tokens', 0) or 0
             output_tokens = token_usage.get('output_tokens', 0) or 0
             reasoning_tokens = token_usage.get('reasoning_tokens', 0) or 0
             self.batch_token_usage["actual_count"] += 1
         else:
             # Estimate from text
-            input_tokens = int(len(prompt) / CHARS_PER_TOKEN) if prompt else 0
+            estimated_input = (token_usage or {}).get("estimated_provider_input_tokens")
+            input_tokens = int(estimated_input) if estimated_input is not None else (
+                int(len(prompt) / CHARS_PER_TOKEN) if prompt else 0
+            )
             output_tokens = int(len(response) / CHARS_PER_TOKEN) if response else 0
             reasoning_tokens = 0
             self.batch_token_usage["estimated_count"] += 1

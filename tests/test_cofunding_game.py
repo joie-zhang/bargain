@@ -790,6 +790,39 @@ class TestPrompts:
         prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
         assert "contributions" in prompt
 
+    def test_proposal_prompt_example_uses_exact_project_count(self):
+        game = make_game(m_projects=25, n_agents=2)
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
+        example_text = prompt.split(
+            "Respond with ONLY a JSON object in this exact format:\n",
+            1,
+        )[1].split("\n\n**Rules:**", 1)[0]
+        example_payload = json.loads(example_text)
+
+        assert len(example_payload["contributions"]) == 25
+        assert sum(example_payload["contributions"]) <= state["agent_budgets"]["Agent_1"]
+
+    def test_joint_proposal_prompt_example_uses_exact_project_count(self):
+        game = make_game(m_projects=25, n_agents=2)
+        game.config.pledge_mode = "joint"
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_proposal_prompt("Agent_1", state, 1, ["Agent_1", "Agent_2"])
+        example_text = prompt.split(
+            "Respond with ONLY a JSON object in this exact format:\n",
+            1,
+        )[1].split("\n\n**Rules:**", 1)[0]
+        example_payload = json.loads(example_text)
+
+        assert sorted(example_payload["contributions"]) == ["Agent_1", "Agent_2"]
+        for agent_id, vector in example_payload["contributions"].items():
+            assert len(vector) == 25
+            assert sum(vector) <= state["agent_budgets"][agent_id]
+
     def test_proposal_prompt_omits_trailing_point_zero_zero_for_integer_budget_valuations_and_costs(self):
         game = make_game(m_projects=3)
         agents = create_test_agents(2)

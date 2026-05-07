@@ -138,6 +138,68 @@ class GameEnvironment(ABC):
         return (2 * int(n_agents) + 2) // 3
 
     @staticmethod
+    def json_format_requirements() -> str:
+        """Shared strict-format instructions for model JSON responses."""
+        return (
+            "**JSON FORMAT REQUIREMENTS:**\n"
+            "- Return exactly one valid JSON object matching the requested schema.\n"
+            "- The first non-whitespace character must be `{` and the last non-whitespace character must be `}`.\n"
+            "- Use valid JSON syntax: double quotes for all object keys and string values; never use single quotes.\n"
+            "- Do not wrap the object in markdown code fences.\n"
+            "- Do not include JSON comments (`//`, `#`, or `/* ... */`) or prose before/after the object.\n"
+            "- Do not put labels, item names, explanations, parenthetical notes, or placeholders inside arrays.\n"
+            "- Arrays must contain only the requested primitive values, for example numbers, strings, booleans, or objects required by the schema.\n"
+            "- Line breaks between JSON fields and array entries are allowed, but never put literal line breaks inside quoted string values.\n"
+            "- Keep every string value on one line; use spaces instead of newline characters inside strings.\n"
+            "- Keep free-text fields concise and avoid embedded quotation marks or backslashes unless they are validly escaped JSON."
+        )
+
+    @staticmethod
+    def parse_error_payload(error: Exception) -> Dict[str, Any]:
+        """Return a compact, JSON-serializable parse error payload."""
+        payload: Dict[str, Any] = {
+            "type": type(error).__name__,
+            "message": str(error),
+        }
+        for attr in ("lineno", "colno", "pos"):
+            value = getattr(error, attr, None)
+            if value is not None:
+                payload[attr] = value
+        return payload
+
+    @staticmethod
+    def parse_error_summary(parse_error: Any) -> str:
+        """Render parse diagnostics as a concise repair-prompt reason."""
+        if not isinstance(parse_error, dict):
+            if parse_error:
+                return f"parse error ({parse_error})"
+            return "parse error"
+
+        error_type = str(parse_error.get("type") or "ParseError")
+        message = str(parse_error.get("message") or "").strip()
+        if not message:
+            return f"parse error ({error_type})"
+
+        location_parts = []
+        if parse_error.get("lineno") is not None:
+            location_parts.append(f"line {parse_error['lineno']}")
+        if parse_error.get("colno") is not None:
+            location_parts.append(f"column {parse_error['colno']}")
+        if parse_error.get("pos") is not None:
+            location_parts.append(f"char {parse_error['pos']}")
+
+        message_has_location = (
+            "line " in message.lower()
+            and ("column" in message.lower() or "char" in message.lower())
+        )
+        location = (
+            f" at {', '.join(location_parts)}"
+            if location_parts and not message_has_location
+            else ""
+        )
+        return f"parse error ({error_type}: {message}{location})"
+
+    @staticmethod
     def _json_object_candidates(response: str) -> List[str]:
         """Return plausible JSON-object substrings from model output."""
         return json_object_candidates(response)

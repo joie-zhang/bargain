@@ -36,8 +36,11 @@ def test_malformed_json_diagnostics_written_per_run_and_batch(tmp_path):
         "parse_error": {
             "type": "JSONDecodeError",
             "message": "Unterminated string",
+            "lineno": 1,
+            "colno": 44,
+            "pos": 43,
         },
-        "error_summary": "parse error",
+        "error_summary": "parse error (JSONDecodeError: Unterminated string at line 1, column 44, char 43)",
         "will_retry": False,
         "hard_failed": True,
     }
@@ -72,6 +75,9 @@ def test_malformed_json_diagnostics_written_per_run_and_batch(tmp_path):
     assert example["turn"] == 1
     assert example["raw_malformed_json"] == raw_response
     assert example["parse_error"]["type"] == "JSONDecodeError"
+    assert example["parse_error_reason"] == (
+        "parse error (JSONDecodeError: Unterminated string at line 1, column 44, char 43)"
+    )
 
     jsonl_examples = [
         json.loads(line)
@@ -80,6 +86,7 @@ def test_malformed_json_diagnostics_written_per_run_and_batch(tmp_path):
     ]
     assert len(jsonl_examples) == 1
     assert jsonl_examples[0]["raw_malformed_json"] == raw_response
+    assert jsonl_examples[0]["parse_error_reason"] == example["parse_error_reason"]
 
     materialized_path, materialized = materialize_jsonl(batch_root)
     assert materialized_path == batch_root / "monitoring" / "malformed_json_examples.json"

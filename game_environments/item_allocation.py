@@ -231,10 +231,20 @@ In your response, just acknowledge the setup, summarize the game structure and r
         example_alloc = {aid: [] for aid in agents}
         for item_index in range(len(items)):
             example_alloc[agents[item_index % len(agents)]].append(item_index)
+        alternate_alloc = {aid: [] for aid in agents}
+        for item_index in range(len(items)):
+            alternate_alloc[agents[(item_index + 1) % len(agents)]].append(item_index)
         example_payload = json.dumps(
             {
                 "allocation": example_alloc,
                 "reasoning": "Brief explanation of your proposed allocation",
+            },
+            indent=4,
+        )
+        alternate_payload = json.dumps(
+            {
+                "allocation": alternate_alloc,
+                "reasoning": "Another brief allocation rationale using the same schema",
             },
             indent=4,
         )
@@ -250,6 +260,13 @@ In your response, just acknowledge the setup, summarize the game structure and r
 - Agents: {agents}
 - Round: {round_num}/{self.config.t_rounds}{reasoning_instruction}
 
+**Complete-Ownership Invariant:**
+- Your proposal must account for every available item index exactly once.
+- The union of all agent arrays must be exactly {list(range(len(items)))}.
+- Do not omit any item index.
+- Do not duplicate an item index within one agent's list or across multiple agents.
+- Do not assign any item index outside 0-{len(items)-1}.
+
 **Instructions:**
 Respond with ONLY a JSON object in this exact format:
 {example_payload}
@@ -258,7 +275,130 @@ Respond with ONLY a JSON object in this exact format:
 - Use item INDICES (0-{len(items)-1}), not names
 - Each item must be assigned to exactly one agent
 - All items must be allocated
-- An agent can receive zero or multiple items"""
+- An agent can receive zero or multiple items
+
+Additional valid JSON example using the same schema:
+{alternate_payload}
+
+{self.json_format_requirements()}"""
+
+    @staticmethod
+    def _coerce_item_index(value: Any) -> Optional[int]:
+        """Return an integer item index for clean integer-like values."""
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value) if value.is_integer() else None
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped.startswith("-"):
+                digits = stripped[1:]
+            else:
+                digits = stripped
+            return int(stripped) if digits.isdigit() else None
+        return None
+
+    def allocation_validation_diagnostics(
+        self,
+        proposal: Dict[str, Any],
+        game_state: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Return deterministic diagnostics for item-allocation proposal validity."""
+        items = game_state["items"]
+        n_items = len(items)
+        expected_items = set(range(n_items))
+        allocation = proposal.get("allocation")
+        diagnostics: Dict[str, Any] = {
+            "expected_items": list(range(n_items)),
+            "missing_items": [],
+            "duplicate_items": {},
+            "out_of_range_items": [],
+            "non_integer_items": [],
+            "unknown_agents": [],
+            "non_list_agent_values": [],
+            "schema_errors": [],
+        }
+
+        if not isinstance(allocation, dict):
+            diagnostics["schema_errors"].append("allocation must be an object")
+            diagnostics["missing_items"] = list(range(n_items))
+            return diagnostics
+
+        known_agents = list((game_state.get("agent_preferences") or {}).keys())
+        known_agent_set = set(known_agents)
+        if known_agent_set:
+            diagnostics["unknown_agents"] = sorted(
+                agent_id for agent_id in allocation if agent_id not in known_agent_set
+            )
+
+        item_locations: Dict[int, List[str]] = {}
+        for agent_id, agent_items in allocation.items():
+            if not isinstance(agent_items, list):
+                diagnostics["non_list_agent_values"].append(str(agent_id))
+                continue
+            for raw_item in agent_items:
+                item_index = self._coerce_item_index(raw_item)
+                if item_index is None:
+                    diagnostics["non_integer_items"].append(
+                        {"agent": str(agent_id), "item": repr(raw_item)}
+                    )
+                    continue
+                if item_index not in expected_items:
+                    diagnostics["out_of_range_items"].append(
+                        {"agent": str(agent_id), "item": item_index}
+                    )
+                    continue
+                item_locations.setdefault(item_index, []).append(str(agent_id))
+
+        assigned_items = set(item_locations)
+        diagnostics["missing_items"] = sorted(expected_items - assigned_items)
+        diagnostics["duplicate_items"] = {
+            item_index: locations
+            for item_index, locations in sorted(item_locations.items())
+            if len(locations) > 1
+        }
+        return diagnostics
+
+    def proposal_validation_error(
+        self,
+        proposal: Dict[str, Any],
+        game_state: Dict[str, Any],
+    ) -> Optional[str]:
+        """Describe why an item-allocation proposal violates strict validity."""
+        diagnostics = self.allocation_validation_diagnostics(proposal, game_state)
+        parts: List[str] = []
+
+        if diagnostics["schema_errors"]:
+            parts.extend(diagnostics["schema_errors"])
+        if diagnostics["unknown_agents"]:
+            parts.append(f"unknown agent IDs {diagnostics['unknown_agents']}")
+        if diagnostics["non_list_agent_values"]:
+            parts.append(
+                f"agent allocation values must be arrays for {diagnostics['non_list_agent_values']}"
+            )
+        if diagnostics["non_integer_items"]:
+            parts.append(f"non-integer item entries {diagnostics['non_integer_items']}")
+        if diagnostics["out_of_range_items"]:
+            parts.append(f"out-of-range item indices {diagnostics['out_of_range_items']}")
+        if diagnostics["duplicate_items"]:
+            duplicate_text = ", ".join(
+                f"{item} assigned to {locations}"
+                for item, locations in diagnostics["duplicate_items"].items()
+            )
+            parts.append(f"duplicate item indices ({duplicate_text})")
+        if diagnostics["missing_items"]:
+            parts.append(f"missing item indices {diagnostics['missing_items']}")
+
+        if not parts:
+            return None
+
+        expected = diagnostics["expected_items"]
+        return (
+            "; ".join(parts)
+            + f"; expected each item index in {expected} to appear exactly once"
+        )
 
     def parse_proposal(
         self,
@@ -313,10 +453,7 @@ Respond with ONLY a JSON object in this exact format:
                 "reasoning": "Failed to parse response; proposal is invalid",
                 "proposed_by": agent_id,
                 "raw_response": response,
-                "parse_error": {
-                    "type": type(exc).__name__,
-                    "message": str(exc),
-                },
+                "parse_error": self.parse_error_payload(exc),
             }
 
     def validate_proposal(
@@ -538,7 +675,9 @@ Respond with ONLY a JSON object in this exact format:
 }}
 
 Include exactly one vote entry for each proposal shown above.
-Each vote must be either "accept" or "reject"."""
+Each vote must be either "accept" or "reject".
+
+{self.json_format_requirements()}"""
 
     def parse_batch_voting_response(
         self,
@@ -557,10 +696,7 @@ Each vote must be either "accept" or "reject"."""
                 raise ValueError("Batch vote response did not contain a votes list")
         except (json.JSONDecodeError, ValueError, TypeError, AttributeError) as exc:
             raw_votes = []
-            parse_error = {
-                "type": type(exc).__name__,
-                "message": str(exc),
-            }
+            parse_error = self.parse_error_payload(exc)
 
         proposal_number_set = set(proposal_numbers)
         parsed_votes = {}
@@ -577,17 +713,37 @@ Each vote must be either "accept" or "reject"."""
             if proposal_number not in proposal_number_set:
                 continue
 
-            vote_value = str(raw_vote.get("vote", "reject")).strip().lower()
+            raw_vote_value = raw_vote.get("vote")
+            vote_parse_error = None
+            if raw_vote_value is None:
+                vote_value = "reject"
+                vote_parse_error = {
+                    "type": "MissingVoteField",
+                    "message": "Missing vote field; defaulted to reject",
+                }
+            else:
+                vote_value = str(raw_vote_value).strip().lower()
             if vote_value not in ("accept", "reject"):
+                vote_parse_error = {
+                    "type": "InvalidVoteValue",
+                    "message": f"Invalid vote value {raw_vote_value!r}; defaulted to reject",
+                }
                 vote_value = "reject"
 
-            parsed_votes[proposal_number] = {
+            vote_entry = {
                 "proposal_number": proposal_number,
                 "vote": vote_value,
                 "reasoning": raw_vote.get("reasoning", ""),
                 "voter": agent_id,
                 "round": round_num,
             }
+            if vote_parse_error is not None:
+                vote_entry["synthetic_vote"] = True
+                vote_entry["fallback_policy_version"] = "invalid-output-default-v1"
+                vote_entry["raw_response"] = response
+                vote_entry["parse_error"] = vote_parse_error
+
+            parsed_votes[proposal_number] = vote_entry
 
         vote_results = []
         for proposal_number in proposal_numbers:
@@ -668,6 +824,8 @@ Respond with a JSON object:
     "key_priorities": ["0: Apple (value=9.20)", "..."],
     "potential_concessions": ["4: Pencil (value=4.10)", "..."]
 }}
+
+{self.json_format_requirements()}
 
 Remember: This analysis is completely private."""
 
