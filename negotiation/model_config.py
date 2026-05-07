@@ -9,7 +9,7 @@ Features:
 - Support for Claude models (Haiku, Sonnet, Opus)
 - Support for Llama, Gemini, and Qwen models
 - OpenRouter integration for unified API access
-- Local model support from Princeton cluster (/scratch/gpfs/DANQIC/models/)
+- Local model support from Princeton cluster (bargain/models/)
 - YAML configuration with validation
 - Flexible model assignment and parameterization
 """
@@ -659,7 +659,7 @@ class ModelRegistry:
                                   **kwargs) -> ModelSpec:
         """Add a model available on Princeton cluster."""
         # Validate path exists on cluster
-        cluster_base = "/scratch/gpfs/DANQIC/models/"
+        cluster_base = "bargain/models/"
         if not local_path.startswith(cluster_base):
             local_path = os.path.join(cluster_base, local_path)
         

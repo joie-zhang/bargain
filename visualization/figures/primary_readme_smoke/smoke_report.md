@@ -1,8 +1,8 @@
-# Lewis Slides Plot Inputs (Mar 1)
+# Primary Slides Plot Inputs (Mar 1)
 
 This report is generated from CSV only (no raw JSON dependency).
 
-- Input CSV: `/scratch/gpfs/DANQIC/jz4391/bargain/visualization/figures/gpt5_nano_full_data.csv`
+- Input CSV: `bargain/visualization/figures/gpt5_nano_full_data.csv`
 - Model inclusion rule for plotted lines: `successful runs >= 10`
 - Main plots are generated with: compression + smoothing
 

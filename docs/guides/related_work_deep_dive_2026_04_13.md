@@ -1,6 +1,6 @@
 # Related Work Deep Dive (2026-04-13)
 
-Source basis: I downloaded and read the cited arXiv PDFs locally on 2026-04-13. This note is meant to help rewrite [background.tex](/scratch/gpfs/DANQIC/jz4391/bargain/background.tex:23), not to serve as a polished literature review.
+Source basis: I downloaded and read the cited arXiv PDFs locally on 2026-04-13. This note is meant to help rewrite [background.tex](bargain/background.tex:23), not to serve as a polished literature review.
 
 ## Project anchor
 

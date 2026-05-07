@@ -12,13 +12,13 @@ and 3 as well as test-time-compute scaling runs, because they all route through
 Store secrets outside the repository in:
 
 ```bash
-/home/jz4391/.config/bargain/api_keys.env
+bargain/api_keys.env
 ```
 
 Set restrictive permissions:
 
 ```bash
-chmod 600 /home/jz4391/.config/bargain/api_keys.env
+chmod 600 bargain/api_keys.env
 ```
 
 The file should export distinct variables rather than relying on repeated
@@ -28,20 +28,22 @@ lines.
 Example:
 
 ```bash
-export LLM_KEY_GROUP_ORDER="LEWIS,JOIE,POLARIS"
+export LLM_KEY_GROUP_ORDER="PRIMARY,SECONDARY,GROUP_A,GROUP_B"
 
-export LEWIS_GOOGLE_API_KEY_1="..."
-export LEWIS_ANTHROPIC_API_KEY_1="..."
-export LEWIS_OPENAI_API_KEY_1="..."
-export LEWIS_OPENROUTER_API_KEY_1="..."
+export PRIMARY_GOOGLE_API_KEY_1="..."
+export PRIMARY_ANTHROPIC_API_KEY_1="..."
+export PRIMARY_OPENAI_API_KEY_1="..."
+export PRIMARY_OPENROUTER_API_KEY_1="..."
 
-export JOIE_GOOGLE_API_KEY_1="..."
-export JOIE_GOOGLE_API_KEY_2="..."
-export JOIE_ANTHROPIC_API_KEY_1="..."
-export JOIE_OPENAI_API_KEY_1="..."
-export JOIE_OPENROUTER_API_KEY_1="..."
+export SECONDARY_GOOGLE_API_KEY_1="..."
+export SECONDARY_GOOGLE_API_KEY_2="..."
+export SECONDARY_ANTHROPIC_API_KEY_1="..."
+export SECONDARY_OPENAI_API_KEY_1="..."
+export SECONDARY_OPENROUTER_API_KEY_1="..."
 
-export POLARIS_GOOGLE_API_KEY_1="..."
+export GROUP_A_GOOGLE_API_KEY_1="..."
+
+export GROUP_B_GOOGLE_API_KEY_1="..."
 ```
 
 The code should use `LLM_KEY_GROUP_ORDER` for ordering. Legacy single-key env
@@ -91,7 +93,7 @@ resets.
   - `AnthropicAgent`
   - `OpenAIAgent`
   - `OpenRouterAgent`
-- Source `/home/jz4391/.config/bargain/api_keys.env` in Slurm launch scripts
+- Source `bargain/api_keys.env` in Slurm launch scripts
   when the file exists.
 - Set `LLM_FAILURE_REPORT_PATH` to the run-specific monitoring report.
 - Add tests for discovery order, legacy fallback, immediate rotation,

@@ -14,7 +14,7 @@ These experiments test how different sizes of Qwen2.5 models perform against Cla
 
 1. **Environment Setup**:
    ```bash
-   cd /scratch/gpfs/DANQIC/jz4391/bargain
+   cd bargain
    source .venv/bin/activate
    ```
 
@@ -221,7 +221,7 @@ These experiments help answer:
 
 1. **Model Not Found Error**:
    ```
-   ERROR: Model path does not exist: /scratch/gpfs/DANQIC/models/Qwen2.5-XXB-Instruct
+   ERROR: Model path does not exist: bargain/models/Qwen2.5-XXB-Instruct
    ```
    **Solution**: Ensure Qwen models are downloaded to the Princeton cluster at the specified paths.
 

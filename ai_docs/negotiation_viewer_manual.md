@@ -49,7 +49,7 @@ The Negotiation Viewer is a Streamlit-based web application for visualizing mult
 
 ```bash
 # Navigate to project root
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 
 # Install required packages
 pip install -r ui/requirements.txt
@@ -95,7 +95,7 @@ streamlit run ui/negotiation_viewer.py --server.port 8080 --server.headless true
 ### Option 3: From Any Directory
 
 ```bash
-streamlit run /scratch/gpfs/DANQIC/jz4391/bargain/ui/negotiation_viewer.py
+streamlit run bargain/ui/negotiation_viewer.py
 ```
 
 ### Accessing the UI

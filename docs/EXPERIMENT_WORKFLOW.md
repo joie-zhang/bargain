@@ -9,7 +9,7 @@ This guide explains the workflow for running large-scale negotiation experiments
 Run the config generator to create all experiment configurations:
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 ./scripts/generate_configs_both_orders.sh
 ```
 
@@ -35,7 +35,7 @@ cd /scratch/gpfs/DANQIC/jz4391/bargain
 ### Option A: Submit All at Once (Current Default - May Hit Rate Limits)
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 ./experiments/results/scaling_experiment/configs/slurm/submit_all.sh all
 ```
 
@@ -46,7 +46,7 @@ cd /scratch/gpfs/DANQIC/jz4391/bargain
 Use the staggered submission option:
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 ./experiments/results/scaling_experiment/configs/slurm/submit_all.sh all --staggered 2
 ```
 
@@ -62,7 +62,7 @@ This submits jobs individually with a 2-second delay between each submission to 
 Limit the number of concurrent jobs using SLURM's built-in concurrency control:
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 ./experiments/results/scaling_experiment/configs/slurm/submit_all.sh all --max-concurrent 10
 ```
 
@@ -187,7 +187,7 @@ When `generate_configs_both_orders.sh` runs:
 
 **Example:**
 - Config generation creates: `scaling_experiment_20250116_052234/`
-- SLURM script embeds: `CONFIG_DIR="/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20250116_052234/configs"`
+- SLURM script embeds: `CONFIG_DIR="bargain/experiments/results/scaling_experiment_20250116_052234/configs"`
 - Even if you regenerate configs later, queued jobs from this batch will still use `scaling_experiment_20250116_052234/`
 
 ### Safe Workflow

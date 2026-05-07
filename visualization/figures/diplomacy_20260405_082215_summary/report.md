@@ -1,6 +1,6 @@
 # Game 2 Batch PNG Export
 
-- Results root: `/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215`
+- Results root: `bargain/experiments/results/diplomacy_20260405_082215`
 - Total configs: `540`
 - Completed configs: `540`
 - Missing-result configs: `0`

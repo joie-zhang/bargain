@@ -438,7 +438,7 @@ You can target specific MCP tools or entire MCP servers:
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/scripts/validate-mcp-write.py"
+            "command": "scripts/validate-mcp-write.py"
           }
         ]
       }
@@ -462,7 +462,7 @@ Automatically format code after file modifications:
         "hooks": [
           {
             "type": "command",
-            "command": "/home/user/scripts/format-code.sh"
+            "command": "scripts/format-code.sh"
           }
         ]
       }

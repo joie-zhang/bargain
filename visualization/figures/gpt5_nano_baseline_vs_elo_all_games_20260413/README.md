@@ -1,6 +1,6 @@
 # GPT-5-nano Baseline Payoff vs Adversary Elo
 
-- Output directory: `/scratch/gpfs/DANQIC/jz4391/bargain/visualization/figures/gpt5_nano_baseline_vs_elo_all_games_20260413`
+- Output directory: `bargain/visualization/figures/gpt5_nano_baseline_vs_elo_all_games_20260413`
 
 | Game | Raw Runs | Overall Points | Competition Values | Competition Points | Overall Plot | Stratified Plot |
 |---|---:|---:|---:|---:|---|---|

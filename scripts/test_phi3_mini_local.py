@@ -8,7 +8,7 @@ from transformers.cache_utils import DynamicCache
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 
-DEFAULT_MODEL_PATH = "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct"
+DEFAULT_MODEL_PATH = "bargain/models/Phi-3-mini-128k-instruct"
 QUESTIONS = [
     "What is 12 plus 35?",
     "What is the color of the sky?",

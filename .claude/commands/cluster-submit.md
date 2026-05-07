@@ -237,7 +237,7 @@ della:
 
   quotas:
     gpu_hours: 5000  # Check with `checkquota`
-    storage: "/scratch/gpfs/$USER"  # 20TB limit
+    storage: "bargain"  # project storage
 
 ### PLI Cluster Specifications  
 ```yaml

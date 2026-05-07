@@ -64,7 +64,7 @@ tmux ls | grep openrouter_proxy_monitor
 tmux attach -t openrouter_proxy_monitor
 # or start a fresh session:
 tmux new -s openrouter_proxy_monitor
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 source .venv/bin/activate
 python negotiation/openrouter_proxy_monitor.py
 ```
@@ -89,6 +89,6 @@ To avoid this issue in the future:
 
 If the diagnostic script passes but you still get 401 errors:
 1. Check if multiple processes are using different API keys
-2. Verify the proxy monitor is running on the vis node and watching `/home/jz4391/openrouter_proxy`
+2. Verify the proxy monitor is running on the vis node and watching `bargain/openrouter_proxy`
 3. Check OpenRouter status page for service outages
 4. Contact OpenRouter support if account issues persist

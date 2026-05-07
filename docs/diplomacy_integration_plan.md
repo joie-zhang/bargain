@@ -196,23 +196,23 @@ Keep as reference for validation.
 ## Critical Files
 
 ### New files to create:
-- `/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_refactor.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game_environments.py`
+- `bargain/game_environments/__init__.py`
+- `bargain/game_environments/base.py`
+- `bargain/game_environments/item_allocation.py`
+- `bargain/game_environments/diplomatic_treaty.py`
+- `bargain/tests/test_diplomatic_treaty.py`
+- `bargain/tests/test_item_allocation_refactor.py`
+- `bargain/tests/test_game_environments.py`
 
 ### Files to modify:
-- `/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py`
+- `bargain/strong_models_experiment/experiment.py`
+- `bargain/strong_models_experiment/phases/phase_handlers.py`
+- `bargain/run_strong_models_experiment.py`
 
 ### Reference files:
-- `/scratch/gpfs/DANQIC/jz4391/bargain/diplomacy_environment/diplo_implementation.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py`
-- `/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py`
+- `bargain/diplomacy_environment/diplo_implementation.py`
+- `bargain/strong_models_experiment/prompts/prompt_generator.py`
+- `bargain/strong_models_experiment/utils/experiment_utils.py`
 
 ---
 

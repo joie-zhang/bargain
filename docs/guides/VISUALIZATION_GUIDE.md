@@ -14,7 +14,7 @@ This guide covers the visualization workflows for analyzing negotiation experime
 To analyze GPT-5-nano negotiation experiments:
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 python visualization/gpt5_nano_analysis.py
 ```
 
@@ -27,7 +27,7 @@ This script automatically discovers experiments from the configured scaling expe
 To visualize test-time compute scaling experiments:
 
 ```bash
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 python visualization/visualize_ttc_scaling.py
 ```
 

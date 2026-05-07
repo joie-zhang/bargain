@@ -85,7 +85,7 @@ class TestModelRegistry:
             model_id="test-llama-70b",
             display_name="Test Llama 70B",
             family=ModelFamily.LLAMA,
-            local_path="/scratch/gpfs/DANQIC/models/llama-70b-instruct",
+            local_path="bargain/models/llama-70b-instruct",
             context_window=32000,
             requires_gpu=True,
             estimated_vram_gb=80
@@ -93,7 +93,7 @@ class TestModelRegistry:
         
         assert model_spec.model_id == "test-llama-70b"
         assert model_spec.provider == ModelProvider.PRINCETON_CLUSTER
-        assert model_spec.local_path.startswith("/scratch/gpfs/DANQIC/models/")
+        assert model_spec.local_path.startswith("bargain/models/")
         assert model_spec.requires_gpu is True
         
         # Verify it's retrievable
@@ -429,7 +429,7 @@ class TestRealWorldScenarios:
             model_id="llama-3-8b-cluster",
             display_name="Llama 3 8B (Cluster)",
             family=ModelFamily.LLAMA,
-            local_path="/scratch/gpfs/DANQIC/models/llama-3-8b-instruct"
+            local_path="bargain/models/llama-3-8b-instruct"
         )
         
         config = ExperimentModelConfig(

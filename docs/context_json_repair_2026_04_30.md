@@ -117,7 +117,7 @@ Result after the provider-output retry patch: 142 passed.
 The first Game 3 de-risk attempt exposed a separate provider-handling bug:
 OpenRouter/Amazon returned HTTP success with `finish_reason=stop` but
 `content=null`. The key-rotation layer incorrectly classified this as an
-API-key-scoped failure, rotated from the Lewis OpenRouter key to the Joie
+API-key-scoped failure, rotated from the Primary OpenRouter key to the Secondary
 OpenRouter key, and finally failed with `ProviderKeyExhaustedError`.
 
 That behavior was counterproductive. A provider-success empty message is not

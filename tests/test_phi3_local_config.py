@@ -14,4 +14,4 @@ def test_phi3_uses_local_cluster_weights():
 
     assert config["api_type"] == "princeton_cluster"
     assert config["model_id"] == "microsoft/phi-3-mini-128k-instruct"
-    assert config["local_path"] == "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct"
+    assert config["local_path"] == "bargain/models/Phi-3-mini-128k-instruct"

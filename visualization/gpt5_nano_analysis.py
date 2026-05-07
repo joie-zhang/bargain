@@ -131,7 +131,7 @@ TIER_COLORS = {"Strong": "#e74c3c", "Medium": "#f39c12", "Weak": "#27ae60"}
 
 
 # Define experiment directories to search
-RESULTS_DIR = Path("/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results")
+RESULTS_DIR = Path("bargain/experiments/results")
 
 # Define figures directory relative to script location
 SCRIPT_DIR = Path(__file__).parent

@@ -6,7 +6,7 @@ This compares the repo's canonical native/full context window for each retained 
 
 Sources:
 
-- Native/full context reference: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md`
+- Native/full context reference: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md`
 - Current OpenRouter model metadata: `https://openrouter.ai/api/v1/models`
 - Fallback when a route is missing from the live OpenRouter model index: the public model page at `https://openrouter.ai/<route>`
 
@@ -40,18 +40,18 @@ Summary:
 
 Canonical context rows consulted:
 
-- `qwen3-max-preview`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L20`
-- `deepseek-r1-0528`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L21`
-- `deepseek-r1`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L23`
-- `gemma-3-27b-it`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L25`
-- `deepseek-v3`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L27`
-- `qwq-32b`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L30`
-- `llama-3.3-70b-instruct`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L32`
-- `qwen2.5-72b-instruct`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L34`
-- `amazon-nova-pro-v1.0`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L35`
-- `command-r-plus-08-2024`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L36`
-- `amazon-nova-micro-v1.0`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L38`
-- `llama-3.1-8b-instruct`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L39`
-- `llama-3.2-3b-instruct`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L40`
-- `llama-3.2-1b-instruct`: `/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L41`
+- `qwen3-max-preview`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L20`
+- `deepseek-r1-0528`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L21`
+- `deepseek-r1`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L23`
+- `gemma-3-27b-it`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L25`
+- `deepseek-v3`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L27`
+- `qwq-32b`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L30`
+- `llama-3.3-70b-instruct`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L32`
+- `qwen2.5-72b-instruct`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L34`
+- `amazon-nova-pro-v1.0`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L35`
+- `command-r-plus-08-2024`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L36`
+- `amazon-nova-micro-v1.0`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L38`
+- `llama-3.1-8b-instruct`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L39`
+- `llama-3.2-3b-instruct`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L40`
+- `llama-3.2-1b-instruct`: `bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md#L41`
 

@@ -44,14 +44,14 @@
 **Cluster models only (for easy copy-paste):**
 
 ```
-/scratch/gpfs/DANQIC/models/gemma-3-27b-it
-/scratch/gpfs/DANQIC/models/QwQ-32B
-/scratch/gpfs/DANQIC/models/Llama-3.3-70B-Instruct
-/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct
-/scratch/gpfs/DANQIC/models/phi-4
-/scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct
-/scratch/gpfs/DANQIC/models/Llama-3.2-3B-Instruct
-/scratch/gpfs/DANQIC/models/Mistral-7B-Instruct-v0.2
-/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct
-/scratch/gpfs/DANQIC/models/Llama-3.2-1B-Instruct
+bargain/models/gemma-3-27b-it
+bargain/models/QwQ-32B
+bargain/models/Llama-3.3-70B-Instruct
+bargain/models/Qwen2.5-72B-Instruct
+bargain/models/phi-4
+bargain/models/Llama-3.1-8B-Instruct
+bargain/models/Llama-3.2-3B-Instruct
+bargain/models/Mistral-7B-Instruct-v0.2
+bargain/models/Phi-3-mini-128k-instruct
+bargain/models/Llama-3.2-1B-Instruct
 ```

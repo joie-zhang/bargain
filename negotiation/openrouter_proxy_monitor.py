@@ -2,7 +2,7 @@
 Shared OpenRouter proxy monitor for restricted-network or Slurm workflows.
 
 This process runs on a login/visualization node, watches the shared queue at
-/home/jz4391/openrouter_proxy, and forwards requests to OpenRouter on behalf of
+bargain/openrouter_proxy, and forwards requests to OpenRouter on behalf of
 compute-node jobs.
 """
 
@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-POLL_DIR = Path("/home/jz4391/openrouter_proxy")
+POLL_DIR = Path("bargain/openrouter_proxy")
 PROCESSED_DIR = POLL_DIR / "processed"
 
 

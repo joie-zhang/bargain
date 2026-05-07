@@ -62,7 +62,7 @@ def main():
                 sys.exit(2)
 
         # Log activity - use absolute path to project root
-        project_root = Path("/scratch/gpfs/DANQIC/jz4391/bargain")
+        project_root = Path("bargain")
         log_dir = project_root / ".claude" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
 

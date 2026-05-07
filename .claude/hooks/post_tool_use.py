@@ -13,7 +13,7 @@ def main():
         input_data = json.load(sys.stdin)
 
         # Log to comprehensive JSON file - use absolute path to project root
-        project_root = Path("/scratch/gpfs/DANQIC/jz4391/bargain")
+        project_root = Path("bargain")
         log_dir = project_root / ".claude" / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_path = log_dir / "post_tool_use.json"

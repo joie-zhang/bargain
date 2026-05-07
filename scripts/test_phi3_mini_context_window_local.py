@@ -11,7 +11,7 @@ import torch
 from transformers import AutoTokenizer
 
 
-DEFAULT_MODEL_PATH = "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct"
+DEFAULT_MODEL_PATH = "bargain/models/Phi-3-mini-128k-instruct"
 DEFAULT_LENGTHS = [4096, 8192, 16384, 32768, 65536, 98304, 122880, 126976, 130048, 131071]
 
 

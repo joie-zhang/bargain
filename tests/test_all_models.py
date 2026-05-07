@@ -173,7 +173,7 @@ def print_api_key_status():
 
 def check_cluster_availability() -> Tuple[bool, str]:
     """Check if we're running on Princeton cluster with GPU access."""
-    models_base = "/scratch/gpfs/DANQIC/models"
+    models_base = "bargain/models"
 
     if not os.path.exists(models_base):
         return False, "Models directory not found (not on cluster)"

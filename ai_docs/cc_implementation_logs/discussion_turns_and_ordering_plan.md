@@ -215,7 +215,7 @@ generate_cpu_slurm() {
 #SBATCH --mail-type=FAIL
 
 set -e
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 module load proxy/default
 source .venv/bin/activate
 
@@ -263,7 +263,7 @@ generate_gpu_slurm() {
 #SBATCH --mail-type=FAIL
 
 set -e
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 module load proxy/default
 source .venv/bin/activate
 

@@ -9,7 +9,7 @@ import aiohttp
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-POLL_DIR = Path("/home/jz4391/xai_proxy")
+POLL_DIR = Path("bargain/xai_proxy")
 PROCESSED_DIR = POLL_DIR / "processed"
 POLL_INTERVAL = 1.0
 

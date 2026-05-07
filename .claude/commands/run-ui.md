@@ -41,7 +41,7 @@ hostname
 Use whatever hostname is returned (e.g. `della-pli.princeton.edu`, `della.princeton.edu`, `della-vis1.princeton.edu`, etc.). Then tell the user to run this command **in a terminal on their local laptop** (not on the cluster):
 
 ```
-ssh -L <PORT>:localhost:<PORT> jz4391@<HOSTNAME>
+ssh -L <PORT>:localhost:<PORT> USER@<HOSTNAME>
 ```
 
 Explain:

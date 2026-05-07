@@ -99,7 +99,7 @@ follow_latest err      # Always follows the latest
 **Option 4: Cron job** (for automatic updates)
 ```bash
 # Update symlinks every 5 minutes
-*/5 * * * * cd /scratch/gpfs/DANQIC/jz4391/bargain && ./scripts/log_utils.sh symlinks > /dev/null 2>&1
+*/5 * * * * cd bargain && ./scripts/log_utils.sh symlinks > /dev/null 2>&1
 ```
 
 ## Log Organization Best Practices
@@ -166,7 +166,7 @@ cd() {
 }
 
 # Or cron job (runs daily at 2 AM)
-0 2 * * * cd /scratch/gpfs/DANQIC/jz4391/bargain && ./scripts/log_utils.sh clean 30 false
+0 2 * * * cd bargain && ./scripts/log_utils.sh clean 30 false
 ```
 
 ## Log File Naming Conventions

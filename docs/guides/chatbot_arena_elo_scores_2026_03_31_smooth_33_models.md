@@ -1,8 +1,8 @@
 # Smooth Elo Coverage Model Set with Arena Context and Repo Support
 
-Generated from [chatbot_arena_elo_scores_2026_03_31.md](/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31.md) for the active 30-model smooth-coverage list you are using. Relative to the prior smooth-coverage set, this version removes `mixtral-8x22b-instruct-v0.1`, swaps the two 8.2K-context slots to `amazon-nova-pro-v1.0` and `command-r-plus-08-2024` so the active roster stays on the longer-context routes you selected, and adds `gpt-5-nano-high` (Elo 1337) as the baseline model for the April 2026 diplomacy run.
+Generated from [chatbot_arena_elo_scores_2026_03_31.md](bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31.md) for the active 30-model smooth-coverage list you are using. Relative to the prior smooth-coverage set, this version removes `mixtral-8x22b-instruct-v0.1`, swaps the two 8.2K-context slots to `amazon-nova-pro-v1.0` and `command-r-plus-08-2024` so the active roster stays on the longer-context routes you selected, and adds `gpt-5-nano-high` (Elo 1337) as the baseline model for the April 2026 diplomacy run.
 
-Support status reflects the current repo registry in [configs.py](/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py) after the alias patch in this turn.
+Support status reflects the current repo registry in [configs.py](bargain/strong_models_experiment/configs.py) after the alias patch in this turn.
 
 `OpenRouter Context` records the realized context limit currently exposed by OpenRouter for OpenRouter-backed routes; non-OpenRouter primary routes use `-`.
 
@@ -48,7 +48,7 @@ Support status reflects the current repo registry in [configs.py](/scratch/gpfs/
 
 | Model                      | Why It Needs Special Setup                                                   | Best Current Path                                                                   | Keys / Setup                                           |
 | -------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `phi-3-mini-128k-instruct` | Supported via local Princeton-cluster weights instead of a hosted API route. | Use the local path in `strong_models_experiment/configs.py` and submit as a GPU job | `/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct` |
+| `phi-3-mini-128k-instruct` | Supported via local Princeton-cluster weights instead of a hosted API route. | Use the local path in `strong_models_experiment/configs.py` and submit as a GPU job | `bargain/models/Phi-3-mini-128k-instruct` |
 
 
 ## Important Interpretation Notes
