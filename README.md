@@ -1,470 +1,432 @@
 # Scaling Laws for Strategic Interactions
 
-A research codebase for studying the effects of asymmetric agent capabilities in strategic scenarios, from cooperation to competition. This project investigates how differences in agent capabilities interact with the degree of alignment between agents' preferences to shape outcomes in multi-agent negotiation environments.
-
-## 🎯 Research Questions
-
-**Primary Research Question**: What are the effects of asymmetric agent capabilities in strategic scenarios, from cooperation to competition?
-
-### Key Sub-Questions
-
-#### 1. Overall Patterns and Interplay
-- What's the overall pattern we see across agent capabilities and degree of alignment?
-- What's the interplay between these two dimensions?
-- Can we fit a line to these trends? What does that line look like? Does it allow us to extrapolate?
-- Heatmaps are the primary way to present this overall picture, but we also flatten one dimension (capabilities or degree of alignment) for some plots/results
-
-#### 2. Capability Level Dependencies
-- Does it depend on the base level of capabilities we start from? (i.e., is the difference between a 20% capable and a 50% capable model really big compared to the difference between a 60% capable and a 90% capable model?)
-- This requires separating out a few different sets of ego agents at different capability levels
-
-#### 3. Model Dispositions
-- Does it depend on the model's 'dispositions'? Or rather, where/how does it depend on that?
-- Operationalized by seeing how much variance in results is explained by:
-  - Model family/developer
-  - Scores on relevant 'disposition' benchmarks
-
-#### 4. Auxiliary Observations
-- Other observations that help the reader understand the dynamics of what's happening, or are independently interesting (e.g., time to consensus plots)
-- Quick ablations/sanity checking (can go in appendix) – these shouldn't require running the whole set of experiments again, just a representative scenario/subset:
-  - What happens if we use a different capability metric?
-  - What happens if agents negotiate for longer/shorter?
-  - Etc.
-
-#### 5. Scaling with Number of Agents (Secondary Question)
-- How robust are the scaling trends above when we have multiple agents and the environment is more complex?
-- Can multiple lower-capability agents team up against a higher-capability agent?
-- More generally: imagine you have a set of n agents along a capability x-axis and a fixed competition level, where do the rewards (y-axis) tend to accrue most? Is this linear in capabilities or is there some interesting non-linearity here? Again: what does the trend/'scaling law' look like?
-- This can be run via randomized/selective cross-play; we don't literally have to test for all agents at once, or for all combinations of agents
-
-### Experimental Design
-
-**Target**: Test across 2-3 negotiation/bargaining style games, each a little bit different (technically) and with a different story, to ensure experiment robustness.
-
-**Target Publication**: ICML
-
-## 📋 Project Overview
-
-This codebase implements a modular multi-agent negotiation framework where LLMs negotiate in different game environments. The framework supports multiple game types, each with different mechanics and negotiation structures:
-
-### Supported Game Environments
-
-1. **Item Allocation Game** (`item_allocation`)
-   - Discrete item allocation with preference vectors
-   - Agents negotiate over m items in a shared pool
-   - Preference systems:
-     - Vector preferences: Competitive scenarios with m-dimensional preference vectors
-     - Matrix preferences: Cooperative/competitive scenarios with m×n preference matrices
-
-2. **Diplomatic Treaty Game** (`diplomacy`)
-   - Multi-issue continuous negotiation with position/weight preferences
-   - Agents negotiate over K continuous issues (values in [0,1])
-   - Each agent has position preferences and importance weights
-   - Control parameters: ρ (preference correlation), θ (interest overlap), λ (issue compatibility)
-
-### Common Framework Parameters
-
-- **Configurable Parameters** (game-specific):
-  - `n` agents: Number of negotiating agents (default: 2)
-  - `t` rounds: Maximum negotiation rounds (default: 10)
-  - `γ` (gamma): Discount factor for rewards per round (default: 0.9)
-  - Competition level: Controls preference overlap between agents (0-1), where 0 = full cooperation and 1 = full competition
-  - Game type: Select which game environment to use (`item_allocation`, `diplomacy`, or future game types)
-
-- **Model Support**: Integration with multiple LLM providers including:
-  - Anthropic (Claude models)
-  - OpenAI (GPT models)
-  - Qwen models (via OpenRouter)
-  - And more via the OpenRouter API
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Python 3.8+
-- [uv](https://github.com/astral-sh/uv) (fast Python package installer)
-- API keys for LLM providers (Anthropic, OpenAI, or OpenRouter)
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   cd /scratch/gpfs/DANQIC/jz4391/bargain
-   ```
-
-2. **Install uv** (if not already installed):
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
-
-3. **Create virtual environment and install dependencies with uv**:
-   ```bash
-   uv venv
-   source .venv/bin/activate
-   uv pip install -r requirements.txt
-   ```
-   
-   Or use uv's integrated workflow:
-   ```bash
-   uv sync
-   ```
-
-4. **Set up API keys** (as environment variables):
-   ```bash
-   export ANTHROPIC_API_KEY="your-key-here"
-   export OPENAI_API_KEY="your-key-here"
-   # Or for OpenRouter:
-   export OPENROUTER_API_KEY="your-key-here"
-   ```
-
-## 🧪 Running Experiments
-
-### Basic Single Experiment
-
-Run a single negotiation between two models:
-
-**Item Allocation Game**:
-```bash
-python3 run_strong_models_experiment.py \
-    --game-type item_allocation \
-    --models claude-3-5-sonnet gpt-4o \
-    --competition-level 0.95 \
-    --num-items 5 \
-    --max-rounds 10 \
-    --num-runs 5 \
-    --batch
-```
-
-**Diplomatic Treaty Game**:
-```bash
-python3 run_strong_models_experiment.py \
-    --game-type diplomacy \
-    --models claude-3-5-sonnet gpt-4o \
-    --competition-level 0.95 \
-    --n-issues 5 \
-    --max-rounds 10 \
-    --num-runs 5 \
-    --batch
-```
-
-**Common Parameters**:
-- `--game-type`: Game environment to use (`item_allocation` or `diplomacy`, default: `item_allocation`)
-- `--models`: Two model names to negotiate (see available models below)
-- `--competition-level`: Preference overlap (0.0 = no competition/cooperation, 1.0 = full competition)
-- `--max-rounds`: Maximum negotiation rounds
-- `--num-runs`: Number of negotiation games to run
-- `--batch`: Enable batch mode for multiple runs
-- `--output-dir`: Custom output directory (optional)
-
-**Game-Specific Parameters**:
-- Item Allocation: `--num-items` (number of items in the negotiation pool)
-- Diplomatic Treaty: `--n-issues` (number of continuous issues to negotiate)
-
-### Batch Experiments with Scripts
-
-The repository includes several experiment scripts in the `scripts/` directory:
-
-#### 1. **Qwen Large Models Experiment** (Competition Level 1)
-
-Run experiments comparing larger Qwen models (14B, 32B, 72B) against Claude-3.7-Sonnet:
-
-```bash
-bash scripts/run_qwen_large_models_comp1.sh
-```
-
-This script:
-- Tests Qwen2.5-14B-Instruct, Qwen2.5-32B-Instruct, and Qwen2.5-72B-Instruct
-- Each model runs 5 negotiations against Claude-3.7-Sonnet
-- Competition level = 1 (full competition)
-- Results saved to `experiments/results/`
-
-#### 2. **Simple Experiment Runner**
-
-Run a batch of experiments with parallel execution:
-
-```bash
-# First, generate experiment configurations
-bash scripts/generate_single_config.sh
-
-# Then run all experiments (with 4 parallel workers)
-bash scripts/run_all_simple.sh 4
-```
-
-This workflow:
-- Generates configuration files for multiple model pairs
-- Runs experiments in parallel
-- Automatically skips completed experiments
-- Collects results into summary files
-
-#### 3. **Single Experiment Script**
-
-Run a single experiment from a configuration file:
-
-```bash
-bash scripts/run_single_experiment_simple.sh 0
-```
-
-Where `0` is the job ID corresponding to a config file in `experiments/results/scaling_experiment/configs/`.
-
-### Available Models
-
-Models are defined in `strong_models_experiment/configs.py`. Common models include:
-
-- **Anthropic**: `claude-3-5-sonnet`, `claude-3-7-sonnet`, `claude-3-opus`, `claude-3-haiku`
-- **OpenAI**: `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`
-- **Qwen**: `Qwen2.5-72B-Instruct`, `Qwen2.5-32B-Instruct`, `Qwen2.5-14B-Instruct`, `Qwen2.5-3B-Instruct`
-- **Others**: Available via OpenRouter API
-
-## 📊 Results and Analysis
-
-### Output Structure
-
-Experiment results are saved to `experiments/results/` with the following structure:
-
-```
-experiments/results/
-├── {model1}_vs_{model2}_config_unknown_runs{N}_comp{level}/
-│   ├── run_1_experiment_results.json
-│   ├── run_2_experiment_results.json
-│   ├── ...
-│   └── all_interactions.json
-```
-
-### Analyzing Results
-
-Several analysis scripts are available:
-
-```bash
-# Analyze Qwen experiment results
-python3 scripts/analyze_qwen_results.py
-
-# Analyze order effects in negotiations
-python3 scripts/analyze_order_effects.py
-```
-
-### Visualization
-
-Generate visualizations of negotiation results, including heatmaps showing capability vs. alignment:
-
-```bash
-python3 visualize_negotiation_results.py
-```
-
-## 🖥️ Interactive UI (Negotiation Viewer)
-
-The project includes a Streamlit-based web UI for visualizing and analyzing negotiation experiments interactively.
-
-### Features
-
-The Negotiation Viewer provides three modes:
-
-1. **📂 Post-hoc Analysis**: View and analyze completed experiments
-   - Round-by-round timeline with color-coded phases
-   - Agent comparison with utility metrics
-   - Analytics dashboard with charts and statistics
-   - Raw data explorer for detailed inspection
-   - Preference visualization
-
-2. **📊 Batch Comparison**: Compare multiple experiments side-by-side
-   - Aggregate metrics across experiment runs
-   - Cross-experiment analysis
-   - Performance comparisons
-
-3. **🔴 Live Streaming**: Monitor experiments as they run in real-time
-   - Watch negotiations unfold live
-   - Real-time updates as rounds complete
-
-### Launching the UI
-
-**Option 1: Using the launch script (recommended)**
-
-```bash
-# Default port (8501)
-bash ui/run_viewer.sh
-
-# Custom port
-bash ui/run_viewer.sh --port 8080
-```
-
-**Option 2: Direct Streamlit command**
-
-```bash
-streamlit run ui/negotiation_viewer.py
-```
-
-**Option 3: With custom port**
-
-```bash
-streamlit run ui/negotiation_viewer.py --server.port 8080 --server.headless true
-```
-
-### Accessing the UI
-
-Once launched, open your browser to:
-- **Local**: `http://localhost:8501` (or your custom port)
-- **Remote server**: `http://your-server-address:8501`
-
-### UI Dependencies
-
-The UI requires additional dependencies (already included in `requirements.txt`):
-- `streamlit>=1.28.0`
-- `plotly>=5.15.0` (for interactive charts)
-
-If you haven't installed them yet:
-```bash
-pip install streamlit plotly
-```
-
-### Usage Tips
-
-- **Selecting Experiments**: Use the sidebar to browse experiment results in `experiments/results/`
-- **Filtering**: Use filters in the sidebar to focus on specific rounds, agents, or phases
-- **Exporting**: Export data to CSV or Markdown for further analysis
-- **Live Mode**: For live streaming, ensure experiments are running and writing to the results directory
-
-## 🏗️ Project Structure
-
-```
+This repository studies how LLM agent capability, group size, and strategic
+competition shape bargaining outcomes. The current codebase supports three
+multi-turn negotiation environments, large model-roster sweeps, N-agent Slurm
+batches, test-time-compute stress tests, analysis scripts, Streamlit viewers,
+and the NeurIPS paper source.
+
+The repository has accumulated many exploratory and legacy scripts. Treat this
+README as the current map: when older scripts conflict with the workflows below,
+prefer the workflows below.
+
+## Current Research Surface
+
+The main paper asks whether stronger LLM agents create more joint surplus, take
+a larger share from weaker counterparts, or both. The current experiments vary:
+
+- Model capability, primarily using LMArena Elo from the March 31, 2026 snapshot.
+- Strategic structure, through game-specific competition parameters.
+- Number of agents, with production grids for N in {2, 4, 6, 8, 10}.
+- Native test-time compute, using provider reasoning-effort controls where
+  available and token diagnostics otherwise.
+
+The three implemented games are:
+
+- Game 1, `item_allocation`: agents bargain over indivisible items with private
+  value vectors. The main competition knob is value-vector cosine similarity.
+- Game 2, `diplomacy`: agents bargain over continuous treaty issues with ideal
+  positions and issue weights. The main knobs are `rho` for position correlation
+  and `theta` for interest overlap.
+- Game 3, `co_funding`: agents bargain over threshold public-good funding with
+  private project values and budgets. The main knobs are `alpha` for value
+  alignment and `sigma` for budget abundance/scarcity.
+
+All three games share the same high-level negotiation loop: setup, public
+discussion, private thinking, structured proposal, private voting, proposal
+selection by two-thirds supermajority, and optional reflection before the next
+round. Utilities can be time-discounted by `gamma_discount`.
+
+## Repository Map
+
+```text
 .
-├── run_strong_models_experiment.py    # Main experiment runner
-├── game_environments/                  # Modular game environment implementations
-│   ├── base.py                        # GameEnvironment abstract base class
-│   ├── item_allocation.py             # Item Allocation game
-│   └── diplomatic_treaty.py            # Diplomatic Treaty game
-├── strong_models_experiment/           # Core experiment framework
-│   ├── experiment.py                  # Main experiment class
-│   ├── agents/                        # Agent implementations
-│   ├── phases/                        # Negotiation phase handlers
-│   ├── configs.py                     # Model configurations
-│   └── analysis.py                    # Result analysis tools
-├── negotiation/                       # Legacy negotiation framework
-├── scripts/                           # Experiment automation scripts
-│   ├── run_qwen_large_models_comp1.sh
-│   ├── run_all_simple.sh
-│   └── ...
-├── ui/                                # Streamlit-based negotiation viewer
-│   ├── negotiation_viewer.py          # Main UI application
-│   ├── comparison_view.py             # Batch comparison view
-│   ├── components.py                   # Reusable UI components
-│   ├── analysis.py                    # Analysis utilities
-│   └── run_viewer.sh                  # Launch script
-├── experiments/
-│   └── results/                       # Experiment outputs
-├── tests/                             # Unit tests
-└── requirements.txt                   # Python dependencies
+|-- run_strong_models_experiment.py
+|   Main single-run and small-batch CLI for Games 1-3.
+|-- game_environments/
+|   Game implementations and JSON parsing/repair utilities.
+|-- strong_models_experiment/
+|   Experiment orchestration, agent factory, phase handlers, configs,
+|   analyzers, active model roster, and qualitative metrics.
+|-- negotiation/
+|   LLM clients, OpenRouter proxy transport, provider key rotation,
+|   context compaction, and lower-level agent utilities.
+|-- scripts/
+|   Batch generation, Slurm submission, monitoring, plotting, and paper
+|   analysis scripts. Many older scripts are kept for provenance.
+|-- experiments/results/
+|   Large generated result trees. Usually not something to edit by hand.
+|-- analysis/
+|   Derived CSVs, reports, and figure-generation outputs.
+|-- Figures/
+|   Paper-facing and presentation-facing figure exports.
+|-- overleaf/neurips/
+|   Current NeurIPS paper source and compile script.
+|-- ui/
+|   Streamlit viewers for individual runs, batches, and multi-game comparison.
+|-- docs/
+|   Design notes, model rosters, pricing notes, prompt references, and plans.
+`-- tests/
+    Unit and regression tests for games, clients, parsing, providers, and batches.
 ```
 
-## 🔬 Research Methodology
+## Setup
 
-### Experiment Design
-
-The framework uses a modular game environment system that supports multiple game types:
-
-1. **Setup Phase**: Initialize negotiation environment (game type-specific: items for Item Allocation, issues for Diplomatic Treaty), n agents
-2. **Preference Assignment**: Generate competitive or cooperative preferences based on competition level (game-specific format)
-3. **Negotiation Rounds**: Agents propose allocations/agreements, vote, and reach agreements
-4. **Reflection Phase**: Agents reflect on outcomes and strategies
-5. **Analysis**: Quantitative metrics (utility, capability differences) and qualitative analysis (strategic behavior)
-
-Each game type implements the same `GameEnvironment` interface, allowing experiments to run across different negotiation structures while maintaining consistent analysis.
-
-### Key Metrics
-
-- **Utility Scores**: Per-agent utility from final allocations
-- **Capability Differences**: Outcomes across different capability levels
-- **Strategic Behavior**: Qualitative analysis of negotiation tactics and behaviors
-- **Scaling Relationships**: Model capability vs. negotiation success across different competition levels
-- **Time to Consensus**: Auxiliary metric showing how long negotiations take
-
-### Results Organization
-
-Results are organized around two main dimensions:
-
-**Option 1** (if not including number of agents):
-- Non-reasoning models
-- Reasoning models
-
-**Option 2**:
-- **Capabilities** ['quality' of agents]
-  - Non-reasoning models
-  - Reasoning models
-- **Number** ['quantity' of agents]
-  - 2-agent scenarios
-  - Multi-agent scenarios (3+ agents)
-
-## 🧪 Example Experiments
-
-### Capability vs. Competition Level Study
-
-Test how different capability levels interact with competition levels across game types:
-
-**Item Allocation**:
-```bash
-python3 run_strong_models_experiment.py \
-    --game-type item_allocation \
-    --models Qwen2.5-14B-Instruct claude-3-7-sonnet \
-    --competition-level 0.5 \
-    --num-items 5 \
-    --num-runs 10 \
-    --batch
-```
-
-**Diplomatic Treaty**:
-```bash
-python3 run_strong_models_experiment.py \
-    --game-type diplomacy \
-    --models Qwen2.5-14B-Instruct claude-3-7-sonnet \
-    --competition-level 0.5 \
-    --n-issues 5 \
-    --num-runs 10 \
-    --batch
-```
-
-### Three-Agent Negotiations
-
-Run experiments with three agents to study multi-agent dynamics:
+Use a virtual environment from the repository root.
 
 ```bash
-bash scripts/run_all_3agent.sh
+cd /path/to/bargain
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Capability Level Variation
-
-Test different base capability levels:
+If `uv` is available, this is also fine:
 
 ```bash
-bash scripts/run_qwen_large_models_comp1.sh
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
 ```
 
-## 📝 Development
+Optional dependencies for local/Hugging Face models are commented in
+`requirements.txt`. Before downloading any Hugging Face model on the cluster,
+check `/path/to/models` for an existing local copy.
 
-### Running Tests
+## Credentials and Cluster Networking
+
+Direct provider calls use standard environment variables:
+
+```bash
+export OPENAI_API_KEY="..."
+export ANTHROPIC_API_KEY="..."
+export GOOGLE_API_KEY="..."
+export XAI_API_KEY="..."
+export OPENROUTER_API_KEY="..."
+```
+
+The provider key-rotation layer also supports grouped keys. Set
+`LLM_KEY_GROUP_ORDER` and define variables of the form
+`PRIMARY_OPENAI_API_KEY_1`, `SECONDARY_OPENROUTER_API_KEY_1`,
+`GROUP_A_GOOGLE_API_KEY_1`, `GROUP_B_GOOGLE_API_KEY_1`, etc. The code tries
+groups in order and writes failure reports without logging secret values.
+
+Many Slurm scripts source:
+
+```bash
+${BARGAIN_API_KEYS_ENV:-/path/to/api_keys.env}
+```
+
+On restricted-network compute nodes, OpenRouter traffic should go
+through the file-based proxy queue. The relevant defaults are:
+
+```bash
+export OPENROUTER_TRANSPORT=proxy
+export OPENROUTER_PROXY_POLL_DIR=/path/to/openrouter_proxy
+```
+
+`negotiation/openrouter_proxy_monitor.py` is the monitor process intended to run
+on a login or visualization node with outbound internet access. Batch scripts
+generally assume the monitor already exists and route compute-node jobs through
+that queue.
+
+## Running One Experiment
+
+The main entry point is `run_strong_models_experiment.py`. Use model keys from
+`strong_models_experiment/configs.py`.
+
+Item allocation:
+
+```bash
+python run_strong_models_experiment.py \
+  --game-type item_allocation \
+  --models gpt-5-nano gpt-4o-mini-2024-07-18 \
+  --competition-level 0.5 \
+  --num-items 5 \
+  --max-rounds 10 \
+  --discussion-turns 2 \
+  --random-seed 42 \
+  --batch \
+  --num-runs 1 \
+  --output-dir experiments/results/smoke_item_allocation
+```
+
+Diplomatic treaty:
+
+```bash
+python run_strong_models_experiment.py \
+  --game-type diplomacy \
+  --models gpt-5-nano claude-sonnet-4-20250514 \
+  --rho 0.0 \
+  --theta 0.5 \
+  --n-issues 5 \
+  --max-rounds 10 \
+  --discussion-turns 2 \
+  --random-seed 42 \
+  --batch \
+  --num-runs 1 \
+  --output-dir experiments/results/smoke_diplomacy
+```
+
+Co-funding:
+
+```bash
+python run_strong_models_experiment.py \
+  --game-type co_funding \
+  --models gpt-5-nano gemini-2.5-pro \
+  --alpha 0.5 \
+  --sigma 0.6 \
+  --m-projects 5 \
+  --c-min 10 \
+  --c-max 30 \
+  --cofunding-discussion-transparency own \
+  --max-rounds 10 \
+  --discussion-turns 2 \
+  --random-seed 42 \
+  --batch \
+  --num-runs 1 \
+  --output-dir experiments/results/smoke_cofunding
+```
+
+Useful flags:
+
+- `--model-order weak_first|strong_first|random`: controls speaking/order labels.
+- `--parallel-phases`: runs independent per-agent phases concurrently.
+- `--max-tokens-per-phase`: sets the per-call output cap, defaulting to 16384.
+- `--disable-discussion`, `--disable-thinking`, `--disable-reflection`: ablate
+  protocol phases.
+- `--reasoning-token-budget` and `--reasoning-budget-phases`: prompt-level TTC
+  controls for older experiments.
+- `--access-k`, `--access-agent-index`, `--access-phases`: black-box access
+  scaling for repeated private drafts plus selection.
+
+## Result Files
+
+Small runs and generated batches write under `experiments/results/`. Common
+files include:
+
+- `experiment_results.json` or `run_N_experiment_results.json`: final utilities,
+  agreement status, config, token usage, metadata, and outcome payload.
+- `all_interactions.json` or `run_N_all_interactions.json`: prompts, responses,
+  phases, rounds, token usage, and parse diagnostics.
+- `agent_interactions/`: per-agent interaction views.
+- `progress.json`: lightweight streaming metadata during a run.
+- `monitoring/malformed_json_examples.jsonl`: batch-level parse diagnostics.
+- `batch_summary.json`: aggregate summary for batch-mode runs.
+
+Large generated roots often also contain `configs/`, `status/`, `logs/`,
+`monitoring/`, `runs/`, and Slurm wrapper files.
+
+## Production Batch Workflows
+
+### Full Games 1-3 N-Agent Batch
+
+The current all-game N-agent generator is:
+
+```bash
+python scripts/full_games123_multiagent_batch.py generate \
+  --results-root experiments/results/full_games123_multiagent_MYRUN
+
+python scripts/full_games123_multiagent_batch.py validate \
+  --results-root experiments/results/full_games123_multiagent_MYRUN
+
+python scripts/full_games123_multiagent_batch.py submit \
+  --results-root experiments/results/full_games123_multiagent_MYRUN
+
+python scripts/full_games123_multiagent_batch.py summary \
+  --results-root experiments/results/full_games123_multiagent_MYRUN
+
+python scripts/full_games123_multiagent_batch.py report \
+  --results-root experiments/results/full_games123_multiagent_MYRUN
+```
+
+This script generates homogeneous controls, homogeneous one-adversary runs, and
+heterogeneous ecologies across Games 1-3. It supports selection files for
+targeted reruns:
+
+```bash
+python scripts/full_games123_multiagent_batch.py select \
+  --results-root experiments/results/full_games123_multiagent_MYRUN \
+  --selection-name game3_n10 \
+  --game-label game3 \
+  --n-agents 10
+
+python scripts/full_games123_multiagent_batch.py submit-selection \
+  --results-root experiments/results/full_games123_multiagent_MYRUN \
+  --selection-name game3_n10
+```
+
+### Native Test-Time-Compute Stress Test
+
+The current TTC generator creates configs and Slurm wrappers for GPT-5,
+Claude Sonnet 4.6, and Gemini 3 Flash effort levels across matched game cells:
+
+```bash
+python scripts/generate_ttc_native_scaling_jobs.py \
+  --results-root experiments/results/ttc_native_scaling_MYRUN \
+  --dry-run
+
+python scripts/generate_ttc_native_scaling_jobs.py \
+  --results-root experiments/results/ttc_native_scaling_MYRUN \
+  --submit
+```
+
+One config can be run directly for debugging:
+
+```bash
+python scripts/run_ttc_native_config.py \
+  --config experiments/results/ttc_native_scaling_MYRUN/configs/config_0001.json \
+  --dry-run
+```
+
+### Appendix Llama Baseline
+
+The Llama 3.3 70B baseline replication has dedicated generation/monitoring and
+analysis scripts:
+
+```bash
+python scripts/generate_appendix_llama33_baseline_configs.py
+python scripts/monitor_appendix_llama33_baseline.py
+python scripts/analyze_appendix_llama33_baseline_500.py
+```
+
+### Older and Narrower Batch Scripts
+
+Several older scripts remain useful for targeted probes or provenance:
+
+- `scripts/generate_diplomacy_configs.sh`
+- `scripts/generate_cofunding_configs.sh`
+- `scripts/generate_nagent_configs.sh`
+- `scripts/game1_multiagent_full_batch.py`
+- `scripts/game1_ttc_access_batch.py`
+- `scripts/game2_derisk_32.py`
+- `scripts/game3_multiagent_sample_batch.py`
+
+Prefer `full_games123_multiagent_batch.py` for new all-game N-agent work unless
+you are intentionally reproducing an older run.
+
+## Analysis and Plotting
+
+Current paper-facing analysis scripts include:
+
+```bash
+python scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py
+python scripts/plot_exploitation_vs_elo.py
+python scripts/plot_nbs_decomposition.py
+python scripts/analyze_nash_lindahl_fairness.py
+python scripts/analyze_neurips_revision_stats.py
+python scripts/analyze_capability_payoff_scaling_20260505.py
+python scripts/analyze_n2_baseline_comparison.py
+python scripts/analyze_n2_plus_multiagent_comparison.py
+python scripts/build_n2_ttc_multiagent_report.py
+```
+
+Important derived directories:
+
+- `analysis/neurips_revision_20260504/`: normalized payoff tables, regressions,
+  bootstrap intervals, TTC summaries, and paper-facing copied plots.
+- `analysis/nash_lindahl_fairness_20260505/`: NBS/Lindahl recomputation and
+  benchmark-relative exploitation summaries.
+- `analysis/full_games123_*`: multi-agent aggregate CSVs and plots.
+- `Figures/`: exported figures for slides and paper drafts.
+- `overleaf/neurips/graphics/`: figure copies used by the NeurIPS TeX source.
+
+The active model roster and Elo helpers live in:
+
+```text
+strong_models_experiment/analysis/active_model_roster.py
+docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md
+```
+
+## UI Viewers
+
+The main Streamlit launcher is:
+
+```bash
+bash ui/run_viewer.sh --port 8501
+```
+
+It runs `ui/experiment_viewer.py`. Other specialized viewers include:
+
+- `ui/negotiation_viewer.py`
+- `ui/multi_game_sample_viewer.py`
+- `ui/game1_sample_viewer.py`
+- `ui/game2_batch_viewer.py`
+- `ui/game3_batch_viewer.py`
+
+On a remote cluster, bind Streamlit to loopback and use an SSH tunnel from your
+laptop. For example:
+
+```bash
+streamlit run ui/experiment_viewer.py \
+  --server.address 127.0.0.1 \
+  --server.port 8501 \
+  --server.headless true
+```
+
+Then tunnel `localhost:8501` from the laptop to the cluster node running the UI.
+
+## Paper Source
+
+The current paper is under `overleaf/neurips/`.
+
+```bash
+cd overleaf/neurips
+bash compile_pdf.sh neurips_2026.tex
+```
+
+Primary TeX files:
+
+- `abstract.tex`
+- `body.tex`
+- `1_intro.tex`
+- `2_background.tex`
+- `3_approach.tex`
+- `4_analysis.tex`
+- `5_conclusions.tex`
+- `appendix.tex`
+- `checklist.tex`
+- `refs.bib`
+
+## Testing
+
+Run the full test suite with:
 
 ```bash
 pytest tests/
 ```
 
-### Code Style
+The suite is large and includes provider/route tests. For focused changes, use
+targeted tests first:
 
-The project follows Python best practices. Key modules:
-- `strong_models_experiment/`: Main experiment framework
-- `negotiation/`: Legacy negotiation components (being phased out)
-- `scripts/`: Automation and utility scripts
+```bash
+pytest tests/test_cofunding_game.py
+pytest tests/test_diplomatic_treaty.py
+pytest tests/test_openrouter_transport.py
+pytest tests/test_provider_key_rotation.py
+pytest tests/test_context_compaction.py
+pytest tests/test_full_games123_batch_generation.py
+```
 
-## 🤝 Contributing
+Some integration tests require API keys, local model paths, or cluster-specific
+state. Prefer unit tests for logic changes and explicit smoke runs for provider
+changes.
 
-This is a research codebase. For questions or contributions, please submit an issue or reach out to Joie via email (firstname at princeton dot edu).
+## Development Notes
 
-## 📚 Additional Documentation
+- The current code path is `run_strong_models_experiment.py` plus
+  `strong_models_experiment/`, `game_environments/`, and `negotiation/`.
+- `negotiation/` is not purely legacy anymore; it contains the active provider
+  clients, OpenRouter proxy transport, key rotation, and context compaction.
+- Result directories are large. Avoid committing generated run roots unless the
+  artifact is intentionally paper-facing.
+- Keep new docs in `docs/` or the appropriate subdirectory. The repository root
+  should stay limited to high-level files like this README.
+- Prefer structured JSON parsing/repair utilities already in `game_environments`
+  and `negotiation/json_repair.py` over ad hoc string parsing.
+- Before launching Slurm batches, do a small direct or `run-one` smoke test with
+  the exact model roster and transport settings.
 
-- **Project Context**: See `CLAUDE.md` for detailed project context and research goals
-- **Implementation Roadmap**: See `ai_docs/implementation_roadmap.md` for development plans
-- **Scaling Experiment Guide**: See `docs/SCALING_EXPERIMENT_GUIDE.md` for detailed experiment instructions
+## License
 
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 🙏 Acknowledgments
-
-This research was conducted at the ML Alignment & Theory Scholars Program as well as Princeton University, utilizing Princeton's Della/PLI computing clusters and compute funding from MATS and PLI.
+MIT License. See `LICENSE`.
