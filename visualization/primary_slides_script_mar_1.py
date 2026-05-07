@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Minimal CSV-only plotting script for Lewis slides.
+Minimal CSV-only plotting script for Primary slides.
 
 Reads:
   visualization/figures/gpt5_nano_full_data.csv
@@ -90,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--report-name",
-        default="lewis_slides_plot_report_mar_1.md",
+        default="primary_slides_plot_report_mar_1.md",
         help="Markdown report filename.",
     )
     return parser.parse_args()
@@ -281,7 +281,7 @@ def write_report(
     coverage = coverage[cols]
 
     with report_path.open("w", encoding="utf-8") as f:
-        f.write("# Lewis Slides Plot Inputs (Mar 1)\n\n")
+        f.write("# Primary Slides Plot Inputs (Mar 1)\n\n")
         f.write("This report is generated from CSV only (no raw JSON dependency).\n\n")
         f.write(f"- Input CSV: `{input_csv}`\n")
         f.write(f"- Model inclusion rule for plotted lines: `successful runs >= {min_runs_per_model}`\n")
@@ -399,7 +399,7 @@ def main() -> None:
             ("adversary_compressed_smoothed", "adversary_utility", True, True),
         ]
         for suffix, value_col, compress_levels, apply_smoothing in variants:
-            filename = f"lewis_mar_1_{suffix}.png"
+            filename = f"primary_mar_1_{suffix}.png"
             ylabel = "Baseline Model Payoff" if value_col == "baseline_utility" else "Adversary Model Payoff"
             title = f"{ylabel} vs Adversary Elo"
             if compress_levels and apply_smoothing:

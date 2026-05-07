@@ -491,6 +491,11 @@ def make_plot(
 
     fig, ax = plt.subplots(figsize=G1_MAIN_FIGSIZE)
 
+    xs = [float(row["elo"]) for row in rows]
+    ys = [float(row[spec["avg_key"]]) for row in rows]
+    line_x, line_y = best_fit_line(xs, ys)
+    ax.plot(line_x, line_y, color="#1d4ed8", linewidth=2.2, alpha=0.9, linestyle=":", zorder=2)
+
     for row in rows:
         x_value = float(row["elo"])
         y_value = float(row[spec["avg_key"]])
@@ -500,6 +505,7 @@ def make_plot(
             s=110,
             color="#2563eb",
             alpha=0.9,
+            zorder=3,
         )
         ax.annotate(
             short_model_name(str(row["model"])),

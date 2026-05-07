@@ -1,4 +1,4 @@
-# Lewis Slides Diplomacy Report
+# Primary Slides Diplomacy Report
 
 - Experiment dir: `experiments/results/diplomacy_20260405_082215`
 - Model inclusion rule: `runs >= 1`

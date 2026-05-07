@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 =============================================================================
-Lewis Slides Script — Game 2 (Diplomatic Treaty)
+Primary Slides Script — Game 2 (Diplomatic Treaty)
 =============================================================================
 
-Mirrors the structure of lewis_slides_script_mar_1.py (Game 1) but adapted
+Mirrors the structure of primary_slides_script_mar_1.py (Game 1) but adapted
 for Game 2's two-parameter competition space: rho (preference correlation)
 and theta (interest overlap).
 
@@ -15,20 +15,20 @@ produces two families of "payoff vs adversary Elo" plots:
   1-VARIABLE version  — one line per CI bucket, where CI = theta*(1-rho)/2
 
 Usage:
-    python visualization/lewis_slides_diplomacy.py
-    python visualization/lewis_slides_diplomacy.py --experiment-dir experiments/results/diplomacy_20260223_032204
-    python visualization/lewis_slides_diplomacy.py --param rho        # only rho-bucketed plots
-    python visualization/lewis_slides_diplomacy.py --param ci         # only CI-bucketed plots
-    python visualization/lewis_slides_diplomacy.py --make-all-variants
+    python visualization/primary_slides_diplomacy.py
+    python visualization/primary_slides_diplomacy.py --experiment-dir experiments/results/diplomacy_20260223_032204
+    python visualization/primary_slides_diplomacy.py --param rho        # only rho-bucketed plots
+    python visualization/primary_slides_diplomacy.py --param ci         # only CI-bucketed plots
+    python visualization/primary_slides_diplomacy.py --make-all-variants
 
 What it creates:
-    visualization/figures/diplomacy_lewis/
+    visualization/figures/diplomacy_primary/
     ├── MAIN_PLOT_1_BASELINE_PAYOFF_RHO.png      # baseline (GPT-5-nano) utility, lines = rho
     ├── MAIN_PLOT_2_ADVERSARY_PAYOFF_RHO.png     # adversary utility, lines = rho
     ├── MAIN_PLOT_3_BASELINE_PAYOFF_CI.png       # baseline utility, lines = CI bucket
     ├── MAIN_PLOT_4_ADVERSARY_PAYOFF_CI.png      # adversary utility, lines = CI bucket
-    ├── diplomacy_lewis_data.csv                 # flat per-run data
-    └── lewis_diplomacy_report.md                # coverage report
+    ├── diplomacy_primary_data.csv                 # flat per-run data
+    └── primary_diplomacy_report.md                # coverage report
 
 Competition index motivation:
     rho in [-1, 1]: preference correlation.
@@ -442,7 +442,7 @@ def write_report(
     theta_vals = sorted(df["theta"].dropna().unique())
 
     with report_path.open("w", encoding="utf-8") as f:
-        f.write("# Lewis Slides Diplomacy Report\n\n")
+        f.write("# Primary Slides Diplomacy Report\n\n")
         f.write(f"- Experiment dir: `{experiment_dir}`\n")
         f.write(f"- Model inclusion rule: `runs >= {min_runs}`\n")
         f.write(f"- rho values: {rho_vals}\n")
@@ -485,7 +485,7 @@ def write_report(
 # ---------------------------------------------------------------------------
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate Lewis-style slide plots for Game 2 (Diplomatic Treaty).")
+    parser = argparse.ArgumentParser(description="Generate Primary-style slide plots for Game 2 (Diplomatic Treaty).")
     parser.add_argument(
         "--experiment-dir",
         nargs="+",
@@ -495,7 +495,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="figures/diplomacy_lewis",
+        default="figures/diplomacy_primary",
         help="Output directory relative to this script's location.",
     )
     parser.add_argument(
@@ -524,7 +524,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--report-name",
-        default="lewis_diplomacy_report.md",
+        default="primary_diplomacy_report.md",
     )
     return parser.parse_args()
 
@@ -566,7 +566,7 @@ def main() -> None:
         raise ValueError("No data after filtering. Lower --min-runs-per-model.")
 
     # Save raw CSV
-    csv_path = output_dir / "diplomacy_lewis_data.csv"
+    csv_path = output_dir / "diplomacy_primary_data.csv"
     df.to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}")
 

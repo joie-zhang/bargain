@@ -54,7 +54,7 @@ MODEL_SHORT_NAMES: Dict[str, str] = {
     "deepseek-r1-0528": "DeepSeek R1-0528",
     "deepseek-v3": "DeepSeek V3",
     "gemini-2.5-pro": "Gemini 2.5 Pro",
-    "gemini-3-pro": "Gemini 3 Pro",
+    "gemini-3.1-pro": "Gemini 3.1 Pro",
     "gemma-3-27b-it": "Gemma 3 27B",
     "gpt-4.1-nano-2025-04-14": "GPT-4.1 nano",
     "gpt-4o-2024-05-13": "GPT-4o",
@@ -74,6 +74,7 @@ MODEL_SHORT_NAMES: Dict[str, str] = {
 }
 MODEL_ALIASES: Dict[str, str] = {
     "amazon-nova-micro": "amazon-nova-micro-v1.0",
+    "gemini-3-pro": "gemini-3.1-pro",
     "grok-4-0709": "grok-4",
     "Llama-3.2-1B-Instruct": "llama-3.2-1b-instruct",
     "Llama-3.2-3B-Instruct": "llama-3.2-3b-instruct",
@@ -87,6 +88,8 @@ DEFAULT_ELO_OVERRIDES: Dict[str, Tuple[str, int]] = {
     "gpt-5-nano": ("gpt-5-nano-high", 1337),
     # Preserve the existing grok fallback for future batches.
     "grok-4": ("grok-4.20-beta1", 1496),
+    # gemini-3-pro was deprecated; queries hit gemini-3.1-pro (Arena: gemini-3.1-pro-preview).
+    "gemini-3.1-pro": ("gemini-3.1-pro-preview", 1494),
 }
 
 # Plot styling defaults (paper-facing).
@@ -337,8 +340,22 @@ def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> Non
         .sort_values("elo")
     )
     fig, ax = plt.subplots(figsize=G2_MAIN_FIGSIZE)
+    elo_values = overall["elo"].astype(float).tolist()
+    util_values = overall["avg_utility"].astype(float).tolist()
+    if len(elo_values) >= 2 and min(elo_values) != max(elo_values):
+        slope, intercept = np.polyfit(elo_values, util_values, deg=1)
+        line_x = np.linspace(min(elo_values), max(elo_values), 200)
+        ax.plot(
+            line_x,
+            slope * line_x + intercept,
+            color="#1d4ed8",
+            linewidth=2.2,
+            alpha=0.9,
+            linestyle=":",
+            zorder=2,
+        )
     for _, row in overall.iterrows():
-        ax.scatter(row["elo"], row["avg_utility"], s=110, color="#2563eb", alpha=0.9)
+        ax.scatter(row["elo"], row["avg_utility"], s=110, color="#2563eb", alpha=0.9, zorder=3)
         ax.annotate(
             row["model_short"],
             (row["elo"], row["avg_utility"]),
@@ -349,7 +366,7 @@ def _save_overall_utility_vs_elo(long_df: pd.DataFrame, output_dir: Path) -> Non
         )
     ax.set_title(
         "Game 2: Mean Adversary Utility vs Chatbot Arena Elo\n"
-        "Averages include all completed (rho, theta, model_order) settings.",
+        "Averaged over all competition levels (rho, theta) and both model orders.",
         fontsize=G2_TITLE_SIZE,
         fontweight="bold",
     )

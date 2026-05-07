@@ -60,7 +60,6 @@ TICK_SIZE = 13
 ANNOT_SIZE = 11
 
 X_PADDING = 25
-Y_PADDING = 5
 
 
 def parse_args() -> argparse.Namespace:
@@ -163,18 +162,14 @@ def main() -> None:
         panel_data.append((title, xs, ys, labels))
 
     all_xs = [x for _, xs, _, _ in panel_data for x in xs]
-    all_ys = [y for _, _, ys, _ in panel_data for y in ys]
     x_lim = (min(all_xs) - X_PADDING, max(all_xs) + X_PADDING)
-    y_lim = (min(all_ys) - Y_PADDING, max(all_ys) + Y_PADDING)
 
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8), sharey=True)
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), sharey=False)
 
     for ax, (title, xs, ys, labels) in zip(axes, panel_data):
         draw_panel(ax, title, xs, ys, labels)
         ax.set_xlim(x_lim)
-        ax.set_ylim(y_lim)
-
-    axes[0].set_ylabel("Mean Adversary Utility", fontsize=AXIS_LABEL_SIZE)
+        ax.set_ylabel("Mean Adversary Utility", fontsize=AXIS_LABEL_SIZE)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout(rect=(0, 0, 1, 0.97))

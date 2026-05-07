@@ -1,4 +1,4 @@
-# Lewis Slides Co-Funding (Game 3) Report
+# Primary Slides Co-Funding (Game 3) Report
 
 - Experiment dir: `experiments/results/cofunding_20260405_083548`
 - Model inclusion rule: `runs >= 1`

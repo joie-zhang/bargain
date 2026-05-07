@@ -1,8 +1,8 @@
-# Lewis Slides Script (Mar 1)
+# Primary Slides Script (Mar 1)
 
 This README is for:
 
-- `visualization/lewis_slides_script_mar_1.py`
+- `visualization/primary_slides_script_mar_1.py`
 
 It is a CSV-only plotting script (no raw JSON dependency).
 
@@ -16,7 +16,7 @@ It is a CSV-only plotting script (no raw JSON dependency).
   - `MAIN_PLOT_1_BASELINE_PAYOFF.png`
   - `MAIN_PLOT_2_ADVERSARY_PAYOFF.png`
 - Markdown report:
-  - `lewis_slides_plot_report_mar_1.md` (default name)
+  - `primary_slides_plot_report_mar_1.md` (default name)
 
 The report includes:
 
@@ -31,19 +31,19 @@ Run from repo root.
 uv venv
 source .venv/bin/activate
 uv pip install pandas numpy matplotlib
-python visualization/lewis_slides_script_mar_1.py
+python visualization/primary_slides_script_mar_1.py
 ```
 
 If you prefer not to activate a venv:
 
 ```bash
 uv run --with pandas --with numpy --with matplotlib \
-  python visualization/lewis_slides_script_mar_1.py
+  python visualization/primary_slides_script_mar_1.py
 ```
 
 ## Default Behavior
 
-`python visualization/lewis_slides_script_mar_1.py`
+`python visualization/primary_slides_script_mar_1.py`
 
 - Uses `figures/gpt5_nano_full_data.csv` relative to the script directory
 - Writes outputs to `figures/` relative to the script directory
@@ -55,7 +55,7 @@ uv run --with pandas --with numpy --with matplotlib \
 To generate raw, compressed, smoothed, and compressed+smoothed variants:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py --make-all-variants
+python visualization/primary_slides_script_mar_1.py --make-all-variants
 ```
 
 ## Useful CLI Examples
@@ -63,7 +63,7 @@ python visualization/lewis_slides_script_mar_1.py --make-all-variants
 Use moving-average smoothing instead of EWM:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py \
+python visualization/primary_slides_script_mar_1.py \
   --smoothing-method moving_average \
   --smoothing-window 3
 ```
@@ -71,7 +71,7 @@ python visualization/lewis_slides_script_mar_1.py \
 Tune EWM smoothing strength:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py \
+python visualization/primary_slides_script_mar_1.py \
   --smoothing-method ewm \
   --smoothing-alpha 0.25
 ```
@@ -79,20 +79,20 @@ python visualization/lewis_slides_script_mar_1.py \
 Disable model run-count filtering:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py --min-runs-per-model 0
+python visualization/primary_slides_script_mar_1.py --min-runs-per-model 0
 ```
 
 Write outputs to a custom folder:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py \
-  --output-dir figures/lewis_mar_1_custom
+python visualization/primary_slides_script_mar_1.py \
+  --output-dir figures/primary_mar_1_custom
 ```
 
 Use a different CSV file:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py \
+python visualization/primary_slides_script_mar_1.py \
   --input-csv figures/another_full_data.csv
 ```
 
@@ -112,5 +112,5 @@ python visualization/lewis_slides_script_mar_1.py \
 Show full help:
 
 ```bash
-python visualization/lewis_slides_script_mar_1.py --help
+python visualization/primary_slides_script_mar_1.py --help
 ```

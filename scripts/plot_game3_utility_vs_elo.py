@@ -63,7 +63,7 @@ MODEL_SHORT_NAMES: Dict[str, str] = {
     "deepseek-r1-0528": "DeepSeek R1-0528",
     "deepseek-v3": "DeepSeek V3",
     "gemini-2.5-pro": "Gemini 2.5 Pro",
-    "gemini-3-pro": "Gemini 3 Pro",
+    "gemini-3.1-pro": "Gemini 3.1 Pro",
     "gemma-3-27b-it": "Gemma 3 27B",
     "gpt-4.1-nano-2025-04-14": "GPT-4.1 nano",
     "gpt-4o-2024-05-13": "GPT-4o",
@@ -84,6 +84,7 @@ MODEL_SHORT_NAMES: Dict[str, str] = {
 
 MODEL_ALIASES: Dict[str, str] = {
     "amazon-nova-micro": "amazon-nova-micro-v1.0",
+    "gemini-3-pro": "gemini-3.1-pro",
     "Llama-3.2-1B-Instruct": "llama-3.2-1b-instruct",
     "Llama-3.2-3B-Instruct": "llama-3.2-3b-instruct",
     "o3": "o3-mini-high",
@@ -95,6 +96,8 @@ MODEL_ALIASES: Dict[str, str] = {
 
 DEFAULT_ELO_OVERRIDES: Dict[str, Tuple[str, int]] = {
     "gpt-5-nano": ("gpt-5-nano-high", 1337),
+    # gemini-3-pro was deprecated; queries hit gemini-3.1-pro (Arena: gemini-3.1-pro-preview).
+    "gemini-3.1-pro": ("gemini-3.1-pro-preview", 1494),
 }
 
 # Plot styling defaults (paper-facing).
@@ -498,6 +501,11 @@ def make_overall_plot(
 
     fig, ax = plt.subplots(figsize=G3_MAIN_FIGSIZE)
 
+    xs = [float(row["elo"]) for row in rows]
+    ys = [float(row["avg_utility"]) for row in rows]
+    line_x, line_y = best_fit_line(xs, ys)
+    ax.plot(line_x, line_y, color="#1d4ed8", linewidth=2.2, alpha=0.9, linestyle=":", zorder=2)
+
     for row in rows:
         x_value = float(row["elo"])
         y_value = float(row["avg_utility"])
@@ -507,6 +515,7 @@ def make_overall_plot(
             s=110,
             color=point_color,
             alpha=0.9,
+            zorder=3,
         )
         ax.annotate(
             str(row["model_short"]),

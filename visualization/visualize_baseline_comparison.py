@@ -4,8 +4,8 @@
 Baseline Comparison Visualizer — Game 2 (Diplomatic Treaty) & Game 3 (Co-Funding)
 =============================================================================
 
-Reads pre-computed CSV exports from lewis_slides_diplomacy.py and
-lewis_slides_cofunding.py (or re-runs extraction live from raw JSON dirs)
+Reads pre-computed CSV exports from primary_slides_diplomacy.py and
+primary_slides_cofunding.py (or re-runs extraction live from raw JSON dirs)
 and produces three families of comparison plots:
 
   1. Payoff gap by adversary × condition
@@ -23,10 +23,10 @@ and produces three families of comparison plots:
      - Color: competition index bucket (CI₂ or CI₃)
 
 Usage:
-    # Use pre-computed CSVs (fastest — run lewis_slides_*.py first):
+    # Use pre-computed CSVs (fastest — run primary_slides_*.py first):
     python visualization/visualize_baseline_comparison.py \\
-        --diplomacy-csv visualization/figures/diplomacy_lewis/diplomacy_lewis_data.csv \\
-        --cofunding-csv visualization/figures/cofunding_lewis/cofunding_lewis_data.csv
+        --diplomacy-csv visualization/figures/diplomacy_primary/diplomacy_primary_data.csv \\
+        --cofunding-csv visualization/figures/cofunding_primary/cofunding_primary_data.csv
 
     # Or point directly at experiment dirs (re-runs extraction):
     python visualization/visualize_baseline_comparison.py \\
@@ -37,7 +37,7 @@ Usage:
 
     # Mixed: one from CSV, one from dir:
     python visualization/visualize_baseline_comparison.py \\
-        --diplomacy-csv path/to/diplomacy_lewis_data.csv \\
+        --diplomacy-csv path/to/diplomacy_primary_data.csv \\
         --cofunding-dirs experiments/results/cofunding_latest
 
 What it creates:
@@ -54,7 +54,7 @@ Configuration:
 
 Dependencies:
     - matplotlib, numpy, pandas
-    - Optional: lewis_slides_diplomacy.py and lewis_slides_cofunding.py (for live extraction)
+    - Optional: primary_slides_diplomacy.py and primary_slides_cofunding.py (for live extraction)
 
 =============================================================================
 """
@@ -103,12 +103,12 @@ def _load_csv(csv_path: str) -> pd.DataFrame:
 
 def _extract_via_script(script_name: str, dirs: List[str], script_dir: Path) -> pd.DataFrame:
     """
-    Run a lewis_slides_*.py script with --experiment-dir dirs and capture
+    Run a primary_slides_*.py script with --experiment-dir dirs and capture
     its CSV output from the default figures location.
     """
     script = script_dir / script_name
     if not script.exists():
-        raise FileNotFoundError(f"Lewis slides script not found: {script}")
+        raise FileNotFoundError(f"Primary slides script not found: {script}")
 
     cmd = [sys.executable, str(script)] + ["--experiment-dir"] + dirs
     print(f"Running: {' '.join(cmd)}")
@@ -118,16 +118,16 @@ def _extract_via_script(script_name: str, dirs: List[str], script_dir: Path) -> 
 
     # Infer CSV path from script output
     for line in result.stdout.splitlines():
-        if "data.csv" in line.lower() or "lewis_data" in line.lower():
+        if "data.csv" in line.lower() or "primary_data" in line.lower():
             csv_path = line.strip().split()[-1]
             if os.path.exists(csv_path):
                 return _load_csv(csv_path)
 
     # Fallback: look for CSV in figures dirs
     if "diplomacy" in script_name:
-        csv_glob = list((script_dir / "figures" / "diplomacy_lewis").glob("*data*.csv"))
+        csv_glob = list((script_dir / "figures" / "diplomacy_primary").glob("*data*.csv"))
     else:
-        csv_glob = list((script_dir / "figures" / "cofunding_lewis").glob("*data*.csv"))
+        csv_glob = list((script_dir / "figures" / "cofunding_primary").glob("*data*.csv"))
 
     if csv_glob:
         return _load_csv(str(sorted(csv_glob)[-1]))
@@ -393,13 +393,13 @@ def parse_args() -> argparse.Namespace:
         "--diplomacy-csv",
         default=None,
         metavar="CSV",
-        help="Pre-computed CSV from lewis_slides_diplomacy.py.",
+        help="Pre-computed CSV from primary_slides_diplomacy.py.",
     )
     parser.add_argument(
         "--cofunding-csv",
         default=None,
         metavar="CSV",
-        help="Pre-computed CSV from lewis_slides_cofunding.py.",
+        help="Pre-computed CSV from primary_slides_cofunding.py.",
     )
     parser.add_argument(
         "--diplomacy-dirs",
@@ -462,14 +462,14 @@ def main() -> None:
     df2 = _resolve_df(
         args.diplomacy_csv,
         args.diplomacy_dirs,
-        "lewis_slides_diplomacy.py",
+        "primary_slides_diplomacy.py",
         script_dir,
         _normalise_diplomacy,
     )
     df3 = _resolve_df(
         args.cofunding_csv,
         args.cofunding_dirs,
-        "lewis_slides_cofunding.py",
+        "primary_slides_cofunding.py",
         script_dir,
         _normalise_cofunding,
     )

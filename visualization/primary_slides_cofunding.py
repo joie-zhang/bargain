@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 =============================================================================
-Lewis Slides Script — Game 3 (Co-Funding / Participatory Budgeting)
+Primary Slides Script — Game 3 (Co-Funding / Participatory Budgeting)
 =============================================================================
 
-Mirrors lewis_slides_script_mar_1.py (Game 1) and lewis_slides_diplomacy.py
+Mirrors primary_slides_script_mar_1.py (Game 1) and primary_slides_diplomacy.py
 (Game 2), adapted for Game 3's two-parameter competition space:
   alpha (preference alignment) and sigma (budget abundance).
 
@@ -15,20 +15,20 @@ produces two families of "payoff vs focal model Elo" plots:
   1-VARIABLE version  — one line per CI₃ bucket, where CI₃ = (1-alpha)*(1-sigma)
 
 Usage:
-    python visualization/lewis_slides_cofunding.py
-    python visualization/lewis_slides_cofunding.py --experiment-dir experiments/results/cofunding_latest
-    python visualization/lewis_slides_cofunding.py --param alpha       # only alpha-bucketed plots
-    python visualization/lewis_slides_cofunding.py --param ci          # only CI₃-bucketed plots
-    python visualization/lewis_slides_cofunding.py --make-all-variants
+    python visualization/primary_slides_cofunding.py
+    python visualization/primary_slides_cofunding.py --experiment-dir experiments/results/cofunding_latest
+    python visualization/primary_slides_cofunding.py --param alpha       # only alpha-bucketed plots
+    python visualization/primary_slides_cofunding.py --param ci          # only CI₃-bucketed plots
+    python visualization/primary_slides_cofunding.py --make-all-variants
 
 What it creates:
-    visualization/figures/cofunding_lewis/
+    visualization/figures/cofunding_primary/
     ├── MAIN_PLOT_1_FOCAL_PAYOFF_ALPHA.png       # focal model utility, lines = alpha
     ├── MAIN_PLOT_2_REFERENCE_PAYOFF_ALPHA.png   # reference (gpt-5.2) utility, lines = alpha
     ├── MAIN_PLOT_3_FOCAL_PAYOFF_CI.png          # focal utility, lines = CI₃ bucket
     ├── MAIN_PLOT_4_REFERENCE_PAYOFF_CI.png      # reference utility, lines = CI₃ bucket
-    ├── cofunding_lewis_data.csv                 # flat per-run data
-    └── lewis_cofunding_report.md                # coverage report
+    ├── cofunding_primary_data.csv                 # flat per-run data
+    └── primary_cofunding_report.md                # coverage report
 
 Competition index motivation:
     alpha in [0, 1]: preference alignment.
@@ -491,7 +491,7 @@ def write_report(
     sigma_vals = sorted(df["sigma"].dropna().unique())
 
     with report_path.open("w", encoding="utf-8") as f:
-        f.write("# Lewis Slides Co-Funding (Game 3) Report\n\n")
+        f.write("# Primary Slides Co-Funding (Game 3) Report\n\n")
         f.write(f"- Experiment dir: `{experiment_dir}`\n")
         f.write(f"- Model inclusion rule: `runs >= {min_runs}`\n")
         f.write(f"- alpha values: {alpha_vals}\n")
@@ -535,7 +535,7 @@ def write_report(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate Lewis-style slide plots for Game 3 (Co-Funding)."
+        description="Generate Primary-style slide plots for Game 3 (Co-Funding)."
     )
     parser.add_argument(
         "--experiment-dir",
@@ -546,7 +546,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="figures/cofunding_lewis",
+        default="figures/cofunding_primary",
         help="Output directory relative to this script's location.",
     )
     parser.add_argument(
@@ -573,7 +573,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also generate raw (no smoothing) variants.",
     )
-    parser.add_argument("--report-name", default="lewis_cofunding_report.md")
+    parser.add_argument("--report-name", default="primary_cofunding_report.md")
     return parser.parse_args()
 
 
@@ -622,7 +622,7 @@ def main() -> None:
     print(f"Mean social welfare: {mean_sw:.1f}  →  equal split reference: {equal_split:.1f}")
 
     # Save raw CSV
-    csv_path = output_dir / "cofunding_lewis_data.csv"
+    csv_path = output_dir / "cofunding_primary_data.csv"
     df.to_csv(csv_path, index=False)
     print(f"Saved CSV: {csv_path}")
 
