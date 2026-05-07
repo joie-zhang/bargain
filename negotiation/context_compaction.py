@@ -14,21 +14,33 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set,
 
 DEFAULT_CONTEXT_DOC = Path("docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md")
 DEFAULT_CONTEXT_THRESHOLD = 0.85
-DEFAULT_RESERVED_OUTPUT_TOKENS = 10_000
+DEFAULT_RESERVED_OUTPUT_TOKENS = 16_384
 DEFAULT_CHARS_PER_TOKEN = 3.0
 DISCUSSION_LINE_CHAR_LIMIT = 180
 PROPOSAL_CHAR_LIMIT = 2200
 VOTE_LINE_CHAR_LIMIT = 260
+TERSE_DISCUSSION_LINE_CHAR_LIMIT = 90
+TERSE_PROPOSAL_CHAR_LIMIT = 420
+TERSE_VOTE_LINE_CHAR_LIMIT = 140
+TERSE_MAX_PROPOSALS_PER_ROUND = 10
+TERSE_MAX_VOTE_LINES_PER_ROUND = 8
 
 KNOWN_PROVIDER_CONTEXT_CAPS = {
     "amazon-nova-micro-v1.0": 128_000,
     "amazon/nova-micro-v1": 128_000,
+    # OpenRouter can route DeepSeek V3 to upstreams that enforce a 32K
+    # max_num_tokens limit even though the catalog/table advertises more.
+    "deepseek-v3": 32_768,
+    "deepseek/deepseek-chat": 32_768,
+    "deepseek-chat": 32_768,
     "gpt-4o-mini-2024-07-18": 128_000,
     "gpt-5-nano": 272_000,
     "openai/gpt-5-nano": 272_000,
     "gpt-5-nano-2025-08-07": 272_000,
     "gpt-4o-2024-05-13": 128_000,
     "gpt-4o": 128_000,
+    "claude-sonnet-4-20250514": 200_000,
+    "anthropic/claude-sonnet-4-20250514": 200_000,
 }
 
 
@@ -37,15 +49,18 @@ class ContextCompactionMetadata:
     """Structured metadata for a prompt-local compaction decision."""
 
     model_names: List[str]
-    context_limit_tokens: int
+    context_limit_tokens: Optional[int]
     threshold: float
-    reserved_output_tokens: int
-    input_budget_tokens: int
+    reserved_output_tokens: Optional[int]
+    input_budget_tokens: Optional[int]
     estimated_input_tokens_before: int
     estimated_input_tokens_after: int
     compacted_rounds: List[int]
     original_public_history_entries: int
     compacted_public_history_entries: int
+    phase_prompt_chars: int
+    estimated_provider_input_tokens: int
+    context_compacted: bool
 
 
 class ContextWindowPreflightError(RuntimeError):
@@ -228,21 +243,26 @@ def _truncate(text: str, limit: int) -> str:
     return line[: max(0, limit - 3)].rstrip() + "..."
 
 
-def _first_discussion_line(content: Any) -> str:
+def _first_discussion_line(content: Any, *, char_limit: int = DISCUSSION_LINE_CHAR_LIMIT) -> str:
     text = _collapse_line(content)
     text = re.sub(r"^.*PUBLIC DISCUSSION PHASE[^A-Za-z0-9]*", "", text, flags=re.IGNORECASE)
     parts = re.split(r"(?<=[.!?])\s+", text, maxsplit=1)
-    return _truncate(parts[0] if parts and parts[0] else text, DISCUSSION_LINE_CHAR_LIMIT)
+    return _truncate(parts[0] if parts and parts[0] else text, char_limit)
 
 
-def _proposal_text(content: Any) -> str:
+def _proposal_text(content: Any, *, char_limit: int = PROPOSAL_CHAR_LIMIT) -> str:
     text = _collapse_line(content)
     if text.lower().startswith("i propose:"):
         text = text[len("I propose:"):].strip()
-    return _truncate(text, PROPOSAL_CHAR_LIMIT)
+    return _truncate(text, char_limit)
 
 
-def _vote_lines(content: Any) -> List[str]:
+def _vote_lines(
+    content: Any,
+    *,
+    char_limit: int = VOTE_LINE_CHAR_LIMIT,
+    max_lines: int = 12,
+) -> List[str]:
     lines = []
     for raw_line in str(content or "").splitlines():
         line = _collapse_line(raw_line)
@@ -256,12 +276,23 @@ def _vote_lines(content: Any) -> List[str]:
             or "winning proposal" in lowered
             or "agreement reached" in lowered
         ):
-            lines.append(_truncate(line, VOTE_LINE_CHAR_LIMIT))
-    return lines[:12]
+            lines.append(_truncate(line, char_limit))
+    return lines[:max_lines]
 
 
-def summarize_public_round(round_num: int, entries: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def summarize_public_round(
+    round_num: int,
+    entries: Sequence[Dict[str, Any]],
+    *,
+    terse: bool = False,
+) -> Dict[str, Any]:
     """Build a deterministic public-only summary for one round."""
+    discussion_limit = TERSE_DISCUSSION_LINE_CHAR_LIMIT if terse else DISCUSSION_LINE_CHAR_LIMIT
+    proposal_limit = TERSE_PROPOSAL_CHAR_LIMIT if terse else PROPOSAL_CHAR_LIMIT
+    vote_limit = TERSE_VOTE_LINE_CHAR_LIMIT if terse else VOTE_LINE_CHAR_LIMIT
+    max_proposals = TERSE_MAX_PROPOSALS_PER_ROUND if terse else None
+    max_vote_lines = TERSE_MAX_VOTE_LINES_PER_ROUND if terse else 12
+
     discussion_by_speaker: Dict[str, str] = {}
     proposals: List[str] = []
     vote_outcomes: List[str] = []
@@ -271,18 +302,23 @@ def summarize_public_round(round_num: int, entries: Sequence[Dict[str, Any]]) ->
         speaker = str(entry.get("from") or entry.get("agent_id") or "system")
         content = entry.get("content") or entry.get("response") or ""
         if phase.startswith("discussion") and speaker not in discussion_by_speaker:
-            discussion_by_speaker[speaker] = _first_discussion_line(content)
+            discussion_by_speaker[speaker] = _first_discussion_line(content, char_limit=discussion_limit)
         elif phase.startswith("proposal") or str(content).lstrip().lower().startswith("i propose:"):
-            proposals.append(f"{speaker}: {_proposal_text(content)}")
+            if max_proposals is None or len(proposals) < max_proposals:
+                proposals.append(f"{speaker}: {_proposal_text(content, char_limit=proposal_limit)}")
         elif phase == "vote_tabulation" or "tabulation" in phase:
-            vote_outcomes.extend(_vote_lines(content))
+            vote_outcomes.extend(_vote_lines(content, char_limit=vote_limit, max_lines=max_vote_lines))
         elif phase.startswith("pledge") or str(content).lstrip().lower().startswith("pledge:"):
-            proposals.append(f"{speaker}: {_proposal_text(content)}")
+            if max_proposals is None or len(proposals) < max_proposals:
+                proposals.append(f"{speaker}: {_proposal_text(content, char_limit=proposal_limit)}")
 
-    lines = [
-        f"[DETERMINISTIC PUBLIC SUMMARY | Round {round_num}]",
-        "This replaces older raw public messages for prompt budgeting only; raw trajectories are unchanged on disk.",
-    ]
+    if terse:
+        lines = [f"[TERSE PUBLIC SUMMARY | Round {round_num}]"]
+    else:
+        lines = [
+            f"[DETERMINISTIC PUBLIC SUMMARY | Round {round_num}]",
+            "This replaces older raw public messages for prompt budgeting only; raw trajectories are unchanged on disk.",
+        ]
     if discussion_by_speaker:
         lines.append("Discussion one-liners:")
         for speaker in sorted(discussion_by_speaker):
@@ -295,7 +331,7 @@ def summarize_public_round(round_num: int, entries: Sequence[Dict[str, Any]]) ->
         lines.append("Public vote outcomes:")
         for line in vote_outcomes:
             lines.append(f"- {line}")
-    if len(lines) == 2:
+    if not discussion_by_speaker and not proposals and not vote_outcomes:
         lines.append("No compactable public discussion, proposal, pledge, or vote outcome was recorded.")
 
     return {
@@ -311,6 +347,8 @@ def summarize_public_round(round_num: int, entries: Sequence[Dict[str, Any]]) ->
 def compact_public_history_entries(
     history: Sequence[Dict[str, Any]],
     rounds_to_compact: Set[int],
+    *,
+    terse: bool = False,
 ) -> List[Dict[str, Any]]:
     """Replace selected public-history rounds with deterministic summaries."""
     output: List[Dict[str, Any]] = []
@@ -328,6 +366,6 @@ def compact_public_history_entries(
             continue
         if round_num in emitted_round_summaries:
             continue
-        output.append(summarize_public_round(round_num, grouped.get(round_num, [])))
+        output.append(summarize_public_round(round_num, grouped.get(round_num, []), terse=terse))
         emitted_round_summaries.add(round_num)
     return output
