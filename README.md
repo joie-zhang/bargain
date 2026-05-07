@@ -3,8 +3,8 @@
 This repository studies how LLM agent capability, group size, and strategic
 competition shape bargaining outcomes. The current codebase supports three
 multi-turn negotiation environments, large model-roster sweeps, N-agent Slurm
-batches, test-time-compute stress tests, analysis scripts, Streamlit viewers,
-and the NeurIPS paper source.
+batches, test-time-compute stress tests, analysis scripts, and Streamlit
+viewers.
 
 The repository has accumulated many exploratory and legacy scripts. Treat this
 README as the current map: when older scripts conflict with the workflows below,
@@ -60,8 +60,6 @@ round. Utilities can be time-discounted by `gamma_discount`.
 |   Derived CSVs, reports, and figure-generation outputs.
 |-- Figures/
 |   Paper-facing and presentation-facing figure exports.
-|-- overleaf/neurips/
-|   Current NeurIPS paper source and compile script.
 |-- ui/
 |   Streamlit viewers for individual runs, batches, and multi-game comparison.
 |-- docs/
@@ -329,7 +327,6 @@ Important derived directories:
   benchmark-relative exploitation summaries.
 - `analysis/full_games123_*`: multi-agent aggregate CSVs and plots.
 - `Figures/`: exported figures for slides and paper drafts.
-- `overleaf/neurips/graphics/`: figure copies used by the NeurIPS TeX source.
 
 The active model roster and Elo helpers live in:
 
@@ -365,28 +362,6 @@ streamlit run ui/experiment_viewer.py \
 ```
 
 Then tunnel `localhost:8501` from the laptop to the cluster node running the UI.
-
-## Paper Source
-
-The current paper is under `overleaf/neurips/`.
-
-```bash
-cd overleaf/neurips
-bash compile_pdf.sh neurips_2026.tex
-```
-
-Primary TeX files:
-
-- `abstract.tex`
-- `body.tex`
-- `1_intro.tex`
-- `2_background.tex`
-- `3_approach.tex`
-- `4_analysis.tex`
-- `5_conclusions.tex`
-- `appendix.tex`
-- `checklist.tex`
-- `refs.bib`
 
 ## Testing
 
