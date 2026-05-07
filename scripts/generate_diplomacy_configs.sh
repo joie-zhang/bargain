@@ -131,7 +131,7 @@ NUM_ISSUES=5
 MAX_ROUNDS=10
 GAMMA_DISCOUNT=0.9
 DISCUSSION_TURNS=2
-MAX_TOKENS_PER_PHASE=10500
+MAX_TOKENS_PER_PHASE=16384
 BASE_SEED=42
 NUM_RUNS=2
 MS_PARAM_PAIRS=()  # explicit "rho:theta" pairs; if non-empty, overrides MS_RHO_VALUES × MS_THETA_VALUES grid
@@ -616,7 +616,7 @@ ${PARTITION_LINE}
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 

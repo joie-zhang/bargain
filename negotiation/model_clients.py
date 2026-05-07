@@ -252,7 +252,7 @@ class AnthropicClient(BaseModelClient):
             'model': self.model_spec.api_model_name or self.model_spec.model_id,
             'messages': claude_messages,
             'temperature': kwargs.get('temperature', 0.7),
-            'max_tokens': kwargs.get('max_tokens', 4096)  # Anthropic requires max_tokens
+            'max_tokens': kwargs.get('max_tokens', 16384)  # Anthropic requires max_tokens
         }
         
         if system_message:
@@ -329,7 +329,7 @@ class GoogleClient(BaseModelClient):
                     prompt_text,
                     generation_config=genai.types.GenerationConfig(
                         temperature=kwargs.get('temperature', 0.7),
-                        max_output_tokens=kwargs.get('max_tokens', 8192),
+                        max_output_tokens=kwargs.get('max_tokens', 16384),
                         top_p=kwargs.get('top_p'),
                         top_k=kwargs.get('top_k')
                     )
@@ -533,8 +533,8 @@ class PrincetonClusterClient(BaseModelClient):
         import re
 
         # Use tokenizer properly to get attention mask
-        # Set max_length based on model's context window (default 4096 for safety)
-        max_length = getattr(self.model.config, 'max_position_embeddings', 4096)
+        # Set max_length based on model's context window.
+        max_length = getattr(self.model.config, 'max_position_embeddings', 16384)
         inputs = self.tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
         input_ids = inputs['input_ids']
         attention_mask = inputs.get('attention_mask', None)
@@ -551,7 +551,7 @@ class PrincetonClusterClient(BaseModelClient):
             temperature = max(kwargs.get('temperature', 0.7), 0.01)
             generate_kwargs = {
                 "input_ids": input_ids,
-                "max_new_tokens": kwargs.get('max_tokens', 512),
+                "max_new_tokens": kwargs.get('max_tokens', 16384),
                 "temperature": temperature,
                 "top_p": kwargs.get('top_p', 0.9),
                 "top_k": kwargs.get('top_k', 50),

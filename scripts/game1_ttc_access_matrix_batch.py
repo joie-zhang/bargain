@@ -507,7 +507,7 @@ module purge
 module load anaconda3/2024.2
 module load proxy/default
 
-KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-/home/jz4391/.config/bargain/api_keys.env}}"
+KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-bargain/api_keys.env}}"
 if [[ -f "$KEY_ENV_FILE" ]]; then
   set -a
   source "$KEY_ENV_FILE"

@@ -1,11 +1,65 @@
 """Configuration for strong language models via OpenRouter and direct APIs."""
 
+DEFAULT_MAX_TOKENS_PER_PHASE = 16384
+CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE = DEFAULT_MAX_TOKENS_PER_PHASE * 4
+GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE = DEFAULT_MAX_TOKENS_PER_PHASE * 4
+GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE = 4096
+AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE = 5120
+COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE = 4000
+CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE = 4096
+AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE = 5120
+
 _GPU_LLAMA_PHASE_TOKEN_CAPS = {
-    "max_tokens_discussion": 2048,
-    "max_tokens_thinking": 1280,
-    "max_tokens_proposal": 512,
-    "max_tokens_voting": 384,
-    "max_tokens_reflection": 1536,
+    "max_tokens_discussion": DEFAULT_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": DEFAULT_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": DEFAULT_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": DEFAULT_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": DEFAULT_MAX_TOKENS_PER_PHASE,
+}
+
+_GPT_4O_2024_05_13_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+    "max_tokens_default": GPT_4O_2024_05_13_MAX_TOKENS_PER_PHASE,
+}
+
+_AMAZON_NOVA_PRO_V1_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_default": AMAZON_NOVA_PRO_V1_MAX_TOKENS_PER_PHASE,
+}
+
+_COMMAND_R_PLUS_08_2024_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+    "max_tokens_default": COMMAND_R_PLUS_08_2024_MAX_TOKENS_PER_PHASE,
+}
+
+_CLAUDE_3_HAIKU_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+    "max_tokens_default": CLAUDE_3_HAIKU_MAX_TOKENS_PER_PHASE,
+}
+
+_AMAZON_NOVA_MICRO_V1_PHASE_TOKEN_CAPS = {
+    "max_tokens_discussion": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_thinking": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_proposal": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_voting": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_reflection": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
+    "max_tokens_default": AMAZON_NOVA_MICRO_V1_MAX_TOKENS_PER_PHASE,
 }
 
 STRONG_MODELS_CONFIG = {
@@ -29,6 +83,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "Weak tier, Closed-source, Non-reasoning",
         "temperature": 0.7,
+        **_GPT_4O_2024_05_13_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
@@ -151,6 +206,17 @@ STRONG_MODELS_CONFIG = {
         "description": "Strong tier, Closed-source, Reasoning",
         "temperature": 1.0,
         "reasoning_effort": "low",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5-minimal-effort": {
+        "name": "GPT-5 (Minimal Reasoning Effort)",
+        "model_id": "gpt-5-2025-08-07",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "GPT-5 snapshot with provider-native minimal reasoning effort for TTC scaling",
+        "temperature": 1.0,
+        "reasoning_effort": "minimal",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -318,6 +384,50 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "gemini-3-flash-thinking-minimal": {
+        "name": "Gemini 3 Flash (Minimal Thinking)",
+        "model_id": "google/gemini-3-flash-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=minimal for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {"reasoning": {"effort": "minimal", "exclude": True}},
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gemini-3-flash-thinking-low": {
+        "name": "Gemini 3 Flash (Low Thinking)",
+        "model_id": "google/gemini-3-flash-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=low for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {"reasoning": {"effort": "low", "exclude": True}},
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gemini-3-flash-thinking-medium": {
+        "name": "Gemini 3 Flash (Medium Thinking)",
+        "model_id": "google/gemini-3-flash-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=medium for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {"reasoning": {"effort": "medium", "exclude": True}},
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gemini-3-flash-thinking-high": {
+        "name": "Gemini 3 Flash (High Thinking)",
+        "model_id": "google/gemini-3-flash-preview",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=high for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {"reasoning": {"effort": "high", "exclude": True}},
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "claude-opus-4-6": {
         "name": "Claude Opus 4.6",
         "model_id": "claude-opus-4-6",
@@ -335,6 +445,62 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Fallback for Anthropic quota/credit failures",
         "temperature": 0.7,
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-sonnet-4-6-effort-low": {
+        "name": "Claude Sonnet 4.6 (Low Effort)",
+        "model_id": "claude-sonnet-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=low for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking": {"type": "adaptive"},
+            "extra_body": {"output_config": {"effort": "low"}},
+        },
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-sonnet-4-6-effort-medium": {
+        "name": "Claude Sonnet 4.6 (Medium Effort)",
+        "model_id": "claude-sonnet-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=medium for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking": {"type": "adaptive"},
+            "extra_body": {"output_config": {"effort": "medium"}},
+        },
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-sonnet-4-6-effort-high": {
+        "name": "Claude Sonnet 4.6 (High Effort)",
+        "model_id": "claude-sonnet-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=high for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking": {"type": "adaptive"},
+            "extra_body": {"output_config": {"effort": "high"}},
+        },
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "claude-sonnet-4-6-effort-max": {
+        "name": "Claude Sonnet 4.6 (Max Effort)",
+        "model_id": "claude-sonnet-4-6",
+        "provider": "Anthropic",
+        "api_type": "anthropic",
+        "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=max for TTC scaling",
+        "temperature": 1.0,
+        "custom_parameters": {
+            "thinking": {"type": "adaptive"},
+            "extra_body": {"output_config": {"effort": "max"}},
+        },
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -391,14 +557,47 @@ STRONG_MODELS_CONFIG = {
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
+    "gpt-5.2-low": {
+        "name": "GPT-5.2 Low",
+        "model_id": "gpt-5.2-2025-12-11",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "GPT-5.2 snapshot with provider-native low reasoning effort",
+        "temperature": 1.0,
+        "reasoning_effort": "low",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5.2-medium": {
+        "name": "GPT-5.2 Medium",
+        "model_id": "gpt-5.2-2025-12-11",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "GPT-5.2 snapshot with provider-native medium reasoning effort",
+        "temperature": 1.0,
+        "reasoning_effort": "medium",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
     "gpt-5.2-high": {
         "name": "GPT-5.2 High",
         "model_id": "gpt-5.2-2025-12-11",
         "provider": "OpenAI",
         "api_type": "openai",
-        "description": "Rank 9, Elo: 1436, Closed-source, Reasoning",
+        "description": "Rank 9, Elo: 1436, Closed-source, Reasoning; provider-native high reasoning effort",
         "temperature": 1.0,
         "reasoning_effort": "high",
+        "system_prompt": "You are a negotiating agent.",
+        "model_category": "strong"
+    },
+    "gpt-5.2-xhigh": {
+        "name": "GPT-5.2 XHigh",
+        "model_id": "gpt-5.2-2025-12-11",
+        "provider": "OpenAI",
+        "api_type": "openai",
+        "description": "GPT-5.2 snapshot with provider-native xhigh reasoning effort",
+        "temperature": 1.0,
+        "reasoning_effort": "xhigh",
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -562,6 +761,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "Rank 20, Elo: 1346, Closed-source, Non-reasoning",
         "temperature": 0.7,
+        **_GPT_4O_2024_05_13_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -622,6 +822,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Replacement candidate for the low-context Gemma-2-27B slot: Elo 1290, 300K context, OpenRouter",
         "temperature": 0.7,
+        **_AMAZON_NOVA_PRO_V1_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -632,6 +833,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Replacement candidate for the low-context Llama-3-70B slot: Elo 1276, 128K context, OpenRouter",
         "temperature": 0.7,
+        **_COMMAND_R_PLUS_08_2024_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -642,6 +844,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Rank 26, Elo: 1262, Closed-source, Non-reasoning; routed through OpenRouter because the native Anthropic endpoint no longer accepts the dated Arena alias.",
         "temperature": 0.7,
+        **_CLAUDE_3_HAIKU_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -664,6 +867,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Rank 28, Elo: 1241, Closed-source",
         "temperature": 0.7,
+        **_AMAZON_NOVA_MICRO_V1_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
@@ -712,7 +916,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "meta-llama/llama-3.1-8b-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.1-8B-Instruct",
+        "local_path": "bargain/models/Llama-3.1-8B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         **_GPU_LLAMA_PHASE_TOKEN_CAPS,
@@ -754,7 +958,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "microsoft/phi-3-mini-128k-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct",
+        "local_path": "bargain/models/Phi-3-mini-128k-instruct",
         "description": "Rank 35, Elo: 1130, Open-source, Local Princeton cluster weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -765,7 +969,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "microsoft/phi-3-mini-128k-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Phi-3-mini-128k-instruct",
+        "local_path": "bargain/models/Phi-3-mini-128k-instruct",
         "description": "Exact Arena-name alias for the local Princeton cluster Phi-3 Mini 128K weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -796,7 +1000,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "meta-llama/llama-3.2-3b-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.2-3B-Instruct",
+        "local_path": "bargain/models/Llama-3.2-3B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         **_GPU_LLAMA_PHASE_TOKEN_CAPS,
@@ -826,11 +1030,18 @@ STRONG_MODELS_CONFIG = {
         "description": "Arena alias for Claude Opus 4.6 with thinking enabled; mapped here to Anthropic adaptive thinking via `thinking` plus `extra_body.output_config`.",
         "temperature": 1.0,
         "custom_parameters": {
+            "phase_token_cap_policy": "prefer_model_cap_when_experiment_default",
             "thinking": {"type": "adaptive"},
             "extra_body": {
                 "output_config": {"effort": "high"}
             }
         },
+        "max_tokens_discussion": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
+        "max_tokens_thinking": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
+        "max_tokens_proposal": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
+        "max_tokens_voting": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
+        "max_tokens_reflection": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
+        "max_tokens_default": CLAUDE_OPUS_4_6_THINKING_MAX_TOKENS_PER_PHASE,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -916,6 +1127,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openai",
         "description": "Exact Arena-name alias.",
         "temperature": 0.7,
+        **_GPT_4O_2024_05_13_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -964,7 +1176,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "qwen/qwen-2.5-72b-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-72B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-72B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -987,6 +1199,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Exact Arena-name alias routed through OpenRouter because the native Anthropic endpoint no longer accepts this dated alias.",
         "temperature": 0.7,
+        **_CLAUDE_3_HAIKU_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"
     },
@@ -997,6 +1210,7 @@ STRONG_MODELS_CONFIG = {
         "api_type": "openrouter",
         "description": "Exact Arena-name alias routed through OpenRouter.",
         "temperature": 0.7,
+        **_AMAZON_NOVA_MICRO_V1_PHASE_TOKEN_CAPS,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "weak"
     },
@@ -1015,7 +1229,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "meta-llama/llama-3.2-1b-instruct",
         "provider": "Princeton Cluster",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Llama-3.2-1B-Instruct",
+        "local_path": "bargain/models/Llama-3.2-1B-Instruct",
         "description": "Cluster-only fallback alias for local Princeton weights (GPU job required)",
         "temperature": 0.7,
         **_GPU_LLAMA_PHASE_TOKEN_CAPS,
@@ -1034,8 +1248,15 @@ STRONG_MODELS_CONFIG = {
             "reasoning": {
                 "effort": "high",
                 "exclude": True,
-            }
+            },
+            "phase_token_cap_policy": "prefer_model_cap_when_experiment_default",
         },
+        "max_tokens_discussion": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
+        "max_tokens_thinking": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
+        "max_tokens_proposal": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
+        "max_tokens_voting": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
+        "max_tokens_reflection": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
+        "max_tokens_default": GPT_5_4_HIGH_MAX_TOKENS_PER_PHASE,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "strong"
     },
@@ -1069,7 +1290,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "Qwen/Qwen2.5-0.5B-Instruct",
         "provider": "Qwen",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-0.5B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-0.5B-Instruct",
         "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -1080,7 +1301,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
         "provider": "Qwen",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-1.5B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-1.5B-Instruct",
         "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -1091,7 +1312,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "Qwen/Qwen2.5-3B-Instruct",
         "provider": "Qwen",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-3B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-3B-Instruct",
         "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -1112,7 +1333,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "Qwen/Qwen2.5-14B-Instruct",
         "provider": "Qwen",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-14B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-14B-Instruct",
         "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
@@ -1123,7 +1344,7 @@ STRONG_MODELS_CONFIG = {
         "model_id": "Qwen/Qwen2.5-32B-Instruct",
         "provider": "Qwen",
         "api_type": "princeton_cluster",
-        "local_path": "/scratch/gpfs/DANQIC/models/Qwen2.5-32B-Instruct",
+        "local_path": "bargain/models/Qwen2.5-32B-Instruct",
         "description": "Open-source, Non-reasoning, Local",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",

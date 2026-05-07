@@ -137,7 +137,7 @@ echo ""
 M_PROJECTS=5
 MAX_ROUNDS=10
 DISCUSSION_TURNS=2
-MAX_TOKENS_PER_PHASE=10500
+MAX_TOKENS_PER_PHASE=16384
 BASE_SEED=42
 NUM_RUNS=2
 MS_PARAM_PAIRS=()  # explicit "alpha:sigma" pairs; if non-empty, overrides MS_ALPHA_VALUES × MS_SIGMA_VALUES grid
@@ -693,7 +693,7 @@ cat > "${WORKER_SCRIPT}" << SLURM_WORKER_EOF
 #!/bin/bash
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 

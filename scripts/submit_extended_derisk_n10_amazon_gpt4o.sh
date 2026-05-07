@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/scratch/gpfs/DANQIC/jz4391/bargain"
+REPO_ROOT="bargain"
 cd "$REPO_ROOT"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"

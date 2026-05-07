@@ -512,7 +512,7 @@ def build_command(config: Dict) -> List[str]:
         "--job-id",
         str(config["config_id"]),
         "--max-tokens-voting",
-        str(config.get("max_tokens_voting", 768)),
+        str(config.get("max_tokens_voting", 16384)),
     ]
 
 
@@ -752,7 +752,7 @@ module purge
 module load anaconda3/2024.2
 module load proxy/default
 
-KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-/home/jz4391/.config/bargain/api_keys.env}}"
+KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-bargain/api_keys.env}}"
 if [[ -f "$KEY_ENV_FILE" ]]; then
   set -a
   source "$KEY_ENV_FILE"
@@ -763,7 +763,7 @@ fi
 : "${{SUBMISSION_FILE:?SUBMISSION_FILE is required}}"
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
-export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
+export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-bargain/openrouter_proxy}}"
 export OPENROUTER_PROXY_CLIENT_TIMEOUT="${{OPENROUTER_PROXY_CLIENT_TIMEOUT:-9000}}"
 export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-$RUN_DIR/monitoring/provider_failures.md}}"
 export PYTHONUNBUFFERED=1

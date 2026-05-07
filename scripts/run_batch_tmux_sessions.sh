@@ -28,11 +28,11 @@
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "$BASE_DIR"
 
 # Use the exact config directory from the sbatch file
-CONFIG_DIR="/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260121_070359/configs"
+CONFIG_DIR="bargain/experiments/results/scaling_experiment_20260121_070359/configs"
 LOG_DIR="$BASE_DIR/logs/tmux"
 
 mkdir -p "$LOG_DIR"

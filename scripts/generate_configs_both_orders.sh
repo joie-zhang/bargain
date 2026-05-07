@@ -365,7 +365,7 @@ cat > "${CPU_SLURM}" << SLURM_CPU
 set -e
 
 # Change to project directory first
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 
 # Create logs directory if it doesn't exist
@@ -500,7 +500,7 @@ cat > "${GPU_SMALL_SLURM}" << SLURM_GPU_SMALL
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 
@@ -587,7 +587,7 @@ cat > "${GPU_MEDIUM_SLURM}" << SLURM_GPU_MEDIUM
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 
@@ -674,7 +674,7 @@ cat > "${GPU_LARGE_SLURM}" << SLURM_GPU_LARGE
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 

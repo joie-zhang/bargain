@@ -14,10 +14,38 @@ from negotiation.llm_agents import (
     LLMConfig,
     build_openrouter_fallback_custom_parameters,
     infer_openrouter_fallback_model_id,
+    openrouter_fallback_unsupported_reason,
 )
 from negotiation.openrouter_client import OpenRouterAgent
 from negotiation.provider_key_rotation import ProviderKeyExhaustedError, has_provider_keys
 from ..configs import STRONG_MODELS_CONFIG
+
+
+OPENAI_REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
+
+_PHASE_TOKEN_CAP_FIELDS = {
+    "discussion": "max_tokens_discussion",
+    "thinking": "max_tokens_thinking",
+    "proposal": "max_tokens_proposal",
+    "voting": "max_tokens_voting",
+    "reflection": "max_tokens_reflection",
+    "default": "max_tokens_default",
+}
+
+
+def _with_model_phase_token_caps(
+    custom_parameters: Dict[str, Any],
+    model_config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Copy top-level model phase caps into per-agent custom parameters."""
+    phase_token_caps = dict(custom_parameters.get("phase_token_caps") or {})
+    for phase_name, field_name in _PHASE_TOKEN_CAP_FIELDS.items():
+        if model_config.get(field_name) is not None:
+            phase_token_caps[phase_name] = int(model_config[field_name])
+
+    if phase_token_caps:
+        custom_parameters["phase_token_caps"] = phase_token_caps
+    return custom_parameters
 
 
 class StrongModelAgentFactory:
@@ -125,7 +153,8 @@ class StrongModelAgentFactory:
         Args:
             reasoning_token_budget: Optional token budget for API-based reasoning control.
                 - For Anthropic: Sets thinking.budget_tokens parameter
-                - For OpenAI: Maps to reasoning_effort (low/medium/high)
+                - For OpenAI: Maps to reasoning_effort (low/medium/high),
+                  while model configs may declare provider-native xhigh directly
                 - For others: No API-level control available
         """
 
@@ -222,6 +251,20 @@ class StrongModelAgentFactory:
             )
             return None
 
+        unsupported_reason = openrouter_fallback_unsupported_reason(
+            api_type,
+            source_custom_parameters,
+        )
+        if unsupported_reason:
+            self.logger.warning(
+                "No %s keys for %s and OpenRouter fallback route %s is not compatible: %s",
+                api_type,
+                model_name,
+                fallback_model_id,
+                unsupported_reason,
+            )
+            return None
+
         if not has_provider_keys("openrouter", openrouter_key):
             self.logger.warning(
                 "No %s keys for %s and no OpenRouter key pool configured for fallback; skipping",
@@ -293,18 +336,21 @@ class StrongModelAgentFactory:
         # Build custom_parameters for Anthropic.
         # Allow model configs to declare default thinking/output controls and let
         # runtime reasoning_token_budget override only the thinking budget piece.
-        custom_params = dict(model_config.get("custom_parameters", {}))
+        custom_params = _with_model_phase_token_caps(
+            dict(model_config.get("custom_parameters", {})),
+            model_config,
+        )
 
-        # Set appropriate max_tokens based on model type
-        # Haiku models have a 4096 token limit, others can go higher
+        # Set appropriate max_tokens based on model type.
+        # Default caps should leave enough room for reasoning-heavy runs.
         if "haiku" in model_name.lower():
-            actual_max_tokens = min(max_tokens, 4096)
-        elif "claude-opus-4-6" in model_name.lower():
-            actual_max_tokens = min(max_tokens, 32768)
+            actual_max_tokens = min(max_tokens, 16384)
+        elif "claude-opus-4-6" in model_name.lower() or "claude-sonnet-4-6" in model_name.lower():
+            actual_max_tokens = min(max_tokens, 65536)
         elif "opus" in model_name.lower():
-            actual_max_tokens = min(max_tokens, 4096)
+            actual_max_tokens = min(max_tokens, 16384)
         else:
-            actual_max_tokens = min(max_tokens, 8192)
+            actual_max_tokens = min(max_tokens, 16384)
 
         configured_budget = custom_params.get("thinking_budget_tokens")
         if configured_budget is not None:
@@ -368,11 +414,20 @@ class StrongModelAgentFactory:
             model_type = ModelType.GPT_4  # default fallback
 
         # Allow model configs to pass through provider-native parameters (for
-        # example reasoning_effort) while keeping runtime budget overrides highest
-        # priority.
-        custom_params = dict(model_config.get("custom_parameters", {}))
+        # example reasoning_effort, including xhigh) while keeping runtime budget
+        # overrides highest priority.
+        custom_params = _with_model_phase_token_caps(
+            dict(model_config.get("custom_parameters", {})),
+            model_config,
+        )
         if "reasoning_effort" in model_config:
-            custom_params["reasoning_effort"] = model_config["reasoning_effort"]
+            reasoning_effort = model_config["reasoning_effort"]
+            if reasoning_effort not in OPENAI_REASONING_EFFORTS:
+                raise ValueError(
+                    f"Unsupported OpenAI reasoning_effort for {model_name}: "
+                    f"{reasoning_effort!r}"
+                )
+            custom_params["reasoning_effort"] = reasoning_effort
 
         # Map reasoning_token_budget to reasoning_effort for O3/O1/GPT-5 models
         # This overrides model_config's reasoning_effort if budget is specified
@@ -418,7 +473,7 @@ class StrongModelAgentFactory:
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={}
+            custom_parameters=_with_model_phase_token_caps({}, model_config)
         )
         
         # Store the actual model_id for the agent to use
@@ -443,7 +498,7 @@ class StrongModelAgentFactory:
             temperature=model_config["temperature"],
             max_tokens=max_tokens,
             system_prompt=model_config["system_prompt"],
-            custom_parameters={}
+            custom_parameters=_with_model_phase_token_caps({}, model_config)
         )
 
         # Store the actual model_id for the agent to use
@@ -469,21 +524,10 @@ class StrongModelAgentFactory:
             self.logger.warning(f"Model path does not exist: {local_path}, skipping {model_name}")
             return None
         
-        custom_params = dict(model_config.get("custom_parameters", {}))
-        phase_token_caps = {
-            phase_name: model_config[field_name]
-            for phase_name, field_name in {
-                "discussion": "max_tokens_discussion",
-                "thinking": "max_tokens_thinking",
-                "proposal": "max_tokens_proposal",
-                "voting": "max_tokens_voting",
-                "reflection": "max_tokens_reflection",
-                "default": "max_tokens_default",
-            }.items()
-            if model_config.get(field_name) is not None
-        }
-        if phase_token_caps:
-            custom_params["phase_token_caps"] = phase_token_caps
+        custom_params = _with_model_phase_token_caps(
+            dict(model_config.get("custom_parameters", {})),
+            model_config,
+        )
 
         # Use GEMMA_2_27B as base type (just for config compatibility, won't be used)
         llm_config = LLMConfig(
@@ -516,7 +560,10 @@ class StrongModelAgentFactory:
             self.logger.warning(f"No OpenRouter API key pool configured, skipping {model_name}")
             return None
         
-        custom_parameters = dict(model_config.get("custom_parameters", {}))
+        custom_parameters = _with_model_phase_token_caps(
+            dict(model_config.get("custom_parameters", {})),
+            model_config,
+        )
         custom_parameters["model_id"] = model_config["model_id"]
 
         agent_config = AgentConfiguration(

@@ -190,7 +190,7 @@ else
 fi
 
 # Max tokens per phase (high to allow full reasoning)
-MAX_TOKENS_PER_PHASE=10500
+MAX_TOKENS_PER_PHASE=16384
 
 # Base seed
 BASE_SEED=42
@@ -384,7 +384,7 @@ cat > "${TTC_SLURM}" << SLURM_TTC
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "\${BASE_DIR}"
 mkdir -p logs/cluster
 

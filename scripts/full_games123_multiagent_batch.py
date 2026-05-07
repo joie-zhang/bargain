@@ -1708,7 +1708,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
             "OPENROUTER_TRANSPORT": env.get("OPENROUTER_TRANSPORT", "proxy"),
             "OPENROUTER_PROXY_POLL_DIR": env.get(
                 "OPENROUTER_PROXY_POLL_DIR",
-                "/home/jz4391/openrouter_proxy",
+                "bargain/openrouter_proxy",
             ),
             "OPENROUTER_PROXY_CLIENT_TIMEOUT": env.get("OPENROUTER_PROXY_CLIENT_TIMEOUT", "9000"),
             "OPENROUTER_API_TIMEOUT": env.get("OPENROUTER_API_TIMEOUT", "1800"),
@@ -1797,7 +1797,7 @@ module purge
 module load anaconda3/2024.2
 module load proxy/default
 
-KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-/home/jz4391/.config/bargain/api_keys.env}}"
+KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-bargain/api_keys.env}}"
 if [[ -f "$KEY_ENV_FILE" ]]; then
   set -a
   source "$KEY_ENV_FILE"
@@ -1822,7 +1822,7 @@ else
 fi
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
-export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
+export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-bargain/openrouter_proxy}}"
 export OPENROUTER_PROXY_CLIENT_TIMEOUT="${{OPENROUTER_PROXY_CLIENT_TIMEOUT:-9000}}"
 export OPENROUTER_API_TIMEOUT="${{OPENROUTER_API_TIMEOUT:-1800}}"
 export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-$RUN_DIR/monitoring/provider_failures.md}}"

@@ -74,7 +74,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--c-max", type=float, default=30.0)
     parser.add_argument("--max-rounds", type=int, default=10)
     parser.add_argument("--discussion-turns", type=int, default=2)
-    parser.add_argument("--max-tokens-per-phase", type=int, default=10500)
+    parser.add_argument("--max-tokens-per-phase", type=int, default=16384)
     parser.add_argument("--base-seed", type=int, default=42)
     parser.add_argument("--num-runs", type=int, default=1)
     parser.add_argument("--transparency", choices=["aggregate", "own", "full"], default="own")

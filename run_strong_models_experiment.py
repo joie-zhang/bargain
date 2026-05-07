@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from strong_models_experiment import StrongModelsExperiment, STRONG_MODELS_CONFIG
+from strong_models_experiment.configs import DEFAULT_MAX_TOKENS_PER_PHASE
 from negotiation.provider_key_rotation import has_provider_keys
 
 
@@ -335,8 +336,11 @@ async def main():
     parser.add_argument(
         "--max-tokens-per-phase",
         type=int,
-        default=None,
-        help="Set max_tokens for EACH individual phase/API call (default: no per-phase cap)"
+        default=DEFAULT_MAX_TOKENS_PER_PHASE,
+        help=(
+            "Set max_tokens for EACH individual phase/API call "
+            f"(default: {DEFAULT_MAX_TOKENS_PER_PHASE})"
+        )
     )
 
     parser.add_argument(

@@ -148,7 +148,7 @@ echo "=============================================="
 
 # Load environment
 source ~/.bashrc
-KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-/home/jz4391/.config/bargain/api_keys.env}}"
+KEY_ENV_FILE="${{BARGAIN_API_KEYS_ENV:-bargain/api_keys.env}}"
 if [[ -f "$KEY_ENV_FILE" ]]; then
   set -a
   source "$KEY_ENV_FILE"
@@ -158,10 +158,10 @@ module load python/3.9
 module load cuda/11.8
 
 # Activate virtual environment
-source /scratch/gpfs/DANQIC/jz4391/bargain/.venv/bin/activate
+source bargain/.venv/bin/activate
 
 # Navigate to project directory
-cd /scratch/gpfs/DANQIC/jz4391/bargain
+cd bargain
 
 export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-{config['output']['base_dir']}/monitoring/provider_failures.md}}"
 mkdir -p "$(dirname "$LLM_FAILURE_REPORT_PATH")"

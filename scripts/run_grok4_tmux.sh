@@ -21,7 +21,7 @@
 
 set -e
 
-BASE_DIR="/scratch/gpfs/DANQIC/jz4391/bargain"
+BASE_DIR="bargain"
 cd "${BASE_DIR}"
 
 # Config directory (use timestamped path)
