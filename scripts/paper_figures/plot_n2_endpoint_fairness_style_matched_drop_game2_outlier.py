@@ -23,7 +23,7 @@ import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -33,7 +33,7 @@ from strong_models_experiment.analysis.active_model_roster import (  # noqa: E40
 
 
 AGENT_METRICS_CSV = PROJECT_ROOT / "analysis" / "nash_lindahl_fairness_20260505" / "agent_metrics.csv"
-ELO_CSV = PROJECT_ROOT / "Figures" / "game_1" / "average_utility_vs_elo.csv"
+ELO_CSV = Path(__file__).resolve().parent / "assets" / "endpoint_fairness_elo_snapshot.csv"
 OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano" / "fairness_explanation"
 
 OUT_PNG = OUT_DIR / "baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm_drop_game2_lowest_elo_style_matched.png"

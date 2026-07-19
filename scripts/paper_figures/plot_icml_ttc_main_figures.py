@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ICML_GRAPHICS = PROJECT_ROOT / "overleaf/icml_aiwild_template/graphics"
 TTC_SUMMARY_CSV = PROJECT_ROOT / "analysis/neurips_revision_20260504/ttc_game_averaged_by_effort.csv"
 TTC_INTENSITY_CSV = (

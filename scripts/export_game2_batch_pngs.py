@@ -3,8 +3,8 @@
 Export summary PNG plots for a Game 2 diplomacy batch.
 
 Usage:
-    python visualization/export_game2_batch_pngs.py
-    python visualization/export_game2_batch_pngs.py --results-dir experiments/results/diplomacy_20260404_052849
+    python scripts/export_game2_batch_pngs.py
+    python scripts/export_game2_batch_pngs.py --results-dir experiments/results/diplomacy_20260404_052849
 """
 
 from __future__ import annotations
@@ -117,7 +117,19 @@ def parse_args() -> argparse.Namespace:
         "--output-dir",
         type=str,
         default=None,
-        help="Output directory for PNGs. Defaults to visualization/figures/<batch_name>_summary.",
+        help="Output directory. Defaults to analysis/game2_batch_summaries/<batch_name>_summary.",
+    )
+    parser.add_argument(
+        "--long-csv",
+        type=str,
+        default=None,
+        help="Adversary-level CSV path. Defaults to <output-dir>/utility_vs_elo_adversary_long.csv.",
+    )
+    parser.add_argument(
+        "--roster-csv",
+        type=str,
+        default=None,
+        help="Optional fixed model, model_short, and elo table for exact historical exports.",
     )
     parser.add_argument(
         "--elo-markdown",
@@ -148,6 +160,20 @@ def parse_elo_markdown(markdown_path: Path) -> Dict[str, int]:
         model_name = match.group(1).strip().strip("`")
         elo_by_model[model_name] = int(match.group(2))
     return elo_by_model
+
+
+def load_roster_csv(path: Path) -> Dict[str, Tuple[str, float]]:
+    frame = pd.read_csv(path)
+    required = {"model", "model_short", "elo"}
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(f"{path} is missing required columns: {', '.join(missing)}")
+    if frame["model"].duplicated().any():
+        raise ValueError(f"{path} contains duplicate model rows")
+    return {
+        str(row.model): (str(row.model_short), float(row.elo))
+        for row in frame.itertuples(index=False)
+    }
 
 
 def model_short_name(model_name: str) -> str:
@@ -243,6 +269,7 @@ def _infer_utility_by_model(
 def load_batch_frames(
     results_root: Path,
     elo_by_model: Dict[str, int],
+    roster_snapshot: Optional[Dict[str, Tuple[str, float]]] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     index_path = results_root / "configs" / "experiment_index.csv"
     if not index_path.exists():
@@ -260,8 +287,10 @@ def load_batch_frames(
             output_dir = _resolve_output_dir(config_payload["output_dir"])
             result_path = _result_file(output_dir)
 
-            model1 = canonical_model_name(row["model1"])
-            model2 = canonical_model_name(row["model2"])
+            raw_model1 = str(row["model1"])
+            raw_model2 = str(row["model2"])
+            model1 = canonical_model_name(raw_model1)
+            model2 = canonical_model_name(raw_model2)
             if not is_active_adversary_model(model2):
                 continue
             rho = float(row["rho"])
@@ -312,14 +341,21 @@ def load_batch_frames(
             )
 
             for model_name, utility in utility_by_model.items():
+                export_model = model_name
+                if roster_snapshot:
+                    if model_name == model1 and raw_model1 in roster_snapshot:
+                        export_model = raw_model1
+                    elif model_name == model2 and raw_model2 in roster_snapshot:
+                        export_model = raw_model2
+                roster_row = roster_snapshot.get(export_model) if roster_snapshot else None
                 long_rows.append(
                     {
                         "experiment_id": int(row["experiment_id"]),
-                        "model": model_name,
-                        "model_short": model_short_name(model_name),
+                        "model": export_model,
+                        "model_short": roster_row[0] if roster_row else model_short_name(model_name),
                         "role": "baseline" if model_name == model1 else "adversary",
                         "utility": utility,
-                        "elo": model_elo(model_name, elo_by_model),
+                        "elo": roster_row[1] if roster_row else model_elo(model_name, elo_by_model),
                         "rho": rho,
                         "theta": theta,
                         "competition_index": ci,
@@ -665,12 +701,21 @@ def main() -> None:
     output_dir = (
         _resolve_candidate(args.output_dir)
         if args.output_dir
-        else (PROJECT_ROOT / "visualization" / "figures" / f"{results_root.name}_summary")
+        else (PROJECT_ROOT / "analysis" / "game2_batch_summaries" / f"{results_root.name}_summary")
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     elo_by_model = parse_elo_markdown(elo_markdown)
-    index_df, experiment_df, long_df = load_batch_frames(results_root, elo_by_model)
+    roster_snapshot = (
+        load_roster_csv(_resolve_candidate(args.roster_csv))
+        if args.roster_csv
+        else None
+    )
+    index_df, experiment_df, long_df = load_batch_frames(
+        results_root,
+        elo_by_model,
+        roster_snapshot=roster_snapshot,
+    )
     if experiment_df.empty or long_df.empty:
         raise RuntimeError(f"No completed result artifacts found under {results_root}")
     missing_elo_models = sorted(
@@ -684,6 +729,17 @@ def main() -> None:
         )
 
     adversary_df = _adversary_only(long_df)
+    long_csv = (
+        _resolve_candidate(args.long_csv)
+        if args.long_csv
+        else output_dir / "utility_vs_elo_adversary_long.csv"
+    )
+    long_csv.parent.mkdir(parents=True, exist_ok=True)
+    long_export = adversary_df.sort_values(
+        ["rho", "theta", "elo", "experiment_id"],
+        kind="stable",
+    ).reset_index(drop=True)
+    long_export.to_csv(long_csv, index=False)
 
     _save_overall_utility_vs_elo(adversary_df, output_dir)
     _save_utility_vs_elo_by_ci(adversary_df, output_dir)
@@ -717,6 +773,7 @@ def main() -> None:
     _write_report(index_df, output_dir, results_root)
 
     print(f"Saved PNG plots to: {output_dir}")
+    print(f"Saved adversary-level CSV to: {long_csv}")
 
 
 if __name__ == "__main__":

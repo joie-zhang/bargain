@@ -49,8 +49,8 @@ Read `docs/appendix_llama33_baseline_experiment_spec_2026_05.md` before you chan
 ## TTC Figures
 
 Use `scripts/analyze_neurips_revision_stats.py`,
-`scripts/plot_icml_ttc_main_figures.py`, and the other current `plot_ttc_*`
-scripts. The January and February TTC plotters were removed because they used
+`scripts/paper_figures/plot_icml_ttc_main_figures.py`, and the other current TTC
+renderers under `scripts/paper_figures/`. The January and February TTC plotters were removed because they used
 superseded experiment formats.
 
 ## Output Checks

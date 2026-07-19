@@ -53,13 +53,13 @@ round. Utilities can be time-discounted by `gamma_discount`.
 |   context compaction, and lower-level agent utilities.
 |-- scripts/
 |   Batch generation, Slurm submission, monitoring, plotting, and paper
-|   analysis scripts. Many older scripts are kept for provenance.
+|   analysis scripts. Dedicated paper renderers are in scripts/paper_figures/.
 |-- experiments/results/
 |   Large generated result trees. Usually not something to edit by hand.
 |-- analysis/
 |   Derived CSVs, reports, and figure-generation outputs.
-|-- Figures/
-|   Paper-facing and presentation-facing figure exports.
+|-- overleaf/
+|   The current paper roots and their paper-facing graphics.
 |-- ui/
 |   Streamlit viewers for individual runs, batches, and multi-game comparison.
 |-- docs/
@@ -326,7 +326,8 @@ Important derived directories:
 - `analysis/nash_lindahl_fairness_20260505/`: NBS/Lindahl recomputation and
   benchmark-relative exploitation summaries.
 - `analysis/full_games123_*`: multi-agent aggregate CSVs and plots.
-- `Figures/`: exported figures for slides and paper drafts.
+- `scripts/paper_figures/`: dedicated renderers and small fixed rendering assets.
+- `overleaf/*/graphics/`: paper-root-specific figure exports.
 
 The active model roster and Elo helpers live in:
 

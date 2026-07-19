@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from matplotlib import font_manager
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BASE_PNG = Path("/tmp/bargain_figure3_recreate/fairshare_residual_combined.png")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+BASE_PNG = Path(__file__).resolve().parent / "assets" / "fairshare_residual_combined_base.png"
 OUT_ICML = (
     PROJECT_ROOT
     / "overleaf"
@@ -31,18 +32,7 @@ OUT_NEURIPS = (
     / "n2_gpt5_nano"
     / "fairshare_residual_combined.png"
 )
-FONT_PATH = (
-    PROJECT_ROOT
-    / ".venv"
-    / "lib"
-    / "python3.14"
-    / "site-packages"
-    / "matplotlib"
-    / "mpl-data"
-    / "fonts"
-    / "ttf"
-    / "DejaVuSans.ttf"
-)
+FONT_PATH = Path(font_manager.findfont("DejaVu Sans"))
 RIGHT_PANEL_SHIFT = 16
 RIGHT_PANEL_SOURCE_LEFT = 1210
 

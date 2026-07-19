@@ -495,7 +495,8 @@ def analyze_exploitation(output_dir: Path) -> pd.DataFrame:
 def analyze_bilateral_utility(output_dir: Path, elo_markdown: Path) -> pd.DataFrame:
     elo_by_model = parse_elo_markdown(elo_markdown)
     game2_long_csv = (
-        PROJECT_ROOT / "visualization/figures/diplomacy_20260405_082215_summary/utility_vs_elo_adversary_long.csv"
+        PROJECT_ROOT
+        / "analysis/neurips_revision_20260504/inputs/game2_utility_vs_elo_adversary_long.csv"
     )
     if game2_long_csv.exists():
         game2_long = pd.read_csv(game2_long_csv)

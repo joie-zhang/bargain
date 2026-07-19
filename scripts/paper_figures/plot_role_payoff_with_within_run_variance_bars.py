@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = PROJECT_ROOT / "overleaf/neurips/graphics/n_gt_2_report"
 
 ROLE_METRICS = OUT_DIR / "role_payoff_curves_by_strength_run_metrics.csv"

@@ -19,7 +19,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 IN_CSV = PROJECT_ROOT / "experiments" / "results" / "n2_baseline_comparison_analysis_20260505" / "overall_by_model_game.csv"
 OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano"
 OUT_PNG = OUT_DIR / "11_fairness_distance_three_game_curves.png"

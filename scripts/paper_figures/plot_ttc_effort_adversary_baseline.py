@@ -12,8 +12,8 @@ dotted lines show the fixed GPT-5-nano baseline utility. Points are means over
 matched runs and error bars are SEM.
 
 Usage:
-    python scripts/plot_ttc_effort_adversary_baseline.py
-    python scripts/plot_ttc_effort_adversary_baseline.py --output /tmp/ttc.png
+    python scripts/paper_figures/plot_ttc_effort_adversary_baseline.py
+    python scripts/paper_figures/plot_ttc_effort_adversary_baseline.py --output /tmp/ttc.png
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from matplotlib.lines import Line2D
 import pandas as pd
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_CSV = (
     PROJECT_ROOT
     / "experiments"

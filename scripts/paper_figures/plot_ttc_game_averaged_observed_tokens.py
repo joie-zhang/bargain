@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ORDER_AVG_CSV = PROJECT_ROOT / "analysis/neurips_revision_20260504/ttc_order_averaged.csv"
 SUMMARY_CSV = PROJECT_ROOT / "analysis/neurips_revision_20260504/ttc_game_averaged_by_effort.csv"
 PANEL_OUTPUT_PATH = (
@@ -236,7 +236,12 @@ def plot_panels(
 
 def main() -> None:
     order_avg, summary = load_data()
-    plot_panels(summary, PANEL_OUTPUT_PATH)
+    plot_panels(
+        summary,
+        PANEL_OUTPUT_PATH,
+        x_label_override="Inference Tokens",
+        y_label_override="Payoff",
+    )
     plot_panels(summary, PANEL_WITH_POINTS_OUTPUT_PATH, order_avg)
     print(PANEL_OUTPUT_PATH)
     print(PANEL_WITH_POINTS_OUTPUT_PATH)

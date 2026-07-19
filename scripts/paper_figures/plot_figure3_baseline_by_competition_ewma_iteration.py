@@ -21,7 +21,7 @@ from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INPUT_CSV = PROJECT_ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv"
 ITERATION_DIR = PROJECT_ROOT / "experiments/results/figure_iteration_20260507/gpt5_nano"
 MAIN_OUTPUT_PATH = (

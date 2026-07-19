@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INPUT_CSV = PROJECT_ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv"
 OUTPUT_PATH = PROJECT_ROOT / "overleaf/neurips/graphics/n2_gpt5_nano/10_total_welfare_by_competition_ewma.png"
 ATTAINABLE_CSV = (

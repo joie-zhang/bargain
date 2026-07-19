@@ -800,8 +800,8 @@ def main() -> None:
     <li><code>scripts/analyze_n2_baseline_comparison.py</code></li>
     <li><code>scripts/analyze_n2_plus_multiagent_comparison.py</code></li>
     <li><code>scripts/build_n2_ttc_multiagent_report.py</code></li>
-    <li><code>scripts/plot_figure3_baseline_by_competition_ewma_iteration.py</code></li>
-    <li><code>scripts/plot_ttc_effort_adversary_baseline.py</code></li>
+    <li><code>scripts/paper_figures/plot_figure3_baseline_by_competition_ewma_iteration.py</code></li>
+    <li><code>scripts/paper_figures/plot_ttc_effort_adversary_baseline.py</code></li>
     <li><code>docs/cleanup_and_release_plan_2026_06.md</code></li>
   </ul>
   <p>

@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GRAPHICS_DIR = PROJECT_ROOT / "overleaf/icml_aiwild_template/graphics/n_gt_2_report"
 GINI_SUMMARY = GRAPHICS_DIR / "homogeneous_adversary_baseline_only_vs_all_payoff_gini_summary.csv"
 ROLE_SUMMARY = GRAPHICS_DIR / "role_payoff_with_within_run_variance_bars_summary.csv"

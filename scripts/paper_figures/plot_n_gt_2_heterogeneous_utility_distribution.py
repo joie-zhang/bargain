@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 AGENT_TABLE = (
     PROJECT_ROOT
     / "experiments/results/n2_plus_multiagent_comparison_analysis_20260505"

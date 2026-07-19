@@ -26,22 +26,21 @@ Each machine-readable manifest contains one row for each active
   name or a later visual edit.
 - `manual-composite`: The scripts for the component plots exist, but code for the
   final combined image was not found.
+- `manual-asset`: The author made the final asset outside this repository. No
+  generation script is expected.
 - `nonportable`: The producer exists, but it reads a temporary or deleted path.
 - `unresolved`: No producer or source was found.
 
 ## Open Problems
 
-1. `F004` has no known source or generation script.
-2. `F005`, `F025`, `F026`, and `F027` have no final composition script.
-3. `F008` reads its source image from `/tmp`. Move that source into a retained bundle.
-4. `F013` reads `Figures/game_1/average_utility_vs_elo.csv`. That file was deleted.
-   Change the script to use a canonical Elo table before the figure is regenerated.
-5. Several scripts write to older Overleaf staging trees. The final release must use
+1. `F005`, `F025`, `F026`, and `F027` have no final composition script.
+2. Several scripts write to older Overleaf staging trees. The final release must use
    one explicit export destination.
-6. The ICML and NeurIPS introduction files each contain a hero path that is missing
-   relative to the paper root. The ICML log confirms that it compiled a placeholder.
-7. Seven graphic paths are active only in an older root. Keep them and their
+3. Seven graphic paths are active only in an older root. Keep them and their
    dependencies until the paper-root consolidation is complete.
+
+The repository contains the fixed inputs for `F008` and `F013` under
+`scripts/paper_figures/assets/`.
 
 Run the validator after a paper or figure change:
 

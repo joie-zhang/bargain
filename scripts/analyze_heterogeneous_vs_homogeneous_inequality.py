@@ -27,7 +27,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 import full_games123_multiagent_batch as full  # noqa: E402
 import random_monoculture_control_batch as rmc  # noqa: E402
 from full_games123_multiagent_batch import elo_for_model  # noqa: E402
-from plot_random_monoculture_gini_vs_heterogeneous import shifted_gini  # noqa: E402
+from paper_figures.plot_random_monoculture_gini_vs_heterogeneous import shifted_gini  # noqa: E402
 
 
 DEFAULT_HOM_ROOT = (

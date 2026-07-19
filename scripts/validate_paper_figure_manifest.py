@@ -62,6 +62,13 @@ def split_paths(value: str) -> list[str]:
     return [item for item in value.split(";") if item]
 
 
+def resolve_graphic(root: Path, graphic_path: str) -> Path:
+    local_path = root / graphic_path
+    if local_path.is_file():
+        return local_path
+    return PROJECT_ROOT / "overleaf" / graphic_path
+
+
 def validate_coverage(
     name: str,
     rows: list[dict[str, str]],
@@ -88,7 +95,7 @@ def validate_detailed_rows(
             errors.append(f"nextgame: duplicate figure_id: {figure_id}")
         ids.add(figure_id)
 
-        graphic = root / row["graphic_path"]
+        graphic = resolve_graphic(root, row["graphic_path"])
         if not graphic.is_file():
             errors.append(f"{figure_id}: graphic does not exist: {row['graphic_path']}")
         elif file_hash(graphic) != row["sha256"]:
@@ -129,7 +136,7 @@ def validate_reference_rows(
             errors.append(f"{name}: duplicate figure_id: {figure_id}")
         ids.add(figure_id)
 
-        graphic = root / row["graphic_path"]
+        graphic = resolve_graphic(root, row["graphic_path"])
         expected_missing = row["resolution_status"] == "missing"
         if expected_missing:
             if graphic.exists():
