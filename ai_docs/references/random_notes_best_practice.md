@@ -1,1 +1,0 @@
-You need to create detailed specifications of the task (with Claude's help) and then write tests that validate each roll out confirms to the specification. It's a PITA but it also sets up the groundwork for more wild experimentation knowing you are still within the confines of the original specification
