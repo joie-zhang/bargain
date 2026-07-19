@@ -91,7 +91,7 @@ For experimental validation:
 **IMPORTANT**: When creating markdown files or documentation, always place them in the appropriate `docs/` subdirectory rather than the project root. Use:
 - `docs/guides/` for tutorials and how-to documentation
 - `docs/reference/` for API references and technical specifications
-- `docs/templates/` for reusable document templates
+- `docs/analysis/` for analysis records and implementation notes
 - `docs/` root only for high-level planning documents
 </directory_structure>
 
@@ -152,7 +152,7 @@ For experimental validation:
 3. **File Organization**: Maintain strict file organization
    - Place all markdown documentation in `docs/` subdirectories
    - **CRITICAL**: Never create markdown files in the project root unless it is a README.md
-   - Implementation log files like 'FEATURE_IMPLEMENTATION.md' go in `ai_docs/cc_implementation_logs/`
+   - Implementation and analysis notes go in `docs/analysis/`
    - **CRITICAL**: All test files (test_*.py, *_test.py, *.test.js, etc.) go in `tests/` directory
    - Never create test files in the project root
    - Use appropriate subdirectories for different file types
@@ -654,20 +654,11 @@ Ensure reproducibility across different environments and scales."
 <automation>
 - Mock data validation: Blocked by default, docs/ exempt
 - **File organization validation**: Automatically blocks and redirects misplaced files
-  - Markdown files (except README.md) in root → redirected to `ai_docs/cc_implementation_logs/`
+  - Markdown files (except README.md) in root → redirected to `docs/analysis/`
   - Test files in root → redirected to `tests/`
   - Provides clear guidance on correct file placement
   - Runs on Write, Edit, and MultiEdit operations
-- Git auto-commit: Intelligent selective commits for research sessions
-  - Only commits files in: results/, experiments/, specs/, tasks/, issues/, docs/
-  - Detects research/experiment sessions from conversation context
-  - Generates smart commit messages based on file types and context
-  - Logs all actions to ~/.claude/logs/auto-commit.log
-- Python formatting: Black runs automatically post-edit
-- Activity logging: All actions logged to ~/.claude/research-activity.log
-- Test execution: Automatic on file changes matching test_*.py
-
-For detailed automation documentation, see `docs/guides/automation-hooks.md`
+- Hook definitions live in `.claude/settings.json` and `.claude/hooks/`.
 </automation>
 
 ## Virtual Environment Management
@@ -724,17 +715,17 @@ When encountering package-related errors (e.g., `ModuleNotFoundError`, `ImportEr
 - **verification_metrics.py**: Common metrics for result validation
 
 ### Key Directories
-- **ai_docs/**: Store AI-optimized documentation and summaries
-  - **cc_implementation_logs/**: All markdown files created during Claude Code sessions
-    - Implementation notes, debugging logs, analysis documents
-    - NEVER create markdown files in project root - always use this directory
+- **docs/**: Store project documentation for researchers and AI agents
+  - **analysis/**: Historical analysis records and implementation notes
+  - **guides/**: Current procedures and user guides
+  - **reference/**: Generated references and technical audits
 - **specs/**: Experiment and feature specifications
   - Contains `EXAMPLE_RESEARCH_SPEC.md` - Template for creating detailed specs
 - **experiments/**: Experiment configs, results, and logs
 - **external_codebases/**: Integration point for external code
 - **.claude/**: Claude-specific configuration and hooks
 - **scripts/**: Automation and command implementations
-- **docs/**: Template documentation and guides
+- **docs/**: Project documentation and research records
 - **examples/**: Example workflows and patterns
 
 ### Important Templates

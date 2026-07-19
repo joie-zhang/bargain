@@ -18,7 +18,7 @@ Your expertise includes:
 <task_context>
 The user has downloaded the AI Safety Research template repository and wants to integrate it with their existing research codebase. They need guidance on:
 - Merging the template structure with their code
-- Creating comprehensive documentation in ai_docs/
+- Creating project documentation in `docs/analysis/setup/`
 - Setting up project-specific CLAUDE.md instructions
 - Building custom slash commands for their workflow
 - Establishing verification and testing patterns
@@ -52,7 +52,7 @@ The goal is to transform their codebase into an AI-agent-friendly environment wh
 3. **Essential Directory Creation**
    Create missing directories for AI agent workflows:
    ```
-   mkdir -p ai_docs/{papers,summaries,context,cheatsheets}
+   mkdir -p docs/analysis/setup/{papers,summaries,context,cheatsheets}
    mkdir -p specs/{experiments,features,analysis}
    mkdir -p experiments/{configs,results,logs,checkpoints}
    mkdir -p logs/{daily,experiments,debug}
@@ -65,19 +65,19 @@ The goal is to transform their codebase into an AI-agent-friendly environment wh
       - "Record yourself explaining your research as if to a new collaborator"
       - "Include: hypothesis, methods, challenges, previous attempts"
       - "Mention specific functions, files, and workflows you use often"
-      - Save as `ai_docs/context/research_overview_transcript.txt`
+      - Save as `docs/analysis/setup/context/research_overview_transcript.txt`
    
    b) **Paper Collection**:
-      - "Add 3-5 most relevant papers to ai_docs/papers/"
+      - "Add 3-5 most relevant papers to docs/analysis/setup/papers/"
       - "Include your own papers/preprints if any"
       - Use Gemini to create summaries: 
         ```bash
-        gemini -p "@ai_docs/papers/[paper.pdf] Summarize focusing on methods and results relevant to [their-research]"
+        gemini -p "@docs/analysis/setup/papers/[paper.pdf] Summarize focusing on methods and results relevant to [their-research]"
         ```
    
    c) **Codebase Documentation**:
       - "Let's map your codebase structure"
-      - Create `ai_docs/context/codebase_map.md`
+      - Create `docs/analysis/setup/context/codebase_map.md`
       - Document key files, functions, and data flows
       - Note common issues and workarounds
 
@@ -184,7 +184,7 @@ The goal is to transform their codebase into an AI-agent-friendly environment wh
 11. **Documentation and Next Steps**
     Create a roadmap:
     - Save refined spec as template for similar tasks
-    - Document what was set up in `ai_docs/setup_summary.md`
+    - Document what was set up in `docs/analysis/setup/setup_summary.md`
     - Create command for your most common workflow
     - Plan next specification to write
 
@@ -217,7 +217,7 @@ git merge template/main --allow-unrelated-histories
 **Step 2: Creating AI-Friendly Structure**
 Let me create the directories you'll need:
 ```bash
-mkdir -p ai_docs/{papers,summaries,context,cheatsheets}
+mkdir -p docs/analysis/setup/{papers,summaries,context,cheatsheets}
 mkdir -p specs/{experiments,ablations,features}
 mkdir -p experiments/{configs,results,logs,checkpoints}
 ```
@@ -230,7 +230,7 @@ This is crucial! Please do a 15-20 minute speech-to-text recording explaining:
 - Previous ablation results and insights
 - Common failure modes and debugging strategies
 
-Save this as `ai_docs/context/research_overview.txt`
+Save this as `docs/analysis/setup/context/research_overview.txt`
 
 **Step 4: Customizing CLAUDE.md**
 I'll help you add project-specific instructions:
@@ -293,7 +293,7 @@ python scripts/integrate_codebase.py https://github.com/[your-username]/rl-exper
 ```
 
 **Step 3: Create Unified Context**
-Let's create a comprehensive map in `ai_docs/context/multi_repo_structure.md`:
+Let's create a comprehensive map in `docs/analysis/setup/context/multi_repo_structure.md`:
 ```markdown
 # Hierarchical RL Research Structure
 
@@ -356,13 +356,13 @@ git merge template/main --allow-unrelated-histories --strategy-option=theirs
 
 **Step 2: Theory-Specific Structure**
 ```bash
-mkdir -p ai_docs/{derivations,proofs,notation,references}
+mkdir -p docs/analysis/setup/{derivations,proofs,notation,references}
 mkdir -p specs/{theorems,lemmas,conjectures}
 mkdir -p validation/{notebooks,scripts,figures}
 ```
 
 **Step 3: Context for Theoretical Work**
-Please create a comprehensive notation guide in `ai_docs/notation/notation_guide.md`:
+Please create a comprehensive notation guide in `docs/analysis/setup/notation/notation_guide.md`:
 ```markdown
 # Notation Guide
 
@@ -386,7 +386,7 @@ Let's create commands for theoretical work:
 
 **Step 5: LaTeX + Notebook Workflow**
 Set up AI-friendly documentation:
-- Extract theorem statements to `ai_docs/theorems/`
+- Extract theorem statements to `docs/analysis/setup/theorems/`
 - Create proof sketches in markdown
 - Link notebooks to specific theoretical results
 

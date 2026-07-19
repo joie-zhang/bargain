@@ -58,12 +58,7 @@ def main():
         ("Markdown in root", "Write", "test.md", True),
         ("README.md in root", "Write", "README.md", False),
         ("Markdown in docs", "Write", "docs/guide.md", False),
-        (
-            "Markdown in ai_docs",
-            "Write",
-            "ai_docs/cc_implementation_logs/impl.md",
-            False,
-        ),
+        ("Markdown in docs analysis", "Write", "docs/analysis/impl.md", False),
         # Test files in root (should block)
         ("Python test in root", "Write", "test_example.py", True),
         ("JS test in root", "Write", "example.test.js", True),

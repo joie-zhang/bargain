@@ -5,7 +5,7 @@ Help the user launch the correct Streamlit UI and set up port forwarding on thei
 ## Step 1: Ask which game
 
 Ask the user which game they want to view results for:
-- **Game 1**: Item Allocation → `ui/negotiation_viewer.py`
+- **Game 1**: Item Allocation → `ui/game1_sample_viewer.py`
 - **Game 2**: Diplomatic Treaty → `ui/experiment_viewer.py`
 - **Game 3**: Co-Funding / Participatory Budgeting → `ui/experiment_viewer.py`
 
@@ -25,7 +25,7 @@ If it returns `200`, tell the user a viewer is already running on that port and 
 Activate the venv and launch in the background:
 
 ```bash
-source .venv/bin/activate && streamlit run ui/<VIEWER>.py --server.port <PORT> --server.headless true &
+source .venv/bin/activate && streamlit run ui/<VIEWER>.py --server.address 127.0.0.1 --server.port <PORT> --server.headless true &
 ```
 
 Wait a couple seconds, then confirm it's up with the same `curl` health check.
@@ -51,5 +51,6 @@ Explain:
 
 ## Notes
 - Game 2 and Game 3 both use `experiment_viewer.py`, which has a sidebar to switch between game types
+- Use `multi_game_sample_viewer.py` to browse samples from all three games
 - `diplomacy_latest` in the results directory is a symlink and is intentionally skipped — use the dated directory (e.g., `diplomacy_20260304_015517`) instead
 - If the port is already in use by another process, suggest trying port 8502 or 8503

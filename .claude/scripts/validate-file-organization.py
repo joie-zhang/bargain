@@ -45,8 +45,10 @@ def main():
         base_name = os.path.basename(abs_path)
         dir_name = os.path.dirname(abs_path)
 
-        # Get the project root (use absolute path for reliability)
-        project_root = "bargain"
+        # Resolve the repository root from this script's stable location.
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
 
         # Check if file is being created in project root
         if os.path.dirname(abs_path) == project_root:
@@ -58,17 +60,16 @@ def main():
                 )
                 print(f"Please use one of these locations instead:", file=sys.stderr)
                 print(
-                    f"  • Implementation logs → ai_docs/cc_implementation_logs/{base_name}",
+                    f"  • Analysis records → docs/analysis/{base_name}",
                     file=sys.stderr,
                 )
                 print(f"  • User guides → docs/guides/{base_name}", file=sys.stderr)
                 print(
                     f"  • Reference docs → docs/reference/{base_name}", file=sys.stderr
                 )
-                print(f"  • Templates → docs/templates/{base_name}", file=sys.stderr)
                 print(f"  • Planning docs → docs/{base_name}", file=sys.stderr)
                 print(
-                    f"\nSuggested action: Create the file in ai_docs/cc_implementation_logs/{base_name}",
+                    f"\nSuggested action: Create the file in docs/analysis/{base_name}",
                     file=sys.stderr,
                 )
                 sys.exit(2)  # Exit code 2 blocks the tool and shows error to Claude

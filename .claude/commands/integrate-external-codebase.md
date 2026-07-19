@@ -1,6 +1,6 @@
 ---
 name: integrate-external-codebase
-description: Integrate an external codebase for AI-assisted analysis and development. Example - /integrate-external-codebase https://github.com/user/repo. Creates comprehensive documentation in ai_docs/
+description: Integrate an external codebase for AI-assisted analysis and development. Example - /integrate-external-codebase https://github.com/user/repo. Creates documentation in docs/reference/external_codebases/
 ---
 
 <role>
@@ -45,7 +45,7 @@ The user wants to integrate an external codebase (GitHub repository or local pat
    - Clone/reference the codebase
    - Create `external_codebases/[repo_name]/`
    - Analyze structure and dependencies
-   - Generate AI documentation in `ai_docs/codebases/[repo_name]/`
+   - Generate AI documentation in `docs/reference/external_codebases/[repo_name]/`
    - Save integration config to `.claude/integrations/[repo_name]/`
    - Handle errors gracefully
    </integration_script>
@@ -53,9 +53,9 @@ The user wants to integrate an external codebase (GitHub repository or local pat
 3. **Review Generated Documentation**
    <review_docs>
    The script creates comprehensive documentation:
-   - `ai_docs/codebases/[repo_name]/overview.md` - Purpose and tech stack
-   - `ai_docs/codebases/[repo_name]/structure_map.md` - Directory layout
-   - `ai_docs/codebases/[repo_name]/context_summary.md` - AI-optimized summary
+   - `docs/reference/external_codebases/[repo_name]/overview.md` - Purpose and tech stack
+   - `docs/reference/external_codebases/[repo_name]/structure_map.md` - Directory layout
+   - `docs/reference/external_codebases/[repo_name]/context_summary.md` - AI-optimized summary
    - `.claude/integrations/[repo_name]/CLAUDE.md` - Integration commands
    
    Review these files and complete any TODOs.
@@ -114,7 +114,7 @@ The user wants to integrate an external codebase (GitHub repository or local pat
      "frameworks": ["framework1", "framework2"],
      "entry_points": ["main.py", "index.js"],
      "key_files": ["path/to/important/file.py"],
-     "ai_docs_path": "ai_docs/codebases/[repo_name]/",
+     "docs_path": "docs/reference/external_codebases/[repo_name]/",
      "update_frequency": "weekly"
    }
    ```
@@ -152,7 +152,7 @@ The user wants to integrate an external codebase (GitHub repository or local pat
 - **Last Updated**: [Date]
 
 ## 📁 Documentation Created
-✅ Created comprehensive documentation in `ai_docs/codebases/[repo_name]/`:
+Created documentation in `docs/reference/external_codebases/[repo_name]/`:
 - `overview.md` - High-level repository overview
 - `structure_map.md` - Complete directory and file mapping  
 - `components/` - Detailed component documentation
@@ -181,14 +181,14 @@ cd external_codebases/[repo_name]
 ```
 
 ## 📖 Next Steps
-1. Review the generated documentation in `ai_docs/codebases/[repo_name]/`
+1. Review the generated documentation in `docs/reference/external_codebases/[repo_name]/`
 2. Use `/crud-claude-commands create [repo_name]-helper` to create custom commands
 3. Reference the context summary when working with this codebase
 
 ## 🤖 AI Usage Tips
 When working with this codebase, reference it using:
-- `@ai_docs/codebases/[repo_name]/context_summary.md` for quick context
-- `@ai_docs/codebases/[repo_name]/components/[component].md` for specific components
+- `@docs/reference/external_codebases/[repo_name]/context_summary.md` for quick context
+- `@docs/reference/external_codebases/[repo_name]/components/[component].md` for specific components
 - `@external_codebases/[repo_name]/[path]` for actual code files
 
 Integration configuration saved to: `.claude/integrations/[repo_name]/config.json`

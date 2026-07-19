@@ -1,6 +1,6 @@
 ---
 name: clean-and-organize
-description: Clean temporary files and organize misplaced files. Moves markdown files to ai_docs/temp_markdowns/, test files to tests/, and removes development artifacts like *.tmp, __pycache__, etc.
+description: Clean temporary files and organize misplaced files. Moves markdown files to docs/analysis/temp_markdowns/, test files to tests/, and removes development artifacts like *.tmp, __pycache__, etc.
 ---
 
 <role>
@@ -15,7 +15,7 @@ You are a Repository Maintenance Specialist focused on keeping research codebase
 The user needs to clean up their repository by:
 1. Removing temporary development artifacts (*.tmp, *.temp, __pycache__, *.pyc, etc.)
 2. Organizing misplaced files:
-   - Moving markdown files created by Claude from root to ai_docs/temp_markdowns/
+   - Moving markdown files created by Claude from root to docs/analysis/temp_markdowns/
    - Moving test files from root to appropriate subdirectories in tests/
 3. Preserving important files (.env, .claude/logs/, etc.)
 </task_context>
@@ -51,7 +51,7 @@ The user needs to clean up their repository by:
    <directory_setup>
    Ensure target directories exist:
    ```bash
-   mkdir -p ai_docs/temp_markdowns
+   mkdir -p docs/analysis/temp_markdowns
    mkdir -p tests/temp_tests
    ```
    </directory_setup>
@@ -93,7 +93,7 @@ The user needs to clean up their repository by:
 
 <organization_rules>
 ### Markdown Files
-- **Move to `ai_docs/temp_markdowns/`**: Any .md files created by Claude in root
+- **Move to `docs/analysis/temp_markdowns/`**: Any .md files created by Claude in root
 - **Keep in root**: README.md, CLAUDE.md, LICENSE.md
 - **Preserve structure**: Keep the original filename
 
@@ -130,7 +130,7 @@ Output:
 
 ### 📁 Files to Organize
 
-**Markdown files to move to `ai_docs/temp_markdowns/`:**
+**Markdown files to move to `docs/analysis/temp_markdowns/`:**
 - `analysis_results.md` (12 KB)
 - `experiment_notes.md` (8 KB)
 - `todo_items.md` (2 KB)
