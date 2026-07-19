@@ -223,6 +223,7 @@ INVALID_KEY_MARKERS = (
     "unauthorized",
     "authentication",
     "invalid x-api-key",
+    "user not found",
 )
 
 MODEL_OUTPUT_RETRY_MARKERS = (
@@ -247,6 +248,8 @@ OPENROUTER_UPSTREAM_RATE_LIMIT_MARKERS = (
     '"provider_name":"deepinfra"',
     "'provider_name': 'deepinfra'",
     "add your own key to accumulate your rate limits",
+    "high demand for",
+    "please retry shortly",
 )
 
 
@@ -288,8 +291,6 @@ def is_upstream_provider_rate_limit(
     """
 
     if _provider_name(provider) != "openrouter":
-        return False
-    if "deepseek/deepseek-chat" not in model.lower():
         return False
 
     status = _extract_status_code(exc)

@@ -120,7 +120,7 @@ through the file-based proxy queue. The relevant defaults are:
 
 ```bash
 export OPENROUTER_TRANSPORT=proxy
-export OPENROUTER_PROXY_POLL_DIR=/path/to/openrouter_proxy
+export OPENROUTER_PROXY_POLL_DIR=/home/jz4391/openrouter_proxy
 ```
 
 `negotiation/openrouter_proxy_monitor.py` is the monitor process intended to run
@@ -343,13 +343,14 @@ The main Streamlit launcher is:
 bash ui/run_viewer.sh --port 8501
 ```
 
-It runs `ui/experiment_viewer.py`. Other specialized viewers include:
+It runs `ui/experiment_viewer.py` for Game 2 and Game 3 trajectories. Other
+supported viewers include:
 
-- `ui/negotiation_viewer.py`
 - `ui/multi_game_sample_viewer.py`
 - `ui/game1_sample_viewer.py`
 - `ui/game2_batch_viewer.py`
 - `ui/game3_batch_viewer.py`
+- `ui/random_monoculture_sample_viewer.py`
 
 On a remote cluster, bind Streamlit to loopback and use an SSH tunnel from your
 laptop. For example:

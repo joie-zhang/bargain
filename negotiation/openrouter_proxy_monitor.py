@@ -2,8 +2,8 @@
 Shared OpenRouter proxy monitor for restricted-network or Slurm workflows.
 
 This process runs on a login/visualization node, watches the shared queue at
-bargain/openrouter_proxy, and forwards requests to OpenRouter on behalf of
-compute-node jobs.
+/home/jz4391/openrouter_proxy by default, and forwards requests to OpenRouter
+on behalf of compute-node jobs.
 """
 
 import asyncio
@@ -22,7 +22,10 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-POLL_DIR = Path("bargain/openrouter_proxy")
+DEFAULT_PROXY_POLL_DIR = "/home/jz4391/openrouter_proxy"
+POLL_DIR = Path(
+    os.getenv("OPENROUTER_PROXY_POLL_DIR") or DEFAULT_PROXY_POLL_DIR
+).expanduser()
 PROCESSED_DIR = POLL_DIR / "processed"
 
 
@@ -91,6 +94,11 @@ def extract_content_from_response(data: dict, model_id: str = None) -> str:
         if reasoning:
             log.warning(f"Model returned reasoning_content instead of content")
             content = reasoning
+        else:
+            reasoning = message.get("reasoning")
+            if isinstance(reasoning, str) and reasoning.strip():
+                log.warning("Model returned reasoning instead of content")
+                content = reasoning
 
     # OpenAI reasoning models via OpenRouter can return content=None with
     # reasoning_details summaries. Use these summaries as best-effort fallback.
@@ -237,7 +245,8 @@ async def _run_and_cleanup(
 
 
 async def main():
-    PROCESSED_DIR.mkdir(exist_ok=True)
+    POLL_DIR.mkdir(parents=True, exist_ok=True)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     max_concurrency_label = (
         "unbounded" if MAX_CONCURRENT_REQUESTS <= 0 else str(MAX_CONCURRENT_REQUESTS)
     )

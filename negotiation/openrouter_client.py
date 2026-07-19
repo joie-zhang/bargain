@@ -31,6 +31,7 @@ from .provider_key_rotation import (
 DEFAULT_OPENROUTER_MAX_TOKENS_CAP = 16384
 OPENROUTER_CLAUDE_OPUS_4_6_MAX_TOKENS_CAP = DEFAULT_OPENROUTER_MAX_TOKENS_CAP * 4
 OPENROUTER_GPT_5_4_MAX_TOKENS_CAP = DEFAULT_OPENROUTER_MAX_TOKENS_CAP * 4
+DEFAULT_OPENROUTER_PROXY_POLL_DIR = "/home/jz4391/openrouter_proxy"
 
 
 # OpenRouter model mappings
@@ -64,7 +65,7 @@ class OpenRouterConfig:
     max_retries: int = 12
     retry_delay: float = 2.0
     transport: str = "auto"  # direct | proxy | auto (proxy-first)
-    proxy_poll_dir: str = "bargain/openrouter_proxy"
+    proxy_poll_dir: str = DEFAULT_OPENROUTER_PROXY_POLL_DIR
     proxy_poll_interval: float = 0.1
     proxy_timeout: float = 6000.0
     proxy_probe_timeout: float = 30.0
@@ -220,7 +221,10 @@ class OpenRouterAgent(BaseLLMAgent):
             resolved_transport = requested_transport
         self.requested_transport = requested_transport
 
-        proxy_poll_dir = os.getenv("OPENROUTER_PROXY_POLL_DIR", "bargain/openrouter_proxy")
+        proxy_poll_dir = (
+            os.getenv("OPENROUTER_PROXY_POLL_DIR")
+            or DEFAULT_OPENROUTER_PROXY_POLL_DIR
+        )
 
         poll_env = os.getenv("OPENROUTER_PROXY_CLIENT_POLL_INTERVAL", "0.1")
         try:
@@ -393,6 +397,10 @@ class OpenRouterAgent(BaseLLMAgent):
 
         if (content is None or content == "") and isinstance(message.get("reasoning_content"), str):
             reasoning = message.get("reasoning_content", "").strip()
+            if reasoning:
+                content = reasoning
+        if (content is None or content == "") and isinstance(message.get("reasoning"), str):
+            reasoning = message.get("reasoning", "").strip()
             if reasoning:
                 content = reasoning
 

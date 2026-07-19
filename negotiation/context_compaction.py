@@ -189,15 +189,21 @@ def estimate_messages_tokens(messages: Sequence[Dict[str, str]]) -> int:
 def reserved_output_tokens(config_max_tokens: Optional[int], context_limit: int) -> int:
     """Resolve the output reserve used in input-budget preflight."""
     raw_default = os.getenv("NEGOTIATION_CONTEXT_RESERVED_OUTPUT_TOKENS")
+    env_reserve: Optional[int] = None
     try:
-        default_reserve = int(raw_default) if raw_default else DEFAULT_RESERVED_OUTPUT_TOKENS
+        if raw_default:
+            env_reserve = int(raw_default)
+        default_reserve = env_reserve if env_reserve is not None else DEFAULT_RESERVED_OUTPUT_TOKENS
     except ValueError:
         default_reserve = DEFAULT_RESERVED_OUTPUT_TOKENS
+        env_reserve = None
 
     if isinstance(config_max_tokens, int) and 0 < config_max_tokens < 999_999:
         reserve = config_max_tokens
     else:
         reserve = default_reserve
+    if env_reserve is not None and env_reserve > 0:
+        reserve = min(reserve, env_reserve)
     return max(1, min(reserve, max(1, int(context_limit * 0.25))))
 
 
