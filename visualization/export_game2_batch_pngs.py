@@ -36,7 +36,7 @@ from strong_models_experiment.analysis.active_model_roster import (
 
 RESULTS_ROOT = PROJECT_ROOT / "experiments" / "results"
 DEFAULT_ELO_MARKDOWN = (
-    PROJECT_ROOT / "docs" / "guides" / "chatbot_arena_elo_scores_2026_03_11.md"
+    PROJECT_ROOT / "docs" / "guides" / "chatbot_arena_elo_scores_2026_03_31.md"
 )
 
 MODEL_SHORT_NAMES: Dict[str, str] = {
