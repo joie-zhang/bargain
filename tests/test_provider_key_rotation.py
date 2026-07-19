@@ -232,6 +232,42 @@ def test_openrouter_nonretryable_key_limit_rotates_to_secondary(monkeypatch, tmp
     assert "auto-rotated-to-SECONDARY_OPENROUTER_API_KEY_1" in text
 
 
+def test_openrouter_nonretryable_user_not_found_rotates_as_invalid_key(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    attempts = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 401: {"error":{"message":"User not found.","code":401}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", error) == "invalid_api_key"
+
+    async def request(key):
+        attempts.append(key.label)
+        if key.label == "PRIMARY_OPENROUTER_API_KEY_1":
+            raise error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="qwen/qwen3-max",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "SECONDARY_OPENROUTER_API_KEY_1"]
+    text = (tmp_path / "provider_failures.md").read_text(encoding="utf-8")
+    assert "invalid_api_key" in text
+    assert "auto-rotated-to-SECONDARY_OPENROUTER_API_KEY_1" in text
+
+
 def test_openrouter_deepseek_upstream_429_retries_same_key(monkeypatch, tmp_path):
     clear_rotation_state()
     monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
@@ -274,6 +310,50 @@ def test_openrouter_deepseek_upstream_429_retries_same_key(monkeypatch, tmp_path
     assert result == "ok"
     assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "PRIMARY_OPENROUTER_API_KEY_1"]
     assert len(sleep_calls) == 1
+    assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
+    assert not (tmp_path / "provider_failures.md").exists()
+
+
+def test_openrouter_qwen_high_demand_429_retries_same_key(monkeypatch, tmp_path):
+    clear_rotation_state()
+    monkeypatch.setenv("LLM_KEY_GROUP_ORDER", "PRIMARY,SECONDARY")
+    monkeypatch.setenv("PRIMARY_OPENROUTER_API_KEY_1", "sk-or-v1-primary")
+    monkeypatch.setenv("SECONDARY_OPENROUTER_API_KEY_1", "sk-or-v1-secondary")
+    monkeypatch.setenv("LLM_FAILURE_REPORT_PATH", str(tmp_path / "provider_failures.md"))
+    monkeypatch.setenv("LLM_TRANSIENT_RETRY_SECONDS", "30")
+    attempts = []
+
+    error = NonRetryableLLMError(
+        'Exception: HTTP 429: {"error":{"message":"Rate limit exceeded: '
+        'limit_rpm/qwen/qwen3-max/example. High demand for qwen/qwen3-max '
+        'on OpenRouter - limited to 20 requests per minute. Please retry '
+        'shortly.","code":429}}'
+    )
+
+    assert classify_key_scoped_failure("openrouter", error) == "rate_limit_or_quota"
+    assert is_upstream_provider_rate_limit("openrouter", "qwen/qwen3-max", error)
+
+    async def fake_sleep(seconds):
+        pass
+
+    async def request(key):
+        attempts.append(key.label)
+        if len(attempts) == 1:
+            raise error
+        return "ok"
+
+    result = asyncio.run(
+        call_with_key_rotation(
+            provider="openrouter",
+            model="qwen/qwen3-max",
+            key_pool=ProviderKeyPool("openrouter"),
+            request_coro_factory=request,
+            sleep_func=fake_sleep,
+        )
+    )
+
+    assert result == "ok"
+    assert attempts == ["PRIMARY_OPENROUTER_API_KEY_1", "PRIMARY_OPENROUTER_API_KEY_1"]
     assert _DISABLED_KEY_LABELS_BY_PROVIDER.get("openrouter", set()) == set()
     assert not (tmp_path / "provider_failures.md").exists()
 

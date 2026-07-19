@@ -6,6 +6,7 @@ from negotiation.context_compaction import (
     ContextWindowPreflightError,
     compact_public_history_entries,
     estimate_text_tokens,
+    reserved_output_tokens,
     resolve_context_limit,
 )
 from negotiation.llm_agents import AgentResponse, BaseLLMAgent, LLMConfig, ModelType, NegotiationContext
@@ -49,6 +50,12 @@ def test_resolve_context_limit_uses_canonical_metadata_and_hard_caps():
     assert resolve_context_limit(["deepseek/deepseek-chat", "deepseek-v3"]) == 32_768
     assert resolve_context_limit(["gpt-5-nano-2025-08-07"]) == 128_000
     assert resolve_context_limit(["claude-sonnet-4-20250514"]) == 200_000
+
+
+def test_reserved_output_tokens_env_caps_configured_reserve(monkeypatch):
+    monkeypatch.setenv("NEGOTIATION_CONTEXT_RESERVED_OUTPUT_TOKENS", "2048")
+
+    assert reserved_output_tokens(16_384, 32_768) == 2048
 
 
 def test_compact_public_history_preserves_only_public_summaries():

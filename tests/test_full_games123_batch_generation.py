@@ -216,7 +216,7 @@ def test_full_games123_game_specific_parameters(tmp_path):
             assert cfg["alpha"] in {0.2, 0.8}
 
 
-def test_full_games123_command_omits_voting_cap_by_default(tmp_path):
+def test_full_games123_command_forwards_phase_token_caps(tmp_path):
     configs = build_configs(
         results_root=tmp_path,
         master_seed=20260427,
@@ -225,12 +225,25 @@ def test_full_games123_command_omits_voting_cap_by_default(tmp_path):
         max_tokens_voting=None,
     )
     command = build_command(configs[0])
+    assert "--max-tokens-discussion" not in command
     assert "--max-tokens-voting" not in command
 
     capped = dict(configs[0])
+    capped["max_tokens_discussion"] = 4096
+    capped["max_tokens_proposal"] = 2048
     capped["max_tokens_voting"] = 8192
+    capped["max_tokens_reflection"] = 1024
+    capped["max_tokens_thinking"] = 512
+    capped["max_tokens_default"] = 4096
+    capped["max_tokens_per_phase"] = 4096
     capped_command = build_command(capped)
+    assert capped_command[capped_command.index("--max-tokens-discussion") + 1] == "4096"
+    assert capped_command[capped_command.index("--max-tokens-proposal") + 1] == "2048"
     assert capped_command[capped_command.index("--max-tokens-voting") + 1] == "8192"
+    assert capped_command[capped_command.index("--max-tokens-reflection") + 1] == "1024"
+    assert capped_command[capped_command.index("--max-tokens-thinking") + 1] == "512"
+    assert capped_command[capped_command.index("--max-tokens-default") + 1] == "4096"
+    assert capped_command[capped_command.index("--max-tokens-per-phase") + 1] == "4096"
 
 
 def test_full_games123_experiment_index_is_replicable_audit_table(tmp_path):

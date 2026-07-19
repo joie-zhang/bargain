@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from negotiation.llm_agents import LLMConfig, ModelType, BaseLLMAgent, NonRetryableLLMError
 from negotiation.openrouter_client import (
     DEFAULT_OPENROUTER_MAX_TOKENS_CAP,
+    DEFAULT_OPENROUTER_PROXY_POLL_DIR,
     OpenRouterAgent,
     ProxyMonitorUnavailableError,
     get_openrouter_max_tokens_cap,
@@ -44,6 +45,15 @@ def test_auto_transport_resolves_to_proxy_in_slurm(monkeypatch):
     agent = make_agent(monkeypatch, transport="auto", slurm_job_id="12345")
     assert agent.requested_transport == "auto"
     assert agent.openrouter_config.transport == "proxy"
+
+
+def test_proxy_poll_dir_defaults_to_shared_home_queue(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_PROXY_POLL_DIR", raising=False)
+
+    agent = make_agent(monkeypatch, transport="proxy", slurm_job_id="12345")
+
+    assert DEFAULT_OPENROUTER_PROXY_POLL_DIR == "/home/jz4391/openrouter_proxy"
+    assert agent.openrouter_config.proxy_poll_dir == DEFAULT_OPENROUTER_PROXY_POLL_DIR
 
 
 def test_auto_transport_in_slurm_does_not_fall_back_to_direct(monkeypatch):
@@ -151,6 +161,28 @@ def test_openrouter_request_does_not_send_local_phase_token_caps(monkeypatch):
 
     assert "phase_token_caps" not in payloads[0]
     assert payloads[0]["reasoning"] == {"effort": "low", "exclude": True}
+
+
+def test_openrouter_extracts_reasoning_field_when_content_missing(monkeypatch):
+    agent = make_agent(monkeypatch, transport="direct")
+
+    content = agent._extract_content_from_openrouter_response(
+        {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "reasoning": "Reasoning-only answer.",
+                        "reasoning_details": [],
+                    },
+                }
+            ]
+        }
+    )
+
+    assert content == "Reasoning-only answer."
 
 
 def test_proxy_provider_error_is_non_retryable(monkeypatch):
