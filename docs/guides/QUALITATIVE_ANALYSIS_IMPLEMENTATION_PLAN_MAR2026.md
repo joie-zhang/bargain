@@ -103,7 +103,8 @@ Deliverables:
 
 Engineering tasks:
 1. Update `visualization/visualize_cofunding.py` to use adaptation and optional qualitative blocks.
-2. Update `visualization/gpt5_nano_analysis.py` to remove legacy keyword behavior columns/plots.
+2. The legacy GPT-5-nano notebook export was later removed. Use the bundled
+   qualitative generators under `analysis/` for this work.
 3. Rename or replace legacy behavior figure outputs with structured qualitative metrics figures.
 
 Acceptance criteria:

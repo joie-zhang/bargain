@@ -119,8 +119,7 @@ The report should always distinguish:
 
 Outputs should be written to:
 
-- `analysis/game1_qualitative_review/`
-- `visualization/figures/game1_qualitative_review/`
+- `analysis/game1_qualitative_review/` contains the report, generator, tables, and figures.
 
 Expected files:
 
