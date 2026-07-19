@@ -79,6 +79,7 @@ OUT_DIR = (
 PLOTS_DIR = OUT_DIR / "plots_multiagent"
 TABLES_DIR = OUT_DIR / "tables_multiagent"
 REPORT_PATH = OUT_DIR / "n2_plus_multiagent_comparison_report.md"
+OVERLEAF_NGT2_DIR = PROJECT_ROOT / "overleaf/icml_aiwild_template/graphics/n_gt_2_report"
 
 GAME_ORDER = ["game1", "game2", "game3"]
 GAME_TITLES = {
@@ -315,7 +316,7 @@ def annotate_slope_block(
     ax: plt.Axes,
     entries: Sequence[tuple[str, float]],
     loc: str = "upper left",
-    fontsize: float = 6.0,
+    fontsize: float = 8.5,
     unit: str = "100 Elo",
 ) -> None:
     clean_entries = [(label, slope) for label, slope in entries if math.isfinite(clean_float(slope))]
@@ -337,7 +338,8 @@ def annotate_slope_block(
         ha=ha,
         va=va,
         fontsize=fontsize,
-        bbox={"facecolor": "white", "edgecolor": "#cccccc", "alpha": 0.78, "pad": 2.0},
+        linespacing=1.18,
+        bbox={"facecolor": "white", "edgecolor": "#999999", "alpha": 0.92, "pad": 3.0},
     )
 
 
@@ -610,6 +612,54 @@ def aggregate_het_agents(agents: pd.DataFrame, by_competition: bool = False) -> 
     )
 
 
+def summarize_homogeneous_adversary_position_effect(hom_runs: pd.DataFrame) -> pd.DataFrame:
+    adv = hom_runs[hom_runs["experiment_family"].eq("homogeneous_adversary")].copy()
+    if adv.empty or "adversary_position" not in adv.columns:
+        return pd.DataFrame()
+    cells = (
+        adv.groupby(
+            [
+                "game_label",
+                "n_agents",
+                "adversary_model",
+                "adversary_elo",
+                "competition_label_ci",
+                "adversary_position",
+            ],
+            dropna=False,
+        )
+        .agg(
+            adversary_utility=("adversary_utility", "mean"),
+            adversary_advantage=("adversary_advantage", "mean"),
+            run_count=("config_id", "count"),
+        )
+        .reset_index()
+    )
+    pivot = cells.pivot_table(
+        index=["game_label", "n_agents", "adversary_model", "adversary_elo", "competition_label_ci"],
+        columns="adversary_position",
+        values="adversary_utility",
+        aggfunc="mean",
+    ).reset_index()
+    if not {"first", "last"}.issubset(pivot.columns):
+        return pd.DataFrame()
+    pivot["first_minus_last_adversary_payoff"] = pivot["first"] - pivot["last"]
+    save_csv(TABLES_DIR / "hom_adversary_starting_position_effect_cells.csv", pivot)
+    summary = (
+        pivot.groupby(["game_label", "n_agents"], dropna=False)
+        .agg(
+            cells=("first_minus_last_adversary_payoff", "count"),
+            mean_signed_effect=("first_minus_last_adversary_payoff", "mean"),
+            mean_abs_effect=("first_minus_last_adversary_payoff", lambda values: float(np.nanmean(np.abs(values)))),
+            median_abs_effect=("first_minus_last_adversary_payoff", lambda values: float(np.nanmedian(np.abs(values)))),
+            p90_abs_effect=("first_minus_last_adversary_payoff", lambda values: float(np.nanpercentile(np.abs(values), 90))),
+        )
+        .reset_index()
+    )
+    save_csv(TABLES_DIR / "hom_adversary_starting_position_effect_summary.csv", summary)
+    return summary
+
+
 def plot_hom_adversary_payoff_vs_elo(hom_runs: pd.DataFrame) -> pd.DataFrame:
     agg = aggregate_hom_adversary(hom_runs, by_competition=False)
     slopes: list[dict[str, object]] = []
@@ -646,7 +696,7 @@ def plot_hom_adversary_payoff_vs_elo(hom_runs: pd.DataFrame) -> pd.DataFrame:
             )
             label_points(ax, sub, "adversary_elo", "adversary_utility", "adversary_model", fontsize=3.8, max_labels=40)
         tidy_axes(ax, "Adversary Arena Elo", "Adversary payoff", GAME_TITLES[game])
-        ax.legend(fontsize=7, ncol=1, frameon=False)
+        ax.legend(fontsize=9.0, ncol=1, frameon=False)
     save_figure(fig, PLOTS_DIR / "hom_adversary_payoff_vs_elo_by_n.png")
     slopes_df = pd.DataFrame(slopes)
     save_csv(TABLES_DIR / "hom_adversary_payoff_vs_elo_slopes.csv", slopes_df)
@@ -694,7 +744,7 @@ def plot_hom_adversary_payoff_by_competition(hom_runs: pd.DataFrame) -> pd.DataF
                         "n_points": len(sub),
                     }
                 )
-            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=5.0)
+            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=8.5)
             tidy_axes(ax, "Adversary Elo", "Adversary payoff", f"N={n}")
         handles, labels_out = axes[-1].get_legend_handles_labels()
         fig.legend(
@@ -703,7 +753,7 @@ def plot_hom_adversary_payoff_by_competition(hom_runs: pd.DataFrame) -> pd.DataF
             loc="lower center",
             bbox_to_anchor=(0.5, -0.05),
             ncol=min(4, max(1, len(labels_out))),
-            fontsize=7,
+            fontsize=8.5,
             frameon=False,
         )
         fig.suptitle(f"Homogeneous adversary payoff vs Elo by competition: {GAME_TITLES[game]}", fontsize=12, y=1.02)
@@ -751,11 +801,44 @@ def plot_heterogeneous_payoff_vs_arena_elo(het_agents: pd.DataFrame) -> pd.DataF
             )
             label_points(ax, sub, "elo", "final_utility", "model_short", fontsize=3.8, alpha=0.55, max_labels=120)
         tidy_axes(ax, "Arena Elo", "Mean model payoff", GAME_TITLES[game])
-        ax.legend(fontsize=7, frameon=False)
+        ax.legend(fontsize=9.0, frameon=False)
     save_figure(fig, PLOTS_DIR / "heterogeneous_payoff_vs_arena_elo_by_n.png")
     slopes_df = pd.DataFrame(slopes)
     save_csv(TABLES_DIR / "heterogeneous_payoff_vs_arena_elo_slopes.csv", slopes_df)
     return slopes_df
+
+
+def plot_main_text_game1_heterogeneous_payoff(het_agents: pd.DataFrame) -> Path:
+    """Write the compact Game 1 heterogeneous payoff figure used in the main text."""
+    OVERLEAF_NGT2_DIR.mkdir(parents=True, exist_ok=True)
+    agg = aggregate_het_agents(het_agents, by_competition=False)
+    game_df = agg[agg["game_label"].eq("game1")]
+    fig, ax = plt.subplots(figsize=(4.9, 3.35))
+    for n in N_ORDER:
+        sub = game_df[game_df["n_agents"].eq(n)].sort_values("elo")
+        if sub.empty:
+            continue
+        color = N_COLORS[n]
+        plot_errorbar_series(
+            ax,
+            sub["elo"],
+            sub["final_utility"],
+            sub["final_utility_sem"],
+            color=color,
+            label=f"N={n}",
+            marker="o",
+            linestyle="none",
+            markersize=3.0,
+            alpha=0.55,
+        )
+        add_fit_line(ax, sub, "elo", "final_utility", color, linewidth=1.7, alpha=0.95)
+    tidy_axes(ax, "Arena Elo", "Mean model payoff", "Heterogeneous payoff scaling (Game 1)")
+    ax.legend(title="Group size", fontsize=8.0, title_fontsize=8.5, frameon=False, loc="center left", bbox_to_anchor=(1.01, 0.5))
+    fig.tight_layout()
+    path = OVERLEAF_NGT2_DIR / "heterogeneous_payoff_vs_arena_elo_game1_maintext_halfpage.png"
+    fig.savefig(path, dpi=260, bbox_inches="tight", pad_inches=0.06)
+    plt.close(fig)
+    return path
 
 
 def plot_heterogeneous_payoff_by_competition(het_agents: pd.DataFrame) -> pd.DataFrame:
@@ -799,7 +882,7 @@ def plot_heterogeneous_payoff_by_competition(het_agents: pd.DataFrame) -> pd.Dat
                         "n_models": len(sub),
                     }
                 )
-            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=5.0)
+            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=8.5)
             tidy_axes(ax, "Arena Elo", "Mean model payoff", f"N={n}")
         handles = [
             plt.Line2D([0], [0], color=color_map[label], marker="o", lw=1, ms=4, label=label)
@@ -810,7 +893,7 @@ def plot_heterogeneous_payoff_by_competition(het_agents: pd.DataFrame) -> pd.Dat
             loc="lower center",
             bbox_to_anchor=(0.5, -0.05),
             ncol=min(4, max(1, len(handles))),
-            fontsize=7,
+            fontsize=8.5,
             frameon=False,
         )
         fig.suptitle(f"Heterogeneous payoff vs Arena Elo by competition: {GAME_TITLES[game]}", fontsize=12, y=1.02)
@@ -1123,12 +1206,13 @@ def plot_multiagent_fairness(fair_runs: pd.DataFrame, fair_agents: pd.DataFrame,
                 )
                 slope, _, _ = add_fit_line(ax, sub, "elo", "residual_metric", FAMILY_COLORS.get(family, "#555555"))
                 label_points(ax, sub, "elo", "residual_metric", "model", fontsize=3.8, max_labels=50)
+                annotate_slope_block(ax, [(FAMILY_LABELS[family], slope)], loc="lower right", fontsize=8.2)
             ax.axhline(0, color="#444444", lw=0.7)
             tidy_axes(
                 ax,
                 "Arena Elo",
                 "Actual minus fair utility",
-                f"{GAME_TITLES[game]}\n{FAMILY_LABELS[family]} ({format_slope_per_100(slope)})",
+                f"{GAME_TITLES[game]}\n{FAMILY_LABELS[family]}",
             )
     save_figure(fig, PLOTS_DIR / "multiagent_agent_fairness_residual_vs_elo.png")
 
@@ -1175,7 +1259,7 @@ def plot_multiagent_fairness(fair_runs: pd.DataFrame, fair_agents: pd.DataFrame,
                 )
                 slope, _, _ = add_fit_line(ax, sub, "elo_std", "fairness_distance", BAND_COLORS.get(band, "#555555"), linewidth=0.9)
                 slope_entries.append((label, slope))
-            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=5.2, unit="100 Elo std.")
+            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=8.5, unit="100 Elo std.")
             tidy_axes(ax, "Roster Elo std. dev.", "NBS/Lindahl distance", GAME_TITLES[game])
         handles, labels = axes[-1].get_legend_handles_labels()
         fig.legend(
@@ -1184,7 +1268,7 @@ def plot_multiagent_fairness(fair_runs: pd.DataFrame, fair_agents: pd.DataFrame,
             loc="lower center",
             bbox_to_anchor=(0.5, -0.06),
             ncol=3,
-            fontsize=7,
+            fontsize=8.5,
             frameon=False,
         )
         save_figure(fig, PLOTS_DIR / "heterogeneous_elo_dispersion_vs_fairness_distance.png")
@@ -1239,7 +1323,7 @@ def plot_heterogeneous_elo_dispersion(het_runs: pd.DataFrame) -> pd.DataFrame:
                     "n_runs": len(sub),
                 }
             )
-        annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=5.2, unit="100 Elo std.")
+        annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=8.5, unit="100 Elo std.")
         tidy_axes(ax, "Roster Elo std. dev.", "Shifted utility Gini", GAME_TITLES[game])
     handles, labels = axes[-1].get_legend_handles_labels()
     fig.legend(
@@ -1248,7 +1332,7 @@ def plot_heterogeneous_elo_dispersion(het_runs: pd.DataFrame) -> pd.DataFrame:
         loc="lower center",
         bbox_to_anchor=(0.5, -0.06),
         ncol=3,
-        fontsize=7,
+        fontsize=8.5,
         frameon=False,
     )
     save_figure(fig, PLOTS_DIR / "heterogeneous_elo_dispersion_vs_gini.png")
@@ -1301,7 +1385,7 @@ def plot_heterogeneous_elo_dispersion(het_runs: pd.DataFrame) -> pd.DataFrame:
                         "n_runs": len(sub),
                     }
                 )
-            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=5.2, unit="100 Elo std.")
+            annotate_slope_block(ax, slope_entries, loc="upper left", fontsize=8.5, unit="100 Elo std.")
             tidy_axes(ax, "Roster Elo std. dev.", "Shifted utility Gini", f"{GAME_TITLES[game]} - N={n}")
         handles, labels = axes[-1].get_legend_handles_labels()
         fig.legend(
@@ -1310,7 +1394,7 @@ def plot_heterogeneous_elo_dispersion(het_runs: pd.DataFrame) -> pd.DataFrame:
             loc="lower center",
             bbox_to_anchor=(0.5, -0.06),
             ncol=min(3, max(1, len(labels))),
-            fontsize=7,
+            fontsize=8.5,
             frameon=False,
         )
         save_figure(fig, PLOTS_DIR / f"heterogeneous_elo_dispersion_vs_gini_n{n}.png")
@@ -1508,6 +1592,7 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
                     alpha=0.82,
                 )
                 slope, intercept, r2 = add_fit_line(ax, sub, "arena_elo", "performance_elo", N_COLORS[n])
+                annotate_slope_block(ax, [(f"N={n}", slope)], loc="lower right", fontsize=8.2)
                 corr = sub[["arena_elo", "performance_elo"]].corr().iloc[0, 1] if len(sub) > 1 else math.nan
                 corr_rows.append(
                     {
@@ -1521,7 +1606,7 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
                     }
                 )
                 label_points(ax, sub, "arena_elo", "performance_elo", "model_short", fontsize=3.7, max_labels=55)
-            tidy_axes(ax, "Arena Elo", "Payoff performance Elo", f"{GAME_TITLES[game]}\nN={n}; {format_slope_per_100(slope)}")
+            tidy_axes(ax, "Arena Elo", "Payoff performance Elo", f"{GAME_TITLES[game]}\nN={n}")
     save_figure(fig, PLOTS_DIR / "heterogeneous_performance_elo_vs_arena_by_game_n.png")
 
     all_n = rankings[(rankings["scope"].eq("all_n")) & (rankings["competition_band"].isin(["cooperative", "competitive"]))]
@@ -1546,6 +1631,7 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
                     alpha=0.82,
                 )
                 slope, intercept, r2 = add_fit_line(ax, sub, "arena_elo", "performance_elo", color)
+                annotate_slope_block(ax, [(band, slope)], loc="lower right", fontsize=8.2)
                 corr = sub[["arena_elo", "performance_elo"]].corr().iloc[0, 1] if len(sub) > 1 else math.nan
                 corr_rows.append(
                     {
@@ -1560,7 +1646,7 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
                 )
                 label_points(ax, sub, "arena_elo", "performance_elo", "model_short", fontsize=3.9, max_labels=60)
             band_title = exact_setting_label(het_agents, game, None, band, compact=True) if het_agents is not None else band
-            tidy_axes(ax, "Arena Elo", "Payoff performance Elo", f"{GAME_TITLES[game]} - {band_title}; {format_slope_per_100(slope)}")
+            tidy_axes(ax, "Arena Elo", "Payoff performance Elo", f"{GAME_TITLES[game]} - {band_title}")
     save_figure(fig, PLOTS_DIR / "heterogeneous_performance_elo_vs_arena_by_competition_band.png")
     corr_df = pd.DataFrame(corr_rows)
     save_csv(TABLES_DIR / "heterogeneous_performance_elo_correlations.csv", corr_df)
@@ -1646,7 +1732,7 @@ def plot_n2_baseline_vs_heterogeneous(het_agents: pd.DataFrame) -> pd.DataFrame:
                 }
             )
         tidy_axes(ax, "Arena Elo", "Mean payoff", GAME_TITLES[game])
-        ax.legend(fontsize=7, frameon=False)
+        ax.legend(fontsize=9.0, frameon=False)
     save_figure(fig, PLOTS_DIR / "n2_baseline_vs_heterogeneous_pairings.png")
     slopes = pd.DataFrame(slope_rows)
     save_csv(TABLES_DIR / "n2_baseline_vs_heterogeneous_pairing_slopes.csv", slopes)
@@ -1693,6 +1779,7 @@ def create_report(
     het_slopes: pd.DataFrame,
     het_comp_slopes: pd.DataFrame,
     dilution: pd.DataFrame,
+    position_summary: pd.DataFrame,
     fairness_summary: pd.DataFrame,
     dispersion_slopes: pd.DataFrame,
     perf_corr: pd.DataFrame,
@@ -1734,6 +1821,18 @@ def create_report(
         )
         .reset_index()
     )
+    position_report = pd.DataFrame()
+    if not position_summary.empty:
+        position_report = (
+            position_summary.groupby("game_label", dropna=False)
+            .agg(
+                mean_signed_effect=("mean_signed_effect", "mean"),
+                mean_abs_effect=("mean_abs_effect", "mean"),
+                max_p90_abs_effect=("p90_abs_effect", "max"),
+                n_groups=("cells", "sum"),
+            )
+            .reset_index()
+        )
 
     fair_simple = fairness_summary.copy()
     if not fair_simple.empty:
@@ -1787,13 +1886,17 @@ Parsed rows: `{total_hom_runs}` homogeneous runs / `{total_hom_agents}` homogene
 
 ### Homogeneous Adversary
 
-In homogeneous adversary runs, one non-nano adversary negotiates with `N-1` GPT-5-nano agents. The main plot shows adversary payoff vs the adversary's Arena Elo, with one curve per `N`.
+In homogeneous adversary runs, one non-nano adversary negotiates with `N-1` GPT-5-nano agents. The main plot shows adversary payoff vs the adversary's Arena Elo, with one curve per `N`. These payoff-vs-Elo plots average over whether the adversary starts first or last; starting position is treated as a diagnostic rather than a separate main curve.
 
 ![Homogeneous adversary payoff vs Elo](plots_multiagent/hom_adversary_payoff_vs_elo_by_n.png)
 
 Slope summary, averaged across the five `N` curves:
 
 {markdown_table(slope_table[slope_table['section'].eq('Homogeneous adversary')], ['game_label', 'mean_slope_per_100_elo', 'min_slope_per_100_elo', 'max_slope_per_100_elo', 'group_count'])}
+
+Starting-position diagnostic, where positive values mean adversary-first yielded higher adversary payoff than adversary-last:
+
+{markdown_table(position_report, ['game_label', 'mean_signed_effect', 'mean_abs_effect', 'max_p90_abs_effect', 'n_groups'])}
 
 Competition-stratified versions:
 
@@ -1927,6 +2030,7 @@ The key generated tables are in `tables_multiagent/`:
 
 - `hom_adversary_payoff_vs_elo_slopes.csv`
 - `hom_adversary_payoff_vs_elo_by_competition_slopes.csv`
+- `hom_adversary_starting_position_effect_summary.csv`
 - `heterogeneous_payoff_vs_arena_elo_slopes.csv`
 - `heterogeneous_payoff_vs_arena_elo_by_competition_slopes.csv`
 - `hom_adversary_dilution_summary.csv`
@@ -1951,9 +2055,11 @@ def main() -> None:
     save_csv(TABLES_DIR / "heterogeneous_runs_fresh.csv", het_runs)
     save_csv(TABLES_DIR / "heterogeneous_agents_fresh.csv", het_agents)
 
+    position_summary = summarize_homogeneous_adversary_position_effect(hom_runs)
     hom_slopes = plot_hom_adversary_payoff_vs_elo(hom_runs)
     hom_comp_slopes = plot_hom_adversary_payoff_by_competition(hom_runs)
     het_slopes = plot_heterogeneous_payoff_vs_arena_elo(het_agents)
+    main_text_hetero_plot = plot_main_text_game1_heterogeneous_payoff(het_agents)
     het_comp_slopes = plot_heterogeneous_payoff_by_competition(het_agents)
     dilution = plot_homogeneous_dilution(hom_runs)
     plot_homogeneous_control_order(hom_agents)
@@ -1977,6 +2083,7 @@ def main() -> None:
         het_slopes=het_slopes,
         het_comp_slopes=het_comp_slopes,
         dilution=dilution,
+        position_summary=position_summary,
         fairness_summary=fairness_summary,
         dispersion_slopes=dispersion_slopes,
         perf_corr=perf_corr,
@@ -1985,6 +2092,7 @@ def main() -> None:
 
     print(f"Wrote report: {REPORT_PATH}")
     print(f"Wrote plots: {PLOTS_DIR}")
+    print(f"Wrote main-text heterogeneous plot: {main_text_hetero_plot}")
     print(f"Wrote tables: {TABLES_DIR}")
     print(f"Homogeneous runs: {len(hom_runs)}; heterogeneous runs: {len(het_runs)}")
     print(f"General dynamics rows: {len(general_summary)}")

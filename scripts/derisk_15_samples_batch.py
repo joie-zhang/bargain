@@ -520,7 +520,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
     env.update({
         "PYTHONUNBUFFERED": "1",
         "OPENROUTER_TRANSPORT": env.get("OPENROUTER_TRANSPORT", "proxy"),
-        "OPENROUTER_PROXY_POLL_DIR": env.get("OPENROUTER_PROXY_POLL_DIR", "bargain/openrouter_proxy"),
+        "OPENROUTER_PROXY_POLL_DIR": env.get("OPENROUTER_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy"),
         "OPENROUTER_PROXY_CLIENT_TIMEOUT": env.get("OPENROUTER_PROXY_CLIENT_TIMEOUT", "9000"),
         "OPENROUTER_API_TIMEOUT": env.get("OPENROUTER_API_TIMEOUT", "1800"),
         "LLM_FAILURE_REPORT_PATH": env.get(
@@ -602,7 +602,7 @@ fi
 : "${{CONFIG_ID:?CONFIG_ID is required}}"
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
-export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-bargain/openrouter_proxy}}"
+export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
 export OPENROUTER_PROXY_CLIENT_TIMEOUT="${{OPENROUTER_PROXY_CLIENT_TIMEOUT:-9000}}"
 export OPENROUTER_API_TIMEOUT="${{OPENROUTER_API_TIMEOUT:-1800}}"
 export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-$RUN_DIR/monitoring/provider_failures.md}}"

@@ -22,7 +22,6 @@ SELECTED_TTC_PLOTS = [
     "overall_by_effort.png",
     "overall_by_compute_per_call.png",
     "individual_scatter_compute_tokens_vs_payoff.png",
-    "by_order_by_compute_per_call.png",
     "by_game_by_compute_per_call.png",
     "by_game_cell_utility_gap_compute_per_call.png",
 ]
@@ -83,9 +82,7 @@ The individual-sample token slope tests tell the same story. Raw OLS slopes look
 
 ![Individual samples: reasoning tokens versus adversary payoff](ttc/full_analysis_plots/individual_scatter_compute_tokens_vs_payoff.png)
 
-### Order And Game Breakdowns
-
-![Breakdown by model order using effective compute tokens per call](ttc/full_analysis_plots/by_order_by_compute_per_call.png)
+### Game Breakdowns
 
 ![Breakdown by game using effective compute tokens per call](ttc/full_analysis_plots/by_game_by_compute_per_call.png)
 

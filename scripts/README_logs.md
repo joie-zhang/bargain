@@ -67,4 +67,4 @@ After running `./scripts/log_utils.sh symlinks`, you can use:
 
 ## 📚 Full Documentation
 
-See `docs/LOG_MANAGEMENT_GUIDE.md` for complete guide.
+See `docs/operations.md` for the current guide.

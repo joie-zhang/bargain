@@ -1562,8 +1562,18 @@ def build_command(config: Dict[str, Any]) -> List[str]:
         str(config.get("gamma_discount", GAMMA_DISCOUNT)),
         "--parallel-phases",
     ]
-    if config.get("max_tokens_voting") is not None:
-        cmd.extend(["--max-tokens-voting", str(config["max_tokens_voting"])])
+    phase_token_args = (
+        ("max_tokens_discussion", "--max-tokens-discussion"),
+        ("max_tokens_proposal", "--max-tokens-proposal"),
+        ("max_tokens_voting", "--max-tokens-voting"),
+        ("max_tokens_reflection", "--max-tokens-reflection"),
+        ("max_tokens_thinking", "--max-tokens-thinking"),
+        ("max_tokens_default", "--max-tokens-default"),
+        ("max_tokens_per_phase", "--max-tokens-per-phase"),
+    )
+    for config_key, cli_arg in phase_token_args:
+        if config.get(config_key) is not None:
+            cmd.extend([cli_arg, str(config[config_key])])
     if config["game_type"] == "item_allocation":
         cmd.extend([
             "--num-items",
@@ -1634,7 +1644,10 @@ def enrich_result_metadata(config: Dict[str, Any]) -> None:
         "subset_model_ids_unordered", "subset_model_elos_unordered",
         "elo_mean", "elo_variance", "elo_stddev",
         "elo_bucket_method", "model_elo_bucket_map",
-        "agent_elo_bucket_map", "max_tokens_voting", "parallel_phases",
+        "agent_elo_bucket_map", "max_tokens_discussion",
+        "max_tokens_proposal", "max_tokens_voting",
+        "max_tokens_reflection", "max_tokens_thinking",
+        "max_tokens_default", "max_tokens_per_phase", "parallel_phases",
     ]
     payload["config"].update({key: config[key] for key in metadata_keys if key in config})
     result_path.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
@@ -1708,7 +1721,7 @@ def run_config(results_root: Path, config: Dict[str, Any]) -> Dict[str, Any]:
             "OPENROUTER_TRANSPORT": env.get("OPENROUTER_TRANSPORT", "proxy"),
             "OPENROUTER_PROXY_POLL_DIR": env.get(
                 "OPENROUTER_PROXY_POLL_DIR",
-                "bargain/openrouter_proxy",
+                "/home/jz4391/openrouter_proxy",
             ),
             "OPENROUTER_PROXY_CLIENT_TIMEOUT": env.get("OPENROUTER_PROXY_CLIENT_TIMEOUT", "9000"),
             "OPENROUTER_API_TIMEOUT": env.get("OPENROUTER_API_TIMEOUT", "1800"),
@@ -1822,7 +1835,7 @@ else
 fi
 
 export OPENROUTER_TRANSPORT="${{OPENROUTER_TRANSPORT:-proxy}}"
-export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-bargain/openrouter_proxy}}"
+export OPENROUTER_PROXY_POLL_DIR="${{OPENROUTER_PROXY_POLL_DIR:-/home/jz4391/openrouter_proxy}}"
 export OPENROUTER_PROXY_CLIENT_TIMEOUT="${{OPENROUTER_PROXY_CLIENT_TIMEOUT:-9000}}"
 export OPENROUTER_API_TIMEOUT="${{OPENROUTER_API_TIMEOUT:-1800}}"
 export LLM_FAILURE_REPORT_PATH="${{LLM_FAILURE_REPORT_PATH:-$RUN_DIR/monitoring/provider_failures.md}}"

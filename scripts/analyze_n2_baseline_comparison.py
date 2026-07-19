@@ -1050,7 +1050,7 @@ def plot_by_competition_metric(
         ax.set_title(GAME_LABELS[game_id], fontsize=10)
         style_axis(ax, ylabel)
         mark_undefined_metric_rows(ax, missing_batches)
-        ax.legend(title="Competition (slope)", fontsize=6.4, title_fontsize=7, frameon=True, ncol=1)
+        ax.legend(title="Competition (slope)", fontsize=8.8, title_fontsize=9.2, frameon=True, ncol=1)
 
     fig.suptitle(f"{spec.label}: {ylabel} vs Elo by competition level/index", fontsize=13, y=1.02)
     fig.tight_layout()
@@ -1107,7 +1107,7 @@ def plot_by_order_metric(
         ax.set_title(GAME_LABELS[game_id], fontsize=10)
         style_axis(ax, ylabel)
         mark_undefined_metric_rows(ax, missing_batches)
-        ax.legend(title="Order (slope)", fontsize=7, title_fontsize=8)
+        ax.legend(title="Order (slope)", fontsize=8.8, title_fontsize=9.2)
 
     fig.suptitle(f"{spec.label}: {ylabel} vs Elo by model order", fontsize=13, y=1.02)
     fig.tight_layout()
@@ -1183,7 +1183,7 @@ def plot_by_order_and_competition_metric(
         ax.set_title(GAME_LABELS[game_id], fontsize=10)
         style_axis(ax, ylabel)
         mark_undefined_metric_rows(ax, missing_batches)
-        ax.legend(fontsize=4.9, title_fontsize=6, frameon=True, ncol=1)
+        ax.legend(fontsize=8.8, title_fontsize=9.2, frameon=True, ncol=1)
 
     fig.suptitle(f"{spec.label}: {ylabel} vs Elo by order and competition", fontsize=13, y=1.02)
     fig.tight_layout()
@@ -1234,7 +1234,7 @@ def plot_fairness_excess_by_role(df: pd.DataFrame, spec: BaselineSpec, filename:
         ax.set_title(GAME_LABELS[game_id], fontsize=10)
         style_axis(ax, "Utility points above fair benchmark")
         mark_undefined_metric_rows(ax, missing_batches)
-        ax.legend(title="Role (slope)", fontsize=7, title_fontsize=8)
+        ax.legend(title="Role (slope)", fontsize=8.8, title_fontsize=9.2)
 
     fig.suptitle(
         f"{spec.label}: who is above/below NBS or Lindahl benchmark?",
@@ -1373,6 +1373,62 @@ def write_summary_tables(df: pd.DataFrame, slopes: pd.DataFrame) -> None:
     )
     by_comp.to_csv(OUT_DIR / "by_competition_model_game.csv", index=False)
 
+    order_cells = (
+        df.groupby(
+            [
+                "baseline_key",
+                "baseline_label",
+                "game_id",
+                "game_label",
+                "competition_value",
+                "competition_label",
+                "adversary_model",
+                "adversary_short",
+                "adversary_elo",
+                "conceptual_order",
+            ],
+            dropna=False,
+        )
+        .agg(
+            adversary_utility=("adversary_utility", "mean"),
+            baseline_utility=("baseline_utility", "mean"),
+            obs_count=("adversary_utility", "count"),
+        )
+        .reset_index()
+    )
+    if not order_cells.empty:
+        pivot = order_cells.pivot_table(
+            index=[
+                "baseline_key",
+                "baseline_label",
+                "game_id",
+                "game_label",
+                "competition_value",
+                "competition_label",
+                "adversary_model",
+                "adversary_short",
+                "adversary_elo",
+            ],
+            columns="conceptual_order",
+            values="adversary_utility",
+            aggfunc="mean",
+        ).reset_index()
+        if {"adversary_first", "baseline_first"}.issubset(pivot.columns):
+            pivot["adversary_first_minus_baseline_first"] = pivot["adversary_first"] - pivot["baseline_first"]
+            pivot.to_csv(OUT_DIR / "starting_position_effect_cells.csv", index=False)
+            position_summary = (
+                pivot.groupby(["baseline_key", "baseline_label", "game_id", "game_label"], dropna=False)
+                .agg(
+                    cells=("adversary_first_minus_baseline_first", "count"),
+                    mean_signed_effect=("adversary_first_minus_baseline_first", "mean"),
+                    mean_abs_effect=("adversary_first_minus_baseline_first", lambda values: float(np.nanmean(np.abs(values)))),
+                    median_abs_effect=("adversary_first_minus_baseline_first", lambda values: float(np.nanmedian(np.abs(values)))),
+                    p90_abs_effect=("adversary_first_minus_baseline_first", lambda values: float(np.nanpercentile(np.abs(values), 90))),
+                )
+                .reset_index()
+            )
+            position_summary.to_csv(OUT_DIR / "starting_position_effect_summary.csv", index=False)
+
     roster = (
         df.groupby(
             [
@@ -1456,8 +1512,6 @@ def report_plot_lines(spec: BaselineSpec) -> list[str]:
         ("Capability scaling by competition", "02_adversary_payoff_by_competition.png"),
         ("Baseline payoff against stronger adversaries", "03_baseline_payoff_overall.png"),
         ("Baseline payoff by competition", "04_baseline_payoff_by_competition.png"),
-        ("Model order", "05_adversary_payoff_by_order.png"),
-        ("Model order by competition", "06_adversary_payoff_by_order_and_competition.png"),
         ("Rounds to consensus", "07_rounds_to_consensus_overall.png"),
         ("Rounds by competition", "08_rounds_to_consensus_by_competition.png"),
         ("Social-welfare optimality", "09_optimality_ratio_overall.png"),
@@ -1484,7 +1538,7 @@ def qualitative_report_lines() -> list[str]:
         "",
         "The core mechanism is package recognition. In a complementary-preference run, DeepSeek R1 immediately recognized that the other side wanted the zero-value-to-it items and accepted the clean split: [DeepSeek R1 cooperative split](../scaling_experiment_20260404_064451/gpt-5-nano_vs_deepseek-r1/weak_first/comp_0.0/turns_1/run_1/experiment_results.json). The key line is: \"Your Option C looks promising\" because each agent gets exactly its high-value bundle. This explains why optimality rises with Elo: higher-Elo models more often find the welfare-maximizing allocation rather than wasting items on the wrong side.",
         "",
-        "In more competitive cells, higher-Elo models often win by making the contested item the only unresolved issue and then forcing a yes/no commitment. GPT-5.4 High did this at `c=0.95`: [GPT-5.4 High high-competition split](../scaling_experiment_20260404_064451/gpt-5-nano_vs_gpt-5.4-high/strong_first/comp_0.95/turns_2/run_2/experiment_results.json). It asked directly whether Stone was non-negotiable, then obtained the exact proposal it wanted in Round 2. This is why the order plot matters: going first lets stronger models set the frame, and the GPT-5-nano baseline order slopes are steeper when the adversary starts in Games 1 and 2.",
+        "In more competitive cells, higher-Elo models often win by making the contested item the only unresolved issue and then forcing a yes/no commitment. GPT-5.4 High did this at `c=0.95`: [GPT-5.4 High high-competition split](../scaling_experiment_20260404_064451/gpt-5-nano_vs_gpt-5.4-high/strong_first/comp_0.95/turns_2/run_2/experiment_results.json). It asked directly whether Stone was non-negotiable, then obtained the exact proposal it wanted in Round 2. This is why starting position remains useful as a diagnostic: going first can let stronger models set the frame, even though the main scaling plots average over starting position.",
         "",
         "Lower-Elo losses are often protocol losses, not principled concessions. A Llama-3.2-3B run repeatedly generated the fallback allocation with the reason \"Failed to parse response - defaulting to proposer gets all\": [Llama-3.2-3B parser failure](../scaling_experiment_20260404_064451/gpt-5-nano_vs_llama-3.2-3b-instruct/strong_first/comp_0.9/turns_1/run_2/experiment_results.json). This produces no consensus and pulls down low-Elo payoff, rounds-to-consensus, optimality, and NBS proximity.",
         "",
@@ -1536,9 +1590,12 @@ def write_report(df: pd.DataFrame, slopes: pd.DataFrame) -> None:
         "- `model_roster_presence_inconsistencies.csv`: loaded plotted models present in only a subset of games.",
         "- `raw_config_model_roster_by_game.csv`: configured model counts by game before result-file loading.",
         "- `raw_config_model_presence_inconsistencies.csv`: configured models present in only a subset of games.",
+        "- `starting_position_effect_summary.csv`: diagnostic adversary-payoff effect of adversary starting first vs baseline starting first.",
         "- `slope_summary.csv`: all plotted linear slopes, expressed as utility or metric units per 100 Elo.",
         "",
         "Fairness definitions: Game 1 and Game 2 use the Nash Bargaining Solution with disagreement utility 0. Game 3 uses Lindahl-style proportional cost sharing over the actually funded project set; the optimality plot for Game 3 uses the surplus-maximizing funded set under the total budget.",
+        "",
+        "Main payoff-vs-Elo and competition-stratified plots average over starting position. Starting-position effects are kept as diagnostics rather than separate main curves.",
         "",
         "Rounds-to-consensus plots average `final_round` only among runs that actually reached consensus; no-consensus runs are reflected separately in `consensus_rate` columns.",
         "",
@@ -1563,6 +1620,27 @@ def write_report(df: pd.DataFrame, slopes: pd.DataFrame) -> None:
             f"| {row['baseline_label']} | {row['game_label']} | {int(row['runs'])} | "
             f"{int(row['models'])} | {float(row['consensus']):.2f} |"
         )
+
+    position_path = OUT_DIR / "starting_position_effect_summary.csv"
+    if position_path.exists():
+        position_summary = pd.read_csv(position_path)
+        lines.extend(
+            [
+                "",
+                "## Starting Position Diagnostic",
+                "",
+                "The main plots average over whether the adversary or baseline starts. As a diagnostic, this table reports adversary payoff when the adversary starts first minus adversary payoff when the baseline starts first, averaged over matched model/competition cells.",
+                "",
+                "| Baseline | Game | Mean signed effect | Mean absolute effect | p90 absolute effect | Cells |",
+                "| --- | --- | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for _, row in position_summary.sort_values(["baseline_label", "game_id"]).iterrows():
+            lines.append(
+                f"| {row['baseline_label']} | {row['game_label']} | "
+                f"{fmt_signed(row['mean_signed_effect'])} | {fmt_float(row['mean_abs_effect'])} | "
+                f"{fmt_float(row['p90_abs_effect'])} | {int(row['cells'])} |"
+            )
 
     lines.extend(["", "## Headline Slopes", ""])
     for spec in BASELINES:

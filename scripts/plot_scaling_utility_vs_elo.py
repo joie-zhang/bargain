@@ -6,20 +6,20 @@ for selected models.
 Example:
     python scripts/plot_scaling_utility_vs_elo.py \
         --results-root experiments/results/scaling_experiment_20260403_051515 \
-        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_11.md \
+        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_31.md \
         --models claude-opus-4-6 gpt-3.5-turbo-0125 grok-4 o3-mini-high \
         --output-dir experiments/results/scaling_experiment_20260403_051515/analysis
 
     python scripts/plot_scaling_utility_vs_elo.py \
         --results-root experiments/results/scaling_experiment_20260403_051515 \
-        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_11.md \
+        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_31.md \
         --models claude-opus-4-6 gpt-3.5-turbo-0125 grok-4 o3-mini-high \
         --output-dir experiments/results/scaling_experiment_20260403_051515/analysis \
         --by-competition-level
 
     python scripts/plot_scaling_utility_vs_elo.py \
         --results-root experiments/results/scaling_experiment_20260403_051515 \
-        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_11.md \
+        --elo-markdown docs/guides/chatbot_arena_elo_scores_2026_03_31.md \
         --models claude-opus-4-6 gpt-3.5-turbo-0125 grok-4 o3-mini-high \
         --output-dir experiments/results/scaling_experiment_20260403_051515/analysis \
         --metric rounds
