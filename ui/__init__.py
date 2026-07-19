@@ -4,10 +4,10 @@ Negotiation Viewer UI Package
 A Streamlit-based UI for visualizing multi-agent negotiation experiments.
 
 Usage:
-    streamlit run ui/negotiation_viewer.py
+    streamlit run ui/experiment_viewer.py
 
 Or use the launch script:
-    ./ui/run_viewer.sh
+    bash ui/run_viewer.sh
 """
 
 from .components import (
