@@ -103,23 +103,20 @@ The provider layer retries transient failures with exponential delays. It also w
 
 ## Examine Logs
 
-Cluster logs usually exist below `logs/cluster/` or in a result root. Use the log utility from the repository root.
+Cluster logs usually exist below `logs/cluster/`, `slurm/`, or in a result
+root. List the most recent logs from the repository root:
 
 ```bash
-source scripts/log_utils.sh
-latest_log
-latest_log err
-recent_logs 10
-tail_latest err 100
-follow_latest out
+find logs/cluster slurm -type f -printf '%T@ %p\n' 2>/dev/null \
+  | sort -nr \
+  | head -20
 ```
 
-You can also run the utility as a command:
+Read or follow a selected log:
 
 ```bash
-scripts/log_utils.sh --latest err
-scripts/log_utils.sh --recent 20
-scripts/log_utils.sh --tail err 100
+tail -n 100 path/to/job.err
+tail -f path/to/job.out
 ```
 
 Use `squeue -u "$USER"` to examine Slurm state. Search error logs for `429`, `RateLimit`, `401`, and `Traceback`.

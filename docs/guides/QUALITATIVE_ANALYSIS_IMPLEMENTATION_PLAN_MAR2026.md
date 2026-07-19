@@ -157,14 +157,14 @@ Acceptance criteria:
 For existing co-funding runs (without rerunning experiments):
 
 ```bash
-python scripts/backfill_qualitative_metrics.py \
+python scripts/retained_analysis/backfill_qualitative_metrics.py \
   --results-dir experiments/results/cofunding_latest
 ```
 
 Optional with event payloads:
 
 ```bash
-python scripts/backfill_qualitative_metrics.py \
+python scripts/retained_analysis/backfill_qualitative_metrics.py \
   --results-dir experiments/results/cofunding_latest \
   --include-events
 ```
@@ -181,7 +181,7 @@ python visualization/visualize_cofunding.py \
 Build stratified judge packets:
 
 ```bash
-python scripts/qualitative_judge_harness.py build-packets \
+python scripts/retained_analysis/qualitative_judge_harness.py build-packets \
   --results-dir experiments/results/cofunding_latest \
   --output analysis/qualitative_judge_packets.jsonl \
   --per-stratum 3
@@ -190,7 +190,7 @@ python scripts/qualitative_judge_harness.py build-packets \
 Aggregate judge responses:
 
 ```bash
-python scripts/qualitative_judge_harness.py score \
+python scripts/retained_analysis/qualitative_judge_harness.py score \
   --responses analysis/qualitative_judge_responses.jsonl \
   --output analysis/qualitative_judge_report.json
 ```

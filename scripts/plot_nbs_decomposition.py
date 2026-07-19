@@ -18,8 +18,8 @@ What it creates:
 Dependencies:
     - pandas, numpy, matplotlib, scipy
     - analysis/nash_lindahl_fairness_20260505/agent_metrics.csv
-    - Figures/game_1/average_utility_vs_elo.csv (for Elo join)
-    - strong_models_experiment.analysis.active_model_roster (for model name mapping)
+    - docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md
+    - strong_models_experiment.analysis.active_model_roster
 
 =============================================================================
 """
@@ -43,6 +43,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from strong_models_experiment.analysis.active_model_roster import (
+    active_model_elo_map,
     canonical_model_name,
     short_model_name,
 )
@@ -51,7 +52,6 @@ from strong_models_experiment.analysis.active_model_roster import (
 # Paths
 # ---------------------------------------------------------------------------
 AGENT_METRICS_CSV = PROJECT_ROOT / "analysis" / "nash_lindahl_fairness_20260505" / "agent_metrics.csv"
-ELO_CSV = PROJECT_ROOT / "Figures" / "game_1" / "average_utility_vs_elo.csv"
 OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano"
 
 # ---------------------------------------------------------------------------
@@ -153,7 +153,6 @@ def main() -> None:
     # 1. Load data
     # ------------------------------------------------------------------
     metrics = pd.read_csv(AGENT_METRICS_CSV)
-    elo_df = pd.read_csv(ELO_CSV)[["model", "elo"]].rename(columns={"elo": "arena_elo"})
 
     # Filter to N=2 GPT-5-nano baseline, adversary role
     adv = metrics[
@@ -165,9 +164,7 @@ def main() -> None:
     # 2. Join Elo via canonical model name
     # ------------------------------------------------------------------
     adv["canonical"] = adv["model"].apply(canonical_model_name)
-    elo_df["canonical"] = elo_df["model"].apply(canonical_model_name)
-    elo_lookup = elo_df.drop_duplicates("canonical").set_index("canonical")["arena_elo"]
-    adv["elo"] = adv["canonical"].map(elo_lookup)
+    adv["elo"] = adv["canonical"].map(active_model_elo_map())
     adv = adv.dropna(subset=["elo"])
     adv["short_name"] = adv["model"].apply(short_model_name)
 

@@ -20,9 +20,9 @@ The TTC run has 216 completed samples: three target families, four effort levels
 
 - Full TTC report: `experiments/results/ttc_native_scaling_20260502_212943/monitoring/test_time_compute_scaling_full_analysis.md`
 - Shards: `experiments/results/ttc_native_scaling_20260502_212943/monitoring/qualitative_shards/*.md`
-- New mechanism scoring script: `scripts/analyze_ttc_objective_shift.py`
-- New matched-delta script: `scripts/analyze_ttc_objective_shift_deltas.py`
-- New raw fairness plot script from the earlier pass: `scripts/plot_ttc_fairness_vs_compute.py`
+- New mechanism scoring script: `scripts/retained_analysis/analyze_ttc_objective_shift.py`
+- New matched-delta script: `scripts/retained_analysis/analyze_ttc_objective_shift_deltas.py`
+- New raw fairness plot script from the earlier pass: `scripts/retained_analysis/plot_ttc_fairness_vs_compute.py`
 
 The raw TTC report already shows the central statistical problem. Target payoff does not rise robustly with compute after game-cell/order controls. In the report's fixed-effect slope tests, GPT-5 is near flat, Claude is near flat, and Gemini is weakly negative. The camera-ready text should not claim a simple monotone TTC benefit.
 

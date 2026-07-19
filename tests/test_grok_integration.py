@@ -252,7 +252,7 @@ def main():
         print("1. Set XAI_API_KEY environment variable")
         print("2. Run xai_proxy_monitor.py on login node (for cluster jobs)")
         print("3. Run: ./scripts/generate_configs_both_orders.sh")
-        print("4. Run: ./scripts/run_all_simple.sh")
+        print("4. Run: ./experiments/results/scaling_experiment/configs/slurm/submit_all.sh all --max-concurrent 10")
     else:
         print("✗ SOME TESTS FAILED - Please review the issues above")
         sys.exit(1)

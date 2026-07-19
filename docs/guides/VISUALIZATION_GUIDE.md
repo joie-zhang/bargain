@@ -18,14 +18,16 @@ python scripts/analyze_nash_lindahl_fairness.py
 python scripts/analyze_neurips_revision_stats.py
 ```
 
-These scripts make comparison reports and plots:
+These scripts make the paper comparison reports and plots:
 
 ```bash
-python scripts/analyze_capability_payoff_scaling_20260505.py
 python scripts/analyze_n2_baseline_comparison.py
 python scripts/analyze_n2_plus_multiagent_comparison.py
-python scripts/build_n2_ttc_multiagent_report.py
+python scripts/paper_figures/verify_all.py
 ```
+
+Temporary qualitative and exploratory analyses are in
+`scripts/retained_analysis/`. Read its README before you run those scripts.
 
 Inspect these output directories:
 

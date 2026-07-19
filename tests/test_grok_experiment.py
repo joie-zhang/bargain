@@ -74,7 +74,7 @@ def main():
         print("\nTo run an experiment with Grok:")
         print("1. export XAI_API_KEY='your-key-here'")
         print("2. ./scripts/generate_configs_both_orders.sh")
-        print("3. ./scripts/run_all_simple.sh")
+        print("3. ./experiments/results/scaling_experiment/configs/slurm/submit_all.sh all --max-concurrent 10")
     else:
         print("✗ SOME TESTS FAILED")
         sys.exit(1)

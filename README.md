@@ -279,29 +279,26 @@ python scripts/run_ttc_native_config.py \
 
 ### Appendix Llama Baseline
 
-The Llama 3.3 70B baseline replication has dedicated generation/monitoring and
-analysis scripts:
+The Llama 3.3 70B baseline replication has dedicated generation and analysis
+scripts:
 
 ```bash
 python scripts/generate_appendix_llama33_baseline_configs.py
-python scripts/monitor_appendix_llama33_baseline.py
 python scripts/analyze_appendix_llama33_baseline_500.py
 ```
 
-### Older and Narrower Batch Scripts
+Use `squeue -u "$USER"` and the generated status files to monitor the batch.
 
-Several older scripts remain useful for targeted probes or provenance:
+### Bilateral Batch Generators
 
+The retained bilateral generators reproduce the paper workflows:
+
+- `scripts/generate_configs_both_orders.sh`
 - `scripts/generate_diplomacy_configs.sh`
 - `scripts/generate_cofunding_configs.sh`
-- `scripts/generate_nagent_configs.sh`
-- `scripts/game1_multiagent_full_batch.py`
-- `scripts/game1_ttc_access_batch.py`
-- `scripts/game2_derisk_32.py`
-- `scripts/game3_multiagent_sample_batch.py`
+- `scripts/submit_cofunding_then_diplomacy.sh`
 
-Prefer `full_games123_multiagent_batch.py` for new all-game N-agent work unless
-you are intentionally reproducing an older run.
+Use `full_games123_multiagent_batch.py` for N-agent work.
 
 ## Analysis and Plotting
 
@@ -313,11 +310,14 @@ python scripts/plot_exploitation_vs_elo.py
 python scripts/plot_nbs_decomposition.py
 python scripts/analyze_nash_lindahl_fairness.py
 python scripts/analyze_neurips_revision_stats.py
-python scripts/analyze_capability_payoff_scaling_20260505.py
 python scripts/analyze_n2_baseline_comparison.py
 python scripts/analyze_n2_plus_multiagent_comparison.py
-python scripts/build_n2_ttc_multiagent_report.py
+python scripts/paper_figures/verify_all.py
 ```
+
+Temporary qualitative and exploratory analyses are in
+`scripts/retained_analysis/`. Its README maps each script to its report and
+asset directory.
 
 Important derived directories:
 

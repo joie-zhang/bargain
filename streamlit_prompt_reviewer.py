@@ -8,7 +8,7 @@ Interactive UI for reviewing proposed prompt changes one at a time.
 Shows a git-diff-style before/after preview for each proposed change.
 Accept, skip, or decline each change with optional narrative notes.
 Saves decisions to docs/reference/prompt_change_decisions.json for
-ingestion by scripts/apply_prompt_changes.py.
+the prompt-review audit record.
 
 Usage:
     streamlit run streamlit_prompt_reviewer.py
@@ -152,7 +152,7 @@ def show_summary(changes, decisions):
         if st.button("💾 Save decisions to JSON", type="primary", use_container_width=True):
             save_decisions(decisions)
             st.success(f"Saved to `{DECISIONS_FILE.relative_to(BASE_DIR)}`")
-            st.code("python scripts/apply_prompt_changes.py", language="bash")
+            st.caption("Review accepted changes against the current prompt sources before a manual edit.")
     with col_restart:
         if st.button("🔄 Start over", use_container_width=True):
             for key in list(st.session_state.keys()):

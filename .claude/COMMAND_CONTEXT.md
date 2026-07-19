@@ -16,28 +16,24 @@ This file ensures Claude Code has access to all custom commands for autonomous e
 ## Research Documentation
 
 ### Core Guides
-- @docs/guides/RESEARCH_PRINCIPLES.md - Universal research coding principles
-- @docs/guides/RESEARCH_COMMAND_GUIDE.md - Command selection for research tasks
-- @docs/examples/RESEARCH_EXAMPLES.md - Examples across research domains
-- @docs/reference/RESEARCH_QUICK_REFERENCE.md - Quick reference for research workflows
+- @README.md - Repository setup and supported workflows
+- @docs/reproduction.md - Experiment reproduction commands
+- @docs/operations.md - Provider, Slurm, and log operations
+- @docs/guides/VISUALIZATION_GUIDE.md - Paper figure workflows
+- @docs/reproducibility/script_retention_manifest.md - Script retention decisions
+- @docs/reproducibility/paper_figure_manifest.md - Figure manifest guide
 
-## Script Implementations
-- @scripts/commands/multi_mind.py - Autonomous multi-mind execution
-- @scripts/commands/analyze_function.py - Programmatic function analysis
-- @scripts/commands/spec_driven.py - Automated spec generation
-- @scripts/commands/orchestrate_research.py - Multi-tool orchestration
-
-## Integration Scripts
-- @scripts/integrate_codebase.py - External codebase integration
-- @scripts/README.md - Complete script documentation
+## Script Guides
+- @scripts/paper_figures/README.md - Paper figure renderers
+- @scripts/retained_analysis/README.md - Temporary qualitative and exploratory analyses
 
 ## Loading Instructions
 
 Claude Code should:
-1. Reference these files when making decisions about command usage
-2. Load specific command files when their triggers are detected
-3. Use the programmatic scripts for autonomous execution
-4. Follow the decision guide for automatic command selection
+1. Use the current reproduction guide before it runs an experiment.
+2. Use the manifests to identify paper scripts and inputs.
+3. Use the retained-analysis README only for temporary analysis work.
+4. Do not infer a workflow from an old result directory.
 
 ## Context Management
 

@@ -61,7 +61,7 @@ the judge should score whether extraction matches transcript evidence.
 
 1. Build packets:
 ```bash
-python scripts/qualitative_judge_harness.py build-packets \
+python scripts/retained_analysis/qualitative_judge_harness.py build-packets \
   --results-dir experiments/results/cofunding_latest \
   --output analysis/qualitative_judge_packets.jsonl
 ```
@@ -70,7 +70,7 @@ python scripts/qualitative_judge_harness.py build-packets \
 
 3. Save judge outputs as JSONL and score:
 ```bash
-python scripts/qualitative_judge_harness.py score \
+python scripts/retained_analysis/qualitative_judge_harness.py score \
   --responses analysis/qualitative_judge_responses.jsonl \
   --output analysis/qualitative_judge_report.json
 ```

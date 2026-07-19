@@ -112,9 +112,10 @@ Use these scripts for the Llama 3.3 70B replication:
 
 ```bash
 python scripts/generate_appendix_llama33_baseline_configs.py
-python scripts/monitor_appendix_llama33_baseline.py
 python scripts/analyze_appendix_llama33_baseline_500.py
 ```
+
+Use `squeue -u "$USER"` and the generated status files to monitor the batch.
 
 Read `appendix_llama33_baseline_experiment_spec_2026_05.md` for the frozen experiment specification.
 
@@ -136,10 +137,14 @@ Each completed run usually contains these files:
 
 ## Validate A Change
 
-Run the applicable tests before a production batch.
+Run the applicable test modules before a production batch. A focused command
+gives a faster result than collection of the complete legacy test tree.
 
 ```bash
-pytest -q
+python -m pytest -q \
+  tests/test_context_compaction.py \
+  tests/test_private_thinking_schema.py \
+  tests/test_openrouter_transport.py
 ```
 
 First, run one config with the same game and provider. Then, examine the result JSON and the interaction JSON.
