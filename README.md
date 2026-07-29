@@ -38,7 +38,7 @@
 
 ## Figure 7 — Baseline and adversary fair-share gaps at cooperative and competitive endpoints
 
-<img src="docs/assets/rebuttal-figures/figure-7-endpoint-fair-share-gaps.png" alt="Figure 7: Baseline and adversary fair-share gaps at cooperative and competitive endpoints" width="50%">
+<img src="docs/assets/rebuttal-figures/figure-7-game2-outlier-removed-v2.png" alt="Figure 7: Baseline and adversary fair-share gaps at cooperative and competitive endpoints" width="60%">
 
 **Caption.** Curves plot each role's signed relative gap from its fairness benchmark, smoothed over adversary Elo with an EWM coefficient of $0.10$. Blue curves show the maximally cooperative endpoint and red curves show the maximally competitive endpoint; filled solid lines are the GPT-5-nano baseline and open dashed lines are the adversary. The lowest-Elo Game 2 maximally competitive model, `llama-3.2-1b-instruct` (Elo 1110), is excluded from both role curves as an outlier. In cooperative settings, both roles generally move upward toward their benchmark shares as adversary capability increases. In competitive settings, especially Games 1 and 3, the adversary's fair-share gap improves as the baseline's worsens, indicating more redistributive benchmark convergence.
 
