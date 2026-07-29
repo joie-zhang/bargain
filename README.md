@@ -1,8 +1,8 @@
 # New NeurIPS Rebuttal Experiment Results
 
-## Figure 1 — TTC payoff does not reliably scale with requested reasoning effort
+## Figure 1 — TTC payoff does not reliably scale with requested reasoning effort across 10 seeds
 
-![Figure 1: TTC payoff does not reliably scale with requested reasoning effort](docs/assets/rebuttal-figures/figure-1-ttc-payoff.png)
+![Figure 1: TTC payoff does not reliably scale with requested reasoning effort across 10 seeds](docs/assets/rebuttal-figures/figure-1-ttc-payoff.png)
 
 **Caption.** Average target utility across random seeds for GPT-5, Claude Sonnet 4.6, and Gemini 3 Flash as requested reasoning effort increases. Lines show across-seed means and shaded regions show 95% confidence intervals. Claude's maximum-effort point uses eight available seeds; all other points use ten. Target utility remains broadly flat across effort levels.
 
