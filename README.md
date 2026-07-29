@@ -1,6 +1,6 @@
 # New NeurIPS Rebuttal Experiment Results
 
-## Figure 1 — TTC payoff does not reliably scale with requested reasoning effort across 10 seeds
+## Figure 1 — TTC with 10 seeds
 
 ![Figure 1: TTC payoff does not reliably scale with requested reasoning effort across 10 seeds](docs/assets/rebuttal-figures/figure-1-ttc-payoff.png)
 
