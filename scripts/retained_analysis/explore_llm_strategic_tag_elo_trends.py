@@ -1616,6 +1616,7 @@ def main() -> None:
     manifest_rows = load_jsonl(input_dir / "all_rollouts_manifest.jsonl")
     denoms = build_denominators(manifest_rows)
     events = build_event_frame(input_dir)
+    events = events[events["speaker_key"].isin(set(denoms["speaker_key"]))].copy()
     tag_freq, group_freq, denominators = make_frequency_tables(denoms, events, tag_meta, hot_tags)
     tag_trends = trend_table(tag_freq, "tag_code", "tag_title")
     group_trends = trend_table(group_freq, "group", "group")

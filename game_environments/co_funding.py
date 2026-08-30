@@ -503,6 +503,20 @@ class CoFundingGame(GameEnvironment):
 
         for start in starts:
             x0 = np.asarray(start, dtype=float).reshape(n_agents * M)
+            # The structured initializer analytically constructs an exact
+            # all-pairs cosine solution.  Avoid sending an already-optimal
+            # point through finite-difference SLSQP: numerical gradients can
+            # move away from the optimum and spend thousands of iterations
+            # trying to recover it, even though the accepted stopping
+            # criterion is already satisfied.
+            initial_error = objective(x0)
+            if initial_error < best_error:
+                best_error = initial_error
+                best_x = x0.copy()
+                best_message = "Exact structured initialization"
+            if best_error < 1e-10:
+                break
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 result = minimize(

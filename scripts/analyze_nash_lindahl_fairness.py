@@ -22,7 +22,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import minimize, minimize_scalar
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -74,6 +74,76 @@ def ordered_agents(mapping: dict[str, Any]) -> list[str]:
 def load_json(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def recover_game1_preferences(
+    result_path: Path,
+    config: dict[str, Any] | None = None,
+) -> dict[str, list[float]]:
+    """Recover the exact private values delivered in a Game 1 setup log.
+
+    The runner historically serialized preferences into the terminal result only
+    after consensus.  A no-consensus result can therefore have an empty embedded
+    preference object even though the actual setup prompt is retained beside it.
+    This function is a strict parser of that retained experiment input, not an
+    imputation from other runs.
+    """
+
+    cfg = config or (load_json(result_path).get("config") or {})
+    expected_agents = ordered_agents(
+        {str(agent): None for agent in (cfg.get("agents") or [])}
+        or {str(agent): None for agent in (cfg.get("agent_model_map") or {})}
+    )
+    expected_n = int(cfg.get("n_agents") or len(expected_agents))
+    expected_items = len(cfg.get("items") or [])
+    if expected_n <= 0 or len(expected_agents) != expected_n or expected_items <= 0:
+        raise ValueError(
+            f"Cannot validate setup-log preferences for {result_path}: "
+            f"n_agents={expected_n}, agent_ids={len(expected_agents)}, items={expected_items}"
+        )
+
+    interaction_paths = [
+        result_path.with_name("all_interactions.json"),
+        result_path.with_name("run_1_all_interactions.json"),
+    ]
+    for interaction_path in interaction_paths:
+        if not interaction_path.is_file():
+            continue
+        recovered: dict[str, dict[int, float]] = {}
+        for entry in load_json(interaction_path):
+            if str(entry.get("phase")) != "game_setup":
+                continue
+            agent_id = str(entry.get("agent_id") or "")
+            if agent_id not in expected_agents:
+                continue
+            values = recovered.setdefault(agent_id, {})
+            for match in re.finditer(
+                r"^\s*(\d+):\s*.+?->\s*(-?\d+(?:\.\d+)?)\s*$",
+                str(entry.get("prompt") or ""),
+                flags=re.MULTILINE,
+            ):
+                item_index = int(match.group(1))
+                value = float(match.group(2))
+                if item_index in values and not math.isclose(values[item_index], value, abs_tol=1e-9):
+                    raise ValueError(
+                        f"Conflicting setup values for {agent_id} item {item_index} in {interaction_path}"
+                    )
+                values[item_index] = value
+
+        expected_indices = set(range(expected_items))
+        if set(recovered) != set(expected_agents):
+            continue
+        if any(set(values) != expected_indices for values in recovered.values()):
+            continue
+        preferences = {
+            agent_id: [recovered[agent_id][index] for index in range(expected_items)]
+            for agent_id in expected_agents
+        }
+        if any(not math.isclose(sum(values), 100.0, abs_tol=1e-8) for values in preferences.values()):
+            raise ValueError(f"Recovered Game 1 preference vector does not sum to 100 in {interaction_path}")
+        return preferences
+
+    raise ValueError(f"Could not recover complete Game 1 setup preferences for {result_path}")
 
 
 def resolve_path(path_text: str | Path) -> Path:
@@ -134,6 +204,7 @@ def competition_fields(game_id: str, config: dict[str, Any]) -> tuple[float, str
 
 
 def gini(values: list[float]) -> float:
+    """Return the shifted, finite-sample-corrected Gini used in the paper."""
     arr = np.asarray(values, dtype=float)
     if arr.size == 0:
         return float("nan")
@@ -144,7 +215,13 @@ def gini(values: list[float]) -> float:
         return 0.0
     arr = np.sort(arr)
     n = arr.size
-    return float((2 * np.sum((np.arange(1, n + 1) * arr))) / (n * np.sum(arr)) - (n + 1) / n)
+    if n == 1:
+        return 0.0
+    raw_gini = float(
+        (2 * np.sum(np.arange(1, n + 1) * arr)) / (n * np.sum(arr))
+        - (n + 1) / n
+    )
+    return min(max(n * raw_gini / (n - 1), 0.0), 1.0)
 
 
 def safe_ratio(num: float, den: float) -> float:
@@ -332,6 +409,138 @@ def game2_social_optimum(positions: dict[str, list[float]], weights: dict[str, l
     return sw * 100.0
 
 
+def game2_nbs_multiagent_agreement(
+    positions: dict[str, list[float]],
+    weights: dict[str, list[float]],
+) -> np.ndarray:
+    """Return a validated numerical NBS treaty for Game 2 with N > 2.
+
+    The negative log Nash product is convex on the treaty box wherever all
+    utilities are positive. Five deterministic SLSQP starts provide robust
+    numerical candidates; coordinate-wise refinement handles the
+    absolute-value kinks, and the final subgradient check certifies convex
+    first-order optimality to a small numerical tolerance.
+    """
+    agents = ordered_agents(positions)
+    pos = np.asarray([positions[aid] for aid in agents], dtype=float)
+    w = np.asarray([weights[aid] for aid in agents], dtype=float)
+    n_issues = pos.shape[1]
+
+    def utilities(agreement: np.ndarray) -> np.ndarray:
+        return np.sum(w * (1.0 - np.abs(pos - agreement[None, :])), axis=1)
+
+    def objective(agreement: np.ndarray) -> float:
+        values = utilities(agreement)
+        if np.any(values <= 0.0):
+            return float("inf")
+        return float(-np.log(values).sum())
+
+    def objective_and_gradient(agreement: np.ndarray) -> tuple[float, np.ndarray]:
+        delta = agreement[None, :] - pos
+        values = np.sum(w * (1.0 - np.abs(delta)), axis=1)
+        if np.any(values <= 0.0):
+            return 1e100, np.zeros(n_issues, dtype=float)
+        # sign(0)=0 selects a valid subgradient at an ideal-point kink.
+        gradient = np.sum(w * np.sign(delta) / values[:, None], axis=0)
+        return float(-np.log(values).sum()), gradient
+
+    weighted_start = np.asarray(
+        [
+            np.average(pos[:, k], weights=np.maximum(w[:, k], EPS))
+            for k in range(n_issues)
+        ],
+        dtype=float,
+    )
+    starts = [weighted_start, np.mean(pos, axis=0), np.median(pos, axis=0)]
+    rng = np.random.default_rng(42)
+    starts.extend(rng.uniform(0.0, 1.0, size=n_issues) for _ in range(2))
+
+    candidates = []
+    for start in starts:
+        result = minimize(
+            objective_and_gradient,
+            np.clip(start, 0.0, 1.0),
+            jac=True,
+            method="SLSQP",
+            bounds=[(0.0, 1.0)] * n_issues,
+            options={"maxiter": 3000, "ftol": 1e-13, "disp": False},
+        )
+        if bool(result.success) and np.all(np.isfinite(result.x)) and np.isfinite(result.fun):
+            candidates.append(result)
+    if not candidates:
+        raise RuntimeError("all five Game 2 NBS starts failed")
+    candidates.sort(key=lambda result: (float(result.fun), tuple(np.asarray(result.x))))
+    agreement = np.clip(np.asarray(candidates[0].x, dtype=float), 0.0, 1.0)
+
+    # SLSQP can stop infinitesimally to one side of a nonsmooth ideal point.
+    # Exact one-coordinate minimization snaps true kink optima to observed
+    # ideals and makes the final convex optimality audit deterministic.
+    for _cycle in range(30):
+        before = objective(agreement)
+        for k in range(n_issues):
+            def one_dimensional(value: float) -> float:
+                trial = agreement.copy()
+                trial[k] = float(value)
+                return objective(trial)
+
+            scalar = minimize_scalar(
+                one_dimensional,
+                bounds=(0.0, 1.0),
+                method="bounded",
+                options={"xatol": 1e-13, "maxiter": 1000},
+            )
+            candidate_values = np.concatenate(
+                [np.asarray([agreement[k], 0.0, 1.0, float(scalar.x)]), pos[:, k]]
+            )
+            scored = sorted(
+                ((one_dimensional(float(value)), float(value)) for value in candidate_values),
+                key=lambda pair: (pair[0], pair[1]),
+            )
+            agreement[k] = scored[0][1]
+        after = objective(agreement)
+        if before - after < 1e-13:
+            break
+
+    values = utilities(agreement)
+    if not np.all(np.isfinite(agreement)) or not np.all(np.isfinite(values)):
+        raise RuntimeError("Game 2 NBS solver returned non-finite output")
+    if np.any(values <= 0.0):
+        raise RuntimeError("Game 2 NBS solver returned non-positive utility")
+    if np.any(agreement < -1e-8) or np.any(agreement > 1.0 + 1e-8):
+        raise RuntimeError("Game 2 NBS solver violated the treaty box")
+
+    # For this convex objective, zero in every coordinate's subgradient
+    # interval (with the appropriate one-sided box condition) is a global
+    # first-order certificate.
+    kink_tolerance = 2e-6
+    coordinate_violations: list[float] = []
+    for k in range(n_issues):
+        delta = agreement[k] - pos[:, k]
+        coefficients = w[:, k] / values
+        tied = np.abs(delta) <= kink_tolerance
+        base = float(np.sum(coefficients[~tied] * np.sign(delta[~tied])))
+        radius = float(np.sum(coefficients[tied]))
+        low, high = base - radius, base + radius
+        if agreement[k] <= kink_tolerance:
+            coordinate_violations.append(max(0.0, -high))
+        elif agreement[k] >= 1.0 - kink_tolerance:
+            coordinate_violations.append(max(0.0, low))
+        elif low > 0.0:
+            coordinate_violations.append(low)
+        elif high < 0.0:
+            coordinate_violations.append(-high)
+        else:
+            coordinate_violations.append(0.0)
+    subgradient_violation = float(max(coordinate_violations, default=0.0))
+    if subgradient_violation > 5e-3:
+        raise RuntimeError(
+            f"Game 2 NBS subgradient violation {subgradient_violation:.3e}"
+        )
+    if objective(agreement) > objective(weighted_start) + 1e-8:
+        raise RuntimeError("Game 2 NBS objective is worse than the weighted compromise start")
+    return agreement
+
+
 def game2_nbs(positions: dict[str, list[float]], weights: dict[str, list[float]]) -> dict[str, float]:
     agents = ordered_agents(positions)
     pos = np.asarray([positions[aid] for aid in agents], dtype=float)
@@ -352,10 +561,8 @@ def game2_nbs(positions: dict[str, list[float]], weights: dict[str, list[float]]
         dtype=float,
     )
     if len(agents) > 2:
-        # The N>2 run matrix has hundreds of 10-agent treaty instances. A
-        # direct deterministic proportional-compromise approximation keeps the
-        # full report tractable and avoids rare nonsmooth optimizer stalls.
-        return game2_raw_utilities(weighted_start.tolist(), positions, weights)
+        agreement = game2_nbs_multiagent_agreement(positions, weights)
+        return game2_raw_utilities(agreement.tolist(), positions, weights)
     else:
         starts = [
             np.mean(pos, axis=0),
@@ -476,6 +683,61 @@ def game3_lindahl_contributions(
     return out
 
 
+def game3_funded_payment_distance(
+    actual_contribs: dict[str, list[float]],
+    benchmark_contribs: dict[str, list[float]],
+    costs: list[float],
+    funded_set: list[int],
+) -> dict[str, float]:
+    """Compare executed funded-project payments with a funded-set reference.
+
+    The accepted proposal retains pledges to every project, but Game 3 refunds
+    pledges outside ``funded_set``.  Outcome-level burden sharing must therefore
+    exclude those refunded entries from both the distance numerator and the
+    actual-payment term in its normalizer.  Full pledged and refunded totals are
+    retained separately for provenance.
+    """
+    agents = list(benchmark_contribs)
+    project_count = len(costs)
+    invalid_projects = [j for j in funded_set if j < 0 or j >= project_count]
+    if invalid_projects:
+        raise ValueError(f"funded project indices out of range: {invalid_projects}")
+
+    distance_squared = 0.0
+    total_pledged = 0.0
+    total_paid_funded = 0.0
+    for aid in agents:
+        actual = np.asarray(
+            actual_contribs.get(aid, [0.0] * project_count), dtype=float
+        )
+        benchmark = np.asarray(
+            benchmark_contribs.get(aid, [0.0] * project_count), dtype=float
+        )
+        if actual.shape != (project_count,) or benchmark.shape != (project_count,):
+            raise ValueError(f"Game 3 contribution vector length mismatch for {aid}")
+        total_pledged += float(actual.sum())
+        if funded_set:
+            paid = actual[funded_set]
+            target = benchmark[funded_set]
+            total_paid_funded += float(paid.sum())
+            distance_squared += float(np.square(paid - target).sum())
+
+    funded_total_cost = float(sum(costs[j] for j in funded_set))
+    refunded_pledges = total_pledged - total_paid_funded
+    if refunded_pledges < -1e-8:
+        raise ValueError(f"computed negative refunded pledges: {refunded_pledges}")
+    distance = math.sqrt(distance_squared)
+    return {
+        "lindahl_distance_norm": distance
+        / max(funded_total_cost, total_paid_funded, 1.0),
+        "actual_total_contribution": total_paid_funded,
+        "actual_total_pledged": total_pledged,
+        "refunded_pledges": max(refunded_pledges, 0.0),
+        "funded_total_cost": funded_total_cost,
+        "overfunding": total_paid_funded - funded_total_cost,
+    }
+
+
 def game3_lindahl_nbs(
     valuations: dict[str, list[float]],
     costs: list[float],
@@ -582,6 +844,11 @@ def analyze_row(row: AnalysisRow) -> tuple[dict[str, Any], list[dict[str, Any]]]
     payload = row.payload or load_json(row.result_path)
     cfg = {**row.config, **(payload.get("config") or {})}
     game_id = row.game_id
+    preferences_recovered_from_setup = False
+    if game_id == "game1" and not (payload.get("agent_preferences") or {}):
+        payload = dict(payload)
+        payload["agent_preferences"] = recover_game1_preferences(row.result_path, cfg)
+        preferences_recovered_from_setup = True
     n_agents = int(cfg.get("n_agents") or len(payload.get("agent_preferences") or {}))
     competition_value, competition_label = competition_fields(game_id, cfg)
     consensus = bool(payload.get("consensus_reached"))
@@ -626,7 +893,11 @@ def analyze_row(row: AnalysisRow) -> tuple[dict[str, Any], list[dict[str, Any]]]
         else:
             actual_raw = {aid: 0.0 for aid in positions}
         benchmark = game2_nbs(positions, weights)
-        nbs_method = "continuous NBS (single-start approximation for N>2)"
+        nbs_method = (
+            "continuous numerical NBS (five-start SLSQP with analytic subgradient and coordinate refinement)"
+            if n_agents > 2
+            else "continuous numerical NBS (five-start L-BFGS-B)"
+        )
         sw_opt = game2_social_optimum(positions, weights)
         agents = ordered_agents(positions)
 
@@ -651,23 +922,19 @@ def analyze_row(row: AnalysisRow) -> tuple[dict[str, Any], list[dict[str, Any]]]
             benchmark = game3_raw_utilities(preferences, opt_lindahl, opt_set)
             nbs_set = opt_set
             nbs_method = "Lindahl cost-sharing on utilitarian-optimal funded set (N>2 proxy)"
-        actual_cost = sum(sum(actual_contribs.get(aid, [])) for aid in agents)
-        total_funded_cost = sum(costs[j] for j in funded_set)
-        lindahl_dist = 0.0
-        for aid in agents:
-            diff = np.asarray(actual_contribs.get(aid, [0.0] * len(costs))) - np.asarray(lindahl_contribs.get(aid, [0.0] * len(costs)))
-            lindahl_dist += float(np.sum(diff**2))
-        lindahl_dist = math.sqrt(lindahl_dist)
+        payment_distance = game3_funded_payment_distance(
+            actual_contribs,
+            lindahl_contribs,
+            costs,
+            funded_set,
+        )
         extra.update(
             {
                 "funded_project_count": len(funded_set),
                 "optimal_project_count": len(opt_set),
                 "nbs_lindahl_project_count": len(nbs_set),
                 "provision_rate": len(set(funded_set) & set(opt_set)) / len(opt_set) if opt_set else 1.0,
-                "lindahl_distance_norm": lindahl_dist / max(total_funded_cost, actual_cost, 1.0),
-                "actual_total_contribution": actual_cost,
-                "funded_total_cost": total_funded_cost,
-                "overfunding": actual_cost - total_funded_cost,
+                **payment_distance,
             }
         )
 
@@ -686,6 +953,7 @@ def analyze_row(row: AnalysisRow) -> tuple[dict[str, Any], list[dict[str, Any]]]
         "competition_label": competition_label,
         "competition_id": cfg.get("competition_id") or competition_label,
         "consensus_reached": consensus,
+        "preferences_recovered_from_setup": preferences_recovered_from_setup,
         "final_round": final_round,
         "discount_factor": discount,
         "nbs_method": nbs_method,
@@ -966,7 +1234,7 @@ def write_markdown_report(out_dir: Path, runs: pd.DataFrame, agents: pd.DataFram
         "- Game 1 uses an exact discrete NBS for two-agent runs and an approximate discrete NBS by multi-start local search for N>2 item allocations.\n"
     )
     lines.append(
-        "- Game 2 uses a continuous NBS over treaty vectors, maximizing the product of utilities over the zero-disagreement point; N>2 diplomacy uses a deterministic single-start approximation for tractability.\n"
+        "- Game 2 uses a continuous numerical NBS over treaty vectors, maximizing the product of utilities over the zero-disagreement point. N>2 diplomacy uses five deterministic SLSQP starts with analytic subgradients and coordinate refinement.\n"
     )
     lines.append(
         "- Game 3 reports a Lindahl comparison for the actually funded projects; two-agent runs also use an enumerated Lindahl-cost-sharing Nash benchmark, while N>2 runs use Lindahl cost-sharing on the utilitarian-optimal funded set as a tractable proxy.\n"
@@ -986,7 +1254,7 @@ def write_markdown_report(out_dir: Path, runs: pd.DataFrame, agents: pd.DataFram
         lines.append("## Game 3 Lindahl Patterns by Competition\n")
         lines.append(game3_comp.to_markdown(index=False, floatfmt=".3f"))
         lines.append(
-            "\n\nThe Game 3 table is the cleanest Lindahl readout: `lindahl_dist` measures how far actual contribution vectors are from benefit-proportional cost shares, and `provision` is the fraction of socially optimal projects that were funded.\n"
+            "\n\nThe Game 3 table is the cleanest Lindahl-style readout: `lindahl_dist` measures how far executed payments on realized funded projects are from benefit-proportional cost shares for those projects; refunded pledges are excluded. `provision` is the fraction of socially optimal projects that were funded.\n"
         )
     if not role_diff.empty:
         lines.append("## Baseline-vs-Adversary Fairness Advantage\n")
@@ -1027,7 +1295,7 @@ def write_markdown_report(out_dir: Path, runs: pd.DataFrame, agents: pd.DataFram
         "- Game 1 N>2 uses an approximate discrete NBS, so small numeric differences should not be over-interpreted. The qualitative comparison is still useful because all actual agreements are scored against the same local-search benchmark.\n"
     )
     lines.append(
-        "- Game 2 N>2 uses a fast single-start continuous NBS approximation; the two-agent diplomacy runs use multiple starts.\n"
+        "- Game 2 N>2 uses a validated numerical NBS with five deterministic SLSQP starts, analytic subgradients, and coordinate refinement; the two-agent diplomacy runs retain their separate five-start L-BFGS-B implementation.\n"
     )
     lines.append(
         "- Game 3's Lindahl benchmark assumes benefit-proportional cost shares for funded projects. This is the natural public-goods fairness notion, but it is not identical to the strategic voting rule used in the experiments.\n"

@@ -1,8 +1,7 @@
-"""
-OpenRouter client for accessing various LLM models including Gemma.
+"""OpenRouter client with direct HTTPS and a shared-file proxy fallback.
 
-On Della, the default transport is the shared file-based proxy monitor first,
-with direct HTTPS as automatic fallback when the proxy path is unavailable.
+When ``OPENROUTER_TRANSPORT=auto``, calls use direct HTTPS first and fall back
+to the externally managed file proxy only for connectivity failures.
 """
 
 import os
@@ -64,7 +63,7 @@ class OpenRouterConfig:
     timeout: float = 300.0
     max_retries: int = 12
     retry_delay: float = 2.0
-    transport: str = "auto"  # direct | proxy | auto (proxy-first)
+    transport: str = "auto"  # direct | proxy | auto (direct, then proxy)
     proxy_poll_dir: str = DEFAULT_OPENROUTER_PROXY_POLL_DIR
     proxy_poll_interval: float = 0.1
     proxy_timeout: float = 6000.0
@@ -142,35 +141,59 @@ def _usage_get_nested(container: Any, *path: str) -> Any:
 
 
 def normalize_openrouter_usage(usage: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """Promote nested provider reasoning-token fields to stable top-level keys."""
+    """Preserve raw usage and promote the authoritative reasoning breakdown.
+
+    OpenRouter currently reports hidden Gemini reasoning in
+    ``completion_tokens_details.reasoning_tokens``. Nested provider detail is
+    authoritative; flat keys are retained as compatibility fallbacks.
+    Explicit zero counts are preserved.
+    """
     normalized = dict(usage or {})
-    reasoning_tokens = normalized.get("reasoning_tokens")
+    reasoning_tokens = None
+    reasoning_source = None
+    for path in (
+        ("completion_tokens_details", "reasoning_tokens"),
+        ("output_tokens_details", "reasoning_tokens"),
+        ("completion_tokens_details", "thinking_tokens"),
+        ("output_tokens_details", "thinking_tokens"),
+    ):
+        reasoning_tokens = _usage_get_nested(normalized, *path)
+        if reasoning_tokens is not None:
+            reasoning_source = ".".join(path)
+            break
     if reasoning_tokens is None:
-        for path in (
-            ("completion_tokens_details", "reasoning_tokens"),
-            ("output_tokens_details", "reasoning_tokens"),
-            ("completion_tokens_details", "thinking_tokens"),
-            ("output_tokens_details", "thinking_tokens"),
-        ):
-            reasoning_tokens = _usage_get_nested(normalized, *path)
+        for key in ("reasoning_tokens", "thinking_tokens"):
+            reasoning_tokens = normalized.get(key)
             if reasoning_tokens is not None:
+                reasoning_source = key
                 break
     if reasoning_tokens is not None:
         normalized["reasoning_tokens"] = reasoning_tokens
 
-    thinking_tokens = normalized.get("thinking_tokens")
+    thinking_tokens = None
+    thinking_source = None
+    for path in (
+        ("completion_tokens_details", "thinking_tokens"),
+        ("output_tokens_details", "thinking_tokens"),
+        ("completion_tokens_details", "reasoning_tokens"),
+        ("output_tokens_details", "reasoning_tokens"),
+    ):
+        thinking_tokens = _usage_get_nested(normalized, *path)
+        if thinking_tokens is not None:
+            thinking_source = ".".join(path)
+            break
     if thinking_tokens is None:
-        for path in (
-            ("completion_tokens_details", "thinking_tokens"),
-            ("output_tokens_details", "thinking_tokens"),
-            ("completion_tokens_details", "reasoning_tokens"),
-            ("output_tokens_details", "reasoning_tokens"),
-        ):
-            thinking_tokens = _usage_get_nested(normalized, *path)
+        for key in ("thinking_tokens", "reasoning_tokens"):
+            thinking_tokens = normalized.get(key)
             if thinking_tokens is not None:
+                thinking_source = key
                 break
     if thinking_tokens is not None:
         normalized["thinking_tokens"] = thinking_tokens
+    token_source = reasoning_source or thinking_source
+    if token_source is not None:
+        normalized["reasoning_token_source"] = token_source
+        normalized.setdefault("output_tokens_includes_reasoning", True)
     return normalized
 
 
@@ -215,11 +238,9 @@ class OpenRouterAgent(BaseLLMAgent):
             requested_transport = "auto"
 
         self.running_in_slurm = bool(os.getenv("SLURM_JOB_ID"))
-        if requested_transport == "auto":
-            resolved_transport = "proxy" if self.running_in_slurm else "direct"
-        else:
-            resolved_transport = requested_transport
         self.requested_transport = requested_transport
+        self._auto_proxy_fallback_active = False
+        self._last_transport_used: Optional[str] = None
 
         proxy_poll_dir = (
             os.getenv("OPENROUTER_PROXY_POLL_DIR")
@@ -269,7 +290,7 @@ class OpenRouterAgent(BaseLLMAgent):
         self.openrouter_config = OpenRouterConfig(
             api_key=initial_key.value.strip(),
             timeout=api_timeout,
-            transport=resolved_transport,
+            transport=requested_transport,
             proxy_poll_dir=proxy_poll_dir,
             proxy_poll_interval=proxy_poll_interval,
             proxy_timeout=proxy_timeout,
@@ -301,9 +322,8 @@ class OpenRouterAgent(BaseLLMAgent):
         
         self.logger = logging.getLogger(f"OpenRouterAgent-{agent_id}")
         self.logger.debug(
-            "Resolved OpenRouter transport requested=%s resolved=%s slurm=%s",
+            "Configured OpenRouter transport=%s slurm=%s",
             self.requested_transport,
-            self.openrouter_config.transport,
             self.running_in_slurm,
         )
     
@@ -313,7 +333,11 @@ class OpenRouterAgent(BaseLLMAgent):
             connector = aiohttp.TCPConnector(force_close=False)
             self.session = aiohttp.ClientSession(
                 connector=connector,
-                json_serialize=lambda x: json.dumps(x, ensure_ascii=False)
+                json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
+                # Princeton's proxy/default module exposes the allowlisted
+                # compute-node route through standard proxy environment
+                # variables. aiohttp ignores those unless trust_env is enabled.
+                trust_env=True,
             )
 
     def _proxy_monitor_hint(self) -> str:
@@ -332,6 +356,46 @@ class OpenRouterAgent(BaseLLMAgent):
             raise Exception("OpenRouter API returned None result")
         if not isinstance(result, str) or len(result.strip()) == 0:
             raise Exception("OpenRouter API returned empty response content")
+
+    @staticmethod
+    def _is_direct_connectivity_failure(error: BaseException) -> bool:
+        """Return True only when the file proxy is a meaningful fallback."""
+        if isinstance(
+            error,
+            (
+                aiohttp.ClientError,
+                asyncio.TimeoutError,
+                OSError,
+            ),
+        ):
+            return True
+        message = str(error).lower()
+        return any(
+            marker in message
+            for marker in (
+                "cannot connect",
+                "connection refused",
+                "connection reset",
+                "connection timed out",
+                "name or service not known",
+                "temporary failure in name resolution",
+                "server disconnected",
+                "ssl handshake",
+                "tunnel connection failed",
+                "proxy error",
+                "blocked by proxy",
+                "not in the allowed",
+                "not whitelisted",
+                "upstream idle timeout",
+            )
+        )
+
+    def _transport_order(self) -> tuple[str, ...]:
+        if self.requested_transport != "auto":
+            return (self.requested_transport,)
+        if self._auto_proxy_fallback_active:
+            return ("proxy",)
+        return ("direct", "proxy")
 
     @staticmethod
     def _is_non_retryable_http_status(status: int) -> bool:
@@ -452,6 +516,11 @@ class OpenRouterAgent(BaseLLMAgent):
                 raise Exception(error_message)
 
             data = await response.json(encoding="utf-8")
+            if not isinstance(data, dict):
+                raise aiohttp.ClientPayloadError(
+                    "OpenRouter direct response returned a non-object JSON "
+                    f"payload ({type(data).__name__})"
+                )
             result = self._extract_content_from_openrouter_response(data)
             usage = normalize_openrouter_usage(data.get("usage", {}) or {})
             return result, None, usage
@@ -546,21 +615,56 @@ class OpenRouterAgent(BaseLLMAgent):
                 "X-Title": self.openrouter_config.site_name or ""
             }
 
-            if self.openrouter_config.transport == "proxy":
-                result, error, usage = await self._send_request_via_proxy(
-                    url, headers, payload, self.openrouter_config.timeout
-                )
-                self._validate_request_result(result, error)
-            elif self.openrouter_config.transport == "direct":
-                result, error, usage = await self._send_request_direct(
-                    url, headers, payload, self.openrouter_config.timeout
-                )
-                self._validate_request_result(result, error)
-            else:
-                raise RuntimeError(
-                    f"Unsupported OpenRouter transport: {self.openrouter_config.transport}"
-                )
-            return result, usage
+            last_error: Optional[BaseException] = None
+            for transport in self._transport_order():
+                try:
+                    if transport == "proxy":
+                        result, error, usage = (
+                            await self._send_request_via_proxy(
+                                url,
+                                headers,
+                                payload,
+                                self.openrouter_config.timeout,
+                            )
+                        )
+                        self._validate_request_result(result, error)
+                    elif transport == "direct":
+                        result, error, usage = (
+                            await self._send_request_direct(
+                                url,
+                                headers,
+                                payload,
+                                self.openrouter_config.timeout,
+                            )
+                        )
+                        self._validate_request_result(result, error)
+                    else:
+                        raise RuntimeError(
+                            f"Unsupported OpenRouter transport: {transport}"
+                        )
+                    usage = dict(usage or {})
+                    usage["openrouter_transport"] = transport
+                    self._last_transport_used = transport
+                    return result, usage
+                except Exception as exc:
+                    last_error = exc
+                    if (
+                        transport == "direct"
+                        and self.requested_transport == "auto"
+                        and self._is_direct_connectivity_failure(exc)
+                    ):
+                        self._auto_proxy_fallback_active = True
+                        self.logger.warning(
+                            "Direct OpenRouter connectivity failed (%s); "
+                            "using the shared file proxy for this agent",
+                            type(exc).__name__,
+                        )
+                        continue
+                    raise
+
+            if last_error is not None:
+                raise last_error
+            raise RuntimeError("No OpenRouter transport was attempted")
 
         return await call_with_key_rotation(
             provider="openrouter",
@@ -756,13 +860,13 @@ Your reflection:"""
     
     async def close(self):
         """Close the aiohttp session."""
-        if self.session:
+        if getattr(self, "session", None):
             await self.session.close()
             self.session = None
     
     def __del__(self):
         """Cleanup on deletion."""
-        if self.session:
+        if getattr(self, "session", None):
             try:
                 asyncio.create_task(self.close())
             except:

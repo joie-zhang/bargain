@@ -77,6 +77,7 @@ def build_codebook() -> list[dict[str, Any]]:
 def build_manifest_rows() -> list[dict[str, Any]]:
     df = pd.read_csv(N2_RUNS_CSV)
     df = df[df["baseline_key"].eq("gpt5_nano")].copy()
+    df = df[~df["adversary_model"].str.contains("phi-3", case=False, na=False)].copy()
     df = df.sort_values(["game_id", "adversary_elo", "adversary_model", "competition_value", "model_order", "discussion_turns"])
 
     rows: list[dict[str, Any]] = []
@@ -147,8 +148,8 @@ def build_manifest_rows() -> list[dict[str, Any]]:
                 "source_analysis_csv": str(N2_RUNS_CSV),
             }
         )
-    if len(rows) != 1941:
-        raise ValueError(f"expected 1941 GPT-5-nano N=2 rows, got {len(rows)}")
+    if len(rows) != 1920:
+        raise ValueError(f"expected 1920 non-Phi GPT-5-nano N=2 rows, got {len(rows)}")
     return rows
 
 
@@ -218,6 +219,8 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     codebook = build_codebook()
     manifest_rows = build_manifest_rows()
+    for old_manifest in MANIFEST_DIR.glob("chunk_*.jsonl"):
+        old_manifest.unlink()
     (OUT_DIR / "llm_tag_codebook.json").write_text(json.dumps(codebook, indent=2), encoding="utf-8")
     write_jsonl(OUT_DIR / "all_rollouts_manifest.jsonl", manifest_rows)
     write_instructions(codebook)

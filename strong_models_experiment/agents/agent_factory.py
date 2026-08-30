@@ -1,5 +1,6 @@
 """Agent creation utilities for different model providers."""
 
+import copy
 import os
 import logging
 from typing import List, Dict, Any, Optional
@@ -54,6 +55,27 @@ class StrongModelAgentFactory:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
         self.factory = AgentFactory()
+
+    @staticmethod
+    def resolve_model_config(model_name: str, run_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Return the catalog config plus an optional run-scoped provider override.
+
+        Experiment batches occasionally need to pin a transport without changing the
+        global model catalog (for example, direct OpenAI instead of OpenRouter).  Keep
+        that decision in the saved run configuration so it is auditable and cannot
+        silently affect unrelated experiments.
+        """
+        model_config = copy.deepcopy(STRONG_MODELS_CONFIG[model_name])
+        overrides = run_config.get("model_config_overrides") or {}
+        override = overrides.get(model_name) or {}
+        if not isinstance(override, dict):
+            raise TypeError(f"model_config_overrides[{model_name!r}] must be a dictionary")
+
+        for key, value in override.items():
+            # Provider-specific custom parameters are replaced, rather than merged:
+            # OpenRouter's `reasoning` object is not accepted by direct OpenAI.
+            model_config[key] = copy.deepcopy(value)
+        return model_config
     
     async def create_agents(self, models: List[str], config: Dict[str, Any]) -> List[BaseLLMAgent]:
         """Create agents for the specified models.
@@ -117,7 +139,7 @@ class StrongModelAgentFactory:
                 self.logger.warning(f"Unknown model: {model_name}, skipping")
                 continue
 
-            model_config = STRONG_MODELS_CONFIG[model_name]
+            model_config = self.resolve_model_config(model_name, config)
             api_type = model_config.get("api_type", "openrouter")
 
             # Use anonymous agent names instead of model names

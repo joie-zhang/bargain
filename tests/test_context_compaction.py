@@ -45,11 +45,13 @@ def _context(history):
 def test_resolve_context_limit_uses_canonical_metadata_and_hard_caps():
     assert resolve_context_limit(["amazon-nova-micro-v1.0"]) == 128_000
     assert resolve_context_limit(["amazon/nova-micro-v1"]) == 128_000
-    assert resolve_context_limit(["deepseek-v3"]) == 32_768
-    assert resolve_context_limit(["deepseek/deepseek-chat"]) == 32_768
-    assert resolve_context_limit(["deepseek/deepseek-chat", "deepseek-v3"]) == 32_768
+    assert resolve_context_limit(["deepseek-v3"]) == 128_000
+    assert resolve_context_limit(["deepseek/deepseek-chat"]) == 128_000
+    assert resolve_context_limit(["deepseek/deepseek-chat", "deepseek-v3"]) == 128_000
     assert resolve_context_limit(["gpt-5-nano-2025-08-07"]) == 128_000
     assert resolve_context_limit(["claude-sonnet-4-20250514"]) == 200_000
+    assert resolve_context_limit(["phi-3-mini-128k-instruct"]) == 131_072
+    assert resolve_context_limit(["microsoft/phi-3-mini-128k-instruct"]) == 131_072
 
 
 def test_reserved_output_tokens_env_caps_configured_reserve(monkeypatch):
@@ -158,7 +160,11 @@ def test_build_context_messages_records_budget_metadata_without_compaction(monke
     assert metadata.input_budget_tokens is not None
 
 
-def test_discussion_phase_bounds_current_round_history_for_deepseek():
+def test_discussion_phase_bounds_current_round_history_for_small_context(monkeypatch):
+    monkeypatch.setattr(
+        "strong_models_experiment.phases.phase_handlers.resolve_context_limit",
+        lambda _names: 32_768,
+    )
     handler = PhaseHandler()
     agent = DummyDeepSeekContextAgent(
         "Agent_1",

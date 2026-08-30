@@ -137,8 +137,13 @@ Each completed run usually contains these files:
 
 ## Validate A Change
 
-Run the applicable test modules before a production batch. A focused command
-gives a faster result than collection of the complete legacy test tree.
+Run the complete retained test suite before a production batch:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m pytest
+```
+
+Use a focused command for a faster check during development:
 
 ```bash
 python -m pytest -q \

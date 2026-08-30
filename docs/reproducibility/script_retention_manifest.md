@@ -25,19 +25,19 @@ table generators, intermediate CSV producers, and retained analysis reports.
 
 ## Keep: Paper Figure Package
 
-Keep all 22 non-cache files in `scripts/paper_figures/`:
+Keep these active files in `scripts/paper_figures/`:
 
 - `README.md`
 - `__init__.py`
-- `assets/endpoint_fairness_elo_snapshot.csv`
-- `assets/fairshare_residual_combined_base.png`
 - `assets/game2_utility_roster_snapshot.csv`
 - `make_combined_aligned_font_balanced.py`
 - `plot_fairshare_residual_combined.py`
 - `plot_figure3_baseline_by_competition_ewma_iteration.py`
 - `plot_figure4_total_welfare_by_competition_ewma.py`
+- `plot_game1_discussion_turn_ablation.py`
 - `plot_homogeneous_adversary_baseline_vs_all_gini.py`
 - `plot_icml_homogeneous_adversary_main_panels.py`
+- `plot_icml_heterogeneous_game1_payoff.py`
 - `plot_icml_ttc_main_figures.py`
 - `plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py`
 - `plot_n2_fairness_distance_three_game_curves.py`
@@ -50,9 +50,16 @@ Keep all 22 non-cache files in `scripts/paper_figures/`:
 - `render_figure7_label_edits.py`
 - `verify_all.py`
 
+These historical reconstruction inputs are no longer used by a renderer. Keep
+them only until the current data-backed figures are approved, and then delete
+them:
+
+- `assets/endpoint_fairness_elo_snapshot.csv`
+- `assets/fairshare_residual_combined_base.png`
+
 ## Keep: Experiment And Analysis Provenance
 
-Keep these 26 top-level files:
+Keep these 27 top-level files:
 
 - `analyze_appendix_llama33_baseline_500.py`: appendix Llama analysis and figures.
 - `analyze_n2_baseline_comparison.py`: main bilateral tables, statistics, and figures.
@@ -78,6 +85,7 @@ Keep these 26 top-level files:
 - `plot_ttc_group_intensity_combined.py`: producer of the retained TTC intensity input table.
 - `random_monoculture_control_batch.py`: random-monoculture experiment generator.
 - `run_ttc_native_config.py`: native TTC experiment worker.
+- `run_game1_single_local_config.sbatch`: staged single-config Game 1 local-model worker.
 - `submit_cofunding_then_diplomacy.sh`: submission helper used by the Game 2 and Game 3 generators.
 - `validate_paper_figure_manifest.py`: active paper-figure validation.
 
@@ -256,10 +264,8 @@ The cleanup did these tasks:
 2. It updated documentation that named moved or deleted files.
 3. It deleted all `__pycache__` directories under `scripts/`.
 4. All 34 moved modules passed independent import checks.
-5. Forty-two focused tests passed. Two complete test-tree collection attempts
-   were stopped after they ran for more than 20 minutes. The production batch
-   generator test did not return a result during its attempted run. Treat these
-   checks as incomplete, not as test failures.
+5. The test cleanup removed obsolete collection blockers. All 479 retained
+   tests now pass. See `docs/reproducibility/test_retention_manifest.md`.
 6. All 16 paper figure jobs completed. The verifier restored each declared
    output after the check.
 7. The figure manifest validator still reports seven changed NeurIPS graphics.

@@ -38,7 +38,7 @@ from strong_models_experiment.analysis.active_model_roster import (  # noqa: E40
 
 
 DEFAULT_GAME1_ROOT = PROJECT_ROOT / "experiments" / "results" / "scaling_experiment_20260404_064451"
-DEFAULT_GAME2_ROOT = PROJECT_ROOT / "experiments" / "results" / "diplomacy_20260404_052849"
+DEFAULT_GAME2_ROOT = PROJECT_ROOT / "experiments" / "results" / "diplomacy_20260405_082215"
 DEFAULT_GAME3_ROOT = PROJECT_ROOT / "experiments" / "results" / "cofunding_20260405_083548"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "visualization" / "figures" / "gpt5_nano_baseline_vs_elo_all_games_20260413"
 DEFAULT_ELO_MARKDOWN = PROJECT_ROOT / "docs" / "guides" / "chatbot_arena_elo_scores_2026_03_31.md"

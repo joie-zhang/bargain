@@ -246,6 +246,7 @@ def test_local_model_factory_passes_phase_caps_into_agent_config(monkeypatch):
         "strong_models_experiment.agents.agent_factory.LocalModelAgent",
         StubLocalModelAgent,
     )
+    monkeypatch.setattr("os.path.exists", lambda path: True)
 
     factory = StrongModelAgentFactory()
     config = STRONG_MODELS_CONFIG["llama-3.2-3b-instruct-cluster"]

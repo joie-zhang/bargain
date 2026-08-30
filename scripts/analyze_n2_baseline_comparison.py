@@ -176,23 +176,37 @@ def errorbar_points(
     linewidth: float = 0.9,
     markersize: float = 4.0,
     alpha: float = 0.85,
+    show_errorbars: bool = False,
 ) -> None:
     plot_df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=[x_col, y_col])
     if plot_df.empty:
         return
-    ax.errorbar(
+    if show_errorbars:
+        ax.errorbar(
+            plot_df[x_col],
+            plot_df[y_col],
+            yerr=finite_yerr(plot_df[yerr_col] if yerr_col in plot_df.columns else 0.0),
+            fmt=marker,
+            linestyle=linestyle,
+            linewidth=linewidth,
+            markersize=markersize,
+            capsize=2.0,
+            capthick=0.7,
+            elinewidth=0.75,
+            color=color,
+            ecolor=color,
+            alpha=alpha,
+            label=label,
+        )
+        return
+    ax.plot(
         plot_df[x_col],
         plot_df[y_col],
-        yerr=finite_yerr(plot_df[yerr_col] if yerr_col in plot_df.columns else 0.0),
-        fmt=marker,
+        marker=marker,
         linestyle=linestyle,
         linewidth=linewidth,
         markersize=markersize,
-        capsize=2.0,
-        capthick=0.7,
-        elinewidth=0.75,
         color=color,
-        ecolor=color,
         alpha=alpha,
         label=label,
     )
@@ -584,6 +598,10 @@ def compute_solution_metrics(
         "fairness_distance": np.nan,
         "adversary_fairness_excess": np.nan,
         "baseline_fairness_excess": np.nan,
+        "adversary_actual_utility_undiscounted": np.nan,
+        "baseline_actual_utility_undiscounted": np.nan,
+        "adversary_fair_utility": np.nan,
+        "baseline_fair_utility": np.nan,
         "adversary_fairness_excess_ratio": np.nan,
         "baseline_fairness_excess_ratio": np.nan,
         "nash_product_ratio": np.nan,
@@ -620,6 +638,10 @@ def compute_solution_metrics(
                 ),
                 "adversary_fairness_excess": actual.get(adversary_agent, 0.0) - nbs.get(adversary_agent, 0.0),
                 "baseline_fairness_excess": actual.get(baseline_agent, 0.0) - nbs.get(baseline_agent, 0.0),
+                "adversary_actual_utility_undiscounted": actual.get(adversary_agent, 0.0),
+                "baseline_actual_utility_undiscounted": actual.get(baseline_agent, 0.0),
+                "adversary_fair_utility": nbs.get(adversary_agent, 0.0),
+                "baseline_fair_utility": nbs.get(baseline_agent, 0.0),
                 "adversary_fairness_excess_ratio": safe_ratio(
                     actual.get(adversary_agent, 0.0) - nbs.get(adversary_agent, 0.0),
                     nbs.get(adversary_agent, 0.0),
@@ -653,6 +675,10 @@ def compute_solution_metrics(
                 ),
                 "adversary_fairness_excess": actual.get(adversary_agent, 0.0) - nbs.get(adversary_agent, 0.0),
                 "baseline_fairness_excess": actual.get(baseline_agent, 0.0) - nbs.get(baseline_agent, 0.0),
+                "adversary_actual_utility_undiscounted": actual.get(adversary_agent, 0.0),
+                "baseline_actual_utility_undiscounted": actual.get(baseline_agent, 0.0),
+                "adversary_fair_utility": nbs.get(adversary_agent, 0.0),
+                "baseline_fair_utility": nbs.get(baseline_agent, 0.0),
                 "adversary_fairness_excess_ratio": safe_ratio(
                     actual.get(adversary_agent, 0.0) - nbs.get(adversary_agent, 0.0),
                     nbs.get(adversary_agent, 0.0),
@@ -700,6 +726,12 @@ def compute_solution_metrics(
                 "actual_funded_project_count": float(len(funded_set)),
                 "optimal_funded_project_count": float(len(opt_set)),
                 "optimal_project_recall": float(recall),
+                "adversary_actual_utility_undiscounted": actual.get(adversary_agent, 0.0),
+                "baseline_actual_utility_undiscounted": actual.get(baseline_agent, 0.0),
+                "adversary_fair_utility": 0.0,
+                "baseline_fair_utility": 0.0,
+                "adversary_fairness_excess": actual.get(adversary_agent, 0.0),
+                "baseline_fairness_excess": actual.get(baseline_agent, 0.0),
             }
         )
         if funded_set:
@@ -720,6 +752,8 @@ def compute_solution_metrics(
                     "fairness_distance": safe_ratio(lindahl_distance(contributions, lindahl), total_funded_cost),
                     "adversary_fairness_excess": actual.get(adversary_agent, 0.0) - fair_actual.get(adversary_agent, 0.0),
                     "baseline_fairness_excess": actual.get(baseline_agent, 0.0) - fair_actual.get(baseline_agent, 0.0),
+                    "adversary_fair_utility": fair_actual.get(adversary_agent, 0.0),
+                    "baseline_fair_utility": fair_actual.get(baseline_agent, 0.0),
                     "adversary_fairness_excess_ratio": safe_ratio(
                         actual.get(adversary_agent, 0.0) - fair_actual.get(adversary_agent, 0.0),
                         abs(fair_actual.get(adversary_agent, 0.0)),
@@ -1251,19 +1285,19 @@ def make_all_plots(df: pd.DataFrame) -> pd.DataFrame:
     slope_frames: list[pd.DataFrame] = []
     for spec in BASELINES:
         plot_specs = [
-            ("adversary_utility", "Mean adversary payoff", "01_adversary_payoff_overall.png", PALETTE["adversary"], True),
-            ("baseline_utility", "Mean baseline payoff", "03_baseline_payoff_overall.png", PALETTE["baseline"], True),
-            ("rounds_to_consensus", "Mean rounds to consensus", "07_rounds_to_consensus_overall.png", "#0f766e", True),
-            ("optimality_ratio", "Mean SW / optimal SW", "09_optimality_ratio_overall.png", "#7c3aed", True),
-            ("fairness_distance", "Mean fairness distance", "11_fairness_distance_overall.png", "#be123c", True),
+            ("adversary_utility", "Mean adversary payoff", "01_adversary_payoff_overall.png", PALETTE["adversary"], False),
+            ("baseline_utility", "Mean baseline payoff", "03_baseline_payoff_overall.png", PALETTE["baseline"], False),
+            ("rounds_to_consensus", "Mean rounds to consensus", "07_rounds_to_consensus_overall.png", "#0f766e", False),
+            ("optimality_ratio", "Mean SW / optimal SW", "09_optimality_ratio_overall.png", "#7c3aed", False),
+            ("fairness_distance", "Mean fairness distance", "11_fairness_distance_overall.png", "#be123c", False),
         ]
         for metric, ylabel, filename, color, label_points in plot_specs:
             slope_frames.append(
                 plot_overall_metric(df, spec, metric, ylabel, filename, point_color=color, label_points=label_points)
             )
         comp_specs = [
-            ("adversary_utility", "Mean adversary payoff", "02_adversary_payoff_by_competition.png", True),
-            ("baseline_utility", "Mean baseline payoff", "04_baseline_payoff_by_competition.png", True),
+            ("adversary_utility", "Mean adversary payoff", "02_adversary_payoff_by_competition.png", False),
+            ("baseline_utility", "Mean baseline payoff", "04_baseline_payoff_by_competition.png", False),
             ("rounds_to_consensus", "Mean rounds to consensus", "08_rounds_to_consensus_by_competition.png", False),
             ("optimality_ratio", "Mean SW / optimal SW", "10_optimality_ratio_by_competition.png", False),
             ("fairness_distance", "Mean fairness distance", "12_fairness_distance_by_competition.png", False),
@@ -1294,9 +1328,21 @@ def make_all_plots(df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(slope_frames, ignore_index=True)
 
 
-def write_summary_tables(df: pd.DataFrame, slopes: pd.DataFrame) -> None:
+def primary_protocol_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep the two-turn protocol for Game 1 and all rows for Games 2-3."""
+    discussion_turns = pd.to_numeric(df["discussion_turns"], errors="coerce")
+    return df[~(df["game_id"].eq("game1") & discussion_turns.ne(2))].copy()
+
+
+def write_summary_tables(
+    df: pd.DataFrame,
+    slopes: pd.DataFrame,
+    *,
+    all_protocols: pd.DataFrame,
+) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    df.to_csv(OUT_DIR / "all_runs_with_metrics.csv", index=False)
+    all_protocols.to_csv(OUT_DIR / "all_runs_with_metrics.csv", index=False)
+    df.to_csv(OUT_DIR / "primary_runs_with_metrics.csv", index=False)
     slopes.to_csv(OUT_DIR / "slope_summary.csv", index=False)
 
     overall = (
@@ -1583,7 +1629,8 @@ def write_report(df: pd.DataFrame, slopes: pd.DataFrame) -> None:
         "",
         "Generated files:",
         "",
-        "- `all_runs_with_metrics.csv`: one row per loaded run with payoff, order, competition, rounds, optimality, and fairness metrics.",
+        "- `all_runs_with_metrics.csv`: one row per loaded run, including the Game 1 one-turn ablation.",
+        "- `primary_runs_with_metrics.csv`: the primary two-turn protocol for Game 1 and all loaded Games 2-3 runs.",
         "- `overall_by_model_game.csv`: model/game means.",
         "- `by_competition_model_game.csv`: model/game/competition means.",
         "- `model_roster_by_game.csv`: loaded plotted-model counts by game.",
@@ -1678,11 +1725,12 @@ def main() -> None:
     elo_map = load_combined_elo_map()
     frames = [load_baseline_rows(spec, elo_map) for spec in BASELINES]
     all_runs = pd.concat(frames, ignore_index=True)
-    slopes = make_all_plots(all_runs)
-    write_summary_tables(all_runs, slopes)
-    write_report(all_runs, slopes)
+    primary_runs = primary_protocol_rows(all_runs)
+    slopes = make_all_plots(primary_runs)
+    write_summary_tables(primary_runs, slopes, all_protocols=all_runs)
+    write_report(primary_runs, slopes)
     print(f"Wrote N=2 baseline comparison bundle to {OUT_DIR}")
-    print(f"Rows loaded: {len(all_runs)}")
+    print(f"Rows loaded: {len(all_runs)} ({len(primary_runs)} in the primary protocol)")
 
 
 if __name__ == "__main__":

@@ -15,6 +15,10 @@ from typing import Any, Dict, List
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 MAX_TOKENS_PER_PHASE_LIMIT = 16_384
 LEGACY_MAX_TOKENS_PER_PHASE = 10_500
+# Anthropic's output ceiling for claude-sonnet-4-6 / claude-opus-4-6, mirroring the
+# clamp in strong_models_experiment/agents/agent_factory.py. Only reachable when a
+# config opts in explicitly via allow_extended_max_tokens_per_phase.
+EXTENDED_MAX_TOKENS_PER_PHASE_LIMIT = 65_536
 
 
 def load_config(path: Path) -> Dict[str, Any]:
@@ -26,15 +30,32 @@ def resolve_max_tokens_per_phase(config: Dict[str, Any]) -> int:
 
     Older generated TTC configs used 10500. Treat that as the old default and
     upgrade it to the current cap, while preserving smaller intentional caps.
+    Seed-replication configs can opt out of that migration so that their cap
+    exactly matches the archived source experiment.
+
+    A config may set allow_extended_max_tokens_per_phase=true to raise its ceiling
+    to the provider maximum. This exists for adaptive-thinking models at max effort,
+    which can consume the whole standard 16384 cap on reasoning and return empty
+    visible content. A run using the extended ceiling is NOT comparable to the
+    standard grid; the resolved cap is recorded in the result file so such runs stay
+    identifiable.
     """
+    limit = (
+        EXTENDED_MAX_TOKENS_PER_PHASE_LIMIT
+        if config.get("allow_extended_max_tokens_per_phase", False)
+        else MAX_TOKENS_PER_PHASE_LIMIT
+    )
+
     raw_value = config.get("max_tokens_per_phase", MAX_TOKENS_PER_PHASE_LIMIT)
     if raw_value is None:
-        return MAX_TOKENS_PER_PHASE_LIMIT
+        return limit
 
     value = int(raw_value)
+    if config.get("preserve_config_max_tokens_per_phase", False):
+        return min(value, limit)
     if value == LEGACY_MAX_TOKENS_PER_PHASE:
-        return MAX_TOKENS_PER_PHASE_LIMIT
-    return min(value, MAX_TOKENS_PER_PHASE_LIMIT)
+        return limit
+    return min(value, limit)
 
 
 def add_game_args(cmd: List[str], config: Dict[str, Any]) -> None:

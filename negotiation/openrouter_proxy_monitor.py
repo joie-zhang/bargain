@@ -198,6 +198,21 @@ async def process_request(session: aiohttp.ClientSession, request_json_fpath) ->
     url, headers, payload, timeout = request_json['url'], request_json['headers'], request_json['payload'], request_json['timeout']
     return await prompt_openrouter(session, url, headers, payload, timeout)
 
+
+def build_success_response(content: str, usage: dict) -> dict:
+    """Build a proxy response without discarding provider usage details.
+
+    In particular, OpenRouter's
+    ``completion_tokens_details.reasoning_tokens`` field must survive the
+    shared-file hop so the client can promote and persist it.
+    """
+    return {
+        "result": content,
+        "error": None,
+        "usage": dict(usage or {}),
+    }
+
+
 async def handle_request(session: aiohttp.ClientSession, request_path: Path):
     suffix = request_path.stem.removeprefix("request_")
     response_path = POLL_DIR / f"response_{suffix}.json"
@@ -205,16 +220,7 @@ async def handle_request(session: aiohttp.ClientSession, request_path: Path):
 
     try:
         content, usage = await process_request(session, str(request_path))
-        response = {
-            "result": content,
-            "error": None,
-            "usage": {
-                "prompt_tokens": usage.get("prompt_tokens"),
-                "completion_tokens": usage.get("completion_tokens"),
-                "reasoning_tokens": usage.get("reasoning_tokens"),
-                "total_tokens": usage.get("total_tokens")
-            }
-        }
+        response = build_success_response(content, usage)
         log.info(f"Success {suffix} ({len(content)} chars)")
     except Exception as e:
         response = {"result": None, "error": f"{type(e).__name__}: {e}", "usage": None}

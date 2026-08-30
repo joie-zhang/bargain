@@ -17,9 +17,7 @@ What it creates:
 
 Dependencies:
     - pandas, numpy, matplotlib, scipy
-    - analysis/nash_lindahl_fairness_20260505/agent_metrics.csv
-    - docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md
-    - strong_models_experiment.analysis.active_model_roster
+    - canonical bilateral result roots loaded by analyze_n2_baseline_comparison.py
 
 =============================================================================
 """
@@ -42,16 +40,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from strong_models_experiment.analysis.active_model_roster import (
-    active_model_elo_map,
-    canonical_model_name,
-    short_model_name,
+from scripts.analyze_n2_baseline_comparison import (
+    BASELINES,
+    load_baseline_rows,
+    load_combined_elo_map,
+    primary_protocol_rows,
 )
 
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-AGENT_METRICS_CSV = PROJECT_ROOT / "analysis" / "nash_lindahl_fairness_20260505" / "agent_metrics.csv"
 OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano"
 
 # ---------------------------------------------------------------------------
@@ -152,38 +150,34 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 1. Load data
     # ------------------------------------------------------------------
-    metrics = pd.read_csv(AGENT_METRICS_CSV)
-
-    # Filter to N=2 GPT-5-nano baseline, adversary role
-    adv = metrics[
-        (metrics["source_group"] == "n2_main_gpt5_baseline")
-        & (metrics["role"] == "adversary")
-    ].copy()
-
-    # ------------------------------------------------------------------
-    # 2. Join Elo via canonical model name
-    # ------------------------------------------------------------------
-    adv["canonical"] = adv["model"].apply(canonical_model_name)
-    adv["elo"] = adv["canonical"].map(active_model_elo_map())
-    adv = adv.dropna(subset=["elo"])
-    adv["short_name"] = adv["model"].apply(short_model_name)
-
-    print(f"After Elo join: {len(adv)} adversary rows, {adv['model'].nunique()} models")
+    spec = next(spec for spec in BASELINES if spec.key == "gpt5_nano")
+    adv = primary_protocol_rows(load_baseline_rows(spec, load_combined_elo_map()))
+    if len(adv) != 1500 or adv["adversary_model"].nunique() != 30:
+        raise RuntimeError(
+            f"Expected 1,500 primary runs over 30 models; found {len(adv):,} runs "
+            f"over {adv['adversary_model'].nunique()} models"
+        )
+    if adv["adversary_model"].astype(str).str.contains("phi", case=False).any():
+        raise RuntimeError("Phi rows remain in the primary bilateral data")
+    adv["utility"] = pd.to_numeric(adv["adversary_actual_utility_undiscounted"], errors="coerce")
+    adv["residual"] = pd.to_numeric(adv["adversary_fairness_excess"], errors="coerce")
+    adv["fair_share"] = pd.to_numeric(adv["adversary_fair_utility"], errors="coerce")
+    print(f"Loaded {len(adv)} primary rows over {adv['adversary_model'].nunique()} models")
 
     # ------------------------------------------------------------------
     # 3. Aggregate to model-level means per game
     # ------------------------------------------------------------------
-    group_cols = ["game_id", "model", "canonical", "short_name", "elo"]
+    group_cols = ["game_id", "adversary_model", "adversary_short", "adversary_elo"]
     agg = (
         adv.groupby(group_cols, as_index=False)
         .agg(
-            utility_mean=("actual_raw_utility", "mean"),
-            utility_sem=("actual_raw_utility", sem),
-            nbs_fair_mean=("nbs_utility", "mean"),
-            nbs_fair_sem=("nbs_utility", sem),
-            residual_mean=("nbs_residual", "mean"),
-            residual_sem=("nbs_residual", sem),
-            n_runs=("actual_raw_utility", "size"),
+            utility_mean=("utility", "mean"),
+            utility_sem=("utility", sem),
+            nbs_fair_mean=("fair_share", "mean"),
+            nbs_fair_sem=("fair_share", sem),
+            residual_mean=("residual", "mean"),
+            residual_sem=("residual", sem),
+            n_runs=("utility", "size"),
         )
     )
 
@@ -194,38 +188,22 @@ def main() -> None:
     slope_rows: list[dict] = []
 
     for ax, game_id in zip(axes, ["game1", "game2", "game3"], strict=True):
-        gdf = agg[agg["game_id"] == game_id].sort_values("elo").copy()
-        x = gdf["elo"].to_numpy(dtype=float)
+        gdf = agg[agg["game_id"] == game_id].sort_values("adversary_elo").copy()
+        x = gdf["adversary_elo"].to_numpy(dtype=float)
 
         # --- Series 1: Adversary utility (filled circles, amber) ---
-        ax.errorbar(
-            gdf["elo"], gdf["utility_mean"],
-            yerr=finite_yerr(gdf["utility_sem"]),
-            fmt="o", markersize=4.4, color=COLOR_UTILITY, ecolor=COLOR_UTILITY,
-            capsize=2.0, capthick=0.7, elinewidth=0.75, alpha=0.9,
-            label="Adversary utility",
-        )
+        ax.plot(gdf["adversary_elo"], gdf["utility_mean"], "o", markersize=4.4, color=COLOR_UTILITY, alpha=0.9)
         util_stats = fit_line_stats(ax, x, gdf["utility_mean"].to_numpy(), COLOR_UTILITY)
 
         # --- Series 2: NBS fair share (open circles, gray) ---
-        ax.errorbar(
-            gdf["elo"], gdf["nbs_fair_mean"],
-            yerr=finite_yerr(gdf["nbs_fair_sem"]),
-            fmt="o", markersize=4.0, color=COLOR_NBS_FAIR, ecolor=COLOR_NBS_FAIR,
-            capsize=2.0, capthick=0.7, elinewidth=0.75, alpha=0.85,
-            markerfacecolor="none", markeredgewidth=1.0,
-            label="NBS fair share",
+        ax.plot(
+            gdf["adversary_elo"], gdf["nbs_fair_mean"], "o", markersize=4.0,
+            color=COLOR_NBS_FAIR, alpha=0.85, markerfacecolor="none", markeredgewidth=1.0,
         )
         nbs_stats = fit_line_stats(ax, x, gdf["nbs_fair_mean"].to_numpy(), COLOR_NBS_FAIR)
 
         # --- Series 3: NBS residual (filled diamonds, red) ---
-        ax.errorbar(
-            gdf["elo"], gdf["residual_mean"],
-            yerr=finite_yerr(gdf["residual_sem"]),
-            fmt="D", markersize=4.4, color=COLOR_RESIDUAL, ecolor=COLOR_RESIDUAL,
-            capsize=2.0, capthick=0.7, elinewidth=0.75, alpha=0.9,
-            label="NBS residual",
-        )
+        ax.plot(gdf["adversary_elo"], gdf["residual_mean"], "D", markersize=4.4, color=COLOR_RESIDUAL, alpha=0.9)
         resid_stats = fit_line_stats(ax, x, gdf["residual_mean"].to_numpy(), COLOR_RESIDUAL)
 
         # --- Zero reference line ---
@@ -238,9 +216,6 @@ def main() -> None:
             ax.axvline(zc, color="#6b7280", linewidth=0.8, linestyle=":", alpha=0.5)
             ax.axvspan(xlims[0], zc, color="#3b82f6", alpha=0.06)
             ax.axvspan(zc, xlims[1], color="#ef4444", alpha=0.06)
-
-        # --- Model name annotations (on utility series only) ---
-        annotate_models(ax, gdf, "elo", "utility_mean")
 
         # --- Title with residual slope and r ---
         resid_slope_str = f"{resid_stats['slope_per_100']:+.2f}"

@@ -63,6 +63,20 @@ def make_game(
 class TestValuationGeneration:
     """Tests for valuation vector generation."""
 
+    def test_exact_structured_start_skips_slsqp(self, monkeypatch):
+        """An analytically exact multi-agent start should not invoke SLSQP."""
+        def unexpected_minimize(*args, **kwargs):
+            raise AssertionError("SLSQP should be skipped for an exact start")
+
+        monkeypatch.setattr(
+            "game_environments.co_funding.minimize",
+            unexpected_minimize,
+        )
+        game = make_game(alpha=0.2, n_agents=8, m_projects=20, seed=1922148755)
+        state = game.create_game_state(create_test_agents(8))
+
+        assert all(sum(values) == 100 for values in state["agent_valuations"].values())
+
     def test_valuations_sum_to_100(self):
         """Each agent's valuation vector should sum to 100."""
         game = make_game(alpha=0.5)

@@ -132,7 +132,12 @@ def draw_plot(summary: pd.DataFrame) -> plt.Figure:
     for ax, family in zip(axes, FAMILY_ORDER):
         fam = summary[summary["family"] == family].sort_values(["level_index", "level"])
         if fam.empty:
-            ax.set_title(FAMILY_TITLES.get(family, family), fontsize=11, pad=7)
+            ax.set_title(
+                FAMILY_TITLES.get(family, family),
+                fontsize=17,
+                fontweight="normal",
+                pad=7,
+            )
             ax.text(0.5, 0.5, "No data", ha="center", va="center", transform=ax.transAxes)
             continue
 
@@ -159,23 +164,25 @@ def draw_plot(summary: pd.DataFrame) -> plt.Figure:
                 label=style["label"],
             )
 
-        ax.set_title(FAMILY_TITLES.get(family, family), fontsize=11, pad=7)
+        ax.set_title(
+            FAMILY_TITLES.get(family, family),
+            fontsize=17,
+            fontweight="normal",
+            pad=7,
+        )
         ax.set_xticks(xs)
-        ax.set_xticklabels(labels, fontsize=9)
-        ax.set_xlabel("Requested reasoning effort", fontsize=10)
+        ax.set_xticklabels(labels, fontsize=12)
+        ax.set_xlabel(
+            "Requested reasoning effort",
+            fontsize=15,
+            fontweight="normal",
+        )
+        ax.tick_params(axis="y", labelsize=12)
         ax.grid(axis="y", alpha=0.28, linewidth=0.8)
         ax.grid(axis="x", alpha=0.10, linewidth=0.6)
         ax.set_xlim(xs.min() - 0.35, xs.max() + 0.35)
-        ax.text(
-            0.02,
-            0.04,
-            "n=18 per point",
-            transform=ax.transAxes,
-            fontsize=8,
-            color="#555555",
-        )
 
-    axes[0].set_ylabel("Mean discounted utility", fontsize=10)
+    axes[0].set_ylabel("Mean Utility", fontsize=15, fontweight="normal")
     finite_vals = [v for v in all_vals if math.isfinite(float(v))]
     if finite_vals:
         lo, hi = min(finite_vals), max(finite_vals)
@@ -201,7 +208,7 @@ def draw_plot(summary: pd.DataFrame) -> plt.Figure:
         ncol=2,
         frameon=False,
         bbox_to_anchor=(0.5, -0.02),
-        fontsize=10,
+        prop={"size": 14, "weight": "normal"},
     )
     fig.tight_layout(rect=[0, 0.08, 1, 0.97])
     return fig

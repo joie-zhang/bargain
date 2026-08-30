@@ -126,6 +126,7 @@ def test_extract_token_usage_preserves_response_time_seconds():
 
     assert token_usage == {
         "input_tokens": 3,
+        "provider_input_tokens": 3,
         "output_tokens": 4,
         "total_tokens": 7,
         "response_time_seconds": 1.25,
@@ -149,6 +150,7 @@ def test_extract_token_usage_preserves_direct_anthropic_metadata():
 
     assert token_usage == {
         "input_tokens": 11,
+        "provider_input_tokens": 11,
         "output_tokens": 13,
         "total_tokens": 29,
         "reasoning_tokens": 5,

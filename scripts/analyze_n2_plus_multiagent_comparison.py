@@ -57,7 +57,7 @@ N2_SUMMARY = (
 N2_RUN_METRICS = (
     PROJECT_ROOT
     / "experiments/results/n2_baseline_comparison_analysis_20260505/"
-    / "all_runs_with_metrics.csv"
+    / "primary_runs_with_metrics.csv"
 )
 HOM_ROOT = (
     PROJECT_ROOT
@@ -678,7 +678,7 @@ def plot_hom_adversary_payoff_vs_elo(hom_runs: pd.DataFrame) -> pd.DataFrame:
                 sub["adversary_utility"],
                 sub["adversary_utility_sem"],
                 color=color,
-                label=f"N={n} ({format_slope_per_100(slope)})",
+                label=f"n={n} ({format_slope_per_100(slope)})",
                 marker="o",
                 linewidth=1.2,
                 alpha=0.9,
@@ -781,7 +781,7 @@ def plot_heterogeneous_payoff_vs_arena_elo(het_agents: pd.DataFrame) -> pd.DataF
                 sub["final_utility"],
                 sub["final_utility_sem"],
                 color=color,
-                label=f"N={n} ({format_slope_per_100(slope)})",
+                label=f"n={n} ({format_slope_per_100(slope)})",
                 marker="o",
                 linestyle="none",
                 markersize=3.4,
@@ -1057,7 +1057,13 @@ def compute_n2_multiagent_fairness() -> tuple[pd.DataFrame, pd.DataFrame]:
     agents = pd.DataFrame(agent_records)
     save_csv(TABLES_DIR / "multiagent_n2_fairness_run_metrics.csv", runs)
     save_csv(TABLES_DIR / "multiagent_n2_fairness_agent_metrics.csv", agents)
-    save_csv(TABLES_DIR / "multiagent_n2_fairness_skipped_rows.csv", pd.DataFrame(skipped_records))
+    skipped = pd.DataFrame(
+        skipped_records,
+        columns=["source_group", "result_path", "reason"],
+    )
+    save_csv(TABLES_DIR / "multiagent_n2_fairness_skipped_rows.csv", skipped)
+    if not skipped.empty:
+        raise RuntimeError(f"N=2 fairness analysis skipped {len(skipped)} canonical rows")
     return runs, agents
 
 
@@ -1119,11 +1125,15 @@ def plot_multiagent_fairness(fair_runs: pd.DataFrame, fair_agents: pd.DataFrame,
         multi.groupby(["game_id", "n_agents", "experiment_family", "family_label"], dropna=False)
         .agg(
             run_count=("result_path", "count"),
+            consensus_count=("consensus_reached", "sum"),
             fairness_distance=("fairness_distance", "mean"),
+            fairness_distance_count=("fairness_distance", "count"),
             fairness_distance_sem=("fairness_distance", sem_series),
             utility_gini=("utility_gini", "mean"),
+            utility_gini_count=("utility_gini", "count"),
             utility_gini_sem=("utility_gini", sem_series),
             sw_efficiency=("sw_efficiency", "mean"),
+            sw_efficiency_count=("sw_efficiency", "count"),
             sw_efficiency_sem=("sw_efficiency", sem_series),
             consensus_rate=("consensus_reached", "mean"),
             consensus_rate_sem=("consensus_reached", sem_series),
@@ -1132,6 +1142,19 @@ def plot_multiagent_fairness(fair_runs: pd.DataFrame, fair_agents: pd.DataFrame,
         )
         .reset_index()
     )
+    summary["consensus_count"] = summary["consensus_count"].astype(int)
+    summary["no_consensus_count"] = summary["run_count"] - summary["consensus_count"]
+    if len(summary) != 45:
+        raise RuntimeError(f"Expected 45 Figure 30 cells, found {len(summary)}")
+    if int(summary["run_count"].sum()) != 2730:
+        raise RuntimeError(f"Expected 2,730 terminal runs, found {int(summary['run_count'].sum())}")
+    if int(summary["consensus_count"].sum()) != 2661:
+        raise RuntimeError(
+            f"Expected 2,661 consensus outcomes, found {int(summary['consensus_count'].sum())}"
+        )
+    for count_column in ("fairness_distance_count", "utility_gini_count", "sw_efficiency_count"):
+        if not summary[count_column].equals(summary["run_count"]):
+            raise RuntimeError(f"{count_column} does not retain every terminal run")
     save_csv(TABLES_DIR / "multiagent_fairness_by_n_summary.csv", summary)
 
     for metric, ylabel, filename in [
@@ -1579,16 +1602,13 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
             sub = by_n[(by_n["game_label"].eq(game)) & (by_n["n_agents"].eq(n))]
             slope = math.nan
             if not sub.empty:
-                plot_errorbar_series(
-                    ax,
+                ax.scatter(
                     sub["arena_elo"],
                     sub["performance_elo"],
-                    sub["performance_elo_se"],
                     color=N_COLORS[n],
                     label=f"N={n}",
                     marker="o",
-                    linestyle="none",
-                    markersize=3.4,
+                    s=3.4**2,
                     alpha=0.82,
                 )
                 slope, intercept, r2 = add_fit_line(ax, sub, "arena_elo", "performance_elo", N_COLORS[n])
@@ -1618,16 +1638,13 @@ def plot_performance_elos(rankings: pd.DataFrame, het_agents: Optional[pd.DataFr
             slope = math.nan
             if not sub.empty:
                 color = BAND_COLORS[band]
-                plot_errorbar_series(
-                    ax,
+                ax.scatter(
                     sub["arena_elo"],
                     sub["performance_elo"],
-                    sub["performance_elo_se"],
                     color=color,
                     label=band,
                     marker="o",
-                    linestyle="none",
-                    markersize=3.8,
+                    s=3.8**2,
                     alpha=0.82,
                 )
                 slope, intercept, r2 = add_fit_line(ax, sub, "arena_elo", "performance_elo", color)
@@ -1878,7 +1895,7 @@ This section analyzes the multi-agent experiments with `N = 2, 4, 6, 8, 10`. I p
 - Game 2: `CI = theta * (1 - rho) / 2`.
 - Game 3: `CI = (1 - alpha) * (1 - sigma)`.
 
-I use per-agent payoff, adversary payoff, adversary minus fleet mean, within-run z-advantage, shifted Gini, NBS/Lindahl distance, and welfare efficiency for cross-`N` plots. I avoid total utility as a primary cross-`N` metric because total utility mechanically changes with the number of agents and with the game scale. Error bars are `mean ± 1 SEM` wherever a plotted point summarizes repeated runs; raw-run dispersion plots retain the raw points and overlay binned `mean ± 1 SEM`; payoff-performance Elo bars use the fitted Bradley-Terry inverse-Hessian standard error.
+I use per-agent payoff, adversary payoff, adversary minus fleet mean, within-run z-advantage, shifted Gini, NBS/Lindahl distance, and welfare efficiency for cross-`N` plots. I avoid total utility as a primary cross-`N` metric because total utility mechanically changes with the number of agents and with the game scale. Error bars are `mean ± 1 SEM` wherever a plotted point summarizes repeated runs; raw-run dispersion plots retain the raw points and overlay binned `mean ± 1 SEM`; payoff-performance Elo ratings are shown as descriptive point estimates because within-run pairs are dependent.
 
 Parsed rows: `{total_hom_runs}` homogeneous runs / `{total_hom_agents}` homogeneous agent rows, and `{total_het_runs}` heterogeneous runs / `{total_het_agents}` heterogeneous agent rows.
 
@@ -1940,11 +1957,11 @@ Interpretation: when the average `N=10 - N=2` advantage is negative, the larger 
 
 ## 3. Heterogeneous Performance Elo
 
-I also computed a payoff-based Elo ranking for heterogeneous runs. For each multi-agent result, I converted the realized utilities into all pairwise comparisons among agents in the same run. If model `i` earned higher utility than model `j`, `i` scored 1; if tied, both scored 0.5. I then fit a Bradley-Terry/Elo model by maximum likelihood:
+I also computed a payoff-based Elo ranking for heterogeneous runs. For each fitted subset, I retained models meeting its minimum distinct-run threshold. In the paper's game-by-`N`, all-competition-band panels, the minimum is three runs for `N=2` and five for `N>2`; band-specific game-by-`N` panels use two and three, respectively, and all-`N` panels use five.
 
-`P(i beats j) = 1 / (1 + 10 ** ((R_j - R_i) / 400))`
+Within each run, I then constructed one comparison for every unordered pair of distinct retained models. A higher-utility model scores 1, a lower-utility model 0, and a tied utility 0.5. I fit a ridge-regularized Bradley-Terry/Elo model by minimizing the fractional Bernoulli negative log-likelihood plus `2e-5 * sum_i (R_i - mean(R))^2`, where `P(i beats j) = 1 / (1 + 10 ** ((R_j - R_i) / 400))`.
 
-Ratings are centered to mean 1500 within each fitted subset. This is not the external Arena Elo; it is an experiment-specific payoff performance Elo inferred from shared-roster outcomes.
+Ratings are shifted to mean 1500 within each fitted subset. This is not the external Arena Elo; it is an experiment-specific payoff performance Elo inferred from shared-roster outcomes.
 
 ![Heterogeneous performance Elo by game and N](plots_multiagent/heterogeneous_performance_elo_vs_arena_by_game_n.png)
 

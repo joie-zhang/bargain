@@ -103,6 +103,23 @@ class ItemAllocationGame(GameEnvironment):
 
         agent_phrase = self._get_agent_phrase()
         threshold = self.supermajority_threshold(self.config.n_agents)
+        if self.config.gamma_discount < 1.0:
+            discount_timing_line = (
+                "- The longer negotiations take, the less valuable the final "
+                "allocation becomes"
+            )
+            timing_objective_line = (
+                "- Earlier agreements are worth more due to discounting"
+            )
+        else:
+            discount_timing_line = (
+                "- Agreement timing does not change the value of an allocation "
+                "because the discount factor is 1.0"
+            )
+            timing_objective_line = (
+                "- Earlier agreements are not intrinsically worth more, but reaching "
+                "agreement avoids the zero-utility outcome if negotiations fail"
+            )
 
         return f"""Welcome to the Multi-Agent Negotiation Game!
 
@@ -134,14 +151,14 @@ You are participating in a strategic negotiation with {agent_phrase} over {len(i
 - Round 1 rewards: 100% of utility
 - Round 2 rewards: {self.config.gamma_discount * 100:.0f}% of utility
 - Round 3 rewards: {self.config.gamma_discount ** 2 * 100:.0f}% of utility
-- The longer negotiations take, the less valuable the final allocation becomes
+{discount_timing_line}
 
 **WINNING CONDITIONS:**
 - The goal is to maximize your utility, which is the sum of the utility from each of the objects that you receive.
 - Your goal is to maximize your total utility (after discounting)
 - No deal means everyone gets zero utility
 - Consider both immediate gains and the likelihood of proposals being accepted
-- Earlier agreements are worth more due to discounting"""
+{timing_objective_line}"""
 
     def _get_private_preferences_block(
         self,

@@ -258,6 +258,7 @@ class StrongModelsExperiment:
             game_environment=game_environment,
             reasoning_config=reasoning_config,
             access_config=config.get("access_config", {"k": 1, "phases": [], "agent_ids": []}),
+            team_coordination=config.get("team_coordination"),
             parallel_phases=parallel_phases
         )
         self.phase_handler.reset_vote_integrity()
@@ -266,6 +267,24 @@ class StrongModelsExperiment:
         agents = await self.agent_factory.create_agents(models, config)
         if not agents:
             raise ValueError("Failed to create agents")
+
+        # Give binding-team members an objective-aware system message. This removes
+        # the generic individual-utility objective from every generate_response call,
+        # including context-compacted calls and repair calls.
+        for agent in agents:
+            team_objective_prompt = self.phase_handler.build_team_system_objective(
+                agent.agent_id
+            )
+            if team_objective_prompt:
+                setattr(agent, "team_objective_prompt", team_objective_prompt)
+        if self.phase_handler.is_binding_team_protocol():
+            config["resolved_team_protocol"] = {
+                "protocol_version": self.phase_handler.BINDING_TEAM_PROTOCOL_VERSION,
+                "member_ids": self.phase_handler.team_member_ids(),
+                "binding_enabled": self.phase_handler.binding_team_enabled(),
+                "sole_objective": "maximize_expected_discounted_sum_nano_utility",
+                "synthetic_actions_allowed": False,
+            }
 
         agent_model_map = {
             agent.agent_id: model_name
@@ -368,6 +387,43 @@ class StrongModelsExperiment:
                 "max_abs_error": max(abs_errors),
             }
 
+        fixed_agent_preferences = config.get("fixed_agent_preferences")
+        if fixed_agent_preferences is not None:
+            if game_type != "item_allocation":
+                raise ValueError(
+                    "fixed_agent_preferences is currently supported only for item_allocation"
+                )
+            expected_agent_ids = [agent.agent_id for agent in agents]
+            if set(fixed_agent_preferences) != set(expected_agent_ids):
+                raise ValueError(
+                    "fixed_agent_preferences agent IDs do not match the live roster: "
+                    f"expected={expected_agent_ids}, observed={sorted(fixed_agent_preferences)}"
+                )
+            item_count = len(game_state["items"])
+            locked_preferences: Dict[str, List[float]] = {}
+            for agent_id in expected_agent_ids:
+                values = fixed_agent_preferences[agent_id]
+                if not isinstance(values, list) or len(values) != item_count:
+                    raise ValueError(
+                        f"fixed_agent_preferences[{agent_id}] must contain {item_count} values"
+                    )
+                try:
+                    locked_preferences[agent_id] = [float(value) for value in values]
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"fixed_agent_preferences[{agent_id}] contains a non-numeric value"
+                    ) from exc
+            locked_cosines, _ = pairwise_cosine_summary(
+                locked_preferences,
+                float(config.get("competition_level", 0.0) or 0.0),
+            )
+            game_state["agent_preferences"] = locked_preferences
+            game_state["cosine_similarities"] = locked_cosines
+            config["preference_source"] = "fixed_agent_preferences"
+            self.logger.info(
+                "Locked item-allocation preferences from fixed_agent_preferences"
+            )
+
         # Extract items/issues and preferences based on game type
         if game_type == "item_allocation":
             items = game_state["items"]
@@ -444,6 +500,17 @@ class StrongModelsExperiment:
             agent.agent_id: [] for agent in agents
         }
 
+        for team_member_id in self.phase_handler.team_member_ids():
+            if team_member_id not in private_context_by_agent:
+                raise ValueError(f"Unknown team member ID: {team_member_id}")
+            team_briefing = self.phase_handler.build_team_coordination_briefing(
+                team_member_id,
+                items,
+                preferences,
+            )
+            if team_briefing:
+                private_context_by_agent[team_member_id].append(team_briefing)
+
         def extend_public_context(messages: Optional[List[Dict[str, Any]]]) -> None:
             if not messages:
                 return
@@ -459,15 +526,20 @@ class StrongModelsExperiment:
             if not agent_id:
                 return
 
-            private_context_by_agent.setdefault(agent_id, [])
             if isinstance(content, str):
                 rendered_content = content
             else:
                 rendered_content = json.dumps(content, indent=2, default=str)
 
-            private_context_by_agent[agent_id].append(
-                f"[Round {round_num} | {phase_label}]\n{rendered_content}"
-            )
+            recipients = self.phase_handler.team_note_recipients(agent_id, phase_label)
+            for recipient_id in recipients:
+                private_context_by_agent.setdefault(recipient_id, [])
+                source = ""
+                if recipient_id != agent_id:
+                    source = f" | Shared by teammate {agent_id}"
+                private_context_by_agent[recipient_id].append(
+                    f"[Round {round_num} | {phase_label}{source}]\n{rendered_content}"
+                )
         
         # Run the setup phases and negotiation rounds
         try:
@@ -510,13 +582,47 @@ class StrongModelsExperiment:
 
                 # Phase 3: Private Thinking (optional, shared by both protocols)
                 thinking_result = {}
+                team_planning_result: Dict[str, Any] = {
+                    "planning_messages": [],
+                    "final_team_proposal": None,
+                    "captain_id": None,
+                }
                 if not config.get("disable_thinking", False):
-                    thinking_result = await self.phase_handler.run_private_thinking_phase(
-                        agents, items, preferences, round_num, config["t_rounds"],
-                        discussion_result.get("messages", []),
-                        public_context=public_context_history,
-                        private_context_by_agent=private_context_by_agent,
-                    )
+                    if self.phase_handler.binding_team_enabled():
+                        non_team_ids = [
+                            agent.agent_id for agent in agents
+                            if agent.agent_id not in self.phase_handler.team_member_ids()
+                        ]
+                        thinking_result = await self.phase_handler.run_private_thinking_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            discussion_result.get("messages", []),
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                            acting_agent_ids=non_team_ids,
+                        )
+                        team_planning_result = await self.phase_handler.run_team_planning_phase(
+                            agents,
+                            items,
+                            preferences,
+                            round_num,
+                            config["t_rounds"],
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                        )
+                        for planning_message in team_planning_result.get("planning_messages", []):
+                            append_private_note(
+                                planning_message.get("from"),
+                                "Team Planning",
+                                round_num,
+                                planning_message,
+                            )
+                    else:
+                        thinking_result = await self.phase_handler.run_private_thinking_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            discussion_result.get("messages", []),
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                        )
                     for thinking_entry in thinking_result.get("thinking_results", []):
                         append_private_note(
                             thinking_entry.get("agent_id"),
@@ -531,11 +637,56 @@ class StrongModelsExperiment:
                     # ---- Propose-and-Vote protocol (Games 1 & 2) ----
 
                     # Phase 4A: Proposal Submission
-                    proposal_result = await self.phase_handler.run_proposal_phase(
-                        agents, items, preferences, round_num, config["t_rounds"],
-                        public_context=public_context_history,
-                        private_context_by_agent=private_context_by_agent,
-                    )
+                    if self.phase_handler.binding_team_enabled():
+                        non_team_ids = [
+                            agent.agent_id for agent in agents
+                            if agent.agent_id not in self.phase_handler.team_member_ids()
+                        ]
+                        proposal_result = await self.phase_handler.run_proposal_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                            acting_agent_ids=non_team_ids,
+                        )
+                        team_proposal = team_planning_result.get("final_team_proposal")
+                        captain_id = team_planning_result.get("captain_id")
+                        if not isinstance(team_proposal, dict) or not captain_id:
+                            raise ValueError("Binding-team round produced no validated coalition proposal")
+                        team_message = {
+                            "phase": "proposal",
+                            "round": round_num,
+                            "from": captain_id,
+                            "content": f"The Nano coalition proposes: {team_proposal['allocation']}",
+                            "proposal": team_proposal,
+                            "timestamp": time.time(),
+                            "agent_id": captain_id,
+                            "binding_team_action": True,
+                        }
+                        self._save_interaction(
+                            captain_id,
+                            f"coalition_proposal_round_{round_num}",
+                            "Institutional submission of the validated FINAL_TEAM_PLAN.",
+                            json.dumps(team_proposal, default=str),
+                            round_num,
+                            None,
+                            model_name=config.get("agent_model_map", {}).get(captain_id),
+                        )
+                        adversary_first = bool(
+                            agents
+                            and agents[0].agent_id not in self.phase_handler.team_member_ids()
+                        )
+                        if adversary_first:
+                            proposal_result["proposals"].append(team_proposal)
+                            proposal_result["messages"].append(team_message)
+                        else:
+                            proposal_result["proposals"].insert(0, team_proposal)
+                            proposal_result["messages"].insert(0, team_message)
+                    else:
+                        proposal_result = await self.phase_handler.run_proposal_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                        )
                     conversation_logs.extend(proposal_result.get("messages", []))
                     extend_public_context(proposal_result.get("messages", []))
                     for proposal in proposal_result.get("proposals", []):
@@ -555,13 +706,25 @@ class StrongModelsExperiment:
                     extend_public_context(enumeration_result.get("messages", []))
 
                     # Phase 5A: Private Voting
-                    voting_result = await self.phase_handler.run_private_voting_phase(
-                        agents, items, preferences, round_num, config["t_rounds"],
-                        proposal_result.get("proposals", []),
-                        enumeration_result.get("enumerated_proposals", []),
-                        public_context=public_context_history,
-                        private_context_by_agent=private_context_by_agent,
-                    )
+                    if self.phase_handler.is_binding_team_protocol():
+                        voting_result = await self.phase_handler.run_strict_binding_voting_phase(
+                            agents,
+                            items,
+                            preferences,
+                            round_num,
+                            config["t_rounds"],
+                            enumeration_result.get("enumerated_proposals", []),
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                        )
+                    else:
+                        voting_result = await self.phase_handler.run_private_voting_phase(
+                            agents, items, preferences, round_num, config["t_rounds"],
+                            proposal_result.get("proposals", []),
+                            enumeration_result.get("enumerated_proposals", []),
+                            public_context=public_context_history,
+                            private_context_by_agent=private_context_by_agent,
+                        )
                     votes_by_agent: Dict[str, List[Dict[str, Any]]] = {}
                     for vote in voting_result.get("private_votes", []):
                         voter_id = vote.get("voter_id")
@@ -967,9 +1130,12 @@ class StrongModelsExperiment:
             ):
                 if field in token_usage:
                     interaction[field] = token_usage[field]
-            # Also save reasoning_tokens at top level for easy access
-            if "reasoning_tokens" in token_usage and token_usage["reasoning_tokens"]:
-                interaction["reasoning_tokens"] = token_usage["reasoning_tokens"]
+            # Also save direct reasoning fields at top level for easy access.
+            # Preserve an explicit zero so it remains distinguishable from an
+            # older artifact where the provider detail field was not captured.
+            for field in ("reasoning_tokens", "thinking_tokens"):
+                if field in token_usage and token_usage[field] is not None:
+                    interaction[field] = token_usage[field]
 
         # Track token usage for batch aggregation
         self._track_token_usage(agent_id, phase, prompt, response, token_usage)

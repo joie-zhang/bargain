@@ -10,7 +10,10 @@ examples remain stable and readable.
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
 from pathlib import Path
+import re
+import subprocess
 import sys
 from textwrap import dedent
 
@@ -29,6 +32,7 @@ from game_environments.item_allocation import ItemAllocationGame
 
 
 OUTPUT_PATH = BASE_DIR / "docs/reference/all_prompts.md"
+LATEX_OUTPUT_PATH = BASE_DIR / "overleaf/icml_aiwild_template/all_prompts_generated.tex"
 
 
 def code_block(text: str) -> str:
@@ -72,7 +76,7 @@ def render_asset_tables() -> str:
 
         ### Game 1 - All Possible Items (`ITEM_NAMES`)
 
-        Up to 10 items; the game uses the first `m_items` from this list.
+        Up to {len(ItemAllocationGame.ITEM_NAMES)} items; the game uses the first `m_items` from this list.
 
         {md_table(["Index", "Name"], item_rows)}
 
@@ -80,7 +84,7 @@ def render_asset_tables() -> str:
 
         ### Game 2 - All Possible Issues (`ISSUE_NAMES`, `ISSUE_PROPOSITIONS`, `ISSUE_INTERP_TEMPLATES`)
 
-        Up to 10 issues; the game uses the first `n_issues` from this list.
+        Up to {len(DiplomaticTreatyGame.ISSUE_NAMES)} issues; the game uses the first `n_issues` from this list.
 
         Each issue is a continuous policy rate shown to agents as an integer percentage from 0% to 100%.
 
@@ -90,7 +94,7 @@ def render_asset_tables() -> str:
 
         ### Game 3 - All Possible Projects (`PROJECT_NAMES`)
 
-        Up to 10 projects; the game uses the first `m_projects` from this list.
+        Up to {len(CoFundingGame.PROJECT_NAMES)} projects; the game uses the first `m_projects` from this list.
 
         {md_table(["Index", "Name"], project_rows)}
         """
@@ -200,22 +204,16 @@ def render_game1() -> str:
         ## Game 1: Item Allocation
 
         Protocol: `propose_and_vote`
-        Runtime structure: one-time setup (`rules + private preferences`), then each round:
+        Runtime structure: one-time setup, then each round:
         `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
-        ### 1.1 Setup Prompt (combined rules + private preferences)
+        ### 1.1 Setup Prompt
 
-        Source: `ItemAllocationGame.get_combined_setup_prompt()`
+        Source: `game_environments/item_allocation.py`
 
         {code_block(game.get_combined_setup_prompt("Agent_1", deepcopy(state)))}
 
-        ### 1.2 Preference Assignment Prompt (merged into 1.1)
-
-        Game 1 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
-        but the runtime uses `uses_combined_setup_phase() == True`, so the setup prompt above is the
-        actual live prompt path.
-
-        ### 1.3 Discussion Prompt
+        ### 1.2 Discussion Prompt
 
         #### Case A - Round 1, first speaker
 
@@ -233,25 +231,25 @@ def render_game1() -> str:
 
         {code_block(game.get_discussion_prompt("Agent_1", deepcopy(state), 2, 3, ['**Agent_2**: I still want Jewel most, but I might compromise on Pencil.']))}
 
-        ### 1.4 Private Thinking Prompt
+        ### 1.3 Private Thinking Prompt
 
         Source: `ItemAllocationGame.get_thinking_prompt()`
 
         {code_block(game.get_thinking_prompt("Agent_1", deepcopy(state), 1, 3, []))}
 
-        ### 1.5 Proposal Prompt
+        ### 1.4 Proposal Prompt
 
         Source: `ItemAllocationGame.get_proposal_prompt()`
 
         {code_block(game.get_proposal_prompt("Agent_1", deepcopy(state), 1, ["Agent_1", "Agent_2"]))}
 
-        ### 1.6 Voting Prompt
+        ### 1.5 Voting Prompt
 
         Source: `ItemAllocationGame.get_batch_voting_prompt()`
 
         {code_block(game.get_batch_voting_prompt("Agent_1", voting_proposals, deepcopy(state), 2))}
 
-        ### 1.7 Reflection Prompt
+        ### 1.6 Reflection Prompt
 
         Source: default `GameEnvironment.get_reflection_prompt()` in `game_environments/base.py`
 
@@ -291,22 +289,16 @@ def render_game2() -> str:
         ## Game 2: Diplomatic Treaty
 
         Protocol: `propose_and_vote`
-        Runtime structure: one-time setup (`rules + private preferences`), then each round:
+        Runtime structure: one-time setup, then each round:
         `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
-        ### 2.1 Setup Prompt (combined rules + private preferences)
+        ### 2.1 Setup Prompt
 
-        Source: `DiplomaticTreatyGame.get_combined_setup_prompt()`
+        Source: `game_environments/diplomatic_treaty.py`
 
         {code_block(game.get_combined_setup_prompt("Agent_1", deepcopy(state)))}
 
-        ### 2.2 Preference Assignment Prompt (merged into 2.1)
-
-        Game 2 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
-        but the runtime uses `uses_combined_setup_phase() == True`, so the combined setup prompt above
-        is the actual live prompt path.
-
-        ### 2.3 Discussion Prompt
+        ### 2.2 Discussion Prompt
 
         #### Case A - Round 1, first speaker
 
@@ -324,25 +316,25 @@ def render_game2() -> str:
 
         {code_block(game.get_discussion_prompt("Agent_1", deepcopy(state), 2, 3, ['**Agent_2**: AI chip export controls still matter most to me, but I may have some flexibility on the emergency stockpile.']))}
 
-        ### 2.4 Private Thinking Prompt
+        ### 2.3 Private Thinking Prompt
 
         Source: `DiplomaticTreatyGame.get_thinking_prompt()`
 
         {code_block(game.get_thinking_prompt("Agent_1", deepcopy(state), 1, 3, ['**Agent_2**: AI chip export controls are non-negotiable for me.']))}
 
-        ### 2.5 Proposal Prompt
+        ### 2.4 Proposal Prompt
 
         Source: `DiplomaticTreatyGame.get_proposal_prompt()`
 
         {code_block(game.get_proposal_prompt("Agent_1", deepcopy(state), 1, ["Agent_1", "Agent_2"]))}
 
-        ### 2.6 Voting Prompt
+        ### 2.5 Voting Prompt
 
         Source: `DiplomaticTreatyGame.get_batch_voting_prompt()`
 
         {code_block(game.get_batch_voting_prompt("Agent_1", voting_proposals, deepcopy(state), 2))}
 
-        ### 2.7 Reflection Prompt
+        ### 2.6 Reflection Prompt
 
         Source: default `GameEnvironment.get_reflection_prompt()` in `game_environments/base.py`
 
@@ -407,27 +399,6 @@ def render_game3() -> str:
 
     game_own, live_state, joint_proposal = build_cofunding_joint_proposal()
 
-    game_joint = CoFundingGame(
-        CoFundingConfig(
-            n_agents=2,
-            t_rounds=5,
-            gamma_discount=0.9,
-            m_projects=5,
-            alpha=0.5,
-            sigma=0.5,
-            pledge_mode="joint",
-            discussion_transparency="own",
-            enable_commit_vote=True,
-            enable_time_discount=True,
-            random_seed=0,
-        )
-    )
-    joint_state = build_cofunding_base_state(pledge_mode="joint")
-    game_joint.update_game_state_with_pledges(
-        joint_state,
-        deepcopy(live_state["current_pledges"]),
-    )
-
     game_full = CoFundingGame(
         CoFundingConfig(
             n_agents=2,
@@ -458,25 +429,16 @@ def render_game3() -> str:
         ## Game 3: Co-Funding / Participatory Budgeting
 
         Protocol: `propose_and_vote`
-        Runtime structure: one-time setup (`rules + private preferences`), then each round:
+        Runtime structure: one-time setup, then each round:
         `Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`
 
-        Current runtime note: `CoFundingGame.get_protocol_type()` returns `propose_and_vote`.
-        The legacy feedback / commit-vote helper prompts still exist in `co_funding.py`; those are included in an appendix below.
+        ### 3.1 Setup Prompt
 
-        ### 3.1 Setup Prompt (combined rules + private preferences)
-
-        Source: `CoFundingGame.get_combined_setup_prompt()`
+        Source: `game_environments/co_funding.py`
 
         {code_block(game_own.get_combined_setup_prompt("Agent_1", build_cofunding_base_state(pledge_mode="individual")))}
 
-        ### 3.2 Preference Assignment Prompt (merged into 3.1)
-
-        Game 3 still implements `get_game_rules_prompt()` and `get_preference_assignment_prompt()`,
-        but the runtime uses `uses_combined_setup_phase() == True`, so the combined setup prompt above
-        is the actual live prompt path.
-
-        ### 3.3 Discussion Prompt
+        ### 3.2 Discussion Prompt
 
         #### Case A - Round 1, first speaker (`discussion_transparency="aggregate"`)
 
@@ -494,51 +456,29 @@ def render_game3() -> str:
 
         {code_block(game_full.get_discussion_prompt("Agent_1", deepcopy(full_state), 2, 5, case_b_history))}
 
-        ### 3.4 Private Thinking Prompt
+        ### 3.3 Private Thinking Prompt
 
         Source: `CoFundingGame.get_thinking_prompt()`
 
         {code_block(game_own.get_thinking_prompt("Agent_1", deepcopy(live_state), 2, 5, thinking_history))}
 
-        ### 3.5 Proposal Prompt
+        ### 3.4 Proposal Prompt
 
-        #### Individual mode (current default)
+        Source: `CoFundingGame.get_proposal_prompt()`
 
         {code_block(game_own.get_proposal_prompt("Agent_1", deepcopy(live_state), 2, ["Agent_1", "Agent_2"]))}
 
-        #### Joint mode (legacy helper retained in code)
-
-        {code_block(game_joint.get_proposal_prompt("Agent_1", deepcopy(joint_state), 2, ["Agent_1", "Agent_2"]))}
-
-        ### 3.6 Voting Prompt
+        ### 3.5 Voting Prompt
 
         Source: `CoFundingGame.get_voting_prompt()`
 
         {code_block(game_own.get_voting_prompt("Agent_1", deepcopy(joint_proposal), deepcopy(live_state), 2))}
 
-        ### 3.7 Reflection Prompt
+        ### 3.6 Reflection Prompt
 
         Source: `CoFundingGame.get_reflection_prompt()`
 
         {code_block(game_own.get_reflection_prompt("Agent_1", deepcopy(live_state), 2, 5, reflection_result))}
-
-        ## Appendix: Legacy Co-Funding Helper Prompts
-
-        These helpers remain in `game_environments/co_funding.py` for the legacy `talk_pledge_revise`
-        flow wired in `strong_models_experiment/experiment.py`, but they are not used by the current
-        `propose_and_vote` Game 3 runtime.
-
-        ### A.1 Feedback Prompt
-
-        Source: `CoFundingGame.get_feedback_prompt()`
-
-        {code_block(game_own.get_feedback_prompt("Agent_1", deepcopy(live_state)))}
-
-        ### A.2 Commit Vote Prompt
-
-        Source: `CoFundingGame.get_commit_vote_prompt()`
-
-        {code_block(game_own.get_commit_vote_prompt("Agent_1", deepcopy(live_state), 2, 5))}
         """
     )
 
@@ -579,28 +519,28 @@ def render_summary_table() -> str:
         ## Summary Table
 
         {md_table(
-            ["Game", "Setup path", "Round phases", "Reflection source", "Notes"],
+            ["Game", "Setup source", "Round phases", "Reflection source", "Notes"],
             [
                 [
                     "Game 1: Item Allocation",
-                    "`get_combined_setup_prompt()`",
+                    "`item_allocation.py`",
                     "`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`",
                     "`base.py` default",
-                    "Separate setup / preference helpers remain in code but are not used at runtime.",
+                    "Private information: item values.",
                 ],
                 [
                     "Game 2: Diplomatic Treaty",
-                    "`get_combined_setup_prompt()`",
+                    "`diplomatic_treaty.py`",
                     "`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`",
                     "`base.py` default",
                     "Percent displays are integer percentages throughout the prompt-facing interface.",
                 ],
                 [
                     "Game 3: Co-Funding",
-                    "`get_combined_setup_prompt()`",
+                    "`co_funding.py`",
                     "`Discussion -> Private Thinking -> Proposal -> Voting -> Reflection`",
                     "`co_funding.py` custom",
-                    "Current runtime uses `propose_and_vote`; legacy feedback / commit-vote helpers are documented in the appendix.",
+                    "Private information: budget and project valuations.",
                 ],
             ],
         )}
@@ -629,9 +569,82 @@ def build_document() -> str:
     return "\n\n---\n\n".join(section.strip() for section in sections) + "\n"
 
 
+def build_latex_document(markdown: str) -> str:
+    """Convert the canonical Markdown reference into an appendix-ready fragment."""
+    # The parent appendix supplies the section heading. Keep H2 and lower headings
+    # so Pandoc maps the three games to subsections and prompt phases below them.
+    _, markdown_body = markdown.split("\n", 1)
+    result = subprocess.run(
+        [
+            "pandoc",
+            "--from=gfm",
+            "--to=latex",
+            "--listings",
+            "--wrap=none",
+        ],
+        input=markdown_body.lstrip(),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    latex = result.stdout
+
+    # Pandoc uses unbreakable inline listings when --listings is enabled. Convert
+    # those small source identifiers back to normal monospaced LaTeX text.
+    def replace_inline_listing(match: re.Match[str]) -> str:
+        value = match.group(1).replace(r"\_", "_")
+        if "_" in value or "/" in value:
+            return rf"\nolinkurl{{{value}}}"
+        replacements = {
+            "\\": r"\textbackslash{}",
+            "&": r"\&",
+            "%": r"\%",
+            "$": r"\$",
+            "#": r"\#",
+            "_": r"\_",
+            "{": r"\{",
+            "}": r"\}",
+            "~": r"\textasciitilde{}",
+            "^": r"\textasciicircum{}",
+        }
+        escaped = "".join(replacements.get(char, char) for char in value)
+        return rf"\texttt{{{escaped}}}"
+
+    latex = re.sub(
+        r"\\passthrough\{\\lstinline!(.*?)!\}",
+        replace_inline_listing,
+        latex,
+    )
+
+    # Pandoc's default l-columns cannot wrap the two text-heavy tables.
+    latex = latex.replace(
+        r"\begin{longtable}[]{@{}llll@{}}",
+        r"\begin{longtable}[]{@{}p{0.04\linewidth}p{0.18\linewidth}p{0.34\linewidth}p{0.36\linewidth}@{}}",
+    )
+    latex = latex.replace(
+        r"\begin{longtable}[]{@{}lllll@{}}",
+        r"\begin{longtable}[]{@{}p{0.13\linewidth}p{0.16\linewidth}p{0.21\linewidth}p{0.14\linewidth}p{0.25\linewidth}@{}}",
+    )
+
+    source_hash = hashlib.sha256(markdown.encode("utf-8")).hexdigest()
+    header = "\n".join(
+        [
+            "% GENERATED FILE. DO NOT EDIT.",
+            "% Source: docs/reference/all_prompts.md",
+            "% Generator: scripts/generate_all_prompts_reference.py",
+            f"% Source SHA-256: {source_hash}",
+            "",
+        ]
+    )
+    return header + latex
+
+
 def main() -> None:
-    OUTPUT_PATH.write_text(build_document(), encoding="utf-8")
+    markdown = build_document()
+    OUTPUT_PATH.write_text(markdown, encoding="utf-8")
+    LATEX_OUTPUT_PATH.write_text(build_latex_document(markdown), encoding="utf-8")
     print(f"Wrote {OUTPUT_PATH.relative_to(BASE_DIR)}")
+    print(f"Wrote {LATEX_OUTPUT_PATH.relative_to(BASE_DIR)}")
 
 
 if __name__ == "__main__":

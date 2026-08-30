@@ -110,29 +110,6 @@ def main() -> None:
         label="Heterogeneous mean",
     )
 
-    labels = {
-        "Nova Micro": (4, 0.028, "left"),
-        "Claude 3 Haiku": (4, -0.018, "left"),
-        "GPT-5 nano": (4, 0.020, "left"),
-        "Opus 4.5": (4, -0.010, "left"),
-        "GPT-5.2 Chat": (4, 0.030, "left"),
-        "Opus 4.6": (5, -0.014, "left"),
-    }
-    for row in model_summary.itertuples(index=False):
-        if row.model_short not in labels:
-            continue
-        dx, dy, ha = labels[row.model_short]
-        ax_scatter.annotate(
-            row.model_short,
-            xy=(row.model_elo, row.mean),
-            xytext=(row.model_elo + dx, row.mean + dy),
-            textcoords="data",
-            ha=ha,
-            va="center",
-            fontsize=12.5,
-            arrowprops={"arrowstyle": "-", "color": "#999999", "lw": 0.7},
-        )
-
     ax_scatter.set_xlabel("Monoculture model Elo")
     ax_scatter.set_ylabel("Gini inequality")
     ax_scatter.set_xlim(1210, 1529)

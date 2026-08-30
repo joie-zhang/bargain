@@ -14,7 +14,7 @@ Each machine-readable manifest contains one row for each active
 - Main text graphics: 3.
 - Appendix graphics: 36.
 - Total active graphics: 39.
-- ICML active graphics: 40.
+- ICML active graphics: 41.
 - NeurIPS active graphics: 40.
 - Appendix retention rule: keep each graphic and its dependencies until the paper
   authors make a final appendix decision.

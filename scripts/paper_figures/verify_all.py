@@ -33,7 +33,19 @@ TASKS = (
     Task(
         "bilateral overview",
         ("scripts/paper_figures/render_figure2_large_fonts.py",),
-        ("analysis/recreated_figures/figure2_bilateral_overview_combined_large_fonts.png",),
+        (
+            "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/bilateral_overview_combined.png",
+            "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/bilateral_overview_combined_provenance.json",
+        ),
+        ("experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",),
+    ),
+    Task(
+        "Game 1 discussion-turn ablation",
+        ("scripts/paper_figures/plot_game1_discussion_turn_ablation.py",),
+        (
+            "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/game1_discussion_turn_ablation.png",
+            "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/game1_discussion_turn_ablation_summary.csv",
+        ),
         ("experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv",),
     ),
     Task(
@@ -56,6 +68,26 @@ TASKS = (
         ("analysis/neurips_revision_20260504/ttc_order_averaged.csv",),
     ),
     Task(
+        "TTC comparable complete seed panels",
+        ("scripts/analyze_ttc_complete_seed_panels.py",),
+        ("analysis/ttc_complete_family_seed_panels_20260810/*",),
+        tuple(
+            f"experiments/results/{name}"
+            for name in (
+                "ttc_native_scaling_20260502_212943",
+                "ttc_native_scaling_seed984_20260725_025700",
+                "ttc_native_scaling_seed526_20260725_181400",
+                "ttc_native_scaling_seed423_20260725_211500",
+                "ttc_native_scaling_seed1024_20260725_211500",
+                "ttc_native_scaling_seed128_20260727_043613",
+                "ttc_native_scaling_seed256_20260727_043613",
+                "ttc_native_scaling_seed612_20260727_043613",
+                "ttc_native_scaling_seed2048_20260727_043613",
+                "ttc_native_scaling_seed4096_20260727_043613",
+            )
+        ),
+    ),
+    Task(
         "bilateral baseline payoff",
         ("scripts/paper_figures/plot_figure3_baseline_by_competition_ewma_iteration.py",),
         (
@@ -63,7 +95,7 @@ TASKS = (
             "overleaf/neurips/graphics/n2_gpt5_nano/04_baseline_payoff_by_competition_raw_per_elo.png",
             "experiments/results/figure_iteration_20260507/gpt5_nano/figure3_baseline_payoff_by_competition_iteration.png",
         ),
-        ("experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv",),
+        ("experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",),
     ),
     Task(
         "bilateral total welfare",
@@ -72,7 +104,7 @@ TASKS = (
             "overleaf/neurips/graphics/n2_gpt5_nano/10_total_welfare_by_competition_ewma.png",
             "experiments/results/figure_iteration_20260507/gpt5_nano/figure4_welfare_by_competition_attainable_welfare.csv",
         ),
-        ("experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv",),
+        ("experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",),
     ),
     Task(
         "fair-share residual",
@@ -80,8 +112,13 @@ TASKS = (
         (
             "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/fairshare_residual_combined.png",
             "overleaf/neurips/graphics/n2_gpt5_nano/fairshare_residual_combined.png",
+            "overleaf/NExT_Game_2026_style_new/graphics/n2_gpt5_nano/fairshare_residual_combined.png",
         ),
-        ("scripts/paper_figures/assets/fairshare_residual_combined_base.png",),
+        (
+            "docs/reproducibility/paper_experiment_data_manifest.csv",
+            "experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+            "analysis/nash_lindahl_fairness_20260505/agent_metrics.csv",
+        ),
     ),
     Task(
         "bilateral fairness distance",
@@ -94,8 +131,8 @@ TASKS = (
         ("scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",),
         ("overleaf/neurips/graphics/n2_gpt5_nano/fairness_explanation/baseline_adversary_fair_share_symmetric_percent_endpoints_tall_*",),
         (
-            "analysis/nash_lindahl_fairness_20260505/agent_metrics.csv",
-            "scripts/paper_figures/assets/endpoint_fairness_elo_snapshot.csv",
+            "experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+            "docs/reproducibility/paper_experiment_data_manifest.csv",
         ),
     ),
     Task(
@@ -113,8 +150,8 @@ TASKS = (
             "overleaf/icml_aiwild_template/graphics/qualitative_ttc/ttc_group_intensity_fullwidth_2x3_compact.*",
         ),
         (
-            "analysis/neurips_revision_20260504/ttc_game_averaged_by_effort.csv",
-            "analysis/ttc_group_intensity_turn_dedup_verification_20260701/ttc_group_intensity_turn_dedup_summary.csv",
+            "analysis/ttc_complete_family_seed_panels_20260810/family_effort_complete_seed_ci95.csv",
+            "overleaf/icml_aiwild_template/graphics/qualitative_ttc/ttc_selected23_summary.csv",
         ),
     ),
     Task(
@@ -127,6 +164,15 @@ TASKS = (
             "experiments/results/figure_iteration_20260626/multiagent_utility_distribution/*",
         ),
         ("experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent/heterogeneous_agents_fresh.csv",),
+    ),
+    Task(
+        "ICML heterogeneous Game 1 payoff",
+        ("scripts/paper_figures/plot_icml_heterogeneous_game1_payoff.py",),
+        ("overleaf/icml_aiwild_template/graphics/qualitative_ttc/heterogenous_game1_payoff_singlecolumn.png",),
+        (
+            "experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent/heterogeneous_agents_fresh.csv",
+            "docs/reproducibility/paper_experiment_data_manifest.csv",
+        ),
     ),
     Task(
         "heterogeneous versus monoculture Gini",

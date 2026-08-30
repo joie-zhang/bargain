@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """Create the compact main-text N=2 fairness-distance figure.
 
-Reads model-level averages from the N=2 baseline comparison analysis and
-plots within-game normalized fairness distance against adversary Elo, with the
-three game families overlaid in the same style as the main adversary-payoff
-figure.
+Reads the 1,500 primary GPT-5-nano runs, computes model-level averages, and
+plots within-game normalized fairness distance against adversary Elo.
 """
 
 from __future__ import annotations
@@ -20,15 +18,21 @@ import matplotlib.pyplot as plt
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-IN_CSV = PROJECT_ROOT / "experiments" / "results" / "n2_baseline_comparison_analysis_20260505" / "overall_by_model_game.csv"
-OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano"
-OUT_PNG = OUT_DIR / "11_fairness_distance_three_game_curves.png"
-OUT_SLOPES = OUT_DIR / "11_fairness_distance_three_game_curves_slopes.csv"
+IN_CSV = PROJECT_ROOT / "experiments" / "results" / "n2_baseline_comparison_analysis_20260505" / "primary_runs_with_metrics.csv"
+OUT_DIR = PROJECT_ROOT / "overleaf" / "icml_aiwild_template" / "graphics" / "n2_gpt5_nano"
+OUT_PNG = OUT_DIR / "11_fairness_distance_three_game_curves_smaller_30pct.png"
+OUT_SLOPES = (
+    PROJECT_ROOT
+    / "experiments/results/figure_iteration_20260507/gpt5_nano"
+    / "figure11_fairness_distance_three_game_curves_slopes.csv"
+)
+
+EXPECTED_GAME_COUNTS = {"game1": 420, "game2": 540, "game3": 540}
 
 GAME_ORDER = ("game1", "game2", "game3")
 GAME_LABELS = {
     "game1": "Game 1: Item allocation",
-    "game2": "Game 2: Diplomacy",
+    "game2": "Game 2: Diplomatic Treaty",
     "game3": "Game 3: Co-funding",
 }
 GAME_COLORS = {
@@ -59,9 +63,50 @@ def fit_stats(x: np.ndarray, y: np.ndarray) -> dict[str, float]:
     }
 
 
+def sem(values: pd.Series) -> float:
+    clean = pd.to_numeric(values, errors="coerce").dropna()
+    if len(clean) <= 1:
+        return 0.0
+    return float(clean.std(ddof=1) / np.sqrt(len(clean)))
+
+
+def load_main_cohort() -> pd.DataFrame:
+    runs = pd.read_csv(IN_CSV)
+    runs = runs[runs["baseline_key"].eq("gpt5_nano")].copy()
+    counts = runs.groupby("game_id").size().to_dict()
+    if counts != EXPECTED_GAME_COUNTS:
+        raise RuntimeError(f"Expected main-cohort counts {EXPECTED_GAME_COUNTS}, found {counts}")
+    if len(runs) != 1500 or runs["result_path"].nunique() != 1500:
+        raise RuntimeError("Expected 1,500 unique GPT-5-nano primary runs")
+    if runs["adversary_model"].nunique() != 30:
+        raise RuntimeError(f"Expected 30 adversary models, found {runs['adversary_model'].nunique()}")
+    game1_turns = set(pd.to_numeric(runs.loc[runs["game_id"].eq("game1"), "discussion_turns"]))
+    if game1_turns != {2}:
+        raise RuntimeError(f"Expected only two-turn Game 1 rows, found {sorted(game1_turns)}")
+    return runs
+
+
+def aggregate_model_means(runs: pd.DataFrame) -> pd.DataFrame:
+    model_means = (
+        runs.groupby(
+            ["baseline_key", "game_id", "adversary_model", "adversary_short", "adversary_elo"],
+            as_index=False,
+        )
+        .agg(
+            fairness_distance=("fairness_distance", "mean"),
+            fairness_distance_sem=("fairness_distance", sem),
+            fairness_distance_count=("fairness_distance", "count"),
+        )
+    )
+    model_counts = model_means.groupby("game_id")["adversary_model"].nunique().to_dict()
+    if model_counts != {game: 30 for game in GAME_ORDER}:
+        raise RuntimeError(f"Expected 30 model means per game, found {model_counts}")
+    return model_means
+
+
 def main() -> None:
-    df = pd.read_csv(IN_CSV)
-    df = df[df["baseline_key"].eq("gpt5_nano")].copy()
+    runs = load_main_cohort()
+    df = aggregate_model_means(runs)
 
     plot_frames: list[pd.DataFrame] = []
     slope_rows: list[dict[str, float | str | int]] = []
@@ -148,7 +193,7 @@ def main() -> None:
                 label=GAME_LABELS[game_id],
             )
 
-    ax.set_xlabel("Adversary Chatbot Arena Elo", fontsize=17, labelpad=10)
+    ax.set_xlabel("Adversary Elo", fontsize=17, labelpad=10)
     ax.set_ylabel("Normalized benchmark distance", fontsize=17, labelpad=10)
     ax.set_xlim(1090, 1515)
     ax.set_ylim(-0.08, 1.15)
@@ -173,6 +218,7 @@ def main() -> None:
     fig.savefig(OUT_PNG, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
+    OUT_SLOPES.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(slope_rows).to_csv(OUT_SLOPES, index=False)
     print(f"Wrote {OUT_PNG}")
     print(f"Wrote {OUT_SLOPES}")

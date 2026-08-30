@@ -28,11 +28,11 @@ TERSE_MAX_VOTE_LINES_PER_ROUND = 8
 KNOWN_PROVIDER_CONTEXT_CAPS = {
     "amazon-nova-micro-v1.0": 128_000,
     "amazon/nova-micro-v1": 128_000,
-    # OpenRouter can route DeepSeek V3 to upstreams that enforce a 32K
-    # max_num_tokens limit even though the catalog/table advertises more.
-    "deepseek-v3": 32_768,
-    "deepseek/deepseek-chat": 32_768,
-    "deepseek-chat": 32_768,
+    # OpenRouter's current DeepSeek V3 route advertises 163,840 tokens and its
+    # top provider advertises 128,000. Use the conservative provider limit.
+    "deepseek-v3": 128_000,
+    "deepseek/deepseek-chat": 128_000,
+    "deepseek-chat": 128_000,
     "gpt-4o-mini-2024-07-18": 128_000,
     "gpt-5-nano": 272_000,
     "openai/gpt-5-nano": 272_000,
@@ -41,6 +41,8 @@ KNOWN_PROVIDER_CONTEXT_CAPS = {
     "gpt-4o": 128_000,
     "claude-sonnet-4-20250514": 200_000,
     "anthropic/claude-sonnet-4-20250514": 200_000,
+    "phi-3-mini-128k-instruct": 131_072,
+    "microsoft/phi-3-mini-128k-instruct": 131_072,
 }
 
 

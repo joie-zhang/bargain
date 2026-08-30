@@ -28,6 +28,7 @@ AGENT_TABLE = (
     / "tables_multiagent/heterogeneous_agents_fresh.csv"
 )
 OVERLEAF_OUT = PROJECT_ROOT / "overleaf/neurips/graphics/n_gt_2_report"
+ICML_OUT = PROJECT_ROOT / "overleaf/icml_aiwild_template/graphics/n_gt_2_report"
 ITERATION_OUT = (
     PROJECT_ROOT
     / "experiments/results/figure_iteration_20260626/multiagent_utility_distribution"
@@ -48,7 +49,6 @@ N_COLORS = {
     10: "#ff7f0e",
 }
 ELO_BIN_COUNT = 10
-BAR_COLOR = "#5B8DB8"
 
 
 def sem(values: pd.Series) -> float:
@@ -215,7 +215,8 @@ def compute_bucket_summary(agents: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataF
 
 
 def plot_bucket_utility(summary: pd.DataFrame) -> Path:
-    fig, axes = plt.subplots(1, 5, figsize=(18.2, 3.8), sharey=True)
+    plt.rcParams.update({"font.family": "DejaVu Sans"})
+    fig, axes = plt.subplots(1, 5, figsize=(14.5, 4.0), sharey=True)
     bucket_orders = sorted(summary["bucket_order"].dropna().astype(int).unique())
     x_positions = np.arange(len(bucket_orders))
 
@@ -224,41 +225,47 @@ def plot_bucket_utility(summary: pd.DataFrame) -> Path:
         ax.bar(
             x_positions,
             sub["mean_utility"],
-            color=BAR_COLOR,
-            edgecolor="#333333",
-            linewidth=0.6,
-            alpha=0.86,
+            width=0.78,
+            color=N_COLORS[n],
+            edgecolor="none",
+            linewidth=0,
+            alpha=0.72,
         )
-        ax.set_title(f"N={n}", fontsize=14, pad=8)
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels(sub["bucket_label"].tolist(), fontsize=6.8, rotation=0)
-        ax.tick_params(axis="y", labelsize=9)
-        ax.grid(True, axis="y", alpha=0.22, linewidth=0.6)
+        ax.set_title(rf"$n = {n}$", fontsize=28, pad=8)
+        ax.set_xticks([])
+        ax.tick_params(axis="y", labelsize=21, length=5.0, width=1.45)
+        ax.grid(True, axis="y", color="#D1D5DB", alpha=0.52, linewidth=0.75)
         ax.set_axisbelow(True)
-        ax.set_ylim(40, 70)
-        ax.set_yticks([40, 50, 60, 70])
+        ax.set_ylim(0, 75)
+        ax.set_yticks([0, 25, 50, 75])
         for spine in ["top", "right"]:
             ax.spines[spine].set_visible(False)
+        ax.spines["left"].set_linewidth(1.45)
+        ax.spines["bottom"].set_linewidth(1.45)
         if ax is axes[0]:
-            ax.set_ylabel("Mean utility\n(avg. over games)", fontsize=11, labelpad=8)
+            ax.set_ylabel("Mean model payoff", fontsize=25, labelpad=9)
 
-    fig.supxlabel("Arena Elo bucket", fontsize=12, y=0.02)
-    fig.suptitle("Heterogeneous utility by Elo bucket as group size increases", fontsize=16, y=1.04)
-    fig.tight_layout(rect=(0, 0.04, 1, 0.98), w_pad=1.0)
+    fig.supxlabel("Arena Elo bucket (lower to higher)", fontsize=25, y=0.015)
+    fig.subplots_adjust(left=0.075, right=0.995, bottom=0.18, top=0.92, wspace=0.13)
 
-    out_path = OVERLEAF_OUT / "heterogeneous_utility_by_elo_bucket_by_n.png"
+    out_path = ICML_OUT / "heterogeneous_utility_by_elo_bucket_by_n.png"
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=220, bbox_inches="tight")
+    pdf_path = out_path.with_suffix(".pdf")
+    save_options = {"bbox_inches": "tight", "pad_inches": 0.02, "facecolor": "white"}
+    fig.savefig(out_path, dpi=320, **save_options)
+    fig.savefig(pdf_path, **save_options)
     plt.close(fig)
 
-    ITERATION_OUT.mkdir(parents=True, exist_ok=True)
-    fig_copy = ITERATION_OUT / out_path.name
-    fig_copy.write_bytes(out_path.read_bytes())
+    for mirror in (OVERLEAF_OUT, ITERATION_OUT):
+        mirror.mkdir(parents=True, exist_ok=True)
+        (mirror / out_path.name).write_bytes(out_path.read_bytes())
+        (mirror / pdf_path.name).write_bytes(pdf_path.read_bytes())
     return out_path
 
 
 def main() -> None:
     OVERLEAF_OUT.mkdir(parents=True, exist_ok=True)
+    ICML_OUT.mkdir(parents=True, exist_ok=True)
     ITERATION_OUT.mkdir(parents=True, exist_ok=True)
 
     agents = load_heterogeneous_agents()
@@ -268,7 +275,7 @@ def main() -> None:
     summary, game_means = compute_bucket_summary(bucketed_agents)
     bucket_plot_path = plot_bucket_utility(summary)
 
-    for out_dir in [OVERLEAF_OUT, ITERATION_OUT]:
+    for out_dir in [ICML_OUT, OVERLEAF_OUT, ITERATION_OUT]:
         bucket_ranges.to_csv(out_dir / "heterogeneous_elo_bucket_ranges.csv", index=False)
         summary.to_csv(out_dir / "heterogeneous_utility_by_elo_bucket_by_n.csv", index=False)
         game_means.to_csv(out_dir / "heterogeneous_utility_by_elo_bucket_by_n_game_means.csv", index=False)

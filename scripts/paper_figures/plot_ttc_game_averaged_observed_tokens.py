@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import matplotlib
@@ -15,6 +16,10 @@ from matplotlib.lines import Line2D
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RAW_RESULTS_CSV = (
+    PROJECT_ROOT
+    / "experiments/results/ttc_native_scaling_20260502_212943/monitoring/partial_results_latest.csv"
+)
 ORDER_AVG_CSV = PROJECT_ROOT / "analysis/neurips_revision_20260504/ttc_order_averaged.csv"
 SUMMARY_CSV = PROJECT_ROOT / "analysis/neurips_revision_20260504/ttc_game_averaged_by_effort.csv"
 PANEL_OUTPUT_PATH = (
@@ -71,7 +76,57 @@ def sem(series: pd.Series) -> float:
 
 
 def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    order_avg = pd.read_csv(ORDER_AVG_CSV)
+    runs = pd.read_csv(RAW_RESULTS_CSV)
+    if len(runs) != 216 or runs["config_id"].nunique() != 216:
+        raise RuntimeError(f"Expected 216 unique TTC runs, found {len(runs):,}")
+    if runs.groupby("game").size().to_dict() != {"game1": 72, "game2": 72, "game3": 72}:
+        raise RuntimeError(f"Unexpected TTC game counts: {runs.groupby('game').size().to_dict()}")
+    if runs.groupby("family").size().to_dict() != {
+        "claude-sonnet-4-6": 72,
+        "gemini-3-flash": 72,
+        "gpt-5": 72,
+    }:
+        raise RuntimeError(f"Unexpected TTC family counts: {runs.groupby('family').size().to_dict()}")
+
+    for row in runs.itertuples(index=False):
+        result_path = Path(str(row.path))
+        if not result_path.is_file():
+            raise RuntimeError(f"Missing TTC result: {result_path}")
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        utilities = result.get("final_utilities") or {}
+        target = float(utilities.get(str(row.target_agent), 0.0))
+        baseline = float(utilities.get(str(row.baseline_agent), 0.0))
+        if not np.isclose(target, float(row.target_utility)):
+            raise RuntimeError(f"Target payoff mismatch for TTC config {row.config_id}")
+        if not np.isclose(baseline, float(row.baseline_utility)):
+            raise RuntimeError(f"Baseline payoff mismatch for TTC config {row.config_id}")
+        if bool(result.get("consensus_reached")) != bool(row.consensus):
+            raise RuntimeError(f"Consensus mismatch for TTC config {row.config_id}")
+        if int(result.get("final_round") or 0) != int(row.round):
+            raise RuntimeError(f"Final-round mismatch for TTC config {row.config_id}")
+
+    order_avg = (
+        runs.groupby(
+            ["family", "provider", "level", "level_index", "game", "game_cell"],
+            dropna=False,
+        )
+        .agg(
+            order_count=("order", "nunique"),
+            run_count=("config_id", "size"),
+            target_utility=("target_utility", "mean"),
+            baseline_utility=("baseline_utility", "mean"),
+            utility_gap=("utility_gap", "mean"),
+            target_compute_tokens_per_call=("target_compute_tokens_per_call", "mean"),
+            target_output_tokens_per_call=("target_output_tokens_per_call", "mean"),
+            target_reasoning_tokens_raw_per_call=("target_reasoning_tokens_raw_per_call", "mean"),
+            consensus_rate=("consensus", "mean"),
+            mean_round=("round", "mean"),
+        )
+        .reset_index()
+        .sort_values(["family", "game_cell", "level_index"])
+    )
+    ORDER_AVG_CSV.parent.mkdir(parents=True, exist_ok=True)
+    order_avg.to_csv(ORDER_AVG_CSV, index=False)
     order_avg = (
         order_avg.replace([np.inf, -np.inf], np.nan)
         .dropna(subset=["family", "level", "level_index", "game_cell", "target_compute_tokens_per_call", "target_utility"])

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -67,8 +68,8 @@ def centered_smooth(values: pd.Series, window: int) -> pd.Series:
     return values.rolling(window=window, center=True, min_periods=1).mean()
 
 
-def plot_left(ax: plt.Axes) -> None:
-    df = pd.read_csv(PAYOFF_CSV)
+def plot_left(ax: plt.Axes, payoff_csv: Path) -> None:
+    df = pd.read_csv(payoff_csv)
     df["category"] = pd.Categorical(df["category"], CATEGORY_ORDER, ordered=True)
     df = df.sort_values("category")
 
@@ -109,8 +110,8 @@ def plot_left(ax: plt.Axes) -> None:
     ax.spines["bottom"].set_linewidth(1.2)
 
 
-def plot_right(ax: plt.Axes) -> None:
-    df = pd.read_csv(INTENSITY_CSV)
+def plot_right(ax: plt.Axes, intensity_csv: Path) -> None:
+    df = pd.read_csv(intensity_csv)
     df = df[df["category"].isin(CATEGORY_ORDER)].copy()
     df["speaker_elo"] = pd.to_numeric(df["speaker_elo"], errors="coerce")
     df["intensity"] = pd.to_numeric(df["intensity"], errors="coerce")
@@ -169,6 +170,12 @@ def plot_right(ax: plt.Axes) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--payoff-csv", type=Path, default=PAYOFF_CSV)
+    parser.add_argument("--intensity-csv", type=Path, default=INTENSITY_CSV)
+    parser.add_argument("--output", type=Path, default=OUT_PATH)
+    args = parser.parse_args()
+
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
@@ -183,14 +190,16 @@ def main() -> None:
         dpi=150,
         gridspec_kw={"width_ratios": [1.0, 1.08], "wspace": 0.20},
     )
-    plot_left(left_ax)
-    plot_right(right_ax)
+    plot_left(left_ax, args.payoff_csv)
+    plot_right(right_ax, args.intensity_csv)
     fig.subplots_adjust(left=0.22, right=0.985, bottom=0.14, top=0.965, wspace=0.20)
-    fig.savefig(OUT_PATH, dpi=300)
-    fig.savefig(OUT_PDF)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    output_pdf = args.output.with_suffix(".pdf")
+    fig.savefig(args.output, dpi=300)
+    fig.savefig(output_pdf)
     plt.close(fig)
-    print(OUT_PATH)
-    print(OUT_PDF)
+    print(args.output)
+    print(output_pdf)
 
 
 if __name__ == "__main__":

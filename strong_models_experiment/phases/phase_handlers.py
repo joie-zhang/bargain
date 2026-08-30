@@ -50,8 +50,8 @@ class PhaseHandler:
     for game-specific phases (discussion, proposal, voting).
     """
 
-    STRUCTURED_VOTE_BATCH_MAX_TOKENS = 16384
-    STRUCTURED_VOTE_REPAIR_MAX_TOKENS = 16384
+    STRUCTURED_VOTE_BATCH_MAX_TOKENS = 32768
+    STRUCTURED_VOTE_REPAIR_MAX_TOKENS = 32768
     STRUCTURED_VOTE_TIMEOUT_SECONDS = 240.0
     STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS = 120.0
     SYNTHETIC_ACTION_FALLBACK_POLICY_VERSION = "invalid-output-default-v1"
@@ -59,11 +59,13 @@ class PhaseHandler:
     CURRENT_DISCUSSION_HISTORY_BUDGET_FRACTION = 0.25
     CURRENT_DISCUSSION_HISTORY_MAX_TOKENS = 4096
     CURRENT_DISCUSSION_HISTORY_MIN_TOKENS = 256
+    BINDING_TEAM_PROTOCOL_VERSION = "binding-team-three-turn-v3-env-utility"
 
     def __init__(self, save_interaction_callback=None, token_config=None,
                  game_environment: Optional["GameEnvironment"] = None,
                  reasoning_config: Optional[Dict[str, Any]] = None,
                  access_config: Optional[Dict[str, Any]] = None,
+                 team_coordination: Optional[Dict[str, Any]] = None,
                  parallel_phases: bool = False):
         if not isinstance(parallel_phases, bool):
             raise TypeError(
@@ -92,8 +94,201 @@ class PhaseHandler:
         # Black-box access scaling configuration.
         # Format: {"k": int, "phases": ["proposal", ...], "agent_ids": ["Agent_1"]}
         self.access_config = access_config or {"k": 1, "phases": [], "agent_ids": []}
+        self.team_coordination = dict(team_coordination or {})
         self.parallel_phases = parallel_phases
         self.reset_vote_integrity()
+
+    def team_member_ids(self) -> List[str]:
+        if not self.team_coordination.get("enabled", False):
+            return []
+        return list(dict.fromkeys(self.team_coordination.get("member_ids") or []))
+
+    def is_binding_team_protocol(self) -> bool:
+        """Return whether this run uses the strict binding-team protocol."""
+        return (
+            self.team_coordination.get("enabled", False)
+            and self.team_coordination.get("protocol_version")
+            == self.BINDING_TEAM_PROTOCOL_VERSION
+        )
+
+    def binding_team_enabled(self) -> bool:
+        """Return whether this run has at least two Nano team members."""
+        return self.is_binding_team_protocol() and len(self.team_member_ids()) >= 2
+
+    def team_captain_id(self, round_num: int = 1) -> Optional[str]:
+        """Return the recorded captain, optionally rotating by negotiation round."""
+        members = self.team_member_ids()
+        if not members:
+            return None
+        configured = self.team_coordination.get("captain_id") or members[0]
+        if configured not in members:
+            raise ValueError("team_coordination.captain_id must be a team member")
+        if not self.team_coordination.get("rotate_captain_each_round", False):
+            return configured
+        start_index = members.index(configured)
+        return members[(start_index + max(0, int(round_num) - 1)) % len(members)]
+
+    def build_team_system_objective(self, agent_id: str) -> str:
+        """Return the sole decision objective for a binding-team member."""
+        members = self.team_member_ids()
+        if not self.binding_team_enabled() or agent_id not in members:
+            return ""
+        gamma = getattr(getattr(self.game_environment, "config", None), "gamma_discount", 0.9)
+        return (
+            f"You are a member of the Nano team: {', '.join(members)}.\n"
+            f"Your sole objective is to maximize the expected discounted sum of utility "
+            f"received by all Nano team members, using round discount gamma={gamma}.\n"
+            "For an allocation, calculate each Nano member's utility from only the items "
+            "assigned to that member, then add those member utilities. Each item counts "
+            "once, using its assigned recipient's value. Never sum every teammate's value "
+            "for one coalition-held item.\n"
+            "Your individual utility has no special priority. Do not add a fairness objective. "
+            "Do not minimize the adversary's utility except when that directly increases the "
+            "Nano team's expected discounted utility.\n"
+            "Private team-room messages and the shared Nano preference table are hidden from "
+            "the adversary. Follow the recorded team plan and binding ballot."
+        )
+
+    def apply_team_objective_to_prompt(
+        self,
+        agent_id: str,
+        prompt: str,
+        *,
+        phase_label: str,
+    ) -> str:
+        """Prepend the same team objective to every Nano-facing phase prompt."""
+        objective = self.build_team_system_objective(agent_id)
+        if not objective:
+            return prompt
+        if phase_label == "game setup":
+            prompt = prompt.replace(
+                "- The goal is to maximize your utility, which is the sum of the utility from each of the objects that you receive.",
+                "- The Nano team's goal is to maximize the sum of Nano member utilities. Each item contributes only the assigned recipient's value.",
+            ).replace(
+                "- Your goal is to maximize your total utility (after discounting)",
+                "- The Nano team's goal is to maximize its total utility sum after discounting",
+            ).replace(
+                "**STRATEGIC ANALYSIS:**\n- Your theoretical maximum utility:",
+                "**PRIVATE VECTOR INFORMATION:**\n- The total of your private preference vector is",
+            ).replace(
+                "1. Other agents don't know your exact preferences",
+                "1. GPT-5.4 does not know the exact Nano preference table; Nano teammates receive the shared table",
+            )
+        prompt = prompt.replace(
+            "- Identify mutually beneficial trade possibilities",
+            "- Identify trade possibilities only when they increase the Nano team's expected discounted utility",
+        )
+        if prompt.startswith("BINDING NANO TEAM OBJECTIVE FOR "):
+            return prompt
+        return (
+            f"BINDING NANO TEAM OBJECTIVE FOR {phase_label.upper()}\n"
+            f"{objective}\n\n"
+            f"PHASE TASK\n{prompt}"
+        )
+
+    def team_note_recipients(self, author_id: str, phase_label: str) -> List[str]:
+        """Return recipients for a private note under the coalition protocol."""
+        members = self.team_member_ids()
+        if author_id not in members or len(members) < 2:
+            return [author_id]
+
+        share_key_by_phase = {
+            "Private Thinking": "share_private_thinking",
+            "Private Voting": "share_private_voting",
+            "Reflection": "share_reflection",
+            "Team Planning": "share_team_planning",
+        }
+        share_key = share_key_by_phase.get(phase_label)
+        if share_key and self.team_coordination.get(share_key, False):
+            return members
+        return [author_id]
+
+    def build_team_coordination_briefing(
+        self,
+        agent_id: str,
+        items: List[Dict[str, Any]],
+        preferences: Dict[str, Any],
+    ) -> str:
+        """Build the baseline-only coalition objective and shared preference table."""
+        members = self.team_member_ids()
+        # A singleton is intentionally untreated: N=2 is the negative control.
+        if agent_id not in members or len(members) < 2:
+            return ""
+
+        captain_id = self.team_captain_id(1)
+
+        all_preferences = preferences.get("agent_preferences") or {}
+        item_names = [str(item.get("name", f"Item_{idx}")) for idx, item in enumerate(items)]
+        tables: List[str] = []
+        for member_id in members:
+            values = all_preferences.get(member_id)
+            if not isinstance(values, list) or len(values) != len(items):
+                raise ValueError(f"Missing complete team preferences for {member_id}")
+            rendered = ", ".join(
+                f"{idx}:{item_names[idx]}={values[idx]}" for idx in range(len(values))
+            )
+            tables.append(f"- {member_id}: {rendered}")
+
+        if self.is_binding_team_protocol():
+            rotation_text = (
+                "The captain rotates by round. The Round 1 captain is " + str(captain_id) + "."
+                if self.team_coordination.get("rotate_captain_each_round", False)
+                else "The captain for every round is " + str(captain_id) + "."
+            )
+            return f"""PRIVATE BINDING NANO TEAM ROOM
+
+This information is visible to Nano team members only. The GPT-5.4 adversary
+cannot see this briefing, the shared preference table, or team-room messages.
+
+TEAM MEMBERS: {', '.join(members)}
+CAPTAIN RULE: {rotation_text}
+
+SOLE OBJECTIVE:
+Maximize the expected discounted SUM of utility received by all Nano team
+members. For an allocation, calculate each Nano member's utility from only the
+items assigned to that member, then add those utilities. Each item counts once,
+using the assigned recipient's value. Never sum all teammate values for one
+coalition-held item. Your individual utility has no special priority. Do not add
+a fairness objective. Do not minimize GPT-5.4 utility unless that directly
+increases the Nano team's expected discounted utility.
+
+BINDING PROTOCOL:
+- Each round has three private team-planning turns after public discussion.
+- The current captain produces one validated coalition proposal.
+- After all proposals are visible, the current captain selects one proposal or
+  rejects all proposals according to the sole objective.
+- Every Nano vote follows that binding ballot.
+- Do not disclose this private table or team-room transcript publicly unless a
+  disclosure clearly advances the sole objective.
+
+SHARED FULL NANO TEAM PREFERENCES:
+{chr(10).join(tables)}"""
+
+        return f"""PRIVATE BASELINE-TEAM COORDINATION TREATMENT
+
+This information is visible to the baseline team only. The non-team adversary
+cannot see this briefing, the shared preference table, or the private team notes.
+
+TEAM MEMBERS: {', '.join(members)}
+DESIGNATED TEAM CAPTAIN: {captain_id}
+
+JOINT OBJECTIVE:
+1. Maximize the SUM of discounted utilities earned by all baseline team members.
+2. Subject to that, avoid leaving any teammate unnecessarily far behind.
+3. Give the adversary only what is needed to make the coalition strategy feasible.
+
+COORDINATION PROTOCOL:
+- Treat teammate utility as part of your own joint objective, not as competition.
+- Your existing private-thinking and reflection outputs are shared with teammates.
+- All agents still make the same number of API calls and retain their own proposal
+  and vote actions; there is no extra caucus call.
+- {captain_id}'s submitted proposal is the default coalition slate. In voting,
+  support that slate when it is structurally valid and advances the joint objective.
+- Use public discussion strategically, but do not reveal the private preference table
+  or private team notes to the adversary.
+
+SHARED FULL TEAM PREFERENCES:
+{chr(10).join(tables)}"""
 
     def _agent_context_model_names(self, agent: BaseLLMAgent) -> List[str]:
         if hasattr(agent, "_context_model_names"):
@@ -1077,6 +1272,18 @@ class PhaseHandler:
                     agent_id=agent.agent_id,
                     game_state=game_state
                 )
+                team_briefing = self.build_team_coordination_briefing(
+                    agent.agent_id,
+                    items,
+                    preferences,
+                )
+                if team_briefing:
+                    setup_prompt += "\n\n" + team_briefing
+                setup_prompt = self.apply_team_objective_to_prompt(
+                    agent.agent_id,
+                    setup_prompt,
+                    phase_label="game setup",
+                )
 
                 context = NegotiationContext(
                     current_round=0,
@@ -1330,6 +1537,11 @@ class PhaseHandler:
                         token_budget=discussion_history_budget,
                     )
                     full_discussion_prompt = build_full_discussion_prompt(current_discussion_history)
+                    full_discussion_prompt = self.apply_team_objective_to_prompt(
+                        agent.agent_id,
+                        full_discussion_prompt,
+                        phase_label="public discussion",
+                    )
                     try:
                         agent_response = await self._generate_response_with_access(
                             agent, context, full_discussion_prompt, phase="discussion"
@@ -1373,6 +1585,11 @@ class PhaseHandler:
                         ),
                     ]
                     for retry_index, retry_prompt in enumerate(retry_prompts, start=1):
+                        retry_prompt = self.apply_team_objective_to_prompt(
+                            agent.agent_id,
+                            retry_prompt,
+                            phase_label="public discussion repair",
+                        )
                         try:
                             retry_response = await self._generate_response_with_access(
                                 agent, context, retry_prompt, phase="discussion"
@@ -1422,14 +1639,20 @@ class PhaseHandler:
                                         preferences: Dict, round_num: int, max_rounds: int,
                                         discussion_messages: List[Dict],
                                         public_context: Optional[List[Dict[str, Any]]] = None,
-                                        private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
+                                        private_context_by_agent: Optional[Dict[str, List[str]]] = None,
+                                        acting_agent_ids: Optional[List[str]] = None) -> Dict:
         """Phase 3: Private Thinking Phase"""
         thinking_results = []
         
         self.logger.info(f"=== PRIVATE THINKING PHASE - Round {round_num} ===")
         
         # Apply token limits for thinking phase if configured for this experiment or agent.
-        self._apply_phase_token_limits(agents, "thinking")
+        acting_id_set = set(acting_agent_ids) if acting_agent_ids is not None else None
+        acting_agents = [
+            agent for agent in agents
+            if acting_id_set is None or agent.agent_id in acting_id_set
+        ]
+        self._apply_phase_token_limits(acting_agents, "thinking")
 
         def raw_response_from_error(error: Exception) -> str:
             for attr in ("raw_response", "response_content", "content", "doc"):
@@ -1522,6 +1745,28 @@ class PhaseHandler:
             )
 
             try:
+                if self.is_binding_team_protocol():
+                    raw_response = await self._generate_response_with_access(
+                        agent,
+                        context,
+                        thinking_prompt,
+                        phase="thinking",
+                    )
+                    thinking_response = {
+                        "reasoning": raw_response.content,
+                        "strategy": "See model reasoning",
+                        "key_priorities": [],
+                        "potential_concessions": [],
+                    }
+                    token_usage = self._extract_token_usage(raw_response)
+                    return {
+                        "agent": agent,
+                        "thinking_prompt": thinking_prompt,
+                        "thinking_response": thinking_response,
+                        "token_usage": token_usage,
+                        "error": None,
+                    }
+
                 thinking_response = await agent.think_strategy(thinking_prompt, context)
 
                 # Extract token usage if present (remove from response to avoid saving it in the content)
@@ -1541,13 +1786,15 @@ class PhaseHandler:
                     "error": e,
                 }
 
-        raw_results = await self._run_agent_tasks_in_order(agents, think_for_agent)
+        raw_results = await self._run_agent_tasks_in_order(acting_agents, think_for_agent)
         for result in raw_results:
             if isinstance(result, BaseException):
                 raise result
             agent = result["agent"]
 
             if result["error"] is not None:
+                if self.is_binding_team_protocol():
+                    raise result["error"]
                 if self._is_hard_llm_failure(result["error"]):
                     raise result["error"]
                 self.logger.error(f"Error in private thinking for {agent.agent_id}: {result['error']}")
@@ -1588,11 +1835,328 @@ class PhaseHandler:
             "thinking_results": thinking_results,
             "round_num": round_num
         }
+
+    async def run_team_planning_phase(
+        self,
+        agents: List[BaseLLMAgent],
+        items: List[Dict[str, Any]],
+        preferences: Dict[str, Any],
+        round_num: int,
+        max_rounds: int,
+        *,
+        public_context: Optional[List[Dict[str, Any]]] = None,
+        private_context_by_agent: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, Any]:
+        """Run three private Nano team turns and return one validated proposal."""
+        if not self.binding_team_enabled():
+            return {
+                "planning_messages": [],
+                "final_team_proposal": None,
+                "captain_id": None,
+            }
+        if self.game_environment is None:
+            raise ValueError("Binding-team planning requires a game environment")
+
+        members = self.team_member_ids()
+        agents_by_id = {agent.agent_id: agent for agent in agents}
+        missing = [member_id for member_id in members if member_id not in agents_by_id]
+        if missing:
+            raise ValueError(f"Unknown binding-team member IDs: {missing}")
+        team_agents = [agents_by_id[member_id] for member_id in members]
+        captain_id = self.team_captain_id(round_num)
+        if captain_id is None:
+            raise ValueError("Binding-team planning has no captain")
+
+        planning_turns = int(self.team_coordination.get("planning_turns", 3))
+        if planning_turns != 3:
+            raise ValueError("The binding-team-v2 protocol requires exactly three planning turns")
+        planning_max_tokens = int(self.team_coordination.get("planning_max_tokens", 8192))
+        self._apply_phase_token_limits(team_agents, "thinking")
+
+        game_state = preferences.get("game_state", {
+            "items": items,
+            "agent_preferences": preferences.get("agent_preferences", {}),
+        })
+        all_agent_ids = [agent.agent_id for agent in agents]
+        rotation = (max(1, int(round_num)) - 1) % len(team_agents)
+        rotated_agents = team_agents[rotation:] + team_agents[:rotation]
+        planning_messages: List[Dict[str, Any]] = []
+
+        def render_team_room() -> str:
+            if not planning_messages:
+                return "(No earlier team-room messages in this planning round.)"
+            return "\n\n".join(
+                f"[Turn {message['planning_turn']} | {message['from']}]\n{message['content']}"
+                for message in planning_messages
+            )
+
+        async def call_member(
+            agent: BaseLLMAgent,
+            planning_turn: int,
+            phase_task: str,
+        ) -> Dict[str, Any]:
+            prompt = self.apply_team_objective_to_prompt(
+                agent.agent_id,
+                (
+                    f"PRIVATE NANO TEAM PLANNING, ROUND {round_num}/{max_rounds}, "
+                    f"TURN {planning_turn}/3\n"
+                    f"Current captain: {captain_id}\n\n"
+                    f"TEAM ROOM SO FAR\n{render_team_room()}\n\n"
+                    f"YOUR TASK\n{phase_task}"
+                ),
+                phase_label=f"team planning turn {planning_turn}",
+            )
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=all_agent_ids,
+                agent_id=agent.agent_id,
+                preferences=self._get_context_preferences(agent.agent_id, preferences),
+                turn_type=f"team_planning_turn_{planning_turn}",
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(agent.agent_id, []),
+            )
+            response = await self._generate_response_with_generation_bounds(
+                agent,
+                context,
+                prompt,
+                phase="thinking",
+                max_tokens=planning_max_tokens,
+                timeout=self.STRUCTURED_VOTE_TIMEOUT_SECONDS,
+            )
+            record = {
+                "phase": "team_planning",
+                "round": round_num,
+                "planning_turn": planning_turn,
+                "from": agent.agent_id,
+                "content": response.content,
+                "timestamp": time.time(),
+                "captain_id": captain_id,
+            }
+            self.save_interaction(
+                agent.agent_id,
+                f"team_planning_round_{round_num}_turn_{planning_turn}",
+                prompt,
+                response.content,
+                round_num,
+                self._extract_token_usage(response),
+                model_name=agent.get_model_info()["model_name"],
+            )
+            return record
+
+        candidate_task = (
+            "Independently calculate a candidate allocation that advances the sole team "
+            "objective. For each Nano member, sum only the values of items assigned to "
+            "that member. Add those member utilities to get the team sum. Each item "
+            "counts once at its recipient's value. Report the allocation, every Nano "
+            "member utility, their total, what GPT-5.4 receives, and the main negotiation "
+            "risk. Keep this concise. Do not defer to another team member."
+        )
+        turn_one_results = await asyncio.gather(
+            *(call_member(agent, 1, candidate_task) for agent in rotated_agents)
+        )
+        planning_messages.extend(turn_one_results)
+
+        audit_task = (
+            "Audit the candidate allocations already in the team room. Check item "
+            "ownership, recipient-specific utility, team-sum arithmetic, round discount, "
+            "and whether the proposal can pass. Reject any calculation that sums several "
+            "teammates' values for one item. Recommend exact corrections and a preferred "
+            "candidate."
+        )
+        for agent in rotated_agents:
+            planning_messages.append(await call_member(agent, 2, audit_task))
+
+        recommendation_task = (
+            "Give your final recommendation to the captain. Name an exact allocation, "
+            "the reason it best advances the sole team objective, and whether the team "
+            "should prefer a better proposal from GPT-5.4 if one appears."
+        )
+        captain_agent = agents_by_id[captain_id]
+        for agent in [candidate for candidate in rotated_agents if candidate.agent_id != captain_id]:
+            planning_messages.append(await call_member(agent, 3, recommendation_task))
+
+        allocation_keys = ", ".join(f'"{agent_id}": []' for agent_id in all_agent_ids)
+        canonical_items = ", ".join(
+            f"{item_index}:{item.get('name', f'Item_{item_index}')}"
+            for item_index, item in enumerate(items)
+        )
+        captain_task = (
+            "You are the captain. Resolve the team discussion and issue the one formal "
+            "coalition proposal. Respond with ONLY a JSON object. Use every agent ID as "
+            "a key. Assign every canonical item index exactly once. The environment will "
+            "calculate all member utilities and the team sum from your allocation. Do "
+            "not report utility numbers in the JSON.\n"
+            f"CANONICAL ITEMS: {canonical_items}\n"
+            "Use this schema:\n"
+            f'{{"allocation": {{{allocation_keys}}}, '
+            '"reasoning": "brief team-objective rationale"}'
+        )
+        captain_record = await call_member(captain_agent, 3, captain_task)
+        planning_messages.append(captain_record)
+
+        item_name_to_index: Dict[str, int] = {}
+        for item_index, item in enumerate(items):
+            item_name = str(item.get("name", "")).strip().casefold()
+            if item_name:
+                if item_name in item_name_to_index:
+                    raise ValueError(
+                        f"Binding-team planning requires unique item names; duplicate: {item_name!r}"
+                    )
+                item_name_to_index[item_name] = item_index
+
+        def normalize_allocation_items(raw_response: str) -> str:
+            """Accept exact item names as an unambiguous form of an item index."""
+            payload = BaseGameEnvironment._parse_json_object(
+                raw_response,
+                "captain FINAL_TEAM_PLAN",
+            )
+            allocation = payload.get("allocation")
+            if not isinstance(allocation, dict):
+                return raw_response
+            normalized_allocation: Dict[str, Any] = {}
+            for agent_id, assigned_items in allocation.items():
+                if not isinstance(assigned_items, list):
+                    normalized_allocation[agent_id] = assigned_items
+                    continue
+                normalized_items: List[Any] = []
+                for raw_item in assigned_items:
+                    if isinstance(raw_item, str):
+                        stripped = raw_item.strip()
+                        try:
+                            normalized_items.append(int(stripped))
+                            continue
+                        except ValueError:
+                            pass
+                        name_candidate = stripped.split(":", 1)[-1].strip().casefold()
+                        if name_candidate in item_name_to_index:
+                            normalized_items.append(item_name_to_index[name_candidate])
+                            continue
+                    normalized_items.append(raw_item)
+                normalized_allocation[agent_id] = normalized_items
+            payload["allocation"] = normalized_allocation
+            return json.dumps(payload)
+
+        def parse_and_validate(raw_response: str) -> Dict[str, Any]:
+            proposal = self.game_environment.parse_proposal(
+                normalize_allocation_items(raw_response),
+                captain_id,
+                game_state,
+                all_agent_ids,
+            )
+            invalid = (
+                proposal.get("synthetic_proposal")
+                or proposal.get("synthetic_action")
+                or "parse_error" in proposal
+                or "validation_error" in proposal
+                or not self.game_environment.validate_proposal(proposal, game_state)
+            )
+            if invalid:
+                raise ValueError(
+                    "Captain FINAL_TEAM_PLAN was invalid: "
+                    + str(
+                        proposal.get("parse_error")
+                        or proposal.get("validation_error")
+                        or self.game_environment.proposal_validation_error(proposal, game_state)
+                    )
+                )
+            computed_member_utilities: Dict[str, float] = {}
+            allocation = proposal["allocation"]
+            all_preferences = game_state["agent_preferences"]
+            for member_id in members:
+                computed_member_utilities[member_id] = float(sum(
+                    all_preferences[member_id][item_index]
+                    for item_index in allocation.get(member_id, [])
+                ))
+            computed_team_sum = float(sum(computed_member_utilities.values()))
+            discount = self.game_environment.config.gamma_discount ** (round_num - 1)
+            proposal["team_member_utilities"] = computed_member_utilities
+            proposal["team_raw_utility"] = computed_team_sum
+            proposal["team_discounted_utility"] = computed_team_sum * discount
+            proposal["team_utility_evaluator"] = "environment"
+            proposal["proposed_by"] = captain_id
+            proposal["round"] = round_num
+            proposal["coalition_proposal"] = True
+            proposal["endorsed_by"] = members
+            proposal["team_protocol_version"] = self.BINDING_TEAM_PROTOCOL_VERSION
+            return proposal
+
+        try:
+            final_team_proposal = parse_and_validate(captain_record["content"])
+        except Exception as first_error:
+            invalid_payload = {
+                "raw_response": captain_record["content"],
+                "error": f"{type(first_error).__name__}: {first_error}",
+                "will_retry": True,
+            }
+            self.save_interaction(
+                captain_id,
+                f"team_planning_round_{round_num}_final_invalid_attempt_0",
+                "Validate the captain FINAL_TEAM_PLAN.",
+                json.dumps(invalid_payload, default=str),
+                round_num,
+                None,
+                model_name=captain_agent.get_model_info()["model_name"],
+            )
+            repair_prompt = self.apply_team_objective_to_prompt(
+                captain_id,
+                (
+                    "Your FINAL_TEAM_PLAN was invalid. Repair only its JSON structure or "
+                    "allocation validity. Respond with ONLY one JSON object using every "
+                    f"agent ID and every canonical item index exactly once. The environment "
+                    "will calculate utilities; do not report utility numbers. "
+                    f"Error: {first_error}.\n"
+                    f"CANONICAL ITEMS: {canonical_items}\n"
+                    f"Invalid response:\n{captain_record['content']}\n\n"
+                    f"Required schema:\n"
+                    f'{{"allocation": {{{allocation_keys}}}, '
+                    '"reasoning": "brief team-objective rationale"}'
+                ),
+                phase_label="team plan repair",
+            )
+            repair_context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=all_agent_ids,
+                agent_id=captain_id,
+                preferences=self._get_context_preferences(captain_id, preferences),
+                turn_type="team_plan_repair",
+                conversation_history=list(public_context or []),
+                strategic_notes=(private_context_by_agent or {}).get(captain_id, []),
+            )
+            repair_response = await self._generate_response_with_generation_bounds(
+                captain_agent,
+                repair_context,
+                repair_prompt,
+                phase="proposal",
+                max_tokens=planning_max_tokens,
+                timeout=self.STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS,
+            )
+            self.save_interaction(
+                captain_id,
+                f"team_planning_round_{round_num}_final_repair_1",
+                repair_prompt,
+                repair_response.content,
+                round_num,
+                self._extract_token_usage(repair_response),
+                model_name=captain_agent.get_model_info()["model_name"],
+            )
+            final_team_proposal = parse_and_validate(repair_response.content)
+
+        return {
+            "planning_messages": planning_messages,
+            "final_team_proposal": final_team_proposal,
+            "captain_id": captain_id,
+            "planning_turns": 3,
+        }
     
     async def run_proposal_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                 preferences: Dict, round_num: int, max_rounds: int,
                                 public_context: Optional[List[Dict[str, Any]]] = None,
-                                private_context_by_agent: Optional[Dict[str, List[str]]] = None) -> Dict:
+                                private_context_by_agent: Optional[Dict[str, List[str]]] = None,
+                                acting_agent_ids: Optional[List[str]] = None) -> Dict:
         """Phase 4A: Proposal Submission Phase
 
         When a GameEnvironment is provided, uses its get_*_prompt() methods
@@ -1604,7 +2168,12 @@ class PhaseHandler:
         self.logger.info(f"=== PROPOSAL SUBMISSION PHASE - Round {round_num} ===")
 
         # Apply token limits for proposal phase if configured for this experiment or agent.
-        self._apply_phase_token_limits(agents, "proposal")
+        acting_id_set = set(acting_agent_ids) if acting_agent_ids is not None else None
+        acting_agents = [
+            agent for agent in agents
+            if acting_id_set is None or agent.agent_id in acting_id_set
+        ]
+        self._apply_phase_token_limits(acting_agents, "proposal")
 
         async def propose_for_agent(_idx: int, agent: BaseLLMAgent) -> Dict[str, Any]:
             log_records = []
@@ -1643,6 +2212,11 @@ class PhaseHandler:
                 )
             else:
                 proposal_prompt = f"Please propose an allocation for round {round_num}."
+            proposal_prompt = self.apply_team_objective_to_prompt(
+                agent.agent_id,
+                proposal_prompt,
+                phase_label="formal proposal",
+            )
 
             # Get proposal from agent
             if self.game_environment is not None:
@@ -1765,6 +2339,8 @@ class PhaseHandler:
                     agent_ids=agent_ids,
                     items=items,
                 )
+                if self.is_binding_team_protocol():
+                    proposal_retry_prompts = proposal_retry_prompts[:1]
                 last_attempt_prompt = proposal_prompt
                 for retry_index, retry_prompt_template in enumerate(proposal_retry_prompts, start=1):
                     if not proposal_needs_retry(proposal):
@@ -1970,6 +2546,11 @@ class PhaseHandler:
                             will_retry=False,
                             hard_failed=False,
                         )
+                        if self.is_binding_team_protocol():
+                            raise ValueError(
+                                f"Proposal from {agent.agent_id} remained invalid after one repair: "
+                                f"{last_invalid_summary}"
+                            )
                         log_records.append(
                             (
                                 "error",
@@ -2018,7 +2599,7 @@ class PhaseHandler:
                 "error": None,
             }
 
-        raw_results = await self._run_agent_tasks_in_order(agents, propose_for_agent)
+        raw_results = await self._run_agent_tasks_in_order(acting_agents, propose_for_agent)
         for result in raw_results:
             if isinstance(result, BaseException):
                 raise result
@@ -3180,6 +3761,300 @@ Vote must be either "accept" or "reject".
             "voting_summary": voting_summary,
             "phase_complete": True
         }
+
+    async def run_strict_binding_voting_phase(
+        self,
+        agents: List[BaseLLMAgent],
+        items: List[Dict[str, Any]],
+        preferences: Dict[str, Any],
+        round_num: int,
+        max_rounds: int,
+        enumerated_proposals: List[Dict[str, Any]],
+        *,
+        public_context: Optional[List[Dict[str, Any]]] = None,
+        private_context_by_agent: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, Any]:
+        """Collect strict real-model ballots and enforce the Nano team ballot."""
+        if not self.is_binding_team_protocol():
+            raise ValueError("Strict binding voting requires the binding-team-v2 protocol")
+        if not enumerated_proposals:
+            raise ValueError("Strict binding voting requires at least one proposal")
+        if self.game_environment is None:
+            raise ValueError("Strict binding voting requires a game environment")
+
+        all_agent_ids = [agent.agent_id for agent in agents]
+        agents_by_id = {agent.agent_id: agent for agent in agents}
+        proposal_numbers = [int(row["proposal_number"]) for row in enumerated_proposals]
+        if len(proposal_numbers) != len(set(proposal_numbers)):
+            raise ValueError("Duplicate proposal numbers in strict voting")
+        game_state = preferences.get("game_state", {
+            "items": items,
+            "agent_preferences": preferences.get("agent_preferences", {}),
+        })
+        members = self.team_member_ids()
+        binding_enabled = self.binding_team_enabled()
+        captain_id = self.team_captain_id(round_num) if binding_enabled else None
+        if binding_enabled:
+            actor_ids = [captain_id] + [agent_id for agent_id in all_agent_ids if agent_id not in members]
+        else:
+            actor_ids = list(all_agent_ids)
+        if len(actor_ids) != len(set(actor_ids)):
+            raise ValueError("Duplicate strict-voting actor IDs")
+
+        proposal_view = [
+            {
+                "proposal_number": int(row["proposal_number"]),
+                "proposer": row.get("proposer"),
+                "allocation": row.get("allocation"),
+                "reasoning": row.get("reasoning"),
+                "nano_member_utilities": {
+                    member_id: float(sum(
+                        game_state["agent_preferences"][member_id][item_index]
+                        for item_index in (row.get("allocation") or {}).get(member_id, [])
+                    ))
+                    for member_id in members
+                },
+            }
+            for row in enumerated_proposals
+        ]
+        for proposal in proposal_view:
+            proposal["nano_team_raw_utility"] = float(sum(
+                proposal["nano_member_utilities"].values()
+            ))
+            proposal["nano_team_discounted_utility"] = (
+                proposal["nano_team_raw_utility"]
+                * self.game_environment.config.gamma_discount ** (round_num - 1)
+            )
+        ballot_max_tokens = int(self.team_coordination.get("ballot_max_tokens", 4096))
+        self._apply_phase_token_limits([agents_by_id[actor_id] for actor_id in actor_ids], "voting")
+
+        def strict_json(raw: str) -> Dict[str, Any]:
+            payload = json.loads(raw)
+            if not isinstance(payload, dict):
+                raise ValueError("Ballot response must be one JSON object")
+            return payload
+
+        def parse_captain_ballot(raw: str) -> Dict[str, Any]:
+            payload = strict_json(raw)
+            selected = payload.get("selected_proposal_number")
+            if selected is not None:
+                if isinstance(selected, bool):
+                    raise ValueError("selected_proposal_number cannot be boolean")
+                selected = int(selected)
+                if selected not in proposal_numbers:
+                    raise ValueError(f"Unknown selected proposal number: {selected}")
+            return {
+                "selected_proposal_number": selected,
+                "reasoning": str(payload.get("reasoning", "")),
+            }
+
+        def parse_independent_ballot(raw: str) -> List[Dict[str, Any]]:
+            payload = strict_json(raw)
+            raw_votes = payload.get("votes")
+            if not isinstance(raw_votes, list) or len(raw_votes) != len(proposal_numbers):
+                raise ValueError("Ballot must contain exactly one vote per proposal")
+            parsed: Dict[int, Dict[str, Any]] = {}
+            for raw_vote in raw_votes:
+                if not isinstance(raw_vote, dict):
+                    raise ValueError("Each vote must be one JSON object")
+                proposal_number = int(raw_vote.get("proposal_number"))
+                vote = raw_vote.get("vote")
+                if proposal_number not in proposal_numbers or proposal_number in parsed:
+                    raise ValueError("Ballot has an unknown or duplicate proposal number")
+                if vote not in {"accept", "reject"}:
+                    raise ValueError("Every vote must be exactly accept or reject")
+                parsed[proposal_number] = {
+                    "proposal_number": proposal_number,
+                    "vote": vote,
+                    "reasoning": str(raw_vote.get("reasoning", "")),
+                }
+            if set(parsed) != set(proposal_numbers):
+                raise ValueError("Ballot omitted a proposal")
+            return [parsed[proposal_number] for proposal_number in proposal_numbers]
+
+        async def collect_actor_ballot(actor_id: str) -> Dict[str, Any]:
+            agent = agents_by_id[actor_id]
+            is_captain = binding_enabled and actor_id == captain_id
+            if is_captain:
+                base_prompt = (
+                    "All formal proposals are now visible. Select at most one proposal for "
+                    "the binding Nano team ballot, or select null to reject all proposals. "
+                    "Use the sole team objective and consider the value of waiting for a "
+                    "later discounted round. A GPT-5.4 proposal is eligible if it gives the "
+                    "Nano team more expected discounted utility. Respond with ONLY JSON:\n"
+                    '{"selected_proposal_number": 1, "reasoning": "brief team-objective rationale"}\n'
+                    "Use null instead of 1 to reject all.\n\n"
+                    f"PROPOSALS\n{json.dumps(proposal_view, indent=2)}"
+                )
+                prompt = self.apply_team_objective_to_prompt(
+                    actor_id,
+                    base_prompt,
+                    phase_label="binding team ballot",
+                )
+                parser = parse_captain_ballot
+                phase_name = f"team_ballot_round_{round_num}"
+            else:
+                prompt = self.game_environment.get_batch_voting_prompt(
+                    agent_id=actor_id,
+                    proposals=enumerated_proposals,
+                    game_state=game_state,
+                    round_num=round_num,
+                    reasoning_token_budget=self._get_reasoning_budget("voting", actor_id),
+                )
+                parser = parse_independent_ballot
+                phase_name = f"voting_round_{round_num}_batch"
+
+            context = NegotiationContext(
+                current_round=round_num,
+                max_rounds=max_rounds,
+                items=items,
+                agents=all_agent_ids,
+                agent_id=actor_id,
+                preferences=self._get_context_preferences(actor_id, preferences),
+                turn_type="binding_ballot" if is_captain else "voting",
+                conversation_history=list(public_context or []),
+                current_proposals=enumerated_proposals,
+                strategic_notes=(private_context_by_agent or {}).get(actor_id, []),
+            )
+
+            response = await self._generate_response_with_generation_bounds(
+                agent,
+                context,
+                prompt,
+                phase="voting",
+                max_tokens=ballot_max_tokens,
+                timeout=self.STRUCTURED_VOTE_TIMEOUT_SECONDS,
+            )
+            try:
+                parsed = parser(response.content)
+                final_prompt = prompt
+                final_response = response
+            except Exception as first_error:
+                self.save_interaction(
+                    actor_id,
+                    phase_name + "_invalid_attempt_0",
+                    prompt,
+                    json.dumps({
+                        "raw_response": response.content,
+                        "error": f"{type(first_error).__name__}: {first_error}",
+                        "will_retry": True,
+                    }, default=str),
+                    round_num,
+                    self._extract_token_usage(response),
+                    model_name=agent.get_model_info()["model_name"],
+                )
+                repair_prompt = (
+                    prompt
+                    + "\n\nYour previous ballot was invalid. Correct only the JSON format and "
+                    "required fields. Do not add commentary outside the JSON object. "
+                    f"Validation error: {first_error}. Previous response:\n{response.content}"
+                )
+                repair_response = await self._generate_response_with_generation_bounds(
+                    agent,
+                    context,
+                    repair_prompt,
+                    phase="voting",
+                    max_tokens=ballot_max_tokens,
+                    timeout=self.STRUCTURED_VOTE_REPAIR_TIMEOUT_SECONDS,
+                )
+                parsed = parser(repair_response.content)
+                final_prompt = repair_prompt
+                final_response = repair_response
+
+            self.save_interaction(
+                actor_id,
+                phase_name,
+                final_prompt,
+                final_response.content,
+                round_num,
+                self._extract_token_usage(final_response),
+                model_name=agent.get_model_info()["model_name"],
+            )
+            return {"actor_id": actor_id, "is_captain": is_captain, "parsed": parsed}
+
+        actor_results = await asyncio.gather(
+            *(collect_actor_ballot(actor_id) for actor_id in actor_ids)
+        )
+        private_votes: List[Dict[str, Any]] = []
+        captain_selection = None
+        for result in actor_results:
+            actor_id = result["actor_id"]
+            if result["is_captain"]:
+                captain_selection = result["parsed"]
+                continue
+            for vote in result["parsed"]:
+                private_votes.append({
+                    "voter_id": actor_id,
+                    "proposal_number": vote["proposal_number"],
+                    "vote": vote["vote"],
+                    "reasoning": vote["reasoning"],
+                    "round": round_num,
+                    "timestamp": time.time(),
+                })
+
+        if binding_enabled:
+            if captain_selection is None:
+                raise ValueError("Binding team captain produced no ballot")
+            selected = captain_selection["selected_proposal_number"]
+            for member_id in members:
+                institutional_votes = []
+                for proposal_number in proposal_numbers:
+                    vote_value = "accept" if proposal_number == selected else "reject"
+                    vote = {
+                        "voter_id": member_id,
+                        "proposal_number": proposal_number,
+                        "vote": vote_value,
+                        "reasoning": captain_selection["reasoning"],
+                        "round": round_num,
+                        "timestamp": time.time(),
+                        "binding_team_action": True,
+                        "captain_id": captain_id,
+                    }
+                    institutional_votes.append(vote)
+                    private_votes.append(vote)
+                self.save_interaction(
+                    member_id,
+                    f"binding_team_vote_round_{round_num}",
+                    "Institutional action copied from the validated captain ballot.",
+                    json.dumps({
+                        "captain_id": captain_id,
+                        "selected_proposal_number": selected,
+                        "votes": institutional_votes,
+                        "binding_team_action": True,
+                    }, default=str),
+                    round_num,
+                    None,
+                    model_name=agents_by_id[member_id].get_model_info()["model_name"],
+                )
+
+        expected_vote_count = len(agents) * len(proposal_numbers)
+        if len(private_votes) != expected_vote_count:
+            raise ValueError(
+                f"Strict voting produced {len(private_votes)} votes; expected {expected_vote_count}"
+            )
+        if any(vote.get("synthetic_vote") for vote in private_votes):
+            raise ValueError("Synthetic vote reached strict binding voting output")
+
+        votes_by_proposal: Dict[int, Dict[str, Any]] = {}
+        for proposal_number in proposal_numbers:
+            votes = [vote for vote in private_votes if vote["proposal_number"] == proposal_number]
+            votes_by_proposal[proposal_number] = {
+                "accept": sum(vote["vote"] == "accept" for vote in votes),
+                "reject": sum(vote["vote"] == "reject" for vote in votes),
+                "votes": votes,
+            }
+        return {
+            "private_votes": private_votes,
+            "voting_summary": {
+                "total_agents": len(agents),
+                "total_proposals": len(proposal_numbers),
+                "total_votes_cast": len(private_votes),
+                "votes_by_proposal": votes_by_proposal,
+                "binding_team_enabled": binding_enabled,
+                "captain_id": captain_id,
+            },
+            "phase_complete": True,
+        }
     
     async def run_vote_tabulation_phase(self, agents: List[BaseLLMAgent], items: List[Dict],
                                        preferences: Dict, round_num: int, max_rounds: int,
@@ -3381,6 +4256,11 @@ Vote must be either "accept" or "reject".
                 reflection_prompt = f"""Reflect on the outcome of round {round_num}.
 No proposal achieved two-thirds supermajority acceptance. A proposal needs at least {threshold} out of {total_agents} accept votes to pass.
 Consider what adjustments might lead to supermajority support in future rounds."""
+            reflection_prompt = self.apply_team_objective_to_prompt(
+                agent.agent_id,
+                reflection_prompt,
+                phase_label="private reflection",
+            )
 
             context = NegotiationContext(
                 current_round=round_num,
@@ -3418,6 +4298,11 @@ Consider what adjustments might lead to supermajority support in future rounds."
                         ),
                     ]
                     for retry_index, retry_prompt in enumerate(retry_prompts, start=1):
+                        retry_prompt = self.apply_team_objective_to_prompt(
+                            agent.agent_id,
+                            retry_prompt,
+                            phase_label="private reflection repair",
+                        )
                         try:
                             retry_response = await self._generate_response_with_access(
                                 agent, context, retry_prompt, phase="reflection"
@@ -3456,6 +4341,8 @@ Consider what adjustments might lead to supermajority support in future rounds."
             agent = result["agent"]
 
             if result["error"] is not None:
+                if self.is_binding_team_protocol():
+                    raise result["error"]
                 if self._is_hard_llm_failure(result["error"]):
                     raise result["error"]
                 self.logger.error(f"Error in reflection for {agent.agent_id}: {result['error']}")

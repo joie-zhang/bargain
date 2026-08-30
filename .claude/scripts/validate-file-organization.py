@@ -52,8 +52,12 @@ def main():
 
         # Check if file is being created in project root
         if os.path.dirname(abs_path) == project_root:
-            # Check for markdown files (excluding README.md and CLAUDE.md)
-            if base_name.endswith(".md") and base_name.upper() not in ["README.MD", "CLAUDE.MD"]:
+            # Check for markdown files, excluding repository instruction files.
+            allowed_root_markdown = {"README.MD", "AGENTS.MD", "CLAUDE.MD"}
+            if (
+                base_name.endswith(".md")
+                and base_name.upper() not in allowed_root_markdown
+            ):
                 print(
                     f"❌ Markdown files should not be created in the project root.",
                     file=sys.stderr,

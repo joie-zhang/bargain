@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Style-matched endpoint fair-share plot with Game 2 outlier removed.
+"""Plot endpoint fair-share gaps from the canonical bilateral raw results.
 
-This recreates the visual format of:
-
-    baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm.png
-
-but removes the lowest-Elo Game 2 max-competitive model point
-(`llama-3.2-1b-instruct`) from the max-competitive baseline/adversary curves.
+The filename is retained for compatibility with the figure verification tools.
+Following the rebuttal-era sensitivity analysis, the lowest-Elo Game 2 model
+(`llama-3.2-1b-instruct`) is excluded only from the maximally competitive
+baseline/adversary curves. All accepted Game 1 and Game 3 observations remain.
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -27,14 +26,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from scripts.analyze_n2_baseline_comparison import (  # noqa: E402
+    BASELINES,
+    load_baseline_rows,
+    load_combined_elo_map,
+    primary_protocol_rows,
+)
+from scripts.analyze_nash_lindahl_fairness import game3_lindahl_nbs  # noqa: E402
 from strong_models_experiment.analysis.active_model_roster import (  # noqa: E402
-    canonical_model_name,
+    elo_for_model,
 )
 
 
-AGENT_METRICS_CSV = PROJECT_ROOT / "analysis" / "nash_lindahl_fairness_20260505" / "agent_metrics.csv"
-ELO_CSV = Path(__file__).resolve().parent / "assets" / "endpoint_fairness_elo_snapshot.csv"
 OUT_DIR = PROJECT_ROOT / "overleaf" / "neurips" / "graphics" / "n2_gpt5_nano" / "fairness_explanation"
+ICML_OUT_DIR = PROJECT_ROOT / "overleaf" / "icml_aiwild_template" / "graphics" / "n2_gpt5_nano" / "fairness_explanation"
 
 OUT_PNG = OUT_DIR / "baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm_drop_game2_lowest_elo_style_matched.png"
 OUT_BASELINE_ELO_PNG = (
@@ -48,10 +53,9 @@ OUT_SYMMETRIC_BASELINE_ELO_PNG = (
 OUT_CSV = OUT_DIR / "baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm_drop_game2_lowest_elo_style_matched_model_means.csv"
 OUT_CELLS = OUT_DIR / "baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm_drop_game2_lowest_elo_style_matched_cells.csv"
 
-SOURCE_GROUP = "n2_main_gpt5_baseline"
-DROP_GAME2_MODEL = "llama-3.2-1b-instruct"
 EWM_ALPHA = 0.10
 BASELINE_CANONICAL = "gpt-5-nano-high"
+DROP_GAME2_MODEL = "llama-3.2-1b-instruct"
 
 GAME_ORDER = ("game1", "game2", "game3")
 GAME_LABELS = {
@@ -60,8 +64,8 @@ GAME_LABELS = {
     "game3": "Game 3",
 }
 ENDPOINT_COLORS = {
-    "max_cooperative": "#2563eb",
-    "max_competitive": "#dc2626",
+    "max_cooperative": "#0b4f63",
+    "max_competitive": "#48c7df",
 }
 ENDPOINT_LABELS = {
     "max_cooperative": "Max Cooperative",
@@ -78,25 +82,89 @@ def symmetric_percent(actual: pd.Series, fair: pd.Series) -> pd.Series:
     return out.replace([np.inf, -np.inf], np.nan)
 
 
+def game3_rebuttal_benchmark_utilities(
+    primary: pd.DataFrame,
+) -> dict[str, dict[str, float]]:
+    """Recompute the Game 3 benchmark used by the anonymous rebuttal figure.
+
+    Unlike the realized-set Lindahl reference in the general bilateral loader,
+    this enumerates feasible funded-project sets and selects the
+    Lindahl-cost-sharing allocation with the largest Nash product.
+    """
+
+    game3 = primary[primary["game_id"].eq("game3")]
+    benchmarks: dict[str, dict[str, float]] = {"baseline": {}, "adversary": {}}
+    for row in game3.itertuples(index=False):
+        result_path = str(row.result_path)
+        payload = json.loads((PROJECT_ROOT / result_path).read_text(encoding="utf-8"))
+        config = payload.get("config") or {}
+        valuations = {
+            str(agent): [float(value) for value in values]
+            for agent, values in (payload.get("agent_preferences") or {}).items()
+        }
+        costs = [float(item["cost"]) for item in config.get("items", [])]
+        budgets = {
+            str(agent): float(value)
+            for agent, value in (config.get("agent_budgets") or {}).items()
+        }
+        total_budget = float(config.get("total_budget") or sum(budgets.values()) or sum(costs))
+        benchmark, _funded_set = game3_lindahl_nbs(
+            valuations,
+            costs,
+            budgets,
+            total_budget,
+        )
+        baseline_agent = str(row.baseline_agent)
+        adversary_agent = str(row.adversary_agent)
+        benchmarks["baseline"][result_path] = (
+            float(benchmark[baseline_agent]) if baseline_agent in benchmark else np.nan
+        )
+        benchmarks["adversary"][result_path] = (
+            float(benchmark[adversary_agent]) if adversary_agent in benchmark else np.nan
+        )
+
+    expected = int(len(game3))
+    for role, values in benchmarks.items():
+        if len(values) != expected:
+            raise RuntimeError(
+                f"Expected {expected} Game 3 {role} rebuttal benchmarks, found {len(values)}"
+            )
+    return benchmarks
+
+
 def load_model_means() -> pd.DataFrame:
-    metrics = pd.read_csv(AGENT_METRICS_CSV)
-    metrics = metrics[metrics["source_group"].eq(SOURCE_GROUP)].copy()
+    spec = next(spec for spec in BASELINES if spec.key == "gpt5_nano")
+    all_rows = load_baseline_rows(spec, load_combined_elo_map())
+    primary = primary_protocol_rows(all_rows)
+    if len(primary) != 1500:
+        raise RuntimeError(f"Expected 1,500 primary GPT-5-nano runs, found {len(primary):,}")
+    if primary["adversary_model"].astype(str).str.contains("phi", case=False).any():
+        raise RuntimeError("Phi rows remain in the primary bilateral data")
+    game1_turns = set(pd.to_numeric(primary.loc[primary["game_id"].eq("game1"), "discussion_turns"]))
+    if game1_turns != {2}:
+        raise RuntimeError(f"Expected only two-turn Game 1 rows, found {sorted(game1_turns)}")
 
-    elo = pd.read_csv(ELO_CSV)[["model", "elo"]].copy()
-    elo["canonical"] = elo["model"].apply(canonical_model_name)
-    elo_lookup = elo.drop_duplicates("canonical").set_index("canonical")["elo"]
-
-    adv = metrics[metrics["role"].eq("adversary")][["result_path", "model"]].copy()
-    adv["adversary_canonical"] = adv["model"].apply(canonical_model_name)
-    adv["adv_elo"] = adv["adversary_canonical"].map(elo_lookup)
-
-    metrics = metrics.merge(
-        adv[["result_path", "adversary_canonical", "adv_elo"]],
-        on="result_path",
-        how="left",
-    )
-    metrics = metrics.dropna(subset=["adv_elo"])
-    metrics["signed_relative_gap_pct"] = symmetric_percent(metrics["actual_raw_utility"], metrics["nbs_utility"])
+    game3_benchmarks = game3_rebuttal_benchmark_utilities(primary)
+    role_frames: list[pd.DataFrame] = []
+    for role in ("baseline", "adversary"):
+        actual_col = f"{role}_actual_utility_undiscounted"
+        fair_col = f"{role}_fair_utility"
+        role_rows = primary[
+            ["result_path", "game_id", "competition_value", "adversary_model", "adversary_elo", actual_col, fair_col]
+        ].copy()
+        role_rows["role"] = role
+        role_rows["actual_raw_utility"] = pd.to_numeric(role_rows[actual_col], errors="coerce")
+        role_rows["fair_utility"] = pd.to_numeric(role_rows[fair_col], errors="coerce")
+        game3_mask = role_rows["game_id"].eq("game3")
+        role_rows.loc[game3_mask, "fair_utility"] = role_rows.loc[
+            game3_mask, "result_path"
+        ].map(game3_benchmarks[role])
+        role_rows["signed_relative_gap_pct"] = symmetric_percent(
+            role_rows["actual_raw_utility"], role_rows["fair_utility"]
+        )
+        role_frames.append(role_rows)
+    metrics = pd.concat(role_frames, ignore_index=True)
+    metrics = metrics.rename(columns={"adversary_model": "adversary_canonical", "adversary_elo": "adv_elo"})
 
     endpoint_frames: list[pd.DataFrame] = []
     for game_id, sub in metrics.groupby("game_id", sort=False):
@@ -108,13 +176,18 @@ def load_model_means() -> pd.DataFrame:
             endpoint_frames.append(endpoint_sub)
 
     endpoints = pd.concat(endpoint_frames, ignore_index=True)
-    endpoints = endpoints[
-        ~(
-            endpoints["game_id"].eq("game2")
-            & endpoints["endpoint"].eq("max_competitive")
-            & endpoints["adversary_canonical"].eq(DROP_GAME2_MODEL)
+    drop_mask = (
+        endpoints["game_id"].eq("game2")
+        & endpoints["endpoint"].eq("max_competitive")
+        & endpoints["adversary_canonical"].eq(DROP_GAME2_MODEL)
+    )
+    dropped = endpoints.loc[drop_mask]
+    if len(dropped) != 4 or set(dropped["role"]) != {"baseline", "adversary"}:
+        raise RuntimeError(
+            "Expected four Game 2 max-competitive run-role rows for the "
+            f"rebuttal-era exclusion, found {len(dropped)}"
         )
-    ].copy()
+    endpoints = endpoints.loc[~drop_mask].copy()
 
     means = (
         endpoints.groupby(
@@ -123,7 +196,7 @@ def load_model_means() -> pd.DataFrame:
         )
         .agg(
             signed_relative_gap_pct=("signed_relative_gap_pct", "mean"),
-            n_runs=("signed_relative_gap_pct", "size"),
+            n_runs=("signed_relative_gap_pct", "count"),
         )
         .sort_values(["game_id", "endpoint", "role", "adv_elo"])
     )
@@ -165,7 +238,7 @@ def role_handle(role: str) -> mlines.Line2D:
         markerfacecolor="white",
         markeredgecolor="#111827",
         markeredgewidth=1.4,
-        linestyle="--",
+        linestyle="-",
         linewidth=3.2,
         markersize=6.0,
         label="Adversary",
@@ -185,12 +258,10 @@ def padded_ylim(values: pd.Series) -> tuple[float, float]:
 
 
 def baseline_elo() -> float:
-    elo = pd.read_csv(ELO_CSV)[["model", "elo"]].copy()
-    elo["canonical"] = elo["model"].apply(canonical_model_name)
-    row = elo[elo["canonical"].eq(BASELINE_CANONICAL)]
-    if row.empty:
+    elo = elo_for_model(BASELINE_CANONICAL)
+    if elo is None:
         raise RuntimeError(f"Could not find baseline Elo for {BASELINE_CANONICAL}")
-    return float(row["elo"].iloc[0])
+    return float(elo)
 
 
 def smooth_series(values: pd.Series, symmetric: bool = False) -> pd.Series:
@@ -209,7 +280,9 @@ def plot(
     symmetric_smoothing: bool = False,
 ) -> pd.DataFrame:
     plt.rcParams.update({"font.family": "DejaVu Sans"})
-    fig, axes = plt.subplots(1, 3, figsize=(10.66, 9.22), sharex=False, sharey=False)
+    # The 70%-scale canvas pairs with the 70%-scale LaTeX inclusion below, so
+    # paper text remains legible while the displayed figure is 30% smaller.
+    fig, axes = plt.subplots(1, 3, figsize=(7.46, 6.45), sharex=False, sharey=False)
     cell_rows: list[dict[str, object]] = []
     base_elo = baseline_elo()
 
@@ -234,7 +307,7 @@ def plot(
                     sub["adv_elo"],
                     y,
                     color=color,
-                    linestyle="-" if is_baseline else "--",
+                    linestyle="-",
                     linewidth=3.0,
                     marker="o",
                     markersize=5.2,
@@ -245,14 +318,18 @@ def plot(
                 )
                 cell_rows.append(
                     {
-                        "plot": OUT_PNG.name,
+                        "plot": out_png.name,
                         "role": role,
                         "game_id": game_id,
                         "endpoint": endpoint,
                         "competition_value": float(sub["competition_value"].iloc[0]),
                         "n_points": int(len(sub)),
                         "ewm_alpha": EWM_ALPHA,
-                        "dropped": f"game2 max_competitive {DROP_GAME2_MODEL}",
+                        "filter": (
+                            "active roster; Game 1 discussion_turns=2; "
+                            f"exclude {DROP_GAME2_MODEL} from Game 2 max_competitive only; "
+                            "Game 3 uses enumerated Lindahl-cost-sharing Nash benchmark"
+                        ),
                     }
                 )
 
@@ -281,33 +358,16 @@ def plot(
         ax.grid(alpha=0.23, linewidth=0.8)
         ax.set_title(GAME_LABELS[game_id], fontsize=22, pad=11)
         ax.set_xlabel("Adversary Elo", fontsize=15, labelpad=8)
-        ax.set_ylabel("Signed relative fair-share gap (%)", fontsize=15, labelpad=10)
+        if game_id == "game1":
+            ax.set_ylabel("Signed relative fair-share gap (%)", fontsize=15, labelpad=10)
         ax.tick_params(axis="both", labelsize=12)
         ax.set_xlim(1088, 1515)
         ax.set_ylim(*padded_ylim(pd.Series(plotted_values)))
-        ax.text(
-            0.06,
-            0.045,
-            f"{'Symmetric EWM' if symmetric_smoothing else 'EWM'} alpha={EWM_ALPHA:.2f}",
-            transform=ax.transAxes,
-            ha="left",
-            va="bottom",
-            fontsize=10.5,
-            color="#475569",
-        )
-
-    fig.suptitle(
-        "Baseline and adversary signed relative fair-share gap: endpoint "
-        f"{'symmetric EWM' if symmetric_smoothing else 'EWM'} trends",
-        fontsize=25.5,
-        y=0.985,
-    )
-
     endpoint_legend = fig.legend(
         handles=[endpoint_handle("max_cooperative"), endpoint_handle("max_competitive")],
-        title="Endpoint Competition",
+        title="Competition",
         loc="upper center",
-        bbox_to_anchor=(0.37, 0.875),
+        bbox_to_anchor=(0.29, 0.985),
         ncol=2,
         fontsize=12.5,
         title_fontsize=12.5,
@@ -322,7 +382,7 @@ def plot(
         handles=[role_handle("baseline"), role_handle("adversary")],
         title="Role",
         loc="upper center",
-        bbox_to_anchor=(0.72, 0.875),
+        bbox_to_anchor=(0.81, 0.985),
         ncol=2,
         fontsize=12.5,
         title_fontsize=12.5,
@@ -333,16 +393,20 @@ def plot(
     role_legend.get_frame().set_edgecolor("#d1d5db")
     role_legend.get_frame().set_alpha(0.96)
 
-    fig.subplots_adjust(left=0.09, right=0.985, bottom=0.075, top=0.70, wspace=0.35)
-    fig.savefig(out_png, dpi=300, bbox_inches="tight")
+    fig.subplots_adjust(left=0.105, right=0.985, bottom=0.11, top=0.79, wspace=0.31)
+    fig.savefig(out_png, dpi=300, bbox_inches="tight", pad_inches=0.04)
     plt.close(fig)
     return pd.DataFrame(cell_rows)
 
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    ICML_OUT_DIR.mkdir(parents=True, exist_ok=True)
     means = load_model_means()
-    cells = plot(means, OUT_PNG)
+    active_neurips = OUT_DIR / "baseline_adversary_fair_share_symmetric_percent_endpoints_tall_ewm.png"
+    active_icml = ICML_OUT_DIR / active_neurips.name
+    cells = plot(means, active_neurips)
+    plot(means, active_icml)
     plot(means, OUT_BASELINE_ELO_PNG, show_baseline_elo=True)
     plot(
         means,
@@ -352,7 +416,8 @@ def main() -> None:
     )
     means.to_csv(OUT_CSV, index=False)
     cells.to_csv(OUT_CELLS, index=False)
-    print(f"Wrote {OUT_PNG}")
+    print(f"Wrote {active_neurips}")
+    print(f"Wrote {active_icml}")
     print(f"Wrote {OUT_BASELINE_ELO_PNG}")
     print(f"Wrote {OUT_SYMMETRIC_BASELINE_ELO_PNG}")
     print(f"Wrote {OUT_CSV}")

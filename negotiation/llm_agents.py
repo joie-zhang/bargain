@@ -16,6 +16,7 @@ import os
 import re
 import time
 import random
+import uuid
 from pathlib import Path
 import logging
 
@@ -156,12 +157,88 @@ def _coerce_positive_int(value: Any) -> Optional[int]:
     return coerced if coerced > 0 else None
 
 
+def _coerce_nonnegative_int(value: Any) -> Optional[int]:
+    """Return a provider token count while preserving an explicit zero."""
+    try:
+        coerced = int(value)
+    except (TypeError, ValueError):
+        return None
+    return coerced if coerced >= 0 else None
+
+
+def _usage_field(container: Any, key: str) -> Any:
+    """Read one field from a provider dict or SDK response object."""
+    if isinstance(container, dict):
+        return container.get(key)
+    return getattr(container, key, None)
+
+
+def _usage_nested(container: Any, *path: str) -> Any:
+    value = container
+    for key in path:
+        value = _usage_field(value, key)
+        if value is None:
+            return None
+    return value
+
+
+def _usage_details_to_dict(details: Any) -> Optional[Dict[str, Any]]:
+    """Convert SDK usage-detail objects into JSON-safe dictionaries."""
+    if details is None:
+        return None
+    if isinstance(details, dict):
+        return dict(details)
+    model_dump = getattr(details, "model_dump", None)
+    if callable(model_dump):
+        return model_dump(exclude_none=True)
+    as_dict = getattr(details, "dict", None)
+    if callable(as_dict):
+        return as_dict(exclude_none=True)
+    return None
+
+
+def _extract_anthropic_thinking_tokens(
+    usage: Any,
+    *,
+    thinking_enabled: bool = False,
+) -> Tuple[Optional[int], Optional[str]]:
+    """Extract Claude's authoritative nested thinking-token breakdown.
+
+    Claude's inclusive ``output_tokens`` total is decomposed by
+    ``output_tokens_details.thinking_tokens``. Older SDK/provider variants are
+    accepted only as fallbacks. Nested provider detail always takes precedence
+    over a flat compatibility field.
+    """
+    for path in (
+        ("output_tokens_details", "thinking_tokens"),
+        ("output_tokens_details", "reasoning_tokens"),
+        ("completion_tokens_details", "thinking_tokens"),
+        ("completion_tokens_details", "reasoning_tokens"),
+    ):
+        value = _coerce_nonnegative_int(_usage_nested(usage, *path))
+        if value is not None:
+            return value, ".".join(path)
+
+    for key in ("thinking_tokens", "reasoning_tokens"):
+        value = _coerce_nonnegative_int(_usage_field(usage, key))
+        if value is not None:
+            return value, key
+    if thinking_enabled:
+        # Claude may elect not to think under adaptive thinking. In that case
+        # the API omits output_tokens_details entirely; absence means an
+        # observed zero, not an unknown count.
+        return 0, "thinking_enabled_without_reported_detail"
+    return None, None
+
+
 OPENROUTER_PROVIDER_FALLBACK_ENV = "OPENROUTER_PROVIDER_FALLBACK"
 OPENROUTER_REASONING_EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh"}
 DEFAULT_OPENAI_MAX_TOKENS_CAP = 16384
 OPENAI_GPT_5_4_MAX_TOKENS_CAP = DEFAULT_OPENAI_MAX_TOKENS_CAP * 4
 OPENAI_MODEL_MAX_TOKENS_CAPS = {
     "gpt-4o-2024-05-13": 4096,
+    "gpt-5-nano": 32768,
+    "gpt-5-nano-2025-08-07": 32768,
 }
 
 
@@ -780,33 +857,43 @@ class BaseLLMAgent(ABC):
             if context_metadata is None:
                 context_metadata = metadata.get("context_budget")
 
-        reasoning_tokens = cls._metadata_get(usage, "reasoning_tokens", "thinking_tokens")
+        reasoning_tokens = None
+        for path in (
+            ("completion_tokens_details", "reasoning_tokens"),
+            ("output_tokens_details", "reasoning_tokens"),
+            ("completion_tokens_details", "thinking_tokens"),
+            ("output_tokens_details", "thinking_tokens"),
+        ):
+            reasoning_tokens = cls._metadata_get_nested(usage, path)
+            if reasoning_tokens is not None:
+                break
         if reasoning_tokens is None:
-            reasoning_tokens = cls._metadata_get(metadata, "reasoning_tokens", "thinking_tokens")
+            reasoning_tokens = cls._metadata_get(
+                usage,
+                "reasoning_tokens",
+                "thinking_tokens",
+            )
         if reasoning_tokens is None:
-            for path in (
-                ("completion_tokens_details", "reasoning_tokens"),
-                ("output_tokens_details", "reasoning_tokens"),
-                ("completion_tokens_details", "thinking_tokens"),
-                ("output_tokens_details", "thinking_tokens"),
-            ):
-                reasoning_tokens = cls._metadata_get_nested(usage, path)
-                if reasoning_tokens is not None:
-                    break
+            reasoning_tokens = cls._metadata_get(
+                metadata,
+                "reasoning_tokens",
+                "thinking_tokens",
+            )
 
-        thinking_tokens = cls._metadata_get(usage, "thinking_tokens")
+        thinking_tokens = None
+        for path in (
+            ("completion_tokens_details", "thinking_tokens"),
+            ("output_tokens_details", "thinking_tokens"),
+            ("completion_tokens_details", "reasoning_tokens"),
+            ("output_tokens_details", "reasoning_tokens"),
+        ):
+            thinking_tokens = cls._metadata_get_nested(usage, path)
+            if thinking_tokens is not None:
+                break
+        if thinking_tokens is None:
+            thinking_tokens = cls._metadata_get(usage, "thinking_tokens")
         if thinking_tokens is None:
             thinking_tokens = cls._metadata_get(metadata, "thinking_tokens")
-        if thinking_tokens is None:
-            for path in (
-                ("completion_tokens_details", "thinking_tokens"),
-                ("output_tokens_details", "thinking_tokens"),
-                ("completion_tokens_details", "reasoning_tokens"),
-                ("output_tokens_details", "reasoning_tokens"),
-            ):
-                thinking_tokens = cls._metadata_get_nested(usage, path)
-                if thinking_tokens is not None:
-                    break
 
         token_usage = {
             "input_tokens": input_tokens,
@@ -819,6 +906,48 @@ class BaseLLMAgent(ABC):
             token_usage["reasoning_tokens"] = reasoning_tokens
         if thinking_tokens is not None:
             token_usage["thinking_tokens"] = thinking_tokens
+        for details_key in (
+            "prompt_tokens_details",
+            "input_tokens_details",
+            "completion_tokens_details",
+            "output_tokens_details",
+        ):
+            details = cls._metadata_get(usage, details_key)
+            details_dict = _usage_details_to_dict(details)
+            if details_dict is not None:
+                token_usage[details_key] = details_dict
+        reasoning_token_source = cls._metadata_get(
+            usage,
+            "reasoning_token_source",
+        )
+        if reasoning_token_source is None:
+            reasoning_token_source = cls._metadata_get(
+                metadata,
+                "reasoning_token_source",
+            )
+        if reasoning_token_source is not None:
+            token_usage["reasoning_token_source"] = reasoning_token_source
+        openrouter_transport = cls._metadata_get(
+            usage,
+            "openrouter_transport",
+        )
+        if openrouter_transport is None:
+            openrouter_transport = cls._metadata_get(
+                metadata,
+                "openrouter_transport",
+            )
+        if openrouter_transport is not None:
+            token_usage["openrouter_transport"] = openrouter_transport
+        for usage_key in (
+            "candidates_token_count",
+            "thoughts_token_count",
+            "output_tokens_includes_reasoning",
+        ):
+            usage_value = cls._metadata_get(usage, usage_key)
+            if usage_value is None:
+                usage_value = cls._metadata_get(metadata, usage_key)
+            if usage_value is not None:
+                token_usage[usage_key] = usage_value
         if isinstance(context_metadata, dict):
             for source_key, target_key in (
                 ("phase_prompt_chars", "phase_prompt_chars"),
@@ -851,6 +980,32 @@ class BaseLLMAgent(ABC):
     
     def _build_system_prompt(self, context: NegotiationContext) -> str:
         """Build system prompt for the agent."""
+        team_objective_prompt = getattr(self, "team_objective_prompt", None)
+        if team_objective_prompt:
+            base_prompt = f"""You are {context.agent_id}, a negotiating agent and member of a binding team in a multi-agent negotiation.
+
+NEGOTIATION SETUP:
+- Round {context.current_round} of {context.max_rounds}
+- Items to negotiate: {len(context.items)} items
+- Participants: {', '.join(context.agents)}
+
+YOUR PRIVATE PREFERENCES:
+{self._format_preferences(context.preferences, context.items)}
+
+The private preferences above are evidence for calculating the team objective. They do not give your personal utility any special priority.
+
+CURRENT SITUATION:
+- Turn type: {context.turn_type}
+- Items on the table: {[item['name'] if isinstance(item, dict) else str(item) for item in context.items]}
+
+BINDING TEAM INSTRUCTIONS:
+{team_objective_prompt}
+
+Be concise and follow the required response format for the current phase."""
+            if self.config.system_prompt:
+                base_prompt += f"\n\nADDITIONAL MODEL INSTRUCTIONS:\n{self.config.system_prompt}"
+            return base_prompt
+
         base_prompt = f"""You are {context.agent_id}, a negotiating agent in a multi-agent negotiation.
 
 NEGOTIATION SETUP:
@@ -2306,10 +2461,16 @@ class AnthropicAgent(BaseLLMAgent):
             thinking_min_max_tokens = int(thinking_budget) + 1024
             if isinstance(max_tokens, int):
                 max_tokens = max(max_tokens, thinking_min_max_tokens)
+        # Models whose provider output ceiling is 65536 rather than 16384. This must
+        # stay in sync with the per-model clamp in
+        # strong_models_experiment/agents/agent_factory.py; when the two disagree,
+        # this call-site clamp silently wins and a config's larger cap never reaches
+        # the API.
+        _extended_output_models = ("claude-opus-4-6", "claude-sonnet-4-6")
         if (
             isinstance(max_tokens, int)
             and max_tokens > 16384
-            and "claude-opus-4-6" not in self.model_name.lower()
+            and not any(m in self.model_name.lower() for m in _extended_output_models)
         ):
             max_tokens = max(thinking_min_max_tokens or 16384, 16384)
 
@@ -2357,7 +2518,9 @@ class AnthropicAgent(BaseLLMAgent):
             full_text = ""
             input_tokens = 0
             output_tokens = 0
-            thinking_tokens = 0  # For extended thinking models
+            thinking_tokens: Optional[int] = None
+            reasoning_token_source: Optional[str] = None
+            output_tokens_details: Optional[Dict[str, Any]] = None
             stop_reason = None
 
             async for event in stream:
@@ -2375,9 +2538,27 @@ class AnthropicAgent(BaseLLMAgent):
                     elif event.type == 'message_delta':
                         if hasattr(event, 'usage'):
                             output_tokens = event.usage.output_tokens
-                            # Extract thinking_tokens for extended thinking models
-                            if hasattr(event.usage, 'thinking_tokens'):
-                                thinking_tokens = event.usage.thinking_tokens
+                            extracted_tokens, extracted_source = (
+                                _extract_anthropic_thinking_tokens(
+                                    event.usage,
+                                    thinking_enabled=(
+                                        explicit_thinking is not None
+                                        or thinking_budget is not None
+                                    ),
+                                )
+                            )
+                            if extracted_tokens is not None:
+                                thinking_tokens = extracted_tokens
+                                reasoning_token_source = extracted_source
+                            raw_output_details = _usage_field(
+                                event.usage,
+                                "output_tokens_details",
+                            )
+                            details_dict = _usage_details_to_dict(
+                                raw_output_details
+                            )
+                            if details_dict is not None:
+                                output_tokens_details = details_dict
                         if hasattr(event.delta, 'stop_reason'):
                             stop_reason = event.delta.stop_reason
 
@@ -2389,27 +2570,48 @@ class AnthropicAgent(BaseLLMAgent):
                     f"(stop_reason={stop_reason}, output_tokens={output_tokens})"
                 )
 
+            usage_metadata: Dict[str, Any] = {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+            }
+            response_metadata: Dict[str, Any] = {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
+                "stop_reason": stop_reason,
+                "usage": usage_metadata,
+            }
+            if thinking_tokens is not None:
+                usage_metadata["reasoning_tokens"] = thinking_tokens
+                usage_metadata["thinking_tokens"] = thinking_tokens
+                usage_metadata["output_tokens_includes_reasoning"] = True
+                response_metadata["reasoning_tokens"] = thinking_tokens
+                response_metadata["thinking_tokens"] = thinking_tokens
+                response_metadata["output_tokens_includes_reasoning"] = True
+                if output_tokens_details is None:
+                    output_tokens_details = {
+                        "thinking_tokens": thinking_tokens,
+                    }
+            if output_tokens_details is not None:
+                usage_metadata["output_tokens_details"] = (
+                    output_tokens_details
+                )
+            if reasoning_token_source is not None:
+                usage_metadata["reasoning_token_source"] = (
+                    reasoning_token_source
+                )
+                response_metadata["reasoning_token_source"] = (
+                    reasoning_token_source
+                )
+
             return AgentResponse(
                 content=full_text,
                 model_used=self.model_name,
                 response_time=response_time,
                 tokens_used=total_tokens,
                 cost_estimate=self._estimate_cost(input_tokens, output_tokens),
-                metadata={
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "total_tokens": total_tokens,
-                    "stop_reason": stop_reason,
-                    "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None,
-                    "thinking_tokens": thinking_tokens if thinking_tokens > 0 else None,
-                    "usage": {
-                        "input_tokens": input_tokens,
-                        "output_tokens": output_tokens,
-                        "total_tokens": total_tokens,
-                        "reasoning_tokens": thinking_tokens if thinking_tokens > 0 else None,
-                        "thinking_tokens": thinking_tokens if thinking_tokens > 0 else None,
-                    },
-                }
+                metadata=response_metadata,
             )
 
         return await self._call_provider_route_sequence(
@@ -2480,6 +2682,32 @@ class OpenAIAgent(BaseLLMAgent):
         self._active_key_label: Optional[str] = None
         self.client = None
         self._configure_client_key(self.key_pool.current())
+
+        requested_transport = os.getenv("OPENAI_TRANSPORT", "auto").strip().lower()
+        if requested_transport not in {"auto", "direct", "proxy"}:
+            self.logger.warning(
+                "Invalid OPENAI_TRANSPORT=%r; defaulting to auto",
+                requested_transport,
+            )
+            requested_transport = "auto"
+        self.openai_transport = requested_transport
+        self.openai_proxy_poll_dir = Path(
+            os.getenv("OPENAI_PROXY_POLL_DIR", "/home/jz4391/openrouter_proxy")
+        )
+        try:
+            self.openai_proxy_poll_interval = max(
+                0.01,
+                float(os.getenv("OPENAI_PROXY_CLIENT_POLL_INTERVAL", "0.1")),
+            )
+        except ValueError:
+            self.openai_proxy_poll_interval = 0.1
+        try:
+            self.openai_proxy_timeout = max(
+                1.0,
+                float(os.getenv("OPENAI_PROXY_CLIENT_TIMEOUT", "6000")),
+            )
+        except ValueError:
+            self.openai_proxy_timeout = 6000.0
         
         # Check if we have an actual model ID stored (for newer models)
         if hasattr(config, '_actual_model_id'):
@@ -2510,6 +2738,72 @@ class OpenAIAgent(BaseLLMAgent):
             max_retries=0,
         )
         self._active_key_label = key.label
+
+    def _use_file_proxy(self) -> bool:
+        if self.openai_transport == "proxy":
+            return True
+        if self.openai_transport == "direct":
+            return False
+        return bool(os.getenv("SLURM_JOB_ID"))
+
+    async def _call_via_file_proxy(
+        self,
+        *,
+        key: ProviderKey,
+        payload: Dict[str, Any],
+    ) -> Tuple[str, Dict[str, Any], float]:
+        """Send one native OpenAI chat-completions call through the shared queue."""
+
+        poll_dir = self.openai_proxy_poll_dir
+        processed_dir = poll_dir / "processed"
+        poll_dir.mkdir(parents=True, exist_ok=True)
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        identifier = f"openai_{time.time_ns()}_{uuid.uuid4().hex}"
+        request_path = poll_dir / f"request_{identifier}.json"
+        response_path = poll_dir / f"response_{identifier}.json"
+        temporary_path = poll_dir / f".request_{identifier}.json.tmp"
+        request_payload = {
+            "url": "https://api.openai.com/v1/chat/completions",
+            "headers": {
+                "Authorization": f"Bearer {key.value}",
+                "Content-Type": "application/json",
+            },
+            "payload": payload,
+            "timeout": max(float(self.config.timeout), 180.0),
+        }
+        temporary_path.write_text(json.dumps(request_payload), encoding="utf-8")
+        os.replace(temporary_path, request_path)
+
+        started = time.time()
+        response_payload: Optional[Dict[str, Any]] = None
+        while response_payload is None:
+            if time.time() - started > self.openai_proxy_timeout:
+                if request_path.exists():
+                    request_path.unlink()
+                raise TimeoutError(
+                    f"No OpenAI file-proxy response after {self.openai_proxy_timeout}s "
+                    f"for {identifier}"
+                )
+            if not response_path.exists():
+                await asyncio.sleep(self.openai_proxy_poll_interval)
+                continue
+            try:
+                response_payload = json.loads(response_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError:
+                await asyncio.sleep(self.openai_proxy_poll_interval)
+
+        processed_path = processed_dir / response_path.name
+        os.replace(response_path, processed_path)
+        error = response_payload.get("error")
+        if error:
+            raise Exception(str(error))
+        content = response_payload.get("result")
+        if not isinstance(content, str) or not content.strip():
+            raise Exception("OpenAI file proxy returned empty content")
+        usage = response_payload.get("usage") or {}
+        if not isinstance(usage, dict):
+            usage = {}
+        return content, usage, time.time() - started
     
     async def _call_llm_api(self, messages: List[Dict[str, str]], **kwargs) -> AgentResponse:
         """Call OpenAI API once; outer agent layers handle retries."""
@@ -2558,6 +2852,28 @@ class OpenAIAgent(BaseLLMAgent):
                 api_params["max_tokens"] = min(max_tokens, output_cap)
 
         async def request_with_key(key: ProviderKey) -> AgentResponse:
+            if self._use_file_proxy():
+                request_payload = {**api_params, **custom_params, **kwargs}
+                content, usage, response_time = await self._call_via_file_proxy(
+                    key=key,
+                    payload=request_payload,
+                )
+                completion_details = usage.get("completion_tokens_details") or {}
+                reasoning_tokens = completion_details.get("reasoning_tokens")
+                return AgentResponse(
+                    content=content,
+                    model_used=self.model_name,
+                    response_time=response_time,
+                    tokens_used=usage.get("total_tokens"),
+                    cost_estimate=None,
+                    metadata={
+                        "finish_reason": "proxy",
+                        "usage": usage,
+                        "reasoning_tokens": reasoning_tokens,
+                        "transport": "file_proxy",
+                    },
+                )
+
             self._configure_client_key(key)
             request_start = time.time()
             response = await self.client.chat.completions.create(
@@ -2934,6 +3250,11 @@ class GoogleAgent(BaseLLMAgent):
             if hasattr(response, 'usage_metadata') and response.usage_metadata:
                 prompt_tokens = getattr(response.usage_metadata, 'prompt_token_count', 0) or 0
                 completion_tokens = getattr(response.usage_metadata, 'candidates_token_count', 0) or 0
+                thoughts_tokens = getattr(
+                    response.usage_metadata,
+                    'thoughts_token_count',
+                    None,
+                )
                 total_tokens = getattr(response.usage_metadata, 'total_token_count', None)
                 # tokens_used should be an int, not a dict!
                 tokens_used = total_tokens if total_tokens else (prompt_tokens + completion_tokens)
@@ -2941,8 +3262,17 @@ class GoogleAgent(BaseLLMAgent):
                 token_metadata = {
                     'prompt_tokens': prompt_tokens,
                     'completion_tokens': completion_tokens,
-                    'total_tokens': tokens_used
+                    'total_tokens': tokens_used,
+                    'candidates_token_count': completion_tokens,
+                    'output_tokens_includes_reasoning': False,
                 }
+                if thoughts_tokens is not None:
+                    token_metadata.update({
+                        'thoughts_token_count': thoughts_tokens,
+                        'reasoning_tokens': thoughts_tokens,
+                        'thinking_tokens': thoughts_tokens,
+                        'reasoning_token_source': 'thoughts_token_count',
+                    })
 
             # Handle various finish reasons and extract content
             content = None

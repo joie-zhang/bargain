@@ -13,8 +13,8 @@ These are the current active-roster models for which both pieces of evidence exi
 
 | Model | Why it is in scope | Direct OpenRouter failure evidence | GPU backfill evidence |
 | --- | --- | --- | --- |
-| `qwen2.5-72b-instruct` | Current active-roster model. The context audit shows OpenRouter at `32,768` tokens vs native `131K`. | `logs/cluster/cofund_api_6569989_396.out`, `..._397.out`, `..._404.out`, `..._409.out`, `..._412.out` all show `This endpoint's maximum context length is 32768 tokens`. Example: config `396` failed at about `33,280` requested tokens. | `experiments/results/cofunding_20260405_083548_cluster_backfill_pli_20260409/manifest.json` lists source model `qwen2.5-72b-instruct` with backfilled config IDs `396, 397, 404, 408, 409, 412`. The earlier fallback manifest at `experiments/results/cofunding_20260405_083548_cluster_fallback_20260406/manifest.json` lists the same model/config set. |
-| `llama-3.2-1b-instruct` | Current active-roster model. The context audit shows OpenRouter at `60,000` tokens vs native `128K`. | `logs/cluster/diplo_6569449_523.out`, `..._525.out`, `..._529.out`, `..._535.out`, plus `logs/cluster/cofund_api_6569989_528.out`, all show `This endpoint's maximum context length is 60000 tokens`. Examples: config `523` failed at about `60,647` requested tokens; config `529` failed at about `64,793`; config `528` failed at about `61,397`. | `experiments/results/cofunding_20260405_083548_cluster_backfill_pli_20260409/manifest.json` lists source model `llama-3.2-1b-instruct` with backfilled config IDs `522, 523, 528`. The earlier fallback manifest at `experiments/results/cofunding_20260405_083548_cluster_fallback_20260406/manifest.json` lists the same model/config set. |
+| `qwen2.5-72b-instruct` | Current active-roster model. The context audit shows OpenRouter at `32,768` tokens vs native `131K`. | `logs/cluster/cofund_api_6569989_396.out`, `..._397.out`, `..._404.out`, `..._409.out`, `..._412.out` all show `This endpoint's maximum context length is 32768 tokens`. Example: config `396` failed at about `33,280` requested tokens. | [`cofunding_cluster_backfill_pli_manifest.json`](./assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_backfill_pli_manifest.json) lists source model `qwen2.5-72b-instruct` with backfilled config IDs `396, 397, 404, 408, 409, 412`. The earlier [`cofunding_cluster_fallback_manifest.json`](./assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_fallback_manifest.json) lists the same model/config set. |
+| `llama-3.2-1b-instruct` | Current active-roster model. The context audit shows OpenRouter at `60,000` tokens vs native `128K`. | `logs/cluster/diplo_6569449_523.out`, `..._525.out`, `..._529.out`, `..._535.out`, plus `logs/cluster/cofund_api_6569989_528.out`, all show `This endpoint's maximum context length is 60000 tokens`. Examples: config `523` failed at about `60,647` requested tokens; config `529` failed at about `64,793`; config `528` failed at about `61,397`. | [`cofunding_cluster_backfill_pli_manifest.json`](./assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_backfill_pli_manifest.json) lists source model `llama-3.2-1b-instruct` with backfilled config IDs `522, 523, 528`. The earlier [`cofunding_cluster_fallback_manifest.json`](./assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_fallback_manifest.json) lists the same model/config set. |
 
 ## Lower OpenRouter Context, But Not Confirmed Here As A Backfill Trigger
 
@@ -28,7 +28,7 @@ For these, this audit did **not** find the same level of direct evidence as abov
 
 ### Note On `llama-3.1-8b-instruct`
 
-`llama-3.1-8b-instruct` does appear in the earlier isolated fallback manifest at `experiments/results/cofunding_20260405_083548_cluster_fallback_20260406/manifest.json`, but that script selected configs with missing results generally, not only context-limit failures. In the logs checked here, I found successful OpenRouter runs for this model as well, for example:
+`llama-3.1-8b-instruct` does appear in the earlier isolated [`cofunding_cluster_fallback_manifest.json`](./assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_fallback_manifest.json), but that script selected configs with missing results generally, not only context-limit failures. In the logs checked here, I found successful OpenRouter runs for this model as well, for example:
 
 - `logs/cluster/diplo_6569449_498.out`
 - `logs/cluster/diplo_6569449_501.out`
@@ -58,5 +58,5 @@ If you want the short answer for the current roster, the confirmed OpenRouter co
 - `logs/cluster/diplo_6569449_525.out`
 - `logs/cluster/diplo_6569449_529.out`
 - `logs/cluster/diplo_6569449_535.out`
-- `experiments/results/cofunding_20260405_083548_cluster_fallback_20260406/manifest.json`
-- `experiments/results/cofunding_20260405_083548_cluster_backfill_pli_20260409/manifest.json`
+- `docs/guides/assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_fallback_manifest.json`
+- `docs/guides/assets/openrouter_context_failures_active_roster_2026_04_11/cofunding_cluster_backfill_pli_manifest.json`

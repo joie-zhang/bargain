@@ -22,7 +22,7 @@ from matplotlib.ticker import MultipleLocator
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-INPUT_CSV = PROJECT_ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv"
+INPUT_CSV = PROJECT_ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv"
 ITERATION_DIR = PROJECT_ROOT / "experiments/results/figure_iteration_20260507/gpt5_nano"
 MAIN_OUTPUT_PATH = (
     PROJECT_ROOT
@@ -31,13 +31,21 @@ MAIN_OUTPUT_PATH = (
 ITERATION_OUTPUT_PATH = ITERATION_DIR / "figure3_baseline_payoff_by_competition_iteration.png"
 APPENDIX_RAW_OUTPUT_PATH = (
     PROJECT_ROOT
-    / "overleaf/neurips/graphics/n2_gpt5_nano/04_baseline_payoff_by_competition_raw_per_elo.png"
+    / "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/04_baseline_payoff_by_competition_raw_per_elo.png"
 )
+
+EXPECTED_GAME_COUNTS = {"game1": 420, "game2": 540, "game3": 540}
 
 GAME_LABELS = {
     "game1": "Game 1: Item Allocation",
     "game2": "Game 2: Diplomacy",
     "game3": "Game 3: Co-funding",
+}
+
+APPENDIX_GAME_LABELS = {
+    "game1": "Game 1: Item Allocation",
+    "game2": "Game 2: Diplomatic Treaty",
+    "game3": "Game 3: Co-Funding",
 }
 
 COMPETITION_ORDER = ["0.0", "0.1-0.3", "0.4-0.6", "0.7-0.9", "1.0"]
@@ -87,6 +95,19 @@ def competition_band(value: float) -> str:
 
 def ewm(values: pd.Series, alpha: float = 0.24) -> pd.Series:
     return values.ewm(alpha=alpha, adjust=False).mean()
+
+
+def validate_main_cohort(df: pd.DataFrame) -> None:
+    counts = df.groupby("game_id").size().to_dict()
+    if counts != EXPECTED_GAME_COUNTS:
+        raise RuntimeError(f"Expected main-cohort counts {EXPECTED_GAME_COUNTS}, found {counts}")
+    if len(df) != 1500 or df["result_path"].nunique() != 1500:
+        raise RuntimeError("Expected 1,500 unique GPT-5-nano primary runs")
+    if df["adversary_model"].nunique() != 30:
+        raise RuntimeError(f"Expected 30 adversary models, found {df['adversary_model'].nunique()}")
+    game1_turns = set(pd.to_numeric(df.loc[df["game_id"].eq("game1"), "discussion_turns"]))
+    if game1_turns != {2}:
+        raise RuntimeError(f"Expected only two-turn Game 1 rows, found {sorted(game1_turns)}")
 
 
 def draw_main(df: pd.DataFrame) -> None:
@@ -223,7 +244,7 @@ def draw_appendix_raw(df: pd.DataFrame) -> None:
                 label=label,
             )
 
-        ax.set_title(GAME_LABELS[game_id], fontsize=26, pad=14)
+        ax.set_title(APPENDIX_GAME_LABELS[game_id], fontsize=26, pad=14)
         ax.set_xlabel("Adversary Elo", fontsize=23, labelpad=8)
         if game_id == "game1":
             ax.set_ylabel("Baseline Model Payoff", fontsize=23, labelpad=10)
@@ -263,6 +284,7 @@ def draw_appendix_raw(df: pd.DataFrame) -> None:
 def main() -> None:
     df = pd.read_csv(INPUT_CSV)
     df = df[df["baseline_key"].eq("gpt5_nano")].copy()
+    validate_main_cohort(df)
     draw_main(df)
     draw_appendix_raw(df)
 

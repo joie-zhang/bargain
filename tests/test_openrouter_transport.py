@@ -2,6 +2,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+import aiohttp
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -11,7 +12,6 @@ from negotiation.openrouter_client import (
     DEFAULT_OPENROUTER_MAX_TOKENS_CAP,
     DEFAULT_OPENROUTER_PROXY_POLL_DIR,
     OpenRouterAgent,
-    ProxyMonitorUnavailableError,
     get_openrouter_max_tokens_cap,
 )
 
@@ -35,16 +35,18 @@ def make_agent(monkeypatch, transport=None, slurm_job_id=None, max_tokens=64):
     )
 
 
-def test_default_transport_resolves_to_direct_outside_slurm(monkeypatch):
+def test_default_transport_is_auto_and_direct_first_outside_slurm(monkeypatch):
     agent = make_agent(monkeypatch)
     assert agent.requested_transport == "auto"
-    assert agent.openrouter_config.transport == "direct"
+    assert agent.openrouter_config.transport == "auto"
+    assert agent._transport_order() == ("direct", "proxy")
 
 
-def test_auto_transport_resolves_to_proxy_in_slurm(monkeypatch):
+def test_auto_transport_is_direct_first_in_slurm(monkeypatch):
     agent = make_agent(monkeypatch, transport="auto", slurm_job_id="12345")
     assert agent.requested_transport == "auto"
-    assert agent.openrouter_config.transport == "proxy"
+    assert agent.openrouter_config.transport == "auto"
+    assert agent._transport_order() == ("direct", "proxy")
 
 
 def test_proxy_poll_dir_defaults_to_shared_home_queue(monkeypatch):
@@ -56,23 +58,66 @@ def test_proxy_poll_dir_defaults_to_shared_home_queue(monkeypatch):
     assert agent.openrouter_config.proxy_poll_dir == DEFAULT_OPENROUTER_PROXY_POLL_DIR
 
 
-def test_auto_transport_in_slurm_does_not_fall_back_to_direct(monkeypatch):
+def test_auto_transport_in_slurm_falls_back_to_proxy(monkeypatch):
     agent = make_agent(monkeypatch, transport="auto", slurm_job_id="12345")
+    calls = []
 
     async def fake_proxy(url, headers, payload, timeout):
-        raise ProxyMonitorUnavailableError("proxy monitor unavailable")
+        calls.append("proxy")
+        return "ok", None, {"total_tokens": 1}
 
     async def fake_direct(url, headers, payload, timeout):
-        raise AssertionError("direct fallback should not be used in Slurm proxy mode")
+        calls.append("direct")
+        raise OSError("direct network unavailable")
 
     monkeypatch.setattr(agent, "_send_request_via_proxy", fake_proxy)
     monkeypatch.setattr(agent, "_send_request_direct", fake_direct)
 
-    with pytest.raises(ProxyMonitorUnavailableError):
-        asyncio.run(agent._make_request([{"role": "user", "content": "hi"}]))
+    result, usage = asyncio.run(
+        agent._make_request([{"role": "user", "content": "hi"}])
+    )
+
+    assert result == "ok"
+    assert usage == {"total_tokens": 1, "openrouter_transport": "proxy"}
+    assert calls == ["direct", "proxy"]
 
 
-def test_auto_transport_outside_slurm_uses_direct_only(monkeypatch):
+@pytest.mark.parametrize(
+    "direct_error",
+    [
+        aiohttp.ClientPayloadError(
+            "OpenRouter direct response returned a non-object JSON payload (NoneType)"
+        ),
+        Exception("API Error: Upstream idle timeout exceeded"),
+    ],
+)
+def test_auto_transport_falls_back_for_invalid_or_idle_direct_response(
+    monkeypatch, direct_error
+):
+    agent = make_agent(monkeypatch, transport="auto", slurm_job_id="12345")
+    calls = []
+
+    async def fake_proxy(url, headers, payload, timeout):
+        calls.append("proxy")
+        return "ok", None, {"total_tokens": 1}
+
+    async def fake_direct(url, headers, payload, timeout):
+        calls.append("direct")
+        raise direct_error
+
+    monkeypatch.setattr(agent, "_send_request_via_proxy", fake_proxy)
+    monkeypatch.setattr(agent, "_send_request_direct", fake_direct)
+
+    result, usage = asyncio.run(
+        agent._make_request([{"role": "user", "content": "hi"}])
+    )
+
+    assert result == "ok"
+    assert usage == {"total_tokens": 1, "openrouter_transport": "proxy"}
+    assert calls == ["direct", "proxy"]
+
+
+def test_auto_transport_outside_slurm_uses_direct_when_available(monkeypatch):
     agent = make_agent(monkeypatch, transport="auto")
     calls = []
 
@@ -92,7 +137,7 @@ def test_auto_transport_outside_slurm_uses_direct_only(monkeypatch):
     )
 
     assert result == "ok"
-    assert usage == {"total_tokens": 1}
+    assert usage == {"total_tokens": 1, "openrouter_transport": "direct"}
     assert calls == ["direct"]
 
 
@@ -125,7 +170,7 @@ def test_openrouter_request_applies_configurable_max_tokens_cap(monkeypatch):
     )
 
     assert result == "ok"
-    assert usage == {"total_tokens": 1}
+    assert usage == {"total_tokens": 1, "openrouter_transport": "direct"}
     assert payloads[0]["max_tokens"] == 8192
 
 
@@ -238,7 +283,7 @@ def test_proxy_waits_for_complete_response_file(monkeypatch, tmp_path):
 
     result, usage = asyncio.run(run_test())
     assert result == "ok"
-    assert usage == {"total_tokens": 1}
+    assert usage == {"total_tokens": 1, "openrouter_transport": "proxy"}
 
 
 class DummyNoRetryAgent(BaseLLMAgent):

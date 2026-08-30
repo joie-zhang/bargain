@@ -51,10 +51,15 @@ from scripts.plot_gpt5_nano_baseline_vs_elo_all_games import (  # noqa: E402
     load_game3_rows,
     parse_elo_markdown,
 )
+from scripts.ttc_accounting import (  # noqa: E402
+    account_token_usage,
+    resolve_final_interactions,
+)
 
 
-DEFAULT_MULTIAGENT_ASSET_DIR = (
-    PROJECT_ROOT / "experiments/results/partial_multiagent_results_plot_report_20260503_assets"
+DEFAULT_MULTIAGENT_TABLE_DIR = (
+    PROJECT_ROOT
+    / "experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent"
 )
 DEFAULT_TTC_ROOT = PROJECT_ROOT / "experiments/results/ttc_native_scaling_20260502_212943"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "analysis/neurips_revision_20260504"
@@ -86,7 +91,12 @@ class OLSResult:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--multiagent-asset-dir", type=Path, default=DEFAULT_MULTIAGENT_ASSET_DIR)
+    parser.add_argument(
+        "--multiagent-table-dir",
+        type=Path,
+        default=DEFAULT_MULTIAGENT_TABLE_DIR,
+        help="Directory with the canonical homogeneous and heterogeneous run and agent tables.",
+    )
     parser.add_argument("--ttc-root", type=Path, default=DEFAULT_TTC_ROOT)
     parser.add_argument("--elo-markdown", type=Path, default=DEFAULT_ELO_MARKDOWN)
     parser.add_argument("--copy-to-overleaf", action=argparse.BooleanOptionalAction, default=True)
@@ -296,9 +306,64 @@ def extract_game1_preferences_from_interactions(result_path: Path) -> dict[str, 
     return {}
 
 
-def load_multiagent_metrics(asset_dir: Path, output_dir: Path, bootstrap_reps: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    runs = pd.read_csv(asset_dir / "completed_runs.csv")
-    agents = pd.read_csv(asset_dir / "agent_observations.csv")
+def canonical_competition_fields(row: pd.Series) -> tuple[str, int]:
+    game = row["game_label"]
+    if game == "game1":
+        level = float(row["competition_level"])
+        return f"comp={level:.2f}", int(round(level * 1000))
+    if game == "game2":
+        rho = float(row["rho"])
+        theta = float(row["theta"])
+        rho_label = "high alignment" if rho >= 0 else "negative lower bound"
+        return f"{rho_label}, theta={theta:.1f}", (0 if rho >= 0 else 10) + (0 if theta < 0.5 else 1)
+    if game == "game3":
+        sigma = float(row["sigma"])
+        alpha = float(row["alpha"])
+        return (
+            f"sigma={sigma:.1f}, alpha={alpha:.1f}",
+            int(round(sigma * 10)) * 10 + int(round(alpha * 10)),
+        )
+    raise ValueError(f"Unsupported game label in canonical multi-agent table: {game!r}")
+
+
+def load_canonical_multiagent_tables(table_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    run_paths = [
+        table_dir / "homogeneous_runs_fresh.csv",
+        table_dir / "heterogeneous_runs_fresh.csv",
+    ]
+    agent_paths = [
+        table_dir / "homogeneous_agents_fresh.csv",
+        table_dir / "heterogeneous_agents_fresh.csv",
+    ]
+    missing = [path for path in [*run_paths, *agent_paths] if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(
+            "Missing canonical multi-agent table(s): " + ", ".join(str(path) for path in missing)
+        )
+
+    runs = pd.concat((pd.read_csv(path) for path in run_paths), ignore_index=True)
+    agents = pd.concat((pd.read_csv(path) for path in agent_paths), ignore_index=True)
+    if len(runs) != 2730:
+        raise ValueError(f"Expected 2,730 canonical multi-agent runs, found {len(runs):,}")
+
+    for frame in (runs, agents):
+        frame["source"] = frame["source_group"]
+        competition_fields = frame.apply(canonical_competition_fields, axis=1, result_type="expand")
+        frame[["competition_label", "competition_order"]] = competition_fields
+
+    agents = agents.merge(
+        runs[["source", "config_id", "sum_utility"]],
+        on=["source", "config_id"],
+        how="left",
+        validate="many_to_one",
+    )
+    if agents["sum_utility"].isna().any():
+        raise ValueError("Canonical agent rows could not be matched to run-level total utility")
+    return runs, agents
+
+
+def load_multiagent_metrics(table_dir: Path, output_dir: Path, bootstrap_reps: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    runs, agents = load_canonical_multiagent_tables(table_dir)
     rng = np.random.default_rng(RNG_SEED)
 
     sw_rows: list[dict[str, Any]] = []
@@ -777,25 +842,29 @@ def analyze_ttc(ttc_root: Path, output_dir: Path) -> tuple[pd.DataFrame, pd.Data
 
     stage_rows: list[dict[str, Any]] = []
     run_stage_totals: dict[int, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    target_interaction_records = 0
+    noncanonical_interaction_logs = 0
     for _, cfg in config_df.iterrows():
         config_id = int(cfg["config_id"])
         run_dir = PROJECT_ROOT / str(cfg["output_dir"])
-        interaction_path = run_dir / "run_1_all_interactions.json"
-        if not interaction_path.exists():
-            continue
+        result_path = run_dir / "run_1_experiment_results.json"
+        interaction_path, interactions = resolve_final_interactions(result_path)
+        if interaction_path.name != "run_1_all_interactions.json":
+            noncanonical_interaction_logs += 1
         target_agent = ttc_target_agent(cfg.to_dict())
-        interactions = load_json(interaction_path)
         for interaction in interactions:
             if interaction.get("agent_id") != target_agent:
                 continue
+            target_interaction_records += 1
             usage = interaction.get("token_usage") or {}
             if not usage:
                 continue
             stage = stage_from_phase(str(interaction.get("phase", "")))
-            input_tokens = float(usage.get("input_tokens") or 0.0)
-            output_tokens = float(usage.get("output_tokens") or 0.0)
-            reasoning_tokens = float(usage.get("reasoning_tokens") or usage.get("thinking_tokens") or 0.0)
-            total_tokens = input_tokens + output_tokens + reasoning_tokens
+            token_accounting = account_token_usage(usage)
+            input_tokens = token_accounting["input_tokens"]
+            output_tokens = token_accounting["output_tokens"]
+            reasoning_tokens = token_accounting["reasoning_tokens"]
+            total_tokens = token_accounting["total_tokens"]
             run_stage_totals[config_id][f"{stage}_total_tokens"] += total_tokens
             run_stage_totals[config_id][f"{stage}_output_tokens"] += output_tokens
             run_stage_totals[config_id][f"{stage}_reasoning_tokens"] += reasoning_tokens
@@ -809,11 +878,16 @@ def analyze_ttc(ttc_root: Path, output_dir: Path) -> tuple[pd.DataFrame, pd.Data
                     "game": cfg["game_label"],
                     "game_cell": cfg["game_cell_id"],
                     "order": cfg["order"],
+                    "interaction_path": str(interaction_path.relative_to(PROJECT_ROOT)),
                     "stage": stage,
                     "input_tokens": input_tokens,
                     "output_tokens": output_tokens,
                     "reasoning_tokens": reasoning_tokens,
                     "total_tokens": total_tokens,
+                    "token_total_source": token_accounting["token_total_source"],
+                    "stored_total_equals_input_plus_output": token_accounting[
+                        "stored_total_equals_input_plus_output"
+                    ],
                 }
             )
     stage_raw = pd.DataFrame(stage_rows)
@@ -821,6 +895,27 @@ def analyze_ttc(ttc_root: Path, output_dir: Path) -> tuple[pd.DataFrame, pd.Data
 
     if stage_raw.empty:
         return order_avg, pd.DataFrame()
+
+    source_counts = stage_raw["token_total_source"].value_counts().to_dict()
+    accounting = {
+        "resolved_runs": int(len(config_df)),
+        "noncanonical_interaction_logs": int(noncanonical_interaction_logs),
+        "target_interaction_records": int(target_interaction_records),
+        "usage_bearing_completed_target_generation_events": int(len(stage_raw)),
+        "stored_total_token_events": int(source_counts.get("stored_total_tokens", 0)),
+        "derived_total_token_events": int(
+            len(stage_raw) - source_counts.get("stored_total_tokens", 0)
+        ),
+        "stored_totals_equal_input_plus_output_events": int(
+            stage_raw["stored_total_equals_input_plus_output"].eq(True).sum()
+        ),
+        "total_stage_tokens": int(stage_raw["total_tokens"].sum()),
+        "reported_reasoning_component_tokens": int(stage_raw["reasoning_tokens"].sum()),
+    }
+    (output_dir / "ttc_stage_token_accounting.json").write_text(
+        json.dumps(accounting, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     stage_summary = (
         stage_raw.groupby(["family", "level", "level_index", "stage"], dropna=False)
@@ -1125,7 +1220,7 @@ def main() -> None:
     print(f"Writing outputs to {output_dir}")
     exploitation = analyze_exploitation(output_dir)
     utility_reg = analyze_bilateral_utility(output_dir, args.elo_markdown)
-    runs, agents = load_multiagent_metrics(args.multiagent_asset_dir, output_dir, args.bootstrap_reps)
+    runs, agents = load_multiagent_metrics(args.multiagent_table_dir, output_dir, args.bootstrap_reps)
     normalized_summary = pd.read_csv(output_dir / "multiagent_normalized_by_game_family_n.csv")
     hetero_n2 = analyze_hetero_n2(agents, output_dir)
     parser_clean = analyze_parser_clean(output_dir)

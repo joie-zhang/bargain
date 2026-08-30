@@ -140,9 +140,15 @@ def load_homogeneous_runs(results_root: Path) -> pd.DataFrame:
 def load_heterogeneous_runs(path: Path) -> pd.DataFrame:
     runs = pd.read_csv(path)
     runs = runs[runs["experiment_family"].eq("heterogeneous_random")].copy()
-    runs["payoff_gini_corrected"] = pd.to_numeric(runs["utility_gini_corrected"], errors="coerce")
-    runs["payoff_gini_raw_shifted"] = pd.to_numeric(runs["utility_gini_raw"], errors="coerce")
     runs["n_agents"] = pd.to_numeric(runs["n_agents"], errors="coerce")
+    runs["payoff_gini_raw_shifted"] = pd.to_numeric(
+        runs["utility_gini_shifted"], errors="coerce"
+    )
+    runs["payoff_gini_corrected"] = (
+        runs["payoff_gini_raw_shifted"]
+        * runs["n_agents"]
+        / (runs["n_agents"] - 1)
+    ).clip(lower=0.0, upper=1.0)
     runs["mean_payoff"] = pd.to_numeric(runs["mean_utility"], errors="coerce")
     runs = runs.dropna(subset=["run_key", "game_label", "n_agents", "payoff_gini_corrected"])
     runs["comparison_group"] = "heterogeneous_random"
@@ -418,6 +424,14 @@ def main() -> int:
         raise SystemExit(f"No heterogeneous rows loaded from {hetero_path}")
     if hom.empty:
         raise SystemExit(f"No homogeneous completed rows loaded from {hom_root}")
+    if len(hetero) != 1300 or hetero["run_key"].nunique() != 1300:
+        raise SystemExit(f"Expected 1,300 unique heterogeneous runs, found {len(hetero):,}")
+    if len(hom) != 325 or hom["run_key"].nunique() != 325:
+        raise SystemExit(f"Expected 325 unique monoculture runs, found {len(hom):,}")
+    if "model_list" in hetero and hetero["model_list"].astype(str).str.contains("phi", case=False).any():
+        raise SystemExit("Phi rows remain in the heterogeneous Gini input")
+    if hom["model"].astype(str).str.contains("phi", case=False).any():
+        raise SystemExit("Phi rows remain in the monoculture Gini input")
 
     summary = build_summary(hetero, hom, hom_root)
     summary_path = out_dir / "gini_summary.csv"

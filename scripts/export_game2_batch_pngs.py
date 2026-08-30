@@ -4,7 +4,7 @@ Export summary PNG plots for a Game 2 diplomacy batch.
 
 Usage:
     python scripts/export_game2_batch_pngs.py
-    python scripts/export_game2_batch_pngs.py --results-dir experiments/results/diplomacy_20260404_052849
+    python scripts/export_game2_batch_pngs.py --results-dir experiments/results/diplomacy_20260405_082215
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from strong_models_experiment.analysis.active_model_roster import (
 )
 
 RESULTS_ROOT = PROJECT_ROOT / "experiments" / "results"
+DEFAULT_RESULTS_ROOT = RESULTS_ROOT / "diplomacy_20260405_082215"
 DEFAULT_ELO_MARKDOWN = (
     PROJECT_ROOT / "docs" / "guides" / "chatbot_arena_elo_scores_2026_03_31.md"
 )
@@ -110,8 +111,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--results-dir",
         type=str,
-        default=None,
-        help="Diplomacy batch root or its configs directory.",
+        default=str(DEFAULT_RESULTS_ROOT),
+        help="Diplomacy batch root or its configs directory. Defaults to the canonical paper batch.",
     )
     parser.add_argument(
         "--output-dir",

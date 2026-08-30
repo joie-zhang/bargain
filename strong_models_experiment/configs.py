@@ -1100,10 +1100,10 @@ STRONG_MODELS_CONFIG = {
     },
     "claude-sonnet-4-20250514": {
         "name": "Claude Sonnet 4 2025-05-14",
-        "model_id": "claude-sonnet-4-20250514",
-        "provider": "Anthropic",
-        "api_type": "anthropic",
-        "description": "Exact Arena-name alias.",
+        "model_id": "anthropic/claude-sonnet-4",
+        "provider": "OpenRouter",
+        "api_type": "openrouter",
+        "description": "Arena-name alias routed through OpenRouter because the native Anthropic endpoint no longer accepts this dated alias.",
         "temperature": 0.7,
         "system_prompt": "You are a negotiating agent.",
         "model_category": "medium"

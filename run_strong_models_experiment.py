@@ -384,6 +384,16 @@ async def main():
     )
 
     args = parser.parse_args()
+
+    metadata_raw = os.getenv("EXPERIMENT_RUN_METADATA_JSON")
+    run_metadata = {}
+    if metadata_raw:
+        try:
+            decoded_metadata = json.loads(metadata_raw)
+            if isinstance(decoded_metadata, dict):
+                run_metadata = decoded_metadata
+        except json.JSONDecodeError as exc:
+            logging.warning("Ignoring invalid EXPERIMENT_RUN_METADATA_JSON: %s", exc)
     
     has_openrouter = has_provider_keys("openrouter", fallback_key=os.getenv("OPENROUTER_API_KEY"))
     has_anthropic = has_provider_keys("anthropic", fallback_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -408,7 +418,11 @@ async def main():
 
     missing_provider_env = []
     for model_name in args.models:
-        model_config = STRONG_MODELS_CONFIG.get(model_name, {})
+        model_config = dict(STRONG_MODELS_CONFIG.get(model_name, {}))
+        override = (run_metadata.get("model_config_overrides") or {}).get(model_name) or {}
+        if not isinstance(override, dict):
+            raise TypeError(f"model_config_overrides[{model_name!r}] must be a dictionary")
+        model_config.update(override)
         api_type = model_config.get("api_type", "openrouter")
         env_var = provider_env_vars.get(api_type)
         if env_var and not provider_key_available.get(api_type, False):
@@ -574,15 +588,8 @@ async def main():
         "cofunding_time_discount": args.cofunding_time_discount,
     }
 
-    metadata_raw = os.getenv("EXPERIMENT_RUN_METADATA_JSON")
-    if metadata_raw:
-        try:
-            run_metadata = json.loads(metadata_raw)
-            if isinstance(run_metadata, dict):
-                for key, value in run_metadata.items():
-                    experiment_config.setdefault(key, value)
-        except json.JSONDecodeError as exc:
-            logging.warning("Ignoring invalid EXPERIMENT_RUN_METADATA_JSON: %s", exc)
+    for key, value in run_metadata.items():
+        experiment_config.setdefault(key, value)
     
     # Only add token limits if they're specified
     if args.max_tokens_discussion is not None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Small HTTP viewer for random-monoculture sample rollouts.
+"""Small HTTP viewer for negotiation sample rollouts.
 
 This intentionally avoids Streamlit so it stays stable behind a simple SSH
 tunnel on login nodes.
@@ -8,6 +8,7 @@ tunnel on login nodes.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import mimetypes
 import sys
@@ -103,6 +104,20 @@ def interactions_path_for(result_path: Path | None) -> Path | None:
     return None
 
 
+def read_prompt_text(run_dir: Path, interaction: dict[str, Any]) -> str:
+    storage_path = interaction.get("prompt_storage_path")
+    if not storage_path:
+        return str(interaction.get("prompt") or "")
+    prompt_path = (run_dir / str(storage_path)).resolve()
+    resolved_run_dir = run_dir.resolve()
+    if resolved_run_dir not in prompt_path.parents:
+        raise ValueError("Prompt path leaves the run directory")
+    if prompt_path.suffix == ".gz":
+        with gzip.open(prompt_path, "rt", encoding="utf-8") as handle:
+            return handle.read()
+    return prompt_path.read_text(encoding="utf-8")
+
+
 @dataclass
 class RunRecord:
     config_id: str
@@ -132,8 +147,12 @@ class BatchIndex:
             except Exception:
                 continue
 
-            config_id = str(config.get("config_id") or config_path.stem)
-            status_path = self.results_root / "status" / f"{config_id}.json"
+            config_id = config_path.stem
+            status_candidates = [
+                self.results_root / "status" / f"{config_id}.json",
+                self.results_root / "status" / f"{config.get('config_id')}.json",
+            ]
+            status_path = next((path for path in status_candidates if path.exists()), status_candidates[0])
             status: dict[str, Any] = {}
             if status_path.exists():
                 try:
@@ -154,21 +173,48 @@ class BatchIndex:
 
             game_type = config.get("game_type") or result.get("config", {}).get("game_type")
             final_utilities = result.get("final_utilities")
+            role_map = config.get("agent_role_map") or {}
+            team_utility = None
+            adversary_utility = None
+            if isinstance(final_utilities, dict):
+                team_utility = sum(
+                    float(value)
+                    for agent_id, value in final_utilities.items()
+                    if role_map.get(agent_id) != "adversary"
+                )
+                adversary_utility = sum(
+                    float(value)
+                    for agent_id, value in final_utilities.items()
+                    if role_map.get(agent_id) == "adversary"
+                )
             vote_integrity = result.get("vote_integrity") or {}
             conversation_logs = result.get("conversation_logs") or []
             row = {
                 "config_id": config_id,
+                "config_number": config.get("config_id"),
                 "state": state,
                 "game_label": config.get("game_label"),
                 "game_type": game_type,
                 "n_agents": config.get("n_agents") or config.get("num_agents"),
-                "model": config.get("monoculture_model") or config.get("baseline_model"),
+                "model": (
+                    config.get("adversary_model")
+                    or config.get("monoculture_model")
+                    or config.get("baseline_model")
+                ),
                 "model_elo": config.get("model_elo"),
                 "competition_id": config.get("competition_id"),
+                "competition_level": config.get("competition_level"),
+                "adversary_position": config.get("adversary_position"),
+                "seed_replicate": config.get("seed_replicate") or config.get("run_number"),
+                "captain_id": (config.get("team_coordination") or {}).get("captain_id"),
+                "team_size": len((config.get("team_coordination") or {}).get("member_ids") or []),
                 "final_round": result.get("final_round"),
                 "consensus": result.get("consensus_reached"),
                 "conversation_logs": len(conversation_logs) if isinstance(conversation_logs, list) else 0,
+                "interactions": None,
                 "utility_sum": sum_utilities(final_utilities),
+                "team_utility": team_utility,
+                "adversary_utility": adversary_utility,
                 "synthetic_votes": vote_integrity.get("synthetic_vote_count", 0),
                 "vote_contaminated": bool(vote_integrity.get("contaminated")),
                 "vote_hard_failed": bool(vote_integrity.get("hard_failed")),
@@ -221,7 +267,7 @@ HTML = r"""<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Random Monoculture Sample Viewer</title>
+<title>Negotiation Sample Viewer</title>
   <style>
     :root {
       --bg: #f7f8fa;
@@ -446,7 +492,7 @@ HTML = r"""<!doctype html>
     <aside>
       <div class="topline">
         <div>
-          <h1>Sample Viewer</h1>
+          <h1>Negotiation Sample Viewer</h1>
           <div id="rootPath" class="muted small mono"></div>
         </div>
         <button style="width:auto" onclick="reloadAll()">Reload</button>
@@ -463,16 +509,20 @@ HTML = r"""<!doctype html>
           <input id="search" type="search" placeholder="config, model, cell">
         </div>
         <div>
-          <label for="gameFilter">Game</label>
-          <select id="gameFilter"></select>
+          <label for="nFilter">N</label>
+          <select id="nFilter"></select>
         </div>
         <div>
-          <label for="statusFilter">Status</label>
-          <select id="statusFilter"></select>
+          <label for="competitionFilter">Competition</label>
+          <select id="competitionFilter"></select>
         </div>
-        <div class="wide">
-          <label for="modelFilter">Model</label>
-          <select id="modelFilter"></select>
+        <div>
+          <label for="positionFilter">Adversary position</label>
+          <select id="positionFilter"></select>
+        </div>
+        <div>
+          <label for="seedFilter">Seed</label>
+          <select id="seedFilter"></select>
         </div>
       </div>
       <div id="runList" class="run-list"></div>
@@ -489,16 +539,14 @@ HTML = r"""<!doctype html>
         </div>
         <div id="summaryGrid" class="summary-grid"></div>
         <div class="tabs">
-          <button class="tab active" data-tab="rollout" onclick="setTab('rollout')">Rollout</button>
+          <button class="tab active" data-tab="rollout" onclick="setTab('rollout')">Full transcript</button>
           <button class="tab" data-tab="outcome" onclick="setTab('outcome')">Outcome</button>
           <button class="tab" data-tab="config" onclick="setTab('config')">Config</button>
-          <button class="tab" data-tab="interactions" onclick="setTab('interactions')">Interactions</button>
           <button class="tab" data-tab="raw" onclick="setTab('raw')">Raw</button>
         </div>
         <section id="tab-rollout" class="tabPanel"></section>
         <section id="tab-outcome" class="tabPanel hidden"></section>
         <section id="tab-config" class="tabPanel hidden"></section>
-        <section id="tab-interactions" class="tabPanel hidden"></section>
         <section id="tab-raw" class="tabPanel hidden"></section>
       </div>
     </main>
@@ -553,13 +601,15 @@ async function reloadAll() {
 }
 
 function buildFilters() {
-  const games = [...new Set(runs.map(r => r.game_label).filter(Boolean))].sort();
-  const states = [...new Set(runs.map(r => r.state).filter(Boolean))].sort();
-  const models = [...new Set(runs.map(r => r.model).filter(Boolean))].sort();
-  setOptions('gameFilter', ['All', ...games]);
-  setOptions('statusFilter', ['All', ...states]);
-  setOptions('modelFilter', ['All', ...models]);
-  for (const id of ['search', 'gameFilter', 'statusFilter', 'modelFilter']) {
+  const ns = [...new Set(runs.map(r => r.n_agents).filter(v => v != null))].sort((a,b) => a-b);
+  const competitions = [...new Set(runs.map(r => r.competition_level).filter(v => v != null))].sort((a,b) => a-b);
+  const positions = [...new Set(runs.map(r => r.adversary_position).filter(Boolean))].sort();
+  const seeds = [...new Set(runs.map(r => r.seed_replicate).filter(v => v != null))].sort((a,b) => a-b);
+  setOptions('nFilter', ['All', ...ns]);
+  setOptions('competitionFilter', ['All', ...competitions]);
+  setOptions('positionFilter', ['All', ...positions]);
+  setOptions('seedFilter', ['All', ...seeds]);
+  for (const id of ['search', 'nFilter', 'competitionFilter', 'positionFilter', 'seedFilter']) {
     document.getElementById(id).oninput = renderRuns;
   }
 }
@@ -573,15 +623,17 @@ function setOptions(id, options) {
 
 function filteredRuns() {
   const q = document.getElementById('search').value.trim().toLowerCase();
-  const game = document.getElementById('gameFilter').value;
-  const state = document.getElementById('statusFilter').value;
-  const model = document.getElementById('modelFilter').value;
+  const n = document.getElementById('nFilter').value;
+  const competition = document.getElementById('competitionFilter').value;
+  const position = document.getElementById('positionFilter').value;
+  const seed = document.getElementById('seedFilter').value;
   return runs.filter(r => {
-    if (game !== 'All' && r.game_label !== game) return false;
-    if (state !== 'All' && r.state !== state) return false;
-    if (model !== 'All' && r.model !== model) return false;
+    if (n !== 'All' && String(r.n_agents) !== n) return false;
+    if (competition !== 'All' && String(r.competition_level) !== competition) return false;
+    if (position !== 'All' && r.adversary_position !== position) return false;
+    if (seed !== 'All' && String(r.seed_replicate) !== seed) return false;
     if (!q) return true;
-    const hay = [r.config_id, r.game_label, r.game_type, r.model, r.competition_id, r.state].join(' ').toLowerCase();
+    const hay = [r.config_id, r.game_label, r.game_type, r.model, r.competition_id, r.state, r.adversary_position, r.captain_id].join(' ').toLowerCase();
     return hay.includes(q);
   });
 }
@@ -601,8 +653,8 @@ function renderRuns() {
         ${badge(r.state, stateKind(r.state))}
       </div>
       <div>
-        <div><b>${esc(r.game_label)}</b> ${esc(r.competition_id)}</div>
-        <div class="muted small">${esc(r.model)} | N=${fmt(r.n_agents)} | round ${fmt(r.final_round)}</div>
+        <div><b>N=${fmt(r.n_agents)}</b> | comp=${fmt(r.competition_level)} | ${esc(r.adversary_position)}</div>
+        <div class="muted small">seed ${fmt(r.seed_replicate)} | captain ${fmt(r.captain_id)} | round ${fmt(r.final_round)}</div>
       </div>
     </div>
   `).join('');
@@ -626,7 +678,7 @@ async function loadRun(configId) {
 
 function renderSelected() {
   const row = selectedPayload.row;
-  document.getElementById('runTitle').textContent = `${row.config_id} | ${row.game_label} | ${row.model}`;
+  document.getElementById('runTitle').textContent = `${row.config_id} | N=${row.n_agents} | comp=${row.competition_level}`;
   document.getElementById('runSubtitle').textContent = row.run_dir || selectedPayload.config_path;
   const badges = [
     badge(row.state, stateKind(row.state)),
@@ -635,19 +687,19 @@ function renderSelected() {
   ];
   document.getElementById('runBadges').innerHTML = badges.join(' ');
   document.getElementById('summaryGrid').innerHTML = [
-    stat('Game', row.game_type || row.game_label),
+    stat('Adversary', row.adversary_position),
     stat('Agents', row.n_agents),
-    stat('Cell', row.competition_id),
+    stat('Competition', row.competition_level),
+    stat('Seed', row.seed_replicate),
     stat('Final Round', row.final_round ? `${row.final_round}/10` : '-'),
-    stat('Utility Sum', row.utility_sum),
-    stat('Logs', row.conversation_logs),
-    stat('Duration', row.duration_seconds ? `${Math.round(row.duration_seconds)}s` : '-'),
-    stat('Finished', row.finished_at || '-'),
+    stat('Captain', row.captain_id),
+    stat('Team Size', row.team_size),
+    stat('Team Utility', row.team_utility),
+    stat('Adversary Utility', row.adversary_utility),
   ].join('');
   renderRollout();
   renderOutcome();
   renderConfig();
-  renderInteractionsPlaceholder();
   renderRaw();
   setTab(currentTab);
 }
@@ -657,34 +709,70 @@ function stat(label, value) {
 }
 
 function renderRollout() {
-  const result = selectedPayload.result || {};
-  const logs = Array.isArray(result.conversation_logs) ? result.conversation_logs : [];
+  const interactions = Array.isArray(selectedPayload.interactions) ? selectedPayload.interactions : [];
+  const roles = selectedPayload.config.agent_role_map || {};
   const failed = selectedPayload.row.state === 'FAILED';
-  let html = `<div class="section"><h2>Rollout</h2>`;
+  let html = `<div class="section"><h2>Full transcript</h2>`;
   if (failed) {
     html += `<p class="error">This config has no completed result file.</p><pre>${esc(selectedPayload.error_tail || '')}</pre></div>`;
     document.getElementById('tab-rollout').innerHTML = html;
     return;
   }
-  if (!logs.length) {
-    html += `<p class="muted">No conversation logs found.</p></div>`;
+  if (!interactions.length) {
+    html += `<p class="muted">No interactions found.</p></div>`;
     document.getElementById('tab-rollout').innerHTML = html;
     return;
   }
-  const byRound = {};
-  for (const log of logs) {
-    const round = log.round ?? 'setup';
-    if (!byRound[round]) byRound[round] = [];
-    byRound[round].push(log);
-  }
-  for (const round of Object.keys(byRound).sort((a, b) => Number(a) - Number(b))) {
-    html += `<h3>Round ${esc(round)}</h3>`;
-    for (const log of byRound[round]) {
-      html += messageBlock(log.phase, log.from, log.content, `turn ${fmt(log.discussion_turn)} | speaker ${fmt(log.speaker_order)}/${fmt(log.total_speakers)}`);
+  const phases = [...new Set(interactions.map(x => x.phase))];
+  const agents = [...new Set(interactions.map(x => x.agent_id))];
+  html += `<div class="filters">
+    <div><label>Phase</label><select id="transcriptPhase" oninput="applyTranscriptFilters()"><option>All</option>${phases.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
+    <div><label>Agent</label><select id="transcriptAgent" oninput="applyTranscriptFilters()"><option>All</option>${agents.map(x => `<option>${esc(x)}</option>`).join('')}</select></div>
+    <div class="wide"><label>Search transcript</label><input id="transcriptSearch" type="search" oninput="applyTranscriptFilters()" placeholder="Search responses"></div>
+  </div>`;
+  let previousRound = null;
+  interactions.forEach((item, index) => {
+    if (item.round !== previousRound) {
+      html += `<h3>Round ${esc(item.round)}</h3>`;
+      previousRound = item.round;
     }
-  }
+    const role = roles[item.agent_id] || '';
+    const search = `${item.phase} ${item.agent_id} ${item.response || ''}`.toLowerCase();
+    html += `<div class="transcript-message" data-phase="${esc(item.phase)}" data-agent="${esc(item.agent_id)}" data-search="${esc(search)}">
+      <div class="message">
+        <div class="message-head">${badge(item.phase || 'phase')} <b>${esc(item.agent_id || 'agent')}</b> ${badge(role, role === 'adversary' ? 'bad' : 'good')} <span class="muted">${esc(item.model_name || '')}</span></div>
+        <div class="message-body">${esc(item.response || '')}</div>
+        <details ontoggle="loadPrompt(this, ${index})"><summary>Prompt</summary><pre>Open to load the full prompt.</pre></details>
+      </div>
+    </div>`;
+  });
   html += `</div>`;
   document.getElementById('tab-rollout').innerHTML = html;
+}
+
+function applyTranscriptFilters() {
+  const phase = document.getElementById('transcriptPhase').value;
+  const agent = document.getElementById('transcriptAgent').value;
+  const q = document.getElementById('transcriptSearch').value.trim().toLowerCase();
+  for (const node of document.querySelectorAll('.transcript-message')) {
+    const visible = (phase === 'All' || node.dataset.phase === phase)
+      && (agent === 'All' || node.dataset.agent === agent)
+      && (!q || node.dataset.search.includes(q));
+    node.classList.toggle('hidden', !visible);
+  }
+}
+
+async function loadPrompt(details, index) {
+  if (!details.open || details.dataset.loaded) return;
+  const pre = details.querySelector('pre');
+  pre.textContent = 'Loading prompt...';
+  try {
+    const payload = await getJson(`/api/prompt?config_id=${encodeURIComponent(selectedId)}&index=${index}`);
+    pre.textContent = payload.prompt || '';
+    details.dataset.loaded = '1';
+  } catch (err) {
+    pre.textContent = err.message;
+  }
 }
 
 function messageBlock(phase, from, content, meta='') {
@@ -729,32 +817,6 @@ function renderConfig() {
   html += `<h3>Models</h3><pre>${esc(JSON.stringify(cfg.models ?? cfg.agent_model_map ?? {}, null, 2))}</pre>`;
   html += `<h3>Full Config JSON</h3><pre>${esc(JSON.stringify(cfg, null, 2))}</pre></div>`;
   document.getElementById('tab-config').innerHTML = html;
-}
-
-function renderInteractionsPlaceholder() {
-  const has = selectedPayload.has_interactions;
-  const button = has ? `<button style="max-width:260px" onclick="loadInteractions()">Load full prompts and responses</button>` : '';
-  document.getElementById('tab-interactions').innerHTML = `<div class="section"><h2>Interactions</h2>${button}<div id="interactionsBody" class="muted">${has ? '' : 'No all_interactions.json file found.'}</div></div>`;
-}
-
-async function loadInteractions() {
-  const body = document.getElementById('interactionsBody');
-  body.textContent = 'Loading interactions...';
-  try {
-    const payload = await getJson(`/api/interactions?config_id=${encodeURIComponent(selectedId)}`);
-    const interactions = payload.interactions || [];
-    let html = `<p class="muted small">${interactions.length} interactions</p>`;
-    for (const item of interactions) {
-      html += `<div class="message">
-        <div class="message-head">${badge(item.phase || 'phase')} <b>${esc(item.agent_id || 'agent')}</b> <span class="muted">round ${fmt(item.round)} | ${esc(item.model_name || '')}</span></div>
-        <div class="message-body"><b>Response</b>\n${esc(item.response || '')}</div>
-        <details><summary>Prompt</summary><pre>${esc(item.prompt || '')}</pre></details>
-      </div>`;
-    }
-    body.innerHTML = html;
-  } catch (err) {
-    body.innerHTML = `<span class="error">${esc(err.message)}</span>`;
-  }
 }
 
 function renderRaw() {
@@ -841,6 +903,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
             if parsed.path == "/api/interactions":
                 self.handle_interactions(parsed.query)
                 return
+            if parsed.path == "/api/prompt":
+                self.handle_prompt(parsed.query)
+                return
             self.send_error_json(HTTPStatus.NOT_FOUND, f"Unknown path: {parsed.path}")
         except Exception as exc:
             traceback.print_exc()
@@ -861,18 +926,26 @@ class ViewerHandler(BaseHTTPRequestHandler):
         config = read_json(record.config_path)
         status = read_json(record.status_path) if record.status_path else {}
         result = read_json(record.result_path) if record.result_path else {}
+        interactions = read_json(record.interactions_path) if record.interactions_path else []
+        transcript = [
+            {key: value for key, value in item.items() if key not in {"prompt", "token_usage"}}
+            for item in interactions
+        ]
         error_tail = ""
         if record.row.get("state") == "FAILED":
             error_tail = tail_text(record.attempt_log_path or record.log_path)
 
+        response_row = dict(record.row)
+        response_row["interactions"] = len(transcript)
         self.send_json(
             {
-                "row": record.row,
+                "row": response_row,
                 "config_path": str(record.config_path),
                 "status_path": str(record.status_path) if record.status_path else None,
                 "result_path": str(record.result_path) if record.result_path else None,
                 "interactions_path": str(record.interactions_path) if record.interactions_path else None,
                 "has_interactions": record.interactions_path is not None,
+                "interactions": transcript,
                 "config": config,
                 "status": status,
                 "result": result,
@@ -895,6 +968,27 @@ class ViewerHandler(BaseHTTPRequestHandler):
             self.send_error_json(HTTPStatus.NOT_FOUND, "No interactions file")
             return
         self.send_json({"config_id": config_id, "interactions": read_json(record.interactions_path)})
+
+    def handle_prompt(self, query: str) -> None:
+        params = parse_qs(query)
+        config_id = (params.get("config_id") or [""])[0]
+        raw_index = (params.get("index") or [""])[0]
+        try:
+            index = int(raw_index)
+            record = INDEX.get(config_id)
+        except (ValueError, KeyError):
+            self.send_error_json(HTTPStatus.BAD_REQUEST, "Invalid config_id or index")
+            return
+        if record.interactions_path is None:
+            self.send_error_json(HTTPStatus.NOT_FOUND, "No interactions file")
+            return
+        interactions = read_json(record.interactions_path)
+        if index < 0 or index >= len(interactions):
+            self.send_error_json(HTTPStatus.NOT_FOUND, "Interaction index is out of range")
+            return
+        item = interactions[index]
+        prompt = read_prompt_text(record.interactions_path.parent, item)
+        self.send_json({"config_id": config_id, "index": index, "prompt": prompt})
 
 
 def parse_args() -> argparse.Namespace:

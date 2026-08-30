@@ -441,6 +441,44 @@ class TestPromptGeneration:
         assert "5" in prompt  # number of items
         assert "10" in prompt  # number of rounds
 
+    def test_gamma_one_rules_do_not_claim_delay_reduces_value(self):
+        """Gamma=1 setup must describe time-neutral allocation utility."""
+        game = create_game_environment(
+            "item_allocation",
+            n_agents=2,
+            t_rounds=10,
+            m_items=5,
+            gamma_discount=1.0,
+            random_seed=42,
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_combined_setup_prompt("Agent_1", state)
+
+        assert "timing does not change the value" in prompt
+        assert "Earlier agreements are not intrinsically worth more" in prompt
+        assert "less valuable the final allocation becomes" not in prompt
+        assert "Earlier agreements are worth more due to discounting" not in prompt
+
+    def test_discounted_rules_retain_time_pressure_description(self):
+        """Gamma<1 setup should continue to explain the time discount."""
+        game = create_game_environment(
+            "item_allocation",
+            n_agents=2,
+            t_rounds=10,
+            m_items=5,
+            gamma_discount=0.9,
+            random_seed=42,
+        )
+        agents = create_test_agents(2)
+        state = game.create_game_state(agents)
+
+        prompt = game.get_combined_setup_prompt("Agent_1", state)
+
+        assert "less valuable the final allocation becomes" in prompt
+        assert "Earlier agreements are worth more due to discounting" in prompt
+
     def test_preference_prompt_contains_values(self):
         """Test that preference prompt contains agent's preference values."""
         game = create_game_environment(

@@ -7,6 +7,8 @@ paper asset.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import matplotlib
@@ -20,8 +22,9 @@ from matplotlib.ticker import MultipleLocator
 
 
 ROOT = Path(__file__).resolve().parents[2]
-INPUT_CSV = ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv"
-OUT_PATH = ROOT / "analysis/recreated_figures/figure2_bilateral_overview_combined_large_fonts.png"
+INPUT_CSV = ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv"
+OUT_PATH = ROOT / "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/bilateral_overview_combined.png"
+PROVENANCE_PATH = OUT_PATH.with_name("bilateral_overview_combined_provenance.json")
 
 GAME_ORDER = ["game1", "game2", "game3"]
 LEFT_LABELS = {
@@ -41,6 +44,30 @@ COLORS = {
     "cooperative": "#0b4f63",
     "competitive": "#48c7df",
 }
+
+EXPECTED_GAME_COUNTS = {"game1": 420, "game2": 540, "game3": 540}
+
+
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_input(df: pd.DataFrame) -> None:
+    counts = df.groupby("game_id").size().to_dict()
+    if counts != EXPECTED_GAME_COUNTS:
+        raise RuntimeError(f"Expected GPT-5-nano game counts {EXPECTED_GAME_COUNTS}, found {counts}")
+    if len(df) != 1500 or df["result_path"].nunique() != 1500:
+        raise RuntimeError("The bilateral overview requires 1,500 unique primary result files")
+    if df["adversary_model"].nunique() != 30:
+        raise RuntimeError(f"Expected 30 adversary models, found {df['adversary_model'].nunique()}")
+    if df["adversary_model"].astype(str).str.contains("phi", case=False).any():
+        raise RuntimeError("Phi rows remain in the bilateral overview input")
+    game1_turns = set(pd.to_numeric(df.loc[df["game_id"].eq("game1"), "discussion_turns"]))
+    if game1_turns != {2}:
+        raise RuntimeError(f"Expected only two-turn Game 1 rows, found {sorted(game1_turns)}")
+    missing = [path for path in df["result_path"].astype(str) if not (ROOT / path).is_file()]
+    if missing:
+        raise RuntimeError(f"Missing {len(missing)} bilateral result files; first: {missing[0]}")
 
 
 def sem(values: pd.Series) -> float:
@@ -190,6 +217,7 @@ def main() -> None:
     df = pd.read_csv(INPUT_CSV)
     df = df[df["baseline_key"].eq("gpt5_nano")].replace([np.inf, -np.inf], np.nan)
     df = df.dropna(subset=["game_id", "adversary_elo", "adversary_utility", "baseline_utility", "competition_value"])
+    validate_input(df)
 
     plt.rcParams.update(
         {
@@ -249,6 +277,24 @@ def main() -> None:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUT_PATH, dpi=300, facecolor="white")
     plt.close(fig)
+    PROVENANCE_PATH.write_text(
+        json.dumps(
+            {
+                "producer": str(Path(__file__).resolve().relative_to(ROOT)),
+                "input": str(INPUT_CSV.relative_to(ROOT)),
+                "input_sha256": sha256(INPUT_CSV),
+                "baseline_key": "gpt5_nano",
+                "run_count": len(df),
+                "game_counts": EXPECTED_GAME_COUNTS,
+                "adversary_model_count": int(df["adversary_model"].nunique()),
+                "phi_row_count": 0,
+                "game1_discussion_turns": [2],
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     print(OUT_PATH)
 
 
