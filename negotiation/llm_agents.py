@@ -107,7 +107,7 @@ class ModelType(Enum):
 @dataclass
 class LLMConfig:
     """Configuration for an LLM agent."""
-    model_type: ModelType
+    model_type: Union[ModelType, str]
     temperature: float = 0.7
     max_tokens: int = 999999  # Effectively unlimited - will be ignored in API calls
     timeout: float = 30.0
@@ -2270,7 +2270,7 @@ Keep your response conversational and authentic. Respond as you would in a real 
         
         return {
             "agent_id": self.agent_id,
-            "model_type": self.config.model_type.value,
+            "model_type": getattr(self.config.model_type, "value", self.config.model_type),
             "total_requests": self.total_requests,
             "total_tokens": self.total_tokens,
             "total_cost": self.total_cost,
@@ -2351,7 +2351,7 @@ Keep your response conversational and authentic. Respond as you would in a real 
         with open(filepath, 'w') as f:
             json.dump({
                 "agent_id": self.agent_id,
-                "model_type": self.config.model_type.value,
+                "model_type": getattr(self.config.model_type, "value", self.config.model_type),
                 "conversation_memory": self.conversation_memory,
                 "strategic_memory": self.strategic_memory,
                 "performance_stats": self.get_performance_stats()

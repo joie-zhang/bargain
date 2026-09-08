@@ -55,7 +55,8 @@ class StrongModelsExperiment:
     Runs the strong models negotiation experiment.
     """
     
-    def __init__(self, output_dir=None):
+    def __init__(self, output_dir=None, *, agent_factory=None,
+                 phase_handler_class=PhaseHandler, game_state_callback=None):
         """Initialize the experiment runner."""
         self.logger = self._setup_logging()
 
@@ -70,7 +71,9 @@ class StrongModelsExperiment:
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
         # Initialize components
-        self.agent_factory = StrongModelAgentFactory()
+        self.agent_factory = agent_factory if agent_factory is not None else StrongModelAgentFactory()
+        self.phase_handler_class = phase_handler_class
+        self.game_state_callback = game_state_callback
         self.analyzer = ExperimentAnalyzer()
         self.utils = ExperimentUtils()
         self.file_manager = FileManager(self.results_dir)
@@ -159,7 +162,7 @@ class StrongModelsExperiment:
         config = {**default_config, **(experiment_config or {})}
         
         # Set random seed if provided
-        if config["random_seed"]:
+        if config["random_seed"] is not None:
             import random
             random.seed(config["random_seed"])
 
@@ -252,7 +255,7 @@ class StrongModelsExperiment:
             )
 
         # Initialize phase handler with token config, game environment, and reasoning config
-        self.phase_handler = PhaseHandler(
+        self.phase_handler = self.phase_handler_class(
             save_interaction_callback=self._save_interaction,
             token_config=token_config,
             game_environment=game_environment,
@@ -484,6 +487,9 @@ class StrongModelsExperiment:
             )
         else:
             raise ValueError(f"Unknown game type: {game_type}")
+
+        if self.game_state_callback is not None:
+            self.game_state_callback(game_state, config, game_environment)
 
         # Initialize tracking variables
         consensus_reached = False

@@ -9,9 +9,9 @@ from typing import Dict, Iterable, List, Tuple
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ELO_MARKDOWN = (
     PROJECT_ROOT
-    / "docs"
-    / "guides"
-    / "chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md"
+    / "strong_models_experiment"
+    / "resources"
+    / "model_context_2026_03_31.md"
 )
 
 

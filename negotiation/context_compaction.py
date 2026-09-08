@@ -12,7 +12,7 @@ import re
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 
-DEFAULT_CONTEXT_DOC = Path("docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md")
+DEFAULT_CONTEXT_DOC = Path(__file__).resolve().parents[1] / "strong_models_experiment/resources/model_context_2026_03_31.md"
 DEFAULT_CONTEXT_THRESHOLD = 0.85
 DEFAULT_RESERVED_OUTPUT_TOKENS = 16_384
 DEFAULT_CHARS_PER_TOKEN = 3.0
@@ -156,6 +156,8 @@ def resolve_context_limit(model_names: Iterable[str]) -> Optional[int]:
 
 @lru_cache(maxsize=1)
 def _token_encoder():
+    if os.getenv("NEGOTIATION_TOKEN_ESTIMATOR") == "chars-v1":
+        return None
     try:
         import tiktoken  # type: ignore
 

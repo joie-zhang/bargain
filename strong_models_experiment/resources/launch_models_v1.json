@@ -1,0 +1,572 @@
+{
+  "elos": {
+    "amazon-nova-micro-v1.0": 1240,
+    "amazon-nova-pro-v1.0": 1290,
+    "claude-3-haiku-20240307": 1260,
+    "claude-haiku-4-5-20251001": 1407,
+    "claude-opus-4-5-20251101": 1468,
+    "claude-opus-4-5-20251101-thinking-32k": 1474,
+    "claude-opus-4-6": 1499,
+    "claude-opus-4-6-thinking": 1504,
+    "claude-sonnet-4-20250514": 1389,
+    "command-r-plus-08-2024": 1276,
+    "deepseek-r1": 1398,
+    "deepseek-r1-0528": 1422,
+    "deepseek-v3": 1358,
+    "gemini-2.5-pro": 1448,
+    "gemini-3.1-pro": 1494,
+    "gemma-3-27b-it": 1365,
+    "gpt-4.1-nano-2025-04-14": 1322,
+    "gpt-4o-2024-05-13": 1345,
+    "gpt-4o-mini-2024-07-18": 1317,
+    "gpt-5-nano-high": 1337,
+    "gpt-5.2-chat-latest-20260210": 1478,
+    "gpt-5.4-high": 1484,
+    "llama-3.1-8b-instruct": 1211,
+    "llama-3.2-1b-instruct": 1110,
+    "llama-3.2-3b-instruct": 1166,
+    "llama-3.3-70b-instruct": 1318,
+    "o3-mini-high": 1363,
+    "qwen2.5-72b-instruct": 1302,
+    "qwen3-max-preview": 1435,
+    "qwq-32b": 1336
+  },
+  "heterogeneous_pool": [
+    "claude-opus-4-6-thinking",
+    "claude-opus-4-6",
+    "gemini-3.1-pro",
+    "gpt-5.4-high",
+    "gpt-5.2-chat-latest-20260210",
+    "claude-opus-4-5-20251101-thinking-32k",
+    "claude-opus-4-5-20251101",
+    "gemini-2.5-pro",
+    "qwen3-max-preview",
+    "deepseek-r1-0528",
+    "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-20250514",
+    "gemma-3-27b-it",
+    "o3-mini-high",
+    "deepseek-v3",
+    "gpt-4o-2024-05-13",
+    "gpt-5-nano-high",
+    "gpt-4.1-nano-2025-04-14",
+    "llama-3.3-70b-instruct",
+    "gpt-4o-mini-2024-07-18",
+    "amazon-nova-pro-v1.0",
+    "command-r-plus-08-2024",
+    "claude-3-haiku-20240307",
+    "amazon-nova-micro-v1.0"
+  ],
+  "models": {
+    "amazon-nova-micro-v1.0": {
+      "api_type": "openrouter",
+      "description": "Exact Arena-name alias routed through OpenRouter.",
+      "max_tokens_default": 5120,
+      "max_tokens_discussion": 5120,
+      "max_tokens_proposal": 5120,
+      "max_tokens_reflection": 5120,
+      "max_tokens_thinking": 5120,
+      "max_tokens_voting": 5120,
+      "model_category": "weak",
+      "model_id": "amazon/nova-micro-v1",
+      "name": "Amazon Nova Micro v1.0",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "amazon-nova-pro-v1.0": {
+      "api_type": "openrouter",
+      "description": "Replacement candidate for the low-context Gemma-2-27B slot: Elo 1290, 300K context, OpenRouter",
+      "max_tokens_default": 5120,
+      "max_tokens_discussion": 5120,
+      "max_tokens_proposal": 5120,
+      "max_tokens_reflection": 5120,
+      "max_tokens_thinking": 5120,
+      "max_tokens_voting": 5120,
+      "model_category": "medium",
+      "model_id": "amazon/nova-pro-v1",
+      "name": "Amazon Nova Pro v1.0",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-3-haiku-20240307": {
+      "api_type": "openrouter",
+      "description": "Exact Arena-name alias routed through OpenRouter because the native Anthropic endpoint no longer accepts this dated alias.",
+      "max_tokens_default": 4096,
+      "max_tokens_discussion": 4096,
+      "max_tokens_proposal": 4096,
+      "max_tokens_reflection": 4096,
+      "max_tokens_thinking": 4096,
+      "max_tokens_voting": 4096,
+      "model_category": "medium",
+      "model_id": "anthropic/claude-3-haiku",
+      "name": "Claude 3 Haiku 2024-03-07",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-haiku-4-5-20251001": {
+      "api_type": "anthropic",
+      "description": "Exact Arena-name alias.",
+      "model_category": "medium",
+      "model_id": "claude-haiku-4-5-20251001",
+      "name": "Claude Haiku 4.5 2025-10-01",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-opus-4-5-20251101": {
+      "api_type": "anthropic",
+      "description": "Exact Arena-name alias.",
+      "model_category": "strong",
+      "model_id": "claude-opus-4-5-20251101",
+      "name": "Claude Opus 4.5 2025-11-01",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-opus-4-5-20251101-thinking-32k": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "thinking_budget_tokens": 32000
+      },
+      "description": "Exact Arena-name alias for the 32K thinking variant.",
+      "model_category": "strong",
+      "model_id": "claude-opus-4-5-20251101",
+      "name": "Claude Opus 4.5 2025-11-01 Thinking 32K",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "claude-opus-4-6": {
+      "api_type": "anthropic",
+      "description": "Requested Mar 2026 run set, Closed-source (primary: Anthropic API)",
+      "model_category": "strong",
+      "model_id": "claude-opus-4-6",
+      "name": "Claude Opus 4.6",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-opus-4-6-thinking": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "extra_body": {
+          "output_config": {
+            "effort": "high"
+          }
+        },
+        "phase_token_cap_policy": "prefer_model_cap_when_experiment_default",
+        "thinking": {
+          "type": "adaptive"
+        }
+      },
+      "description": "Arena alias for Claude Opus 4.6 with thinking enabled; mapped here to Anthropic adaptive thinking via `thinking` plus `extra_body.output_config`.",
+      "max_tokens_default": 65536,
+      "max_tokens_discussion": 65536,
+      "max_tokens_proposal": 65536,
+      "max_tokens_reflection": 65536,
+      "max_tokens_thinking": 65536,
+      "max_tokens_voting": 65536,
+      "model_category": "strong",
+      "model_id": "claude-opus-4-6",
+      "name": "Claude Opus 4.6 Thinking",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "claude-sonnet-4-20250514": {
+      "api_type": "openrouter",
+      "description": "Arena-name alias routed through OpenRouter because the native Anthropic endpoint no longer accepts this dated alias.",
+      "model_category": "medium",
+      "model_id": "anthropic/claude-sonnet-4",
+      "name": "Claude Sonnet 4 2025-05-14",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "claude-sonnet-4-6-effort-high": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "extra_body": {
+          "output_config": {
+            "effort": "high"
+          }
+        },
+        "thinking": {
+          "type": "adaptive"
+        }
+      },
+      "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=high for TTC scaling",
+      "model_category": "strong",
+      "model_id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6 (High Effort)",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "claude-sonnet-4-6-effort-low": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "extra_body": {
+          "output_config": {
+            "effort": "low"
+          }
+        },
+        "thinking": {
+          "type": "adaptive"
+        }
+      },
+      "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=low for TTC scaling",
+      "model_category": "strong",
+      "model_id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6 (Low Effort)",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "claude-sonnet-4-6-effort-max": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "extra_body": {
+          "output_config": {
+            "effort": "max"
+          }
+        },
+        "thinking": {
+          "type": "adaptive"
+        }
+      },
+      "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=max for TTC scaling",
+      "model_category": "strong",
+      "model_id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6 (Max Effort)",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "claude-sonnet-4-6-effort-medium": {
+      "api_type": "anthropic",
+      "custom_parameters": {
+        "extra_body": {
+          "output_config": {
+            "effort": "medium"
+          }
+        },
+        "thinking": {
+          "type": "adaptive"
+        }
+      },
+      "description": "Claude Sonnet 4.6 with adaptive thinking and output_config.effort=medium for TTC scaling",
+      "model_category": "strong",
+      "model_id": "claude-sonnet-4-6",
+      "name": "Claude Sonnet 4.6 (Medium Effort)",
+      "provider": "Anthropic",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "command-r-plus-08-2024": {
+      "api_type": "openrouter",
+      "description": "Replacement candidate for the low-context Llama-3-70B slot: Elo 1276, 128K context, OpenRouter",
+      "max_tokens_default": 4000,
+      "max_tokens_discussion": 4000,
+      "max_tokens_proposal": 4000,
+      "max_tokens_reflection": 4000,
+      "max_tokens_thinking": 4000,
+      "max_tokens_voting": 4000,
+      "model_category": "medium",
+      "model_id": "cohere/command-r-plus-08-2024",
+      "name": "Command R Plus 08-2024",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "deepseek-r1-0528": {
+      "api_type": "openrouter",
+      "description": "Rank 11, Elo: 1418, Open-source, Reasoning",
+      "model_category": "strong",
+      "model_id": "deepseek/deepseek-r1-0528",
+      "name": "DeepSeek R1 0528",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "deepseek-v3": {
+      "api_type": "openrouter",
+      "description": "Rank 19, Elo: 1358, Open-source",
+      "model_category": "medium",
+      "model_id": "deepseek/deepseek-chat",
+      "name": "DeepSeek V3",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gemini-2.5-pro": {
+      "api_type": "openrouter",
+      "description": "Exact Arena-name alias routed through OpenRouter for Slurm proxy execution.",
+      "model_category": "strong",
+      "model_id": "google/gemini-2.5-pro",
+      "name": "Gemini 2.5 Pro",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gemini-3-flash-thinking-high": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "reasoning": {
+          "effort": "high",
+          "exclude": true
+        }
+      },
+      "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=high for TTC scaling",
+      "model_category": "strong",
+      "model_id": "google/gemini-3-flash-preview",
+      "name": "Gemini 3 Flash (High Thinking)",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gemini-3-flash-thinking-low": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "reasoning": {
+          "effort": "low",
+          "exclude": true
+        }
+      },
+      "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=low for TTC scaling",
+      "model_category": "strong",
+      "model_id": "google/gemini-3-flash-preview",
+      "name": "Gemini 3 Flash (Low Thinking)",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gemini-3-flash-thinking-medium": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "reasoning": {
+          "effort": "medium",
+          "exclude": true
+        }
+      },
+      "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=medium for TTC scaling",
+      "model_category": "strong",
+      "model_id": "google/gemini-3-flash-preview",
+      "name": "Gemini 3 Flash (Medium Thinking)",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gemini-3-flash-thinking-minimal": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "reasoning": {
+          "effort": "minimal",
+          "exclude": true
+        }
+      },
+      "description": "Gemini 3 Flash routed through OpenRouter with reasoning.effort=minimal for TTC scaling",
+      "model_category": "strong",
+      "model_id": "google/gemini-3-flash-preview",
+      "name": "Gemini 3 Flash (Minimal Thinking)",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gemini-3.1-pro": {
+      "api_type": "openrouter",
+      "description": "Rank 3, Elo: 1494, Closed-source; routed through OpenRouter for Slurm proxy execution.",
+      "model_category": "strong",
+      "model_id": "google/gemini-3.1-pro-preview",
+      "name": "Gemini 3.1 Pro",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gemma-3-27b-it": {
+      "api_type": "openrouter",
+      "description": "Rank 17, Elo: 1365, Open-source",
+      "model_category": "medium",
+      "model_id": "google/gemma-3-27b-it",
+      "name": "Gemma 3 27B IT",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gpt-4.1-nano-2025-04-14": {
+      "api_type": "openai",
+      "description": "Exact Arena-name alias.",
+      "model_category": "medium",
+      "model_id": "gpt-4.1-nano-2025-04-14",
+      "name": "GPT-4.1 Nano 2025-04-14",
+      "provider": "OpenAI",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gpt-4o-2024-05-13": {
+      "api_type": "openai",
+      "description": "Exact Arena-name alias.",
+      "max_tokens_default": 4096,
+      "max_tokens_discussion": 4096,
+      "max_tokens_proposal": 4096,
+      "max_tokens_reflection": 4096,
+      "max_tokens_thinking": 4096,
+      "max_tokens_voting": 4096,
+      "model_category": "medium",
+      "model_id": "gpt-4o-2024-05-13",
+      "name": "GPT-4o 2024-05-13",
+      "provider": "OpenAI",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gpt-4o-mini-2024-07-18": {
+      "api_type": "openai",
+      "description": "Exact Arena-name alias.",
+      "model_category": "medium",
+      "model_id": "gpt-4o-mini-2024-07-18",
+      "name": "GPT-4o Mini 2024-07-18",
+      "provider": "OpenAI",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "gpt-5-high-effort": {
+      "api_type": "openai",
+      "description": "Strong tier, Closed-source, Reasoning",
+      "model_category": "strong",
+      "model_id": "gpt-5-2025-08-07",
+      "name": "GPT-5 (High Reasoning Effort)",
+      "provider": "OpenAI",
+      "reasoning_effort": "high",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5-low-effort": {
+      "api_type": "openai",
+      "description": "Strong tier, Closed-source, Reasoning",
+      "model_category": "strong",
+      "model_id": "gpt-5-2025-08-07",
+      "name": "GPT-5 (Low Reasoning Effort)",
+      "provider": "OpenAI",
+      "reasoning_effort": "low",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5-medium-effort": {
+      "api_type": "openai",
+      "description": "Strong tier, Closed-source, Reasoning",
+      "model_category": "strong",
+      "model_id": "gpt-5-2025-08-07",
+      "name": "GPT-5 (Medium Reasoning Effort)",
+      "provider": "OpenAI",
+      "reasoning_effort": "medium",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5-minimal-effort": {
+      "api_type": "openai",
+      "description": "GPT-5 snapshot with provider-native minimal reasoning effort for TTC scaling",
+      "model_category": "strong",
+      "model_id": "gpt-5-2025-08-07",
+      "name": "GPT-5 (Minimal Reasoning Effort)",
+      "provider": "OpenAI",
+      "reasoning_effort": "minimal",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5-nano": {
+      "api_type": "openai",
+      "description": "Strong tier, Closed-source, Reasoning (direct OpenAI API)",
+      "model_category": "strong",
+      "model_id": "gpt-5-nano",
+      "name": "GPT-5 Nano",
+      "provider": "OpenAI",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5-nano-high": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "reasoning": {
+          "effort": "high"
+        }
+      },
+      "description": "Strong tier, Closed-source, Reasoning; routed through OpenRouter with high reasoning effort after direct high-effort OpenAI calls repeatedly failed in Slurm.",
+      "model_category": "strong",
+      "model_id": "openai/gpt-5-nano",
+      "name": "GPT-5 Nano (High Reasoning Effort)",
+      "provider": "OpenRouter",
+      "reasoning_effort": "high",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5.2-chat-latest-20260210": {
+      "api_type": "openai",
+      "description": "Requested Mar 2026 run set, Closed-source (direct OpenAI API)",
+      "model_category": "strong",
+      "model_id": "gpt-5.2-chat-latest",
+      "name": "GPT-5.2 Chat Latest (2026-02-10)",
+      "provider": "OpenAI",
+      "reasoning_effort": "medium",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "gpt-5.4-high": {
+      "api_type": "openrouter",
+      "custom_parameters": {
+        "phase_token_cap_policy": "prefer_model_cap_when_experiment_default",
+        "reasoning": {
+          "effort": "high",
+          "exclude": true
+        }
+      },
+      "description": "Arena-name alias for GPT-5.4 with high reasoning effort, routed through OpenRouter for Slurm proxy execution.",
+      "max_tokens_default": 65536,
+      "max_tokens_discussion": 65536,
+      "max_tokens_proposal": 65536,
+      "max_tokens_reflection": 65536,
+      "max_tokens_thinking": 65536,
+      "max_tokens_voting": 65536,
+      "model_category": "strong",
+      "model_id": "openai/gpt-5.4",
+      "name": "GPT-5.4 High",
+      "provider": "OpenRouter",
+      "reasoning_effort": "high",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "llama-3.3-70b-instruct": {
+      "api_type": "openrouter",
+      "description": "Rank 22, Elo: 1320, Open-source, Non-reasoning",
+      "model_category": "medium",
+      "model_id": "meta-llama/llama-3.3-70b-instruct",
+      "name": "Llama 3.3 70B Instruct",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    },
+    "o3-mini-high": {
+      "api_type": "openai",
+      "description": "Rank 18, Elo: 1364, Closed-source, Reasoning",
+      "model_category": "medium",
+      "model_id": "o3-mini-2025-01-31",
+      "name": "O3 Mini High",
+      "provider": "OpenAI",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 1.0
+    },
+    "qwen3-max-preview": {
+      "api_type": "openrouter",
+      "description": "Arena-name alias routed to the current OpenRouter Qwen3 Max model.",
+      "model_category": "strong",
+      "model_id": "qwen/qwen3-max",
+      "name": "Qwen3 Max Preview",
+      "provider": "OpenRouter",
+      "system_prompt": "You are a negotiating agent.",
+      "temperature": 0.7
+    }
+  },
+  "source": "configs.py and full_games123_multiagent_batch.py, snapshot 2026-09-08"
+}
