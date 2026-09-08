@@ -17,6 +17,7 @@ import pandas as pd
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.ticker import MultipleLocator
 
@@ -44,6 +45,12 @@ COLORS = {
     "cooperative": "#0b4f63",
     "competitive": "#48c7df",
 }
+COMPETITION_CMAP = LinearSegmentedColormap.from_list(
+    "competition_gradient",
+    [COLORS["cooperative"], "#168a97", COLORS["competitive"]],
+)
+COMPETITION_NORM = Normalize(vmin=0.0, vmax=1.0)
+INTERMEDIATE_ALPHA = 0.46
 
 EXPECTED_GAME_COUNTS = {"game1": 420, "game2": 540, "game3": 540}
 
@@ -164,11 +171,11 @@ def draw_right(ax: plt.Axes, df: pd.DataFrame, game_id: str) -> None:
     game_df = df[df["game_id"].eq(game_id)].copy()
     comp_min = float(game_df["competition_value"].min())
     comp_max = float(game_df["competition_value"].max())
-    series = [
-        (comp_min, "Max Cooperative", COLORS["cooperative"]),
-        (comp_max, "Max Competitive", COLORS["competitive"]),
-    ]
-    for comp_value, label, color in series:
+    competition_values = sorted(game_df["competition_value"].astype(float).unique())
+    for comp_value in competition_values:
+        relative_competition = (comp_value - comp_min) / (comp_max - comp_min)
+        endpoint = np.isclose(comp_value, comp_min) or np.isclose(comp_value, comp_max)
+        color = COMPETITION_CMAP(COMPETITION_NORM(relative_competition))
         sub = game_df[np.isclose(game_df["competition_value"].astype(float), comp_value)]
         per_elo = (
             sub.groupby("adversary_elo", as_index=False)
@@ -179,19 +186,19 @@ def draw_right(ax: plt.Axes, df: pd.DataFrame, game_id: str) -> None:
         x = per_elo["adversary_elo"].to_numpy(dtype=float)
         y = per_elo["smooth"].to_numpy(dtype=float)
         err = per_elo["err"].to_numpy(dtype=float)
-        ax.fill_between(x, y - err, y + err, color=color, alpha=0.17, linewidth=0, zorder=1)
+        if endpoint:
+            ax.fill_between(x, y - err, y + err, color=color, alpha=0.17, linewidth=0, zorder=1)
         ax.plot(
             x,
             y,
             color=color,
             marker="o",
-            markersize=4.2,
-            linewidth=2.0,
+            markersize=4.2 if endpoint else 2.7,
+            linewidth=2.0 if endpoint else 1.05,
             markeredgecolor="white",
-            markeredgewidth=0.55,
-            alpha=0.96,
-            label=label,
-            zorder=3,
+            markeredgewidth=0.55 if endpoint else 0.35,
+            alpha=0.96 if endpoint else INTERMEDIATE_ALPHA,
+            zorder=3 if endpoint else 2,
         )
 
     style_axis(
@@ -208,8 +215,8 @@ def draw_right(ax: plt.Axes, df: pd.DataFrame, game_id: str) -> None:
     if game_id in {"game1", "game2"}:
         ax.set_ylim(-5, 105)
     else:
-        ax.set_ylim(-5, 65)
-    if game_id != "game1":
+        ax.set_ylim(-5, 52.62)
+    if game_id == "game2":
         ax.tick_params(labelleft=False)
 
 
@@ -289,6 +296,24 @@ def main() -> None:
                 "adversary_model_count": int(df["adversary_model"].nunique()),
                 "phi_row_count": 0,
                 "game1_discussion_turns": [2],
+                "right_panel_competition_levels": {
+                    game_id: sorted(
+                        df.loc[df["game_id"].eq(game_id), "competition_value"]
+                        .astype(float)
+                        .unique()
+                        .tolist()
+                    )
+                    for game_id in GAME_ORDER
+                },
+                "right_panel_intermediate_alpha": INTERMEDIATE_ALPHA,
+                "right_panel_intermediate_ribbons": False,
+                "right_panel_competition_colors": {
+                    "cooperative": COLORS["cooperative"],
+                    "midpoint": COMPETITION_CMAP(COMPETITION_NORM(0.5)),
+                    "competitive": COLORS["competitive"],
+                },
+                "game3_top_tick": 50,
+                "game3_ymax": 52.62,
             },
             indent=2,
         )
