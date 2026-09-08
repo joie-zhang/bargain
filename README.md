@@ -1,3 +1,5 @@
+Looking for installation instructions? Please open [README2.md](README2.md)
+
 # New NeurIPS Rebuttal Experiment Results
 
 ## Figure 1 — TTC with 10 seeds
