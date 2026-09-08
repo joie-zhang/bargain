@@ -138,7 +138,7 @@ def render(frame: pd.DataFrame, output: Path) -> None:
         hspace=0.15,
     )
 
-    colormap = plt.get_cmap("plasma")
+    colormap = plt.get_cmap("viridis")
     normalization = Normalize(vmin=0.0, vmax=1.0)
 
     for row, n_agents in enumerate(N_ORDER):
