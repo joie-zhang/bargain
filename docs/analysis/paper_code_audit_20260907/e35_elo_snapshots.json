@@ -1,0 +1,233 @@
+{
+  "task_id": "e35_elo_snapshots",
+  "result": "March versus August Arena Elo snapshot sensitivity, 30 models and three games",
+  "paper_refs": [
+    "sec:appendix_lmarena_snapshot_comparison",
+    "fig:appendix_lmarena_snapshot_comparison",
+    "fig:bilateral_overview"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_lmarena_elo_refresh.py",
+      "role": "analysis",
+      "reason": "Original capture, explicit 30-model identity map, means, SEMs, six OLS fits, and current two-panel renderer.",
+      "evidence": "lines 22-126, 190-257, 275-388, 590-650"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "role": "analysis",
+      "reason": "Producer of primary_runs_with_metrics.csv; configured-seat payoff selection and canonical model aliases must remain reproducible.",
+      "evidence": "lines 34-47, 780-875, 1345"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "analysis",
+      "reason": "Canonical identities and historical Elo guide join, including gemini-3-pro alias.",
+      "evidence": "lines 9-15, 66-83"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31.md",
+      "role": "data",
+      "reason": "Historical full March leaderboard, checked against experiment table.",
+      "evidence": "analyze_lmarena_elo_refresh.py:28"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "data",
+      "reason": "Default guide consumed by active_model_roster, needed to rebuild upstream table.",
+      "evidence": "active_model_roster.py:9-15"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_08_12.md",
+      "role": "data",
+      "reason": "Historical August leaderboard with explicit August16 capture metadata despite August12 filename.",
+      "evidence": "lines 3-10"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/lmarena_elo_refresh_20260816/official_august12_labeled_text_overall_style_control.csv",
+      "role": "data",
+      "reason": "391 captured official rows; irreplaceable historical input, not refreshable from current latest URL.",
+      "evidence": "analyze_lmarena_elo_refresh.py:599-603"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/lmarena_elo_refresh_20260816/provenance.json",
+      "role": "provenance",
+      "reason": "Capture timestamp, response hash, model map, original input hashes.",
+      "evidence": "lines 1-100"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/lmarena_elo_refresh_20260816/paper_roster_march31_vs_august12.csv",
+      "role": "data",
+      "reason": "30 explicit matched scores consumed by historical offline render.",
+      "evidence": "August22 session:494"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/lmarena_elo_refresh_20260816/trend_comparison.csv",
+      "role": "provenance",
+      "reason": "Original six slopes for numerical comparison.",
+      "evidence": "analyze_lmarena_elo_refresh.py:607"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+      "role": "data",
+      "reason": "Exact historical input; select baseline_key=gpt5_nano, 420/540/540 rows. Other500rows serve Llama results and are not disposable.",
+      "evidence": "analyze_lmarena_elo_refresh.py:190-225"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/scripts/reproduce.py",
+      "role": "analysis",
+      "reason": "Offline raw-payoff verification and original renderer invocation without live HTTP fetch.",
+      "evidence": "lines 107-210"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/scripts/analyze_lmarena_elo_refresh.py",
+      "role": "provenance",
+      "reason": "Frozen producer required by hash check and dynamically imported by offline reproduction.",
+      "evidence": "reproduce.py:108-112"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/data/raw_verification.csv",
+      "role": "provenance",
+      "reason": "Concrete1500raw and1500configuration paths with hashes; preserve only selected files, not blanket roots.",
+      "evidence": "reproduce.py:135-186"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/data/runtime_model_verification.json",
+      "role": "provenance",
+      "reason": "Runtime identity audit behind configured-seat/model-name concerns.",
+      "evidence": "scripts/audit_runtime.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/data/gemini_identity_verification.json",
+      "role": "provenance",
+      "reason": "Historic model-version evidence; needed to explain Gemini label mapping.",
+      "evidence": "figure_12/report.md"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/data/invalid_game1_partitions.json",
+      "role": "provenance",
+      "reason": "Records incomplete allocation exceptions retained in source cohort.",
+      "evidence": "figure_12/report.md"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_12/data/missing_utilities.json",
+      "role": "provenance",
+      "reason": "Records missing utility exceptions and historical zero rule.",
+      "evidence": "figure_12/report.md"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/iclr_aiwild_template/graphics/appendix/bilateral_payoff_march31_vs_august2026_lmarena_elo.pdf",
+      "role": "support",
+      "reason": "Current paper output, outside cleanup scope.",
+      "evidence": "appendix.tex:339"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Upstream table builder local import or package-initialization dependency; shared runtime also audited by primary-run agents.",
+      "evidence": "analyze_n2_baseline_comparison.py:34-47 and corresponding package imports"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Full original HTTP response body was not located; captured391-row CSV and response hash survive.",
+    "August12 in filenames is a user-supplied label; actual capture August16 2026 22:00:03.768793 EDT.",
+    "Do not execute original main for historical recreation: it fetches latest data and writes over historical snapshot paths.",
+    "Raw run original launch/recovery/runtime version audit belongs to E01-E03; this result reuses their exact1500run cohort and does not launch new negotiations.",
+    "Raw identity and role anomalies documented by prior audit are not repaired here; numeric table reproduction is not certification of intended model execution.",
+    "No file is certified unused by this result-specific audit; alternate independent renderers and duplicate-looking CSVs need cross-result and history checks."
+  ],
+  "history": [
+    {
+      "session": "01a00d28-68e7-78e0-b6e0-c58f94f9f45c",
+      "path": "/home/jz4391/.codex/sessions/2026/08/16/rollout-2026-08-16T20-39-07-01a00d28-68e7-78e0-b6e0-c58f94f9f45c.jsonl",
+      "lines": [
+        1441,
+        1575,
+        1581
+      ],
+      "verification": "Manually read original user full-list request and successful execution output; bundled codex-search returned this as rank1."
+    },
+    {
+      "session": "01a0293c-ea53-7fe2-9ba5-9e33cfe7bb14",
+      "path": "/home/jz4391/.codex/sessions/2026/08/22/rollout-2026-08-22T07-30-53-01a0293c-ea53-7fe2-9ba5-9e33cfe7bb14.jsonl",
+      "lines": [
+        494
+      ],
+      "verification": "Manually read offline import/load_bilateral/plot_side_by_side and paper PDF copy command."
+    }
+  ],
+  "summary": "Read-only independent calculation confirms30models, mean absolute Elo change1.4, max8, and slopes6.753268→6.810347,6.758601→6.844750,7.400567→7.453546. All1500selected raw result paths exist. Protect saved historical capture, mapping, primary cohort, original producer and offline recreation. No deletion candidates."
+}

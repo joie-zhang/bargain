@@ -1,0 +1,206 @@
+{
+  "task_id": "e41_rosters_inventory",
+  "result": "Experiment count, model roster, alias, sampling and grid-size provenance",
+  "paper_refs": [
+    "tab:appendix_experiment_inventory",
+    "tab:appendix_game_sizes",
+    "tab:appendix_bilateral_roster",
+    "tab:appendix_multiagent_focal_roster",
+    "tab:appendix_alternative_homogeneous_roster"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Defines five adversary models, 24-model filtering, saved subset-map generation, 65 grid cells and dispatch to runtime.",
+      "evidence": "lines30–85,538–610,397–425"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "runtime",
+      "reason": "Canonical30model names, aliases and Markdown-backed Elo/context parser used by sampler.",
+      "evidence": "lines10–17,20–51,63–81,167–242"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "config",
+      "reason": "Runtime input to active_model_elo_map and context_filtered_model_pool, despite Markdown extension.",
+      "evidence": "active_model_roster.py:10–17"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/random_monoculture_control_batch.py",
+      "role": "launch",
+      "reason": "Samples15models once over fiveElo bands using seed20260628 and assigns five per game from historicalpool.",
+      "evidence": "lines29–45,93–155"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/build_paper_experiment_data_manifest.py",
+      "role": "provenance",
+      "reason": "Historical7143manifest builder and explicit older exclusion logic; not authoritative current7160 selector.",
+      "evidence": "lines2,43–61,238–240"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/reproducibility/paper_experiment_data_manifest.csv",
+      "role": "data",
+      "reason": "7143 historicalrows still consumed by homogeneous selector; retain despite stale total.",
+      "evidence": "render_figure3_proposal.py:27,63–85"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/reproducibility/experiment_data_retention_audit.md",
+      "role": "provenance",
+      "reason": "Explains old source roots and130allNano control selection; now stale.",
+      "evidence": "lines122–143"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260830/homogeneous_redesign/render_figure3_proposal.py",
+      "role": "analysis",
+      "reason": "Reads325monoculture raw results, excludes25Haiku, asserts300remaining and removes130allNano.",
+      "evidence": "lines63–85,113,297–298"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "role": "analysis",
+      "reason": "Imported shared loader retains old2730corpus expectations including130allNano before caller filters.",
+      "evidence": "lines55–60;render_figure3_proposal.py:31"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py",
+      "role": "analysis",
+      "reason": "Imported analyze_row dependency of homogeneous selector/render path.",
+      "evidence": "render_figure3_proposal.py:30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+      "role": "data",
+      "reason": "2000bilateral selected-run index referenced by existingmanifest builder.",
+      "evidence": "build_paper_experiment_data_manifest.py:24"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent/homogeneous_runs_fresh.csv",
+      "role": "data",
+      "reason": "1430production rows, must select experiment_family homogeneous_adversary for1300paper rows.",
+      "evidence": "build_paper_experiment_data_manifest.py:178"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent/heterogeneous_runs_fresh.csv",
+      "role": "data",
+      "reason": "1300repairedheterogeneous selected-run index.",
+      "evidence": "build_paper_experiment_data_manifest.py:183"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_random_monoculture_control_20260628_014357/manifest.json",
+      "role": "config",
+      "reason": "Saved15-model assignment and325config collection metadata.",
+      "evidence": "random_monoculture_control_batch.py:445"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/manifest.json",
+      "role": "config",
+      "reason": "Original2730plannedconfigs include1300adversary,1300heterogeneous,130controls; root is not equivalent to selected cohort.",
+      "evidence": "independentjsoncount"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/manifest.json",
+      "role": "config",
+      "reason": "Repairroot contains2730configs although only1300heterogeneous selected runs are relevant.",
+      "evidence": "independentjsoncount"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/model_pool_24.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/manifest.json",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/exact_subset_summary.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/strata_boundaries.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/n_02_subsets.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/n_04_subsets.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/n_06_subsets.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/n_08_subsets.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs/heterogeneous_subset_maps/n_10_subsets.csv",
+      "role": "config",
+      "reason": "Saved24-model pool or exact roster-spread strata used to reproduce selection; pool read bymonoculturelauncher.",
+      "evidence": "full_games123_multiagent_batch.py:397;random_monoculture_control_batch.py:33–38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/configs",
+      "role": "config",
+      "reason": "config_*.json with experiment_family homogeneous_adversary (1300), plus homogeneous_control (130) as old loader provenance; no blanket tree proof",
+      "evidence": "independent read of savedconfigs; source selectors"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs",
+      "role": "config",
+      "reason": "config_*.json with experiment_family heterogeneous_random (1300); no blanket tree proof",
+      "evidence": "independent read of savedconfigs; source selectors"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_random_monoculture_control_20260628_014357/configs",
+      "role": "config",
+      "reason": "all325config_*.json; 300paper rows exclude monoculture_model claude-3-haiku-20240307;25excluded needed for collection/exclusion provenance",
+      "evidence": "independent read of savedconfigs; source selectors"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Current7160is a subtotal excluding separate25matchedGPT5.4coalition runs; a unified current manifest covering all results is absent from inspected materials.",
+    "Old7143manifest cannot be used as deletionallowlist: includes130allNano and25Haiku, omits72Claude612TTC,100team and25matchedcoalition.",
+    "Excluded25Haiku rawresults are opened by active homogeneous selector; retain all325monoculture results until consumers are intentionally revised.",
+    "This agent checked all5785configs across three multiagent roots for counts/rosters/sizes, not every experiment result and transcript; per-family agents own raw-level verification.",
+    "Historical code version and exact launch command for every cohort remain delegated to per-family audits; current source alone does not prove historicalexecution."
+  ],
+  "history": [
+    {
+      "session_id": "01a055c5-7e2b-7610-acf9-95b8c56bd15c",
+      "path": "/home/jz4391/.codex/sessions/2026/08/30/rollout-2026-08-30T23-03-21-01a055c5-7e2b-7610-acf9-95b8c56bd15c.jsonl",
+      "lines": [
+        178,
+        189,
+        579,
+        720,
+        804,
+        1591,
+        1597
+      ],
+      "evidence": "Original naming/count migration, removal130allNano/25Haiku,7160subtotal and user approval at1597; manuallyread."
+    }
+  ],
+  "summary": "Needed roster Markdown and saved subset maps are executable inputs. Historical7143manifest remains a loader dependency but does not match current7160 inventory. No supported deletions."
+}

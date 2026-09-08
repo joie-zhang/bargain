@@ -1,0 +1,178 @@
+{
+  "task_id": "e31_welfare",
+  "result": "Two-player welfare by competition and exact captured ratios",
+  "paper_refs": [
+    "sec:appendix_n2_welfare_detail",
+    "fig:appendix_n2_welfare",
+    "fig:n2_optimality"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_figure4_total_welfare_by_competition_ewma.py",
+      "role": "analysis",
+      "reason": "Current source figure producer; primary CSV, per-Elo means, EWMA alpha .24, maximum-optimum lines.",
+      "evidence": "lines 18-25, 126-228"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "role": "analysis",
+      "reason": "Builds cohort metrics from launch indexes/configs/raw results; optimum helpers and primary protocol filter.",
+      "evidence": "lines 34-46, 411-417, 565-582, 775-829, 1331"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Game 2 optimal welfare solver imported by combined analysis.",
+      "evidence": "line 85"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py",
+      "role": "runtime",
+      "reason": "Game 3 feasible-set optimum solver imported by combined analysis.",
+      "evidence": "line 39"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "config",
+      "reason": "Canonical model selection and Elo table path.",
+      "evidence": "lines 9-55"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "data",
+      "reason": "Active Elo coordinates.",
+      "evidence": "active_model_roster.py:10"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31.md",
+      "role": "data",
+      "reason": "Legacy Elo extension loaded by combined analysis.",
+      "evidence": "analyze_n2_baseline_comparison.py:52,112"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+      "role": "data",
+      "reason": "Exact 1500-row GPT-5-nano selection; current renderer input.",
+      "evidence": "plot_figure4_total_welfare_by_competition_ewma.py:18"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/scripts/recreate_figure17.py",
+      "role": "analysis",
+      "reason": "Read-only function execution independently verified all 1500 raw welfare outcomes and 1494 optima in this audit.",
+      "evidence": "reconstruct_rows and game1_metrics/game2_metrics/game3_metrics"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/scripts/verify_provenance.py",
+      "role": "analysis",
+      "reason": "Explicit raw/config selector, seed and index checks; original provenance audit.",
+      "evidence": "lines 27-94"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/raw_input_provenance.json",
+      "role": "provenance",
+      "reason": "1500 exact raw paths and matching launch config paths plus historical hashes.",
+      "evidence": "verify_provenance.py:64-94"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/commands.sh",
+      "role": "support",
+      "reason": "Pins exact raster recreation interpreter and verification commands.",
+      "evidence": "entire file"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/input_script_hashes.json",
+      "role": "provenance",
+      "reason": "Historical producer and input hashes.",
+      "evidence": "verified referenced by provenance script"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/iclr_aiwild_template/appendix.tex",
+      "role": "provenance",
+      "reason": "Current result prose and labels.",
+      "evidence": "lines 401-416"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/iclr_aiwild_template/graphics/n2_gpt5_nano/10_total_welfare_by_competition_ewma.png",
+      "role": "provenance",
+      "reason": "Current paper asset hash independently equals raw recreation e396cc346da4de4b8a145eadbfc84256f42973d140f6571a7e8ec5a82d2d1a49.",
+      "evidence": "appendix.tex:412"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Transitive package import required when combined analysis imports game_environments metrics.",
+      "evidence": "game_environments/__init__.py:19-30; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451",
+      "role": "data",
+      "reason": "ONLY result_path entries in primary_runs_with_metrics.csv with baseline_key=gpt5_nano for this root, matching configs/config_file entries and configs/experiment_index.csv; 420/540/540 selected respectively. Not a per-file proof for remainder of directory. All selected raw files read this audit; launch validation delegated to E01-E03.",
+      "evidence": "recreate_figure17.py:MANIFEST and reconstruct_rows; verify_provenance.py:roots"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215",
+      "role": "data",
+      "reason": "ONLY result_path entries in primary_runs_with_metrics.csv with baseline_key=gpt5_nano for this root, matching configs/config_file entries and configs/experiment_index.csv; 420/540/540 selected respectively. Not a per-file proof for remainder of directory. All selected raw files read this audit; launch validation delegated to E01-E03.",
+      "evidence": "recreate_figure17.py:MANIFEST and reconstruct_rows; verify_provenance.py:roots"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/cofunding_20260405_083548",
+      "role": "data",
+      "reason": "ONLY result_path entries in primary_runs_with_metrics.csv with baseline_key=gpt5_nano for this root, matching configs/config_file entries and configs/experiment_index.csv; 420/540/540 selected respectively. Not a per-file proof for remainder of directory. All selected raw files read this audit; launch validation delegated to E01-E03.",
+      "evidence": "recreate_figure17.py:MANIFEST and reconstruct_rows; verify_provenance.py:roots"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Six failed Game 1 raw results lack preferences; original combined analysis stores optimum 0, independent reconstruction marks unavailable.",
+    "One Game 3 run has true optimum zero; ratios exclude this run.",
+    "CSV optimality_ratio is undiscounted actual/optimum and is NOT the reported discounted captured ratio.",
+    "Original launch/runtime provenance and in-place backfills are covered by E01-E03; no new claim of historical byte-identical runtime.",
+    "Source renderer still writes ICML path, while current ICLR asset is a matching copy.",
+    "Original May producer conversation absent from available history; broad cleanup cannot infer deletion from this scope.",
+    "No dedicated persisted producer of the appendix percentage table was found; this audit recalculated ratios directly with retained reconstruction functions."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/22/rollout-2026-08-22T07-30-53-01a0293c-ea53-7fe2-9ba5-9e33cfe7bb14.jsonl",
+      "lines": "214,398,445",
+      "evidence": "Manually inspected request at line 214 to change welfare to primary1500 cohort and retain appendix; historical patch/output are cited by original audited report."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/09/07/rollout-2026-09-07T19-47-59-01a07e45-8261-7052-b0e4-7c0ee8fe6210.jsonl",
+      "lines": "61",
+      "evidence": "Bundled codex-search returns inherited user/assistant ratio discussion; not independent execution provenance."
+    }
+  ],
+  "summary": "All 1500 raw welfare results and 1494 optima recalculated; all paper percentages confirmed; no deletion candidates."
+}

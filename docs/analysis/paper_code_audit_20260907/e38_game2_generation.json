@@ -1,0 +1,179 @@
+{
+  "task_id": "e38_game2_generation",
+  "result": "Game2 preference generation",
+  "paper_refs": [
+    "sec:appendix_game2_preference_generation"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Actual copula, SLSQP weights, integerization and local refinement; utility/prompt implementation.",
+      "evidence": "lines 140-255, 318-565"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "DiplomaticTreatyConfig PSD validation and base class.",
+      "evidence": "lines 46-67"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Factory creates treaty game and eagerly imports other game modules.",
+      "evidence": "lines 18-43, 113-126"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Eager package import required even for Game2.",
+      "evidence": "game_environments/__init__.py:26"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Eager package import required even for Game2.",
+      "evidence": "game_environments/__init__.py:28"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Eager package import required even for Game2.",
+      "evidence": "game_environments/__init__.py:29"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Package initialization when base imports json_repair.",
+      "evidence": "game_environments/base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Base game parsing dependency.",
+      "evidence": "game_environments/base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Imported from negotiation package initialization.",
+      "evidence": "negotiation/__init__.py:13"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py",
+      "role": "runtime",
+      "reason": "Preferences module imports generator; not treaty weight implementation itself.",
+      "evidence": "negotiation/preferences.py:19"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Imported by negotiation initialization.",
+      "evidence": "negotiation/__init__.py:25"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Imported by negotiation initialization.",
+      "evidence": "negotiation/__init__.py:37"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "LLM agent import dependency.",
+      "evidence": "negotiation/llm_agents.py:23"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "LLM agent import dependency.",
+      "evidence": "negotiation/llm_agents.py:34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Creates diplomacy environment with n_issues/rho/theta and retains weights in game state.",
+      "evidence": "lines 217-219,455-465"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "launch",
+      "reason": "Runtime entry selected by original retained Slurm launcher.",
+      "evidence": "scripts/generate_diplomacy_configs.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_diplomacy_configs.sh",
+      "role": "launch",
+      "reason": "Two-player configuration and Slurm generator.",
+      "evidence": "lines 1-49,345-352"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Selects feasible negative endpoint and positive .9, fixes ten issues.",
+      "evidence": "lines 299-300,582-595,1994-2000"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty.py",
+      "role": "test",
+      "reason": "PSD, copula, integer rounding, cosine overlap, utility and prompt tests.",
+      "evidence": "lines 46-325"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/requirements.txt",
+      "role": "support",
+      "reason": "NumPy/SciPy requirements for RNG,CDF and optimization.",
+      "evidence": "lines 11-12"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215/configs/config_0000.json",
+      "role": "config",
+      "reason": "Verified actual primary config: n2,5issues,rho-1,theta0,seed42.",
+      "evidence": "whole file"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215/model_scale/gpt-5-nano_vs_claude-opus-4-6-thinking/weak_first/rho_n1_0_theta_0_0/run_1_experiment_results.json",
+      "role": "data",
+      "reason": "Read stored five-position preferences; 1% increments and complementary endpoints.",
+      "evidence": "agent_preferences"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/configs/config_1051.json",
+      "role": "config",
+      "reason": "Verified actual multiagent-family n2 config:10issues,rho-1,theta.2,seed184164847.",
+      "evidence": "whole file"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/runs/config_1051_game2_homogeneous_control_n2_rho_1p0_theta_0p2_seed1/experiment_results.json",
+      "role": "data",
+      "reason": "Read ten-position raw preferences; 1% increments and complementary endpoints.",
+      "evidence": "agent_preferences"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Exact historical runtime checkout and dependency versions are not established for every run family; this audit reads current implementation and two raw samples, not every Game2 run.",
+    "A3 describes continuous ideal-position marginals but actual state rounds positions to 1% increments; this changes the distribution and slightly changes target correlation.",
+    "Rho is a population correlation target, not exact realized correlation across five or ten issues.",
+    "Weight solver docstring says exact, but bounded optimization and integer refinement give approximate pairwise cosine; no post-round hard tolerance check.",
+    "Full transitive runtime and all Game2 raw rows are delegated to sibling cohort/runtime audits; this list is not a complete codebase deletion whitelist."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/history.jsonl",
+      "lines": "325,4144-4147",
+      "reason": "April request for integer percentages; September conceptual copula revision."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/06/30/rollout-2026-06-30T22-05-08-019f1b6c-475f-7a71-9181-ae6c17387dc2.jsonl",
+      "lines": "6547",
+      "reason": "Bundled search top result manually checked; feasible endpoint rather than clipping."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/09/06/rollout-2026-09-06T01-41-36-01a0753c-872c-7e00-88ea-311b7c1c43ec.jsonl",
+      "lines": "20-40",
+      "reason": "Original conceptual revision session inspected runtime construction and integer conversion."
+    }
+  ],
+  "summary": "Retain treaty generator, rounding/refinement, config validators, launch grids and tests. No removal candidates established."
+}

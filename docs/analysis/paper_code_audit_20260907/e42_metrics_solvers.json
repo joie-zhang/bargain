@@ -1,0 +1,194 @@
+{
+  "task_id": "e42_metrics_solvers",
+  "result": "Shared welfare, fairness, inequality and discounting solvers",
+  "paper_refs": [
+    "appendix.tex:242-337",
+    "sec:appendix_behavioral_metrics",
+    "sec:appendix_solution_concepts",
+    "sec:optimal_computation",
+    "fig:fairshare_headline"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py",
+      "role": "analysis",
+      "reason": "Shared all-game benchmark solvers, corrected Gini, payoff recomputation, funded-only Lindahl distance and benchmark rows",
+      "evidence": "scripts/analyze_nash_lindahl_fairness.py:206-1019"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "role": "analysis",
+      "reason": "Bilateral specific exact allocation NBS and fast five-random-start treaty NBS; imports runtime optimum functions",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:34-44,425-510"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "role": "analysis",
+      "reason": "Expanded result pipeline imports shared fairness analyzer and separate shifted Gini",
+      "evidence": "scripts/analyze_n2_plus_multiagent_comparison.py:38-44,142-155,1019"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py",
+      "role": "analysis",
+      "reason": "Multiagent table builder supplies final-payoff population variance and separately corrected raw Gini",
+      "evidence": "scripts/plot_full_games123_clean_subset.py:193-210,438-481"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "role": "analysis",
+      "reason": "Main fairness renderer consumes benchmark analyzer, baseline loader and active model roster",
+      "evidence": "scripts/paper_figures/plot_fairshare_residual_combined.py:24-39,184-185"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "role": "analysis",
+      "reason": "Endpoint renderer explicitly imports enumerated budget-feasible Lindahl NBS helper",
+      "evidence": "scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py:35"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Imported by game package and baseline analysis; weighted-median welfare and 20-restart NBS",
+      "evidence": "game_environments/metrics.py:85-218"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py",
+      "role": "analysis",
+      "reason": "Bilateral analysis imports knapsack and Lindahl helpers; brute force up to20 projects and cents-DP beyond20",
+      "evidence": "game_environments/cofunding_metrics.py:39-140,325-384"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/multiagent_metrics.py",
+      "role": "support",
+      "reason": "Different uncorrected shifted Gini, used by existing visualization workflow; not disposable duplicate",
+      "evidence": "game_environments/multiagent_metrics.py:71-105"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py",
+      "role": "support",
+      "reason": "Existing consumer of multiagent metrics, protected non-paper workflow",
+      "evidence": "visualization/visualize_nagent.py:56"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Game factory and eager imports of all three game implementations and treaty metrics",
+      "evidence": "game_environments/__init__.py:18-41"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Game interfaces/configs and JSON-repair import needed by all utility implementations",
+      "evidence": "game_environments/base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Realized item utility with gamma^(round-1)",
+      "evidence": "game_environments/item_allocation.py:498-519"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Realized treaty utility with time discount",
+      "evidence": "game_environments/diplomatic_treaty.py:894-929"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Realized funded-project-only net payoff with optional time discount",
+      "evidence": "game_environments/co_funding.py:1073-1107,1817-1853"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Imported by game base module, transitive game package dependency",
+      "evidence": "negotiation/json_repair.py:game_environments/base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Execution calls game environment calculate_utility at agreement",
+      "evidence": "strong_models_experiment/phases/phase_handlers.py:4134"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "analysis",
+      "reason": "Shared baseline/composite model/Elo mapping import",
+      "evidence": "strong_models_experiment/analysis/active_model_roster.py:scripts/analyze_n2_baseline_comparison.py:43"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_metrics.py",
+      "role": "test",
+      "reason": "22 treaty utility/welfare/fairness regression tests passed",
+      "evidence": "tests/test_metrics.py:27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_metrics.py",
+      "role": "test",
+      "reason": "33 knapsack, Lindahl, core and coordination tests passed",
+      "evidence": "tests/test_cofunding_metrics.py:22"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_corrected_gini.py",
+      "role": "test",
+      "reason": "7 shifted finite-sample Gini cases passed",
+      "evidence": "tests/test_corrected_gini.py:15"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_issue30_game2_nbs.py",
+      "role": "test",
+      "reason": "2 deterministic corrected NBS tests passed",
+      "evidence": "tests/test_issue30_game2_nbs.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_issue36_refunded_pledges.py",
+      "role": "test",
+      "reason": "Funded-payment-only regression passed",
+      "evidence": "tests/test_issue36_refunded_pledges.py:1"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/conftest.py",
+      "role": "test",
+      "reason": "Shared pytest path setup and backend fixture",
+      "evidence": "tests/conftest.py:1"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/pytest.ini",
+      "role": "test",
+      "reason": "Test discovery configuration used in65-test check",
+      "evidence": "pytest.ini:1"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/requirements.txt",
+      "role": "support",
+      "reason": "NumPy/SciPy/pytest package requirements",
+      "evidence": "requirements.txt:11-12,29"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "No solver with a similar name is established redundant: callers, objective, normalization, starts, discretization and zero cases differ.",
+    "Multiagent Game1 NBS is approximate multistart single-item local search, not a certified global discrete NBS.",
+    "Game3 N>2 benchmark optimum uses group budget only; its proportional individual payments are not checked against each agent budget, unlike bilateral Lindahl-NBS enumeration.",
+    "Paper text uses uppercase N in finite-sample formula with lowercase n denominator; source variants implement different corrections.",
+    "Historical exact versions and parameter defaults require preserved raw benchmark caches and version provenance from result-chain agents E19/E20/E21; not replaced by rerunning current solvers.",
+    "Search verified historical motivation but did not establish original authoring sessions for every corrected solver.",
+    "This is a shared solver audit, not an independent re-run of all1500/2900 benchmark rows; E19/E20/E21 cover result selection and data chains."
+  ],
+  "history": [
+    {
+      "session_id": "019f1d1f-86bb-7711-a818-ad5adaaa9211",
+      "path": "/home/jz4391/.codex/sessions/2026/07/01/rollout-2026-07-01T06-00-33-019f1d1f-86bb-7711-a818-ad5adaaa9211.jsonl",
+      "line": 8221,
+      "evidence": "User requested joint baseline/adversary fair-share analysis under cooperative and competitive settings, preserving source distinction from overall residual."
+    },
+    {
+      "path": "/home/jz4391/.codex/history.jsonl",
+      "line": 4151,
+      "session_id": "01a0753c-872c-7e00-88ea-311b7c1c43ec",
+      "evidence": "User requested current inequality/efficiency wording changes, not solver consolidation."
+    }
+  ],
+  "summary": "Protect26 concrete files; no deletion candidates. Distinct solver variants are active dependencies or existing workflow support.65 focused tests passed."
+}

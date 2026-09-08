@@ -1,0 +1,370 @@
+{
+  "task_id": "e13_homadv_game1",
+  "result": "Game1 homogeneous-adversary scaling and payoff gap across group size",
+  "paper_refs": [
+    "sec:appendix_multiagent_homogeneous",
+    "fig:appendix_multiagent_hom_payoff_full",
+    "fig:appendix_multiagent_hom_competition",
+    "fig:appendix_multiagent_dilution"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Builds selected configurations, Slurm launcher, CLI command and retry/status records.",
+      "evidence": "lines 1542-1610, 1785-1850; raw config_0511.log:3"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "runtime",
+      "reason": "Observed experiment CLI in original April log; imports experiment runtime.",
+      "evidence": "config_0511.log:3; CLI:37-39"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Current direct/transitive imported dependency of experiment CLI; not proof of identical historical version.",
+      "evidence": "experiment.py:21-34; phase_handlers.py:11-27; agent_factory.py:7-22; negotiation/__init__.py:13-37; game_environments/__init__.py:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "config",
+      "reason": "Batch generation imports roster and Elo mapping.",
+      "evidence": "full_games123_multiagent_batch.py:30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "config",
+      "reason": "Default roster source path loaded by active_model_roster.",
+      "evidence": "active_model_roster.py:9-15"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/manifest.json",
+      "role": "provenance",
+      "reason": "Saved original batch design and submission path.",
+      "evidence": "manifest.json:1-45; config_0511 status contains Slurm job 7451401 / array 7445949"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/slurm/run_full_games123.sbatch",
+      "role": "provenance",
+      "reason": "Saved original batch design and submission path.",
+      "evidence": "manifest.json:1-45; config_0511 status contains Slurm job 7451401 / array 7445949"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/submissions.json",
+      "role": "provenance",
+      "reason": "Saved original batch design and submission path.",
+      "evidence": "manifest.json:1-45; config_0511 status contains Slurm job 7451401 / array 7445949"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/configs",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/runs",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/status",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/logs",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/selections",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/submissions",
+      "role": "data",
+      "reason": "Selection only: configs with game_label=game1 and experiment_family=homogeneous_adversary (500); their output_dir experiment_results.json, all_interactions.json, status/config_ID.json, attempt logs and submission selections referencing IDs. Directory is NOT per-file proof that whole tree is required.",
+      "evidence": "Inspected all 500 config/result pairs read-only; config_0511 example directly inspected status/log/config; exact input manifests in figure_25/raw_manifest.csv and figure_26/data/input_manifest.json"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_figure24_hom_adversary_competition_clean.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_figure30_dilution_top_only_clean.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig30_multiagent_dilution/reproduce.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig30_multiagent_dilution/output/pooled_plot_points.csv",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig24_hom_adversary_competition/aggregated_plot_data.csv",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_24/reproduce.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_25/raw_manifest.csv",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/scripts/recreate.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/scripts/plot_source.py",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/data/input_manifest.json",
+      "role": "analysis",
+      "reason": "Retained raw-to-aggregate or current rendering dependency/provenance. Preserve until a validated replacement pipeline is chosen.",
+      "evidence": "comparison.py:39 imports raw reader and fairness module; figure24 renderer:25 input; figure30 renderer:17 input; recreation script inspected"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Original April experiment-code commit not recorded in sampled saved config/status. Current import chain cannot establish byte-identical historical runtime.",
+    "Bundled Codex search invoked twice but returned no visible results this turn; manually verified original locally available August session via rg. Full pre-June conversation unavailable in figure audit.",
+    "No full transitive static/dynamic import closure, external package versions or every retry archive reviewed. Current runtime has evolved and optional dependencies cannot be deleted based on this report.",
+    "No candidate file has repository-wide negative dependency proof. No safe deletion recommendation.",
+    "Group size changes item count as floor(2.5*n), so endpoint gap is descriptive, not isolated causal effect of n."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/02/rollout-2026-08-02T01-57-18-019fc10c-5259-76a0-8efa-0e41696b8ab5.jsonl",
+      "lines": "1632-1650,1694-1697",
+      "evidence": "Historical top-only plot producer, rendering and paper installation; original final completion manually read."
+    }
+  ],
+  "summary": "500 observed Game1 runs verified; all five averaged Elo slopes positive and n10-minus-n2 mean gap +3.030299377913334 reproduced directly from result JSON. Preserve selected raw/status/attempt evidence and current experiment/analysis paths. No justified deletions."
+}

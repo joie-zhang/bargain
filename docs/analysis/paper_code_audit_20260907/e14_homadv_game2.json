@@ -1,0 +1,350 @@
+{
+  "task_id": "e14_homadv_game2",
+  "result": "Homogeneous-adversary Game2 payoff scaling by n and competition; adversary payoff advantage versus group size",
+  "paper_refs": [
+    "fig:appendix_multiagent_hom_payoff_full",
+    "fig:appendix_multiagent_hom_competition",
+    "fig:appendix_multiagent_dilution"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "launch",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/slurm/run_full_games123.sbatch",
+      "role": "launch",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Verified direct or transitive local import on current experiment runtime; eagerly imported other-game modules also required without refactoring.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "config",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "config",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "config",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/manifest.json",
+      "role": "config",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260829/02_agent_n/candidates/fig24/reproduce.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_figure24_hom_adversary_competition_clean.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig24_hom_adversary_competition/recreate.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig24_hom_adversary_competition/aggregated_plot_data.csv",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig30_multiagent_dilution/reproduce.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/fig30_multiagent_dilution/output/pooled_plot_points.csv",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_figure30_dilution_top_only_clean.py",
+      "role": "analysis",
+      "reason": "Raw parser, aggregate, or exact retained renderer for the three scoped figures.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_attempt_logs.py",
+      "role": "test",
+      "reason": "Protect regression tests for shared generation and Game2 runtime; not raw evidence.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_batch_generation.py",
+      "role": "test",
+      "reason": "Protect regression tests for shared generation and Game2 runtime; not raw evidence.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty.py",
+      "role": "test",
+      "reason": "Protect regression tests for shared generation and Game2 runtime; not raw evidence.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_24/raw_input_manifest.csv",
+      "role": "provenance",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/data/raw_run_metrics.csv",
+      "role": "provenance",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255/logs/config_1109.log",
+      "role": "provenance",
+      "reason": "Verified scoped launch/config/provenance dependency.",
+      "evidence": "scripts/full_games123_multiagent_batch.py:1535; run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; report provenance chain"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255",
+      "role": "data",
+      "reason": "Selection ONLY: configs with game_label=game2 and experiment_family=homogeneous_adversary (400), corresponding output_dir result/transcript records, status, all referenced attempt logs, selection/submission records containing these config IDs. This is NOT per-file proof for whole tree.",
+      "evidence": "Independently loaded all 400 configs and final result files; config IDs span 1053..1870 noncontiguously."
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Immutable execution-code commit not recorded in inspected raw records; current runtime dependency graph cannot prove historical bytes.",
+    "All 400 final results read; all attempt logs, provider routes, selection/submission files and archived runtime snapshots not individually traced.",
+    "Bundled codex-search completed over 2175 repo-linked sessions and 42 history-only IDs; broad query returned team-treatment and current-session false positives. Manually verified original August2 producer patch and August29 history directly.",
+    "Current shared runtime includes dynamic provider/config behavior; import graph listed is verified but not claimed exhaustive.",
+    "No repository-wide removal candidate certified. Older copies may preserve unique historical runtime and must not be removed based on this result alone."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/02/rollout-2026-08-02T01-57-18-019fc10c-5259-76a0-8efa-0e41696b8ab5.jsonl",
+      "line": 1632,
+      "evidence": "Directly read original add-file patch for retained dilution renderer and CSV input."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/29/rollout-2026-08-29T20-38-40-01a0501a-ae58-7fc3-93a1-917ae569c417.jsonl",
+      "line": 32,
+      "evidence": "Directly read original paper source/asset inspection; detailed renderer-edit citations remain secondary in figure24 report."
+    }
+  ],
+  "summary": "400 Game2 observations verified. Mean payoff gap increases -0.89846723625 to 6.77470469444 (+7.67317193069) from n2 to n10; no certified deletions."
+}

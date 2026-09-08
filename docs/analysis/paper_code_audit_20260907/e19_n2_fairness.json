@@ -1,0 +1,220 @@
+{
+  "task_id": "e19_n2_fairness",
+  "result": "Two-player signed fairness residuals and absolute benchmark distances across games and competition",
+  "paper_refs": [
+    "fig:fairshare_headline top left",
+    "fig:n2_fairness",
+    "sec:appendix_bilateral_fairness"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "role": "analysis",
+      "reason": "Loads original indexes/configs/results and computes historical appendix fairness metrics; Game 2 five-start L-BFGS-B is distinct from main panel solver.",
+      "evidence": "lines 419-490, 583-885"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_icml_figure14_fairness_polished.py",
+      "role": "analysis",
+      "reason": "Current appendix three-row renderer; masks Game 3 no-project role residuals.",
+      "evidence": "lines 25-40, 244-250"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "role": "analysis",
+      "reason": "Canonical bilateral/multi-agent producer and direct imports; current uncommitted edits must be protected.",
+      "evidence": "lines 25-45, 236-246"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Imported Game 2 utility and welfare calculations.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:39"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py",
+      "role": "runtime",
+      "reason": "Imported Lindahl cost shares, distance and feasible optimal-funded-set calculation.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "analysis",
+      "reason": "Canonical model identities and dated Elo lookup.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:43"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "data",
+      "reason": "Frozen Elo and alias input.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31.md",
+      "role": "data",
+      "reason": "Frozen Elo and alias input.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/reproducibility/paper_experiment_data_manifest.csv",
+      "role": "data",
+      "reason": "Canonical experiment selector consumed by main producer.",
+      "evidence": "scripts/paper_figures/plot_fairshare_residual_combined.py:40"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_baseline_comparison_analysis_20260505/primary_runs_with_metrics.csv",
+      "role": "data",
+      "reason": "Exact appendix renderer numerical input, with historical empty-preference defect.",
+      "evidence": "scripts/paper_figures/plot_icml_figure14_fairness_polished.py:26"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/icml_aiwild_template/graphics/n2_gpt5_nano/fairshare_residual_combined_summary.csv",
+      "role": "data",
+      "reason": "Retained current main-panel means; independently fitted crossings 1394.1617,1460.6873,1426.3158. Absent from ICLR asset folder.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/scripts/replay_original_game2.py:38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/analysis/icml_aiwild_report_20260808/figure_03/recreate.py",
+      "role": "analysis",
+      "reason": "Original exact two-agent Game 2 corner/edge NBS solver; needed despite location under old paper analysis.",
+      "evidence": "lines 279-325; August 8 session line 624"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/rebuild_data.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/raw_metrics.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/original_aug08.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/original_fairness_source.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_original_game2.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/render_combined.py",
+      "role": "analysis",
+      "reason": "Preserved raw reconstruction chain or historical algorithm source for main panel; do not treat dated audit code as unused.",
+      "evidence": "analysis/figure_recreation_20260905/figure_03/run.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/input_manifest.csv",
+      "role": "provenance",
+      "reason": "Per-file raw selection/hash evidence or preserved metric diagnostic; supports exact historical result and explains defect.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/raw_derived_primary_runs_with_metrics.csv",
+      "role": "provenance",
+      "reason": "Per-file raw selection/hash evidence or preserved metric diagnostic; supports exact historical result and explains defect.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/fit_coefficients.csv",
+      "role": "provenance",
+      "reason": "Per-file raw selection/hash evidence or preserved metric diagnostic; supports exact historical result and explains defect.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/empty_preference_diagnostic.json",
+      "role": "provenance",
+      "reason": "Per-file raw selection/hash evidence or preserved metric diagnostic; supports exact historical result and explains defect.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/provenance.json",
+      "role": "provenance",
+      "reason": "Per-file raw selection/hash evidence or preserved metric diagnostic; supports exact historical result and explains defect.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py",
+      "role": "analysis",
+      "reason": "Raw reconstruction or missing preference diagnostic implementation.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/commands.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/scripts/check_empty_preferences.py",
+      "role": "analysis",
+      "reason": "Raw reconstruction or missing preference diagnostic implementation.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/commands.sh"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451",
+      "role": "data",
+      "reason": "Directory representation only, NOT whole-tree proof: retain exact 420 config files and 420 result files whose path lies under this root and included=True in figure_18/input_manifest.csv. All 3,000 selected entries across three roots were independently rehashed now with no missing/changed files. Protect associated transcripts and historical backfills identified by E01-E03.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/input_manifest.csv"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451/configs/experiment_index.csv",
+      "role": "config",
+      "reason": "Original selection index read before primary cohort filtering.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:779"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215",
+      "role": "data",
+      "reason": "Directory representation only, NOT whole-tree proof: retain exact 540 config files and 540 result files whose path lies under this root and included=True in figure_18/input_manifest.csv. All 3,000 selected entries across three roots were independently rehashed now with no missing/changed files. Protect associated transcripts and historical backfills identified by E01-E03.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/input_manifest.csv"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/diplomacy_20260405_082215/configs/experiment_index.csv",
+      "role": "config",
+      "reason": "Original selection index read before primary cohort filtering.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:779"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/cofunding_20260405_083548",
+      "role": "data",
+      "reason": "Directory representation only, NOT whole-tree proof: retain exact 540 config files and 540 result files whose path lies under this root and included=True in figure_18/input_manifest.csv. All 3,000 selected entries across three roots were independently rehashed now with no missing/changed files. Protect associated transcripts and historical backfills identified by E01-E03.",
+      "evidence": "analysis/figure_recreation_20260905/figure_18/input_manifest.csv"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/cofunding_20260405_083548/configs/experiment_index.csv",
+      "role": "config",
+      "reason": "Original selection index read before primary cohort filtering.",
+      "evidence": "scripts/analyze_n2_baseline_comparison.py:779"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Original launch, runtime version and replaced run records are shared with E01-E03; this result audit verifies downstream selection and numerical pipeline, not an independent historical launch reconstruction.",
+    "Six Game 1 failed runs config_644,648,720,724,742,895 have empty preferences and are falsely assigned zero benchmark residual/distance by retained analyzer; all six original setup transcripts exist with unchanged diagnostic hashes and must stay.",
+    "Appendix excludes 80 Game 3 no-funded outcomes from unsigned distance and both role curves; main signed residual means retain their zeros. These numerical inputs are not interchangeable.",
+    "Main Game 2 solver is exact corner/edge enumeration; appendix Game 2 solver is five-start L-BFGS-B. Similar filenames do not establish redundant code.",
+    "Current main caption states Game 3 crossing 1454, but independently fitted retained current means give 1426.3158; source text 1410-1461 also differs from Game 1 1394.1617.",
+    "Current ICLR directory has main PNG but not fairshare_residual_combined_summary.csv; necessary numerical table remains under ICML directory.",
+    "Bundled codex-search broad query returned current conversation forks; verified original May request and August production source directly, rather than accepting those forks as origin.",
+    "Did not rerun optimizers or renderers during this read-only audit; verified code, current asset identity, all primary selected raw/config hashes, six transcript hashes and retained mean fits. Original May full rollout unavailable locally."
+  ],
+  "history": [
+    "/home/jz4391/.codex/history.jsonl:1556 session 019df5c4-2840-7123-96fa-8f31e40d7461 original two-player fairness analysis request.",
+    "/home/jz4391/.codex/sessions/2026/08/02/rollout-2026-08-02T00-23-38-019fc0b6-9452-7cc2-8e8a-d665df4de3a1.jsonl:1200 user three-row layout; :1237 renderer creation and masking.",
+    "/home/jz4391/.codex/sessions/2026/08/08/rollout-2026-08-08T23-35-58-019fe497-72e6-7973-89c5-197c6005ce86.jsonl:624 exact Game 2 solver replacement."
+  ],
+  "summary": "Preserve two distinct fairness pipelines, primary 1500 raw/config pairs, original transcripts, historical exact solver, retained numerical tables and audit diagnostics. No supported deletion candidates in this scope."
+}

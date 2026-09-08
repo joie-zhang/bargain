@@ -1,0 +1,160 @@
+{
+  "task_id": "e23_baseline_gini",
+  "result": "Figure 13 corrected baseline-only Gini across homogeneous-adversary models",
+  "paper_refs": [
+    "fig:multiagent_homo_adversary",
+    "sec:appendix_gini_inequality"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/baseline_label_update_20260907/render.py",
+      "role": "analysis",
+      "reason": "Current label-change producer executes both dated variance renderer and current Gini renderer, overrides Gini input and copies paper PNG.",
+      "evidence": "lines 8-34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_icml_homogeneous_adversary_main_panels.py",
+      "role": "analysis",
+      "reason": "Current five-model baseline-only renderer; required even though filename says ICML.",
+      "evidence": "lines 45-90"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/homogeneous_adversary_baseline_only_vs_all_payoff_gini_summary.csv",
+      "role": "data",
+      "reason": "Exact live input to current label renderer; independently matched all five raw-derived means and SEMs.",
+      "evidence": "label renderer:25"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_14/recreate.py",
+      "role": "analysis",
+      "reason": "Executed unconditionally by current combined label renderer before Gini.",
+      "evidence": "label renderer:19"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_14/summary.csv",
+      "role": "data",
+      "reason": "Unconditional variance input of combined label renderer.",
+      "evidence": "label renderer:22"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/recreate.py",
+      "role": "analysis",
+      "reason": "Five-model raw-data recomputation producer; original generic generator still uses four buckets.",
+      "evidence": "lines 31-157"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/original_plot_homogeneous_adversary_baseline_vs_all_gini.py",
+      "role": "analysis",
+      "reason": "Direct imported metric implementation in raw recomputation.",
+      "evidence": "recreate.py:24"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/render_figure_15.py",
+      "role": "analysis",
+      "reason": "Subprocess dependency of raw recomputation workflow.",
+      "evidence": "recreate.py:156"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_homogeneous_adversary_baseline_vs_all_gini.py",
+      "role": "provenance",
+      "reason": "Original metric and four-bucket comparison producer, verified in original June27 history.",
+      "evidence": "lines 34-47,64-92"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/reproducibility/paper_experiment_data_manifest.csv",
+      "role": "config",
+      "reason": "Select paper_batch=multiagent_homogeneous and experiment_family=homogeneous_adversary; exactly 1300 rows independently checked.",
+      "evidence": "recreate.py:32-35"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_production_20260428_085255",
+      "role": "data",
+      "reason": "Protect ONLY 1300 result_path and config_path files selected by manifest predicates above, plus each matching status/config_NNNN.json and manifest.json; result/config pairs reread independently; status records are source-code dependencies, not independently reread here; not a claim that whole tree is required.",
+      "evidence": "recreate.py:43-60"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/n2_plus_multiagent_comparison_analysis_20260505/tables_multiagent/homogeneous_agents_fresh.csv",
+      "role": "data",
+      "reason": "Original analysis input and verification dependency of recreation; 7800 selected agent rows.",
+      "evidence": "recreate.py:36-39; original generator:19"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "role": "analysis",
+      "reason": "Produces homogeneous_agents_fresh.csv from production root.",
+      "evidence": "lines 38-39,64,2071"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py",
+      "role": "analysis",
+      "reason": "build_tables imported by agent-table producer.",
+      "evidence": "comparison analyzer:38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py",
+      "role": "analysis",
+      "reason": "Import-time dependency of agent-table producer.",
+      "evidence": "comparison analyzer:39"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Current original-family config/launch entry, constructs runner CLI.",
+      "evidence": "lines 1534-1590"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "config",
+      "reason": "Launcher directly imports active roster; current roster may differ from historical.",
+      "evidence": "batch launcher:30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "runtime",
+      "reason": "Runner selected by launcher.",
+      "evidence": "batch launcher:1542"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Experiment implementation selected through package runner import; shared runtime closure audited in experiment family tasks.",
+      "evidence": "runner:37; experiment:21-34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/iclr_aiwild_template/appendix.tex",
+      "role": "provenance",
+      "reason": "Current caption and selected asset reference.",
+      "evidence": "lines 281-286"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/iclr_aiwild_template/graphics/n_gt_2_report/homogeneous_adversary_baseline_only_vs_all_payoff_gini.png",
+      "role": "data",
+      "reason": "Current paper asset shows baseline-only Gini, not all-agent comparison.",
+      "evidence": "appendix.tex:284"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/raw_run_metrics.csv",
+      "role": "provenance",
+      "reason": "Retained per-run recomputation trace, useful for contamination/status investigations.",
+      "evidence": "recreate.py:107"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/raw_config_provenance.json",
+      "role": "provenance",
+      "reason": "Resolved and standalone configs and statuses retained for historical inspection.",
+      "evidence": "recreate.py:109"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Exact historical runtime version and provider recovery closure require E13-E15 family audit; current launcher source alone does not prove original execution bytes.",
+    "Original four-bucket generic Gini generator does not directly reproduce five-model current figure; protect both historical and dated regeneration code.",
+    "Current combined label renderer depends on otherwise unrelated Figure 12 inputs, so deleting dated analysis directories breaks current Figure 13 regeneration.",
+    "No file is classified removable from absence in this result; shared tests, historical failure and recovery records remain protected."
+  ],
+  "history": [
+    "/home/jz4391/.codex/sessions/2026/06/26/rollout-2026-06-26T01-43-15-019f0274-2995-7fe0-97a1-80a4f211dc49.jsonl:4548,4561,4567",
+    "/home/jz4391/.codex/sessions/2026/08/23/rollout-2026-08-23T07-32-24-01a02e64-a937-7b32-a07d-3d364b555e4b.jsonl:9,144,190"
+  ],
+  "summary": "All 1300 result/config pairs independently read and corrected Gini recomputed; five means/SEMs match live summary within 1e-16. Baseline negative shift in 94 runs; 45 no-agreement runs retained; 260 n=2 runs contribute Gini zero. No deletion candidates."
+}

@@ -1,0 +1,389 @@
+{
+  "task_id": "e09_ttc_gemini",
+  "result": "Gemini3Flash TTC requested-effort near-flat endpoint gain +0.48, four appendix payoff levels",
+  "paper_refs": [
+    "overleaf/iclr_aiwild_template/4_analysis.tex:31-38 fig:ttc_scatter",
+    "overleaf/iclr_aiwild_template/appendix.tex:464-490 tab:appendix_ttc_overall"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_native_scaling_jobs.py",
+      "role": "launch",
+      "reason": "Generates original grid, clones archived 216 configs per seed, or launches runtime; archived Gemini configs145..216 select four efforts.",
+      "evidence": "scripts/generate_ttc_seed_replication_jobs.py:79; scripts/run_ttc_native_config.py:88"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_seed_replication_jobs.py",
+      "role": "launch",
+      "reason": "Generates original grid, clones archived 216 configs per seed, or launches runtime; archived Gemini configs145..216 select four efforts.",
+      "evidence": "scripts/generate_ttc_seed_replication_jobs.py:79; scripts/run_ttc_native_config.py:88"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/run_ttc_native_config.py",
+      "role": "launch",
+      "reason": "Generates original grid, clones archived 216 configs per seed, or launches runtime; archived Gemini configs145..216 select four efforts.",
+      "evidence": "scripts/generate_ttc_seed_replication_jobs.py:79; scripts/run_ttc_native_config.py:88"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Verified direct/transitive import chain from TTC runner: negotiation state, prompts, preference generation, provider calls, and saved results. Current runtime retention, not proof byte-identical historical source.",
+      "evidence": "run_strong_models_experiment.py:37; strong_models_experiment/experiment.py:21-34; strong_models_experiment/phases/phase_handlers.py:11-27; negotiation/__init__.py:13-42"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_proxy_monitor.py",
+      "role": "support",
+      "reason": "OpenRouter transport supports file-queue execution on restricted Slurm nodes; protect monitor implementation while external deployed monitor identity remains unresolved.",
+      "evidence": "scripts/generate_ttc_seed_replication_jobs.py:210; negotiation/openrouter_client.py:33"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "runtime",
+      "reason": "Runtime context-window document loaded dynamically; not merely prose documentation.",
+      "evidence": "negotiation/context_compaction.py:15,97"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py",
+      "role": "analysis",
+      "reason": "Current complete-cohort parser and averaging code used for family-effort means and uncertainty.",
+      "evidence": "scripts/analyze_ttc_complete_seed_panels.py:21,25-40; scripts/analyze_ttc_seed_replication.py:64,127"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_complete_seed_panels.py",
+      "role": "analysis",
+      "reason": "Current complete-cohort parser and averaging code used for family-effort means and uncertainty.",
+      "evidence": "scripts/analyze_ttc_complete_seed_panels.py:21,25-40; scripts/analyze_ttc_seed_replication.py:64,127"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/ttc_complete_family_seed_panels_20260810/family_effort_complete_seed_ci95.csv",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/reproduction_audit/icml_aiwild_current_20260829/fig05_ttc/derived_summary.csv",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260829/07_halfwidth_footnote/make_candidate.py",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_05/input_hashes.csv",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_05/scripts/raw_source_snapshot.py",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_05/scripts/recreate.py",
+      "role": "analysis",
+      "reason": "Current numerical and figure provenance; exact half-width producer loads historical derived CSV, raw snapshot retains independently reproducible parser.",
+      "evidence": "lh_review_20260829/07_halfwidth_footnote/make_candidate.py:14; analysis/figure_recreation_20260905/figure_05/scripts/recreate.py:32,115"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_seed_replication.py",
+      "role": "test",
+      "reason": "Protect TTC-specific validation rather than deleting tests absent from runtime imports; test bodies not fully audited here.",
+      "evidence": "TTC-specific test filenames; scope retention, not proof every assertion necessary."
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_accounting.py",
+      "role": "test",
+      "reason": "Protect TTC-specific validation rather than deleting tests absent from runtime imports; test bodies not fully audited here.",
+      "evidence": "TTC-specific test filenames; scope retention, not proof every assertion necessary."
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_reasoning_token_recovery.py",
+      "role": "test",
+      "reason": "Protect TTC-specific validation rather than deleting tests absent from runtime imports; test bodies not fully audited here.",
+      "evidence": "TTC-specific test filenames; scope retention, not proof every assertion necessary."
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_20260502_212943",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed984_20260725_025700",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed526_20260725_181400",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed423_20260725_211500",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed1024_20260725_211500",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed128_20260727_043613",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed256_20260727_043613",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed612_20260727_043613",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed2048_20260727_043613",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/ttc_native_scaling_seed4096_20260727_043613",
+      "role": "data",
+      "reason": "ONLY configs/config_0145.json through config_0216.json, each config output_dir's run_1_experiment_results.json and run_1_all_interactions.json; all720 configs/results read, all2160selected paths exist. Also preserve root manifest and matched Slurm invocation records as provenance. This is an explicit selection rule, NOT required classification of every file in the directory.",
+      "evidence": "analysis/figure_recreation_20260905/figure_05/input_hashes.csv rows with config_id145..216; direct fresh parsing2026-09-07"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Historical manifests record dirty worktrees, including configs.py, llm_agents.py, experiment.py and provider files. Git commit alone is insufficient to restore executed source bytes; historical snapshots/patches need global audit.",
+    "Current generator sets16384 cap and runner migrates legacy10500 unless preservation switch; literal current rerun of original seed42 differs from observed all720Gemini runs at10500.",
+    "target_provider='Google' is vendor metadata, not direct Google transport proof. Current model aliases route via OpenRouter; individual original wire transport/proxy service source version not fully established.",
+    "All720result utility values read and means recomputed, but utilities not independently recalculated from each allocation; all720transcript paths checked, not every transcript body manually audited.",
+    "No evidence justifies calling unrelated TTC analysis scripts unused; earlier seed scripts may be historical production dependencies or serve other paper results."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/14/rollout-2026-08-14T04-28-46-019fff63-4eac-7e31-8963-368d5f16f095.jsonl",
+      "line": 5,
+      "finding": "Directly read original user request to include all2160runs, not earlier Claude-excluded cohort."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/29/rollout-2026-08-29T20-39-12-01a0501b-2794-7462-a4f1-d118dbfef936.jsonl",
+      "line": 64,
+      "finding": "Directly read apply-patch creation of actual halfwidth producer and its derived_summary.csv input."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/09/05/rollout-2026-09-05T23-13-06-01a074b4-92a4-78c3-96f8-c42ae5db663d.jsonl",
+      "line": 23,
+      "finding": "Read requested session discovery context; downstream Figure05 audit was lead then raw configs/results independently inspected."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/07/28/rollout-2026-07-28T05-47-20-019fa81f-23b2-7d71-bc1d-b06f1965c20e.jsonl",
+      "line": 259,
+      "finding": "Codex-search top match manually read: TTC Gemini uses OpenRouter not direct Google; line10551 partial2106of2160stage, later superseded by complete cohort. Fork contains copied earlier rollout; canonical parent identification remains limited."
+    }
+  ],
+  "summary": "720 observed Gemini runs, 10seeds x4efforts x9gamecells x2orders. Direct raw-result means minimal66.1959911777 low66.2204440801 medium67.7684766551 high66.6793057447; endpoint+.4833145670. All720 effective caps10500. No deletions certified."
+}

@@ -1,0 +1,215 @@
+{
+  "task_id": "e06_llama_game3",
+  "result": "Llama baseline Game3 180 runs",
+  "paper_refs": [
+    "tab:n2_headline_slopes",
+    "tab:llama_replication",
+    "fig:appendix_llama_overall",
+    "sec:appendix_llama_results"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_appendix_llama33_baseline_configs.py",
+      "role": "launch",
+      "reason": "Generator now differs from historical token cap; retain as producer provenance.",
+      "evidence": "159-205,284-488"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "runtime",
+      "reason": "Saved run_config invokes CLI, which instantiates StrongModelsExperiment.",
+      "evidence": "37,551-720"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Coordinates game, phases, agents, utility/results writing.",
+      "evidence": "21-34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "config",
+      "reason": "Model IDs/provider routes and phase budgets.",
+      "evidence": "agent_factory.py:22"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "role": "runtime",
+      "reason": "Selected model instantiation and provider configuration.",
+      "evidence": "7-22"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Negotiation protocol and PromptGenerator calls.",
+      "evidence": "11-27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py",
+      "role": "runtime",
+      "reason": "Runtime prompts imported by phase handlers.",
+      "evidence": "phase_handlers.py:27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "role": "runtime",
+      "reason": "FileManager and experiment utilities.",
+      "evidence": "experiment.py:31"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Serialized results types.",
+      "evidence": "experiment.py:21"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Game3 preferences, voting, contributions, welfare.",
+      "evidence": "30-38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Game config and parsing interface.",
+      "evidence": "co_funding.py:38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Direct provider agents and context handling.",
+      "evidence": "agent_factory.py:8"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "role": "runtime",
+      "reason": "Llama and other OpenRouter models; proxy transport.",
+      "evidence": "agent_factory.py:20"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "Provider authentication and error policy.",
+      "evidence": "llm_agents.py:23"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "Context machinery called by agents/phases.",
+      "evidence": "llm_agents.py:34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Response parsing.",
+      "evidence": "llm_agents.py:44; base.py:14"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_appendix_llama33_baseline_500.py",
+      "role": "analysis",
+      "reason": "Loads indexed results, resolves role utilities and computes model means.",
+      "evidence": "270-315"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_appendix_llama_overall_overlay_1x3.py",
+      "role": "analysis",
+      "reason": "Actual current overlay plot producer.",
+      "evidence": "169"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "analysis",
+      "reason": "March Elo mapping and aliases.",
+      "evidence": "142,200"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "config",
+      "reason": "Elo source table used by analysis.",
+      "evidence": "active_model_roster.py"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/appendix_llama33_baseline_experiment_spec_2026_05.md",
+      "role": "provenance",
+      "reason": "Original 500-run experiment specification.",
+      "evidence": "Seed Policy; Game3"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/recreate.py",
+      "role": "provenance",
+      "reason": "Independent raw verification recipe.",
+      "evidence": "25-57"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/input_hashes.json",
+      "role": "provenance",
+      "reason": "Exact selected config/raw/conversation hashes for all games; filter Game3.",
+      "evidence": "entire manifest"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/versioned_sources.json",
+      "role": "provenance",
+      "reason": "Historical source versions, not proof of execution commit.",
+      "evidence": "entire record"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_analysis_20260503/overall_by_model_game.csv",
+      "role": "analysis",
+      "reason": "Historical model means read by plot producer.",
+      "evidence": "plot script:169"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/slurm/run_config.py",
+      "role": "launch",
+      "reason": "Saved historical launch and submitted job mapping.",
+      "evidence": "run_config.py:34; run_one.sbatch:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/slurm/run_one.sbatch",
+      "role": "launch",
+      "reason": "Saved historical launch and submitted job mapping.",
+      "evidence": "run_config.py:34; run_one.sbatch:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/slurm/submit_individual.sh",
+      "role": "launch",
+      "reason": "Saved historical launch and submitted job mapping.",
+      "evidence": "run_config.py:34; run_one.sbatch:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/slurm/submitted_jobs.txt",
+      "role": "launch",
+      "reason": "Saved historical launch and submitted job mapping.",
+      "evidence": "run_config.py:34; run_one.sbatch:62"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/configs",
+      "role": "config",
+      "reason": "Select experiment_index.csv and its 180 named config_0000.json through config_0179.json only. Directory notation is not per-file proof for the whole tree.",
+      "evidence": "analysis loader:270"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game3_202605/model_scale",
+      "role": "data",
+      "reason": "Select each of 180 output_dir values in saved configs: run_1_experiment_results.json, run_1_all_interactions.json and experiment_results.json. Results directly read this audit. Conversations/duplicates retained for lineage; no whole-tree per-file proof.",
+      "evidence": "configs/experiment_index.csv; independent calculation in audit"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "No proof of exact historical execution commit; current runtime has changed.",
+    "Current generator uses 16384 tokens but saved configurations use 10500.",
+    "May full session absent; history confirms 79 Game3 backfills and asks to overwrite original paths. Preserve all surviving failure, Slurm, and provider records until recovery history is reconciled.",
+    "Dynamic dependencies and external /home/jz4391/openrouter_proxy service not exhaustively traced; no deletion safety certification.",
+    "Saved shortened provider names do not alone verify reasoning settings; raw utility recomputation from every transcript not performed."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/history.jsonl",
+      "lines": "1283,1366-1367,1384",
+      "session": "019deb36-702e-7281-831e-85fa43303c19",
+      "verified": "Original launch request, failed attempt/backfill request, completed analysis request read directly."
+    }
+  ],
+  "summary": "Direct raw recomputation confirms 180 runs, 170 agreements, slopes 10.70437348 adversary, 2.19354417 baseline, 8.51082931 gap per100 Elo; Pearson r=.8664928. No deletion candidates established."
+}

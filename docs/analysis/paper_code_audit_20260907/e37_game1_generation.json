@@ -1,0 +1,154 @@
+{
+  "task_id": "e37_game1_generation",
+  "result": "Game1 valuation generation, target competition, fixed totals and item-count scaling",
+  "paper_refs": [
+    "3_approach.tex:24-31",
+    "3_approach.tex:95",
+    "3_approach.tex:106",
+    "tab:appendix_game_sizes"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Creates item names and delegates preference generation; maps returned vectors to live agent IDs.",
+      "evidence": "44-83"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "ItemAllocationConfig and game interface, imports JSON parsing helpers.",
+      "evidence": "1-75"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Package initialization required when importing ItemAllocationGame.",
+      "evidence": "package imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Constructs fixed-total100 integer preference vectors and records actual pairwise similarities.",
+      "evidence": "143-169"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/multi_agent_vector_generator.py",
+      "role": "runtime",
+      "reason": "Seeded pairwise dispatch or multi-agent SLSQP; integer rounding and boundary initialization.",
+      "evidence": "23-196"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py",
+      "role": "runtime",
+      "reason": "Two-agent endpoints and ten-attempt SLSQP with simple-method recovery.",
+      "evidence": "23-234"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Executed package initializer imports preference and agent modules.",
+      "evidence": "1-47"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Imported by base game class.",
+      "evidence": "game_environments/base.py:15"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Eager package import even when accessing preference factory.",
+      "evidence": "negotiation/__init__.py:24"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Eager package import through negotiation initializer.",
+      "evidence": "negotiation/__init__.py:36"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Creates config/game state and applies fixed preferences for matched replications; batch seed offsets.",
+      "evidence": "196-227;390-424;1005-1012"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "launch",
+      "reason": "Shared runner invoked by actual launch scripts.",
+      "evidence": "saved launcher; E01/E10 linkage"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "role": "launch",
+      "reason": "Multi-agent seeds hashed from setting IDs; Game1 item count2.5n.",
+      "evidence": "303-306;573-579;758-876"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_configs_both_orders.sh",
+      "role": "launch",
+      "reason": "Primary configuration/Slurm producer; current seed-pairing comments require historical qualification.",
+      "evidence": "172-199"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_preferences.py",
+      "role": "test",
+      "reason": "Tests total preservation, pairwise tolerance, overcomplete warnings and reproducibility.",
+      "evidence": "140-176;446-466"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/requirements.txt",
+      "role": "support",
+      "reason": "External numerical solver dependencies NumPy/SciPy are required by generation.",
+      "evidence": "generator imports"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/selections/heterogeneous_all_index.csv",
+      "role": "data",
+      "reason": "Defines500 Game1 selected config IDs; independently read all configs and raw files for those IDs.",
+      "evidence": "game_label=game1"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/configs",
+      "role": "config",
+      "reason": "Selection rule: config_NNNN.json where ID appears in heterogeneous_all_index.csv with game_label=game1;500 independently opened. Not whole-tree proof.",
+      "evidence": "read-only verification"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/full_games123_multiagent_heterogeneous_equal_width_openrouter_repair_20260429_113848/runs",
+      "role": "data",
+      "reason": "Selection rule: config_NNNN_*/experiment_results.json for500 Game1 IDs above; all read. Also preserve corresponding logs to recover2 missing top-level tables. Not whole-tree proof.",
+      "evidence": "498 nonempty preference tables"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/scaling_experiment_20260404_064451",
+      "role": "data",
+      "reason": "Selection rule:420 individual raw result paths in E01 needed inventory, primary Game1 discussion_turns2; independently read all. Corresponding logs needed for6 missing tables. Not whole-tree proof.",
+      "evidence": "e01_primary_game1.json selected data records"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Exact historical version per run is not established; Apr25 commit570e9f3 replaced the n>=3 generator and must remain recoverable in Git history.",
+    "Six primary and two heterogeneous failed runs have empty top-level preference tables; logs must be inspected to recover original valuations.",
+    "Integer rounding changes achieved cosine; optimization failure paths can return approximate vectors.",
+    "Current generator/seed defaults do not prove historical launch behavior; preserve resolved config seeds and attempt logs.",
+    "Other cohorts (Llama,TTC,homogeneous,homogeneous-adversary,matched teams) share code but their per-file records are inventoried by assigned result agents; not independently scanned here.",
+    "Transitive provider and package dependencies beyond directly inspected initializers are covered by shared runtime audit, not claimed exhaustive here."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/history.jsonl",
+      "lines": "662,810,864",
+      "evidence": "Original user requests checked pairwise cosine accuracy, item count2.5n, and all-SLSQP requirement."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/06/30/rollout-2026-06-30T22-05-08-019f1b6c-475f-7a71-9181-ae6c17387dc2.jsonl",
+      "lines": "6444-6447",
+      "evidence": "Verified original user Game1 definition and reply distinguishing requested vs achieved cosine."
+    }
+  ],
+  "summary": "Confirmed generator chain and scanned920 raw results:912 nonempty tables have exact totals100 and expected dimensions. Maximum pairwise target error0.0165579 primary and0.0405590 heterogeneous. No supported deletion candidates."
+}

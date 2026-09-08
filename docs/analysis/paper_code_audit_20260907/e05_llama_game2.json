@@ -1,0 +1,293 @@
+{
+  "task_id": "e05_llama_game2",
+  "result": "Llama baseline Game2 replication 180 runs",
+  "paper_refs": [
+    "appendix.tex:393 tab:n2_headline_slopes",
+    "appendix.tex:438 sec:appendix_llama_results",
+    "appendix.tex:451 tab:llama_replication",
+    "appendix.tex:460 fig:appendix_llama_overall",
+    "4_analysis.tex:8"
+  ],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_appendix_llama33_baseline_configs.py",
+      "role": "launch",
+      "reason": "Generator for Game 2 grid; current cap 16384 differs from stored 10500",
+      "evidence": "scripts/generate_appendix_llama33_baseline_configs.py:110"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/configs/experiment_index.csv",
+      "role": "config",
+      "reason": "Exact 180 config selection index read by analysis",
+      "evidence": "scripts/analyze_appendix_llama33_baseline_500.py:269"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/configs",
+      "role": "config",
+      "reason": "Select config_0000.json through config_0179.json only: all 180 individually read and caps verified 10500; not whole-directory proof",
+      "evidence": "audit read-only validation"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/model_scale",
+      "role": "data",
+      "reason": "Select run_1_experiment_results.json at each of the 180 indexed configs' output_dir; all individually loaded. Preserve companion run_1_all_interactions.json and agent_interactions for actual prompts/provenance, but companion files not individually validated. Not whole-tree proof",
+      "evidence": "scripts/analyze_appendix_llama33_baseline_500.py:284"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/slurm/run_config.py",
+      "role": "launch",
+      "reason": "Actual generated subprocess launcher passes stored config into runner",
+      "evidence": "file:33"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/slurm/run_one.sbatch",
+      "role": "launch",
+      "reason": "CPU job and file-queue OpenRouter routing environment",
+      "evidence": "file:32"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/slurm/submit_individual.sh",
+      "role": "launch",
+      "reason": "Launches individual configs",
+      "evidence": "generator:499"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/slurm/submitted_jobs.txt",
+      "role": "provenance",
+      "reason": "Original config to job ID map; 0000=7614731",
+      "evidence": "file:1"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_game2_202605/slurm_logs/apx_l33_g2_0000_7614731.out",
+      "role": "provenance",
+      "reason": "May 2 actual command proves original 10500 cap and proxy transport",
+      "evidence": "file:1-12"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "role": "runtime",
+      "reason": "Original command entry point, imports experiment and config",
+      "evidence": "file:37"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "role": "runtime",
+      "reason": "Entry point package",
+      "evidence": "run_strong_models_experiment.py:37"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py",
+      "role": "runtime",
+      "reason": "Provider/model definitions and token overrides; current values not original snapshot",
+      "evidence": "run_strong_models_experiment.py:38"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "role": "runtime",
+      "reason": "Game and phase orchestration and result writing",
+      "evidence": "file:21-34"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py",
+      "role": "runtime",
+      "reason": "Experiment results schemas",
+      "evidence": "strong_models_experiment/experiment.py:21"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "role": "runtime",
+      "reason": "Selects provider agent classes",
+      "evidence": "file:7-22"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "role": "runtime",
+      "reason": "Negotiation phase, provider, prompt handling",
+      "evidence": "file:11-27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py",
+      "role": "runtime",
+      "reason": "Phase prompt generator imported by handlers",
+      "evidence": "strong_models_experiment/phases/phase_handlers.py:27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "role": "runtime",
+      "reason": "Preferences utilities and file manager",
+      "evidence": "strong_models_experiment/experiment.py:31"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "role": "runtime",
+      "reason": "Imported runtime experiment analyzer",
+      "evidence": "strong_models_experiment/analysis/__init__.py:3"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py",
+      "role": "runtime",
+      "reason": "Runtime qualitative metrics import",
+      "evidence": "strong_models_experiment/experiment.py:26"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py",
+      "role": "runtime",
+      "reason": "Runtime event schema import",
+      "evidence": "strong_models_experiment/experiment.py:27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "role": "runtime",
+      "reason": "Environment factory; imports all game implementations, so unrelated games not removable from this graph",
+      "evidence": "file:19-30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "role": "runtime",
+      "reason": "Game config/interface",
+      "evidence": "game_environments/__init__.py:19"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "role": "runtime",
+      "reason": "Position and weights generation, utility and game prompts",
+      "evidence": "file:371"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "role": "runtime",
+      "reason": "Eager package import even for diplomacy",
+      "evidence": "game_environments/__init__.py:27"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "role": "runtime",
+      "reason": "Eager package import even for diplomacy",
+      "evidence": "game_environments/__init__.py:29"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py",
+      "role": "runtime",
+      "reason": "Eager package import",
+      "evidence": "game_environments/__init__.py:30"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "role": "runtime",
+      "reason": "Shared agent/context exports",
+      "evidence": "strong_models_experiment/agents/agent_factory.py:7"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "role": "runtime",
+      "reason": "Provider classes and response handling",
+      "evidence": "strong_models_experiment/agents/agent_factory.py:8"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "role": "runtime",
+      "reason": "Llama OpenRouter/file queue client",
+      "evidence": "strong_models_experiment/agents/agent_factory.py:20"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py",
+      "role": "runtime",
+      "reason": "Provider key handling",
+      "evidence": "strong_models_experiment/agents/agent_factory.py:21"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py",
+      "role": "runtime",
+      "reason": "Context handling imports",
+      "evidence": "strong_models_experiment/phases/phase_handlers.py:11"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py",
+      "role": "runtime",
+      "reason": "Response JSON parsing",
+      "evidence": "negotiation/llm_agents.py:44"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "role": "runtime",
+      "reason": "Package preference exports",
+      "evidence": "negotiation/__init__.py:13"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "role": "runtime",
+      "reason": "Shared factory export",
+      "evidence": "negotiation/__init__.py:37"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_appendix_llama33_baseline_500.py",
+      "role": "analysis",
+      "reason": "Read raw indexed data and compute model means/slopes; verified direct Game2 recomputation",
+      "evidence": "file:269"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py",
+      "role": "analysis",
+      "reason": "Canonical model mapping and Elo table reader",
+      "evidence": "file:10"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/guides/chatbot_arena_elo_scores_2026_03_31_smooth_33_models.md",
+      "role": "data",
+      "reason": "Elo input for exact published slopes",
+      "evidence": "strong_models_experiment/analysis/active_model_roster.py:10"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/experiments/results/appendix_llama33_baseline_analysis_20260503/overall_by_model_game.csv",
+      "role": "analysis",
+      "reason": "Retained input to figure; Game2 slopes match independent raw read",
+      "evidence": "scripts/paper_figures/plot_appendix_llama_overall_overlay_1x3.py:19"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_appendix_llama_overall_overlay_1x3.py",
+      "role": "analysis",
+      "reason": "Original 1x3 figure renderer",
+      "evidence": "file:19-25"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/docs/appendix_llama33_baseline_experiment_spec_2026_05.md",
+      "role": "provenance",
+      "reason": "Original 500-run design and 10500 phase cap",
+      "evidence": "file:180"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty.py",
+      "role": "test",
+      "reason": "Tests Game2 generator and utility requirements",
+      "evidence": "test filename/content lookup"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_transport.py",
+      "role": "test",
+      "reason": "Transport tests relevant to proxy workflow",
+      "evidence": "test filename lookup"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Exact executed source revision not linked to every raw result; current generator and model defaults changed since original May jobs.",
+    "Original launch session not recovered conclusively; verified Slurm actual command and later historical user cohort pointer instead.",
+    "Provider proxy monitor is external/shared; its original version and complete dependency closure not verified.",
+    "No per-file global deletion classification can follow from this result alone; companion logs and failed records need global audit.",
+    "Runtime dependency inventory is verified import chain, not complete dynamic branch proof."
+  ],
+  "history": [
+    {
+      "path": "/home/jz4391/.codex/history.jsonl",
+      "lines": "1536-1537",
+      "session": "019df249-1b3f-7ce0-ba11-dbd10b3c1338",
+      "evidence": "User identifies original three Llama raw cohorts and May analysis report."
+    },
+    {
+      "path": "/home/jz4391/.codex/sessions/2026/08/02/rollout-2026-08-02T00-33-19-019fc0bf-725a-7833-a049-fa0be2ae3796.jsonl",
+      "lines": "1207,1524",
+      "evidence": "Original figure restructuring request and final rendering report manually checked."
+    }
+  ],
+  "summary": "180/180 selected raw results exist. Direct raw aggregation gives adversary slope 5.01965888168164, baseline -0.2417061297553205, gap 5.26136501143696, Pearson r .8812924312164064. Stored caps all10500, current generator16384. No removal candidates certified."
+}

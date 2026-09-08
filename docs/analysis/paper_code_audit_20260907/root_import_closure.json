@@ -1,0 +1,2143 @@
+{
+  "task_id": "root_import_closure",
+  "result": "Static local import closure cross-check of positive Python dependency inventory",
+  "paper_refs": [],
+  "needed": [
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/__init__.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py:458"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/multiagent_rating.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py:458"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_reviewer_item8_n_slope.py:82"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/__init__.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/cohort_source.py:31"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py:36"
+    },
+    {
+      "path": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py",
+      "role": "support",
+      "reason": "Local Python import dependency of an audited entry point or its import closure; conditional imports are preserved, not claimed to execute in every selected run.",
+      "evidence": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py:44"
+    }
+  ],
+  "candidates": [],
+  "unresolved": [
+    "Static imports do not resolve all runpy/importlib/subprocess paths, command-line consumers or historical revisions.",
+    "Sibling and project-root module resolution records existing candidates; conditional use is not an execution trace."
+  ],
+  "history": [],
+  "summary": "284 seed Python files; 290 closure files; 6 additional import dependencies.",
+  "syntax_errors": [],
+  "import_edges": [
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/scripts/check_empty_preferences.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_18/scripts/reconstruct.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_original_game2.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_original_game2.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/original_aug08.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_original_game2.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/original_fairness_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/rebuild_data.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/rebuild_data.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/rebuild_data.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/raw_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_endpoint_environment.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/replay_endpoint_environment.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/render_retained_values.py",
+      "line": 6,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py",
+      "line": 29,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py",
+      "line": 35,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/endpoint_producer.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_game1_gpt54_binding_team.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_game1_gpt54_team_coordination.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_22/scripts/recreate.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_22/scripts/recreate.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_22/scripts/recreate.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_22/scripts/recreate.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_22/scripts/plot_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/plot_coalition_proposed_accepted_by_game_20260823.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/plot_game1_coalition_conversion_by_family_20260823.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/recreate.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/plot_coalition_proposed_accepted_by_game_20260823.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/recreate.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/plot_game1_coalition_conversion_by_family_20260823.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/audit_inputs.py",
+      "line": 143,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_09/plot_game1_coalition_conversion_by_family_20260823.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/retained_analysis/plot_coalition_proposed_accepted_by_game_20260823.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/retained_analysis/plot_game1_coalition_conversion_by_family_20260823.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/recover_ttc_reasoning_tokens.py",
+      "line": 52,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/recover_ttc_reasoning_tokens.py",
+      "line": 52,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_reviewer_item8_n_slope.py",
+      "line": 82,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py",
+      "line": 44,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_neurips_revision_stats.py",
+      "line": 54,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/ttc_accounting.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_gpt5_nano_baseline_vs_elo_all_games.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "line": 72,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "line": 72,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "line": 77,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "line": 77,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_exploitation_vs_elo.py",
+      "line": 77,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_judge.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/context_compaction_pilot.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reviewer_item8_n_slope.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_reviewer_item8_n_slope.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 16,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_proxy_monitor.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_reasoning_token_capture.py",
+      "line": 16,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_schema.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_schema.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_schema.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_metrics.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_metrics.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_metrics.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_judge.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_judge.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_judge.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_qualitative_judge.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_private_thinking_schema.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_private_thinking_schema.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_llm_agent_diplomatic_preferences.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_llm_agent_diplomatic_preferences.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpu_llama_phase_caps.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_gpt52_effort_aliases.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game_environments.py",
+      "line": 16,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game1_gpt54_analysis_gap_sign.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_game1_gpt54_team_coordination.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game1_gpt54_analysis_gap_sign.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_game1_team_ceiling_normalization.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game12_parse_diagnostics.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 930,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_phases.py",
+      "line": 945,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_allocation_preferences.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_allocation_preferences.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_allocation_preferences.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/analysis/icml_aiwild_report_20260808/figure_09/recreate_payoff_variance_by_model.py",
+      "line": 16,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/overleaf/analysis/icml_aiwild_report_20260808/figure_09/recreate_payoff_variance.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/build_paper_experiment_data_manifest.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/build_paper_experiment_data_manifest.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/random_monoculture_control_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_preferences.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_preferences.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_preferences.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_preferences.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/multi_agent_vector_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/add_gpt54_game1_n2_matched_cells.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/extend_gpt54_game1_matched_grid.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/add_gpt54_game1_n2_matched_cells.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_gpt54_game1_coalition_pilot.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/extend_gpt54_game1_matched_grid.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_gpt54_game1_coalition_pilot.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_parallel_phases.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_refactor.py",
+      "line": 17,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_icml_heterogeneous_game1_payoff.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_03/scripts/fairshare_producer.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/render.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/plot_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/render.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/cohort_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/cohort_source.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/cohort_source.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/cohort_source.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/recompute.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_23/scripts/fairness_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260830/homogeneous_redesign/render_figure3_proposal.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260830/homogeneous_redesign/render_figure3_proposal.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/lh_review_20260830/homogeneous_redesign/render_figure3_proposal.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_02/scripts/rebuild_raw_inputs.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_02/scripts/rebuild_raw_inputs.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_02/scripts/rebuild_raw_inputs.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/scripts/verify_provenance.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/scripts/verify_provenance.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_17/scripts/verify_provenance.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_issue36_refunded_pledges.py",
+      "line": 1,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_issue30_game2_nbs.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_corrected_gini.py",
+      "line": 15,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_metrics.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_metrics.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_metrics.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_metrics.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_metrics.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py",
+      "line": 56,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/multiagent_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py",
+      "line": 56,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py",
+      "line": 458,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/visualization/visualize_nagent.py",
+      "line": 458,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/multiagent_rating.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/multiagent_rating.py",
+      "line": 208,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/multiagent_rating.py",
+      "line": 208,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "line": 29,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "line": 35,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_n2_endpoint_fairness_style_matched_drop_game2_outlier.py",
+      "line": 36,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/plot_fairshare_residual_combined.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/cofunding_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 43,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 43,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_baseline_comparison.py",
+      "line": 43,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_attempt_logs.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_29/scripts/analyze_n2_plus_multiagent_comparison.snapshot.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_29/scripts/analyze_n2_plus_multiagent_comparison.snapshot.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_29/scripts/recreate.py",
+      "line": 16,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_29/scripts/plot_figure25_heterogeneous_competition_clean.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_28/scripts/recreate.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_28/scripts/producer_snapshot.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_28/scripts/recreate.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_28/scripts/compare_assets.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_27/scripts/original_analysis_4ef9d4f.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_27/scripts/original_analysis_4ef9d4f.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/recreate.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_15/original_plot_homogeneous_adversary_baseline_vs_all_gini.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_reasoning_token_recovery.py",
+      "line": 6,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/recover_ttc_reasoning_tokens.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_accounting.py",
+      "line": 6,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/ttc_accounting.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_seed_replication.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_five_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_seed_replication.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_seed_replication_jobs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_ttc_seed_replication.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/run_ttc_native_config.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_batch_generation.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_batch_generation.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_batch_generation.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_full_games123_batch_generation.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_config.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_config.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_config.py",
+      "line": 137,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_config.py",
+      "line": 145,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 1011,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 1012,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 1012,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_cofunding_game.py",
+      "line": 1154,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty_batch_voting.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty_batch_voting.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty_batch_voting.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_diplomatic_treaty_batch_voting.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 88,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 88,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 161,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 161,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 226,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 226,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 297,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 297,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 347,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 347,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 425,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 425,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 491,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 491,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 491,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 492,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_provider_fallback.py",
+      "line": 492,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game2_context_propagation.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_prompt_clarity.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_prompt_clarity.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_prompt_clarity.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_batch_voting.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_batch_voting.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_batch_voting.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_item_allocation_batch_voting.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_majority_vote_tabulation.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 762,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_provider_key_rotation.py",
+      "line": 762,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game1_context_propagation.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_game3_context_propagation.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_transport.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_transport.py",
+      "line": 10,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_transport.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_openrouter_transport.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction_pilot.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/context_compaction_pilot.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_context_compaction.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 6,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_team_coordination.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 29,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 29,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_all_prompts_reference.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/multi_agent_vector_generator.py",
+      "line": 54,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/multi_agent_vector_generator.py",
+      "line": 56,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/model_clients.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/model_config.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_game1_gpt54_binding_team.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_game1_gpt54_team_coordination.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_11/verify_raw.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_11/recreate.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_complete_seed_panels.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_seed_replication_jobs.py",
+      "line": 155,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_seed_replication_jobs.py",
+      "line": 155,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_native_scaling_jobs.py",
+      "line": 474,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_ttc_native_scaling_jobs.py",
+      "line": 474,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/make_gemini_coalition_dialogue_slide_inline_membership.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/make_gemini_coalition_dialogue_slide.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/recreate.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/make_gemini_coalition_dialogue_slide.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/recreate.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_08/scripts/make_gemini_coalition_dialogue_slide_inline_membership.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/make_gemini_coalition_dialogue_slide_inline_membership.py",
+      "line": 12,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/paper_figures/make_gemini_coalition_dialogue_slide.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/random_monoculture_control_batch.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/random_monoculture_control_batch.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_behavior_annotation_review.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_behavior_irr.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_behavior_annotation_review.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/build_behavior_irr_sample.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_behavior_annotation_review.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/behavior_review_core.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_behavior_annotation_review.py",
+      "line": 9,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/behavior_annotation_review.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/behavior_review_core.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/behavior_annotation_review.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_negotiation_sample_viewer.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/random_monoculture_sample_viewer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/tests/test_negotiation_sample_viewer.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/components.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/multi_game_sample_viewer.py",
+      "line": 26,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/experiment_viewer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/multi_game_sample_viewer.py",
+      "line": 26,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/multi_game_sample_viewer.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/game1_sample_viewer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/multi_game_sample_viewer.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/game3_batch_viewer.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/experiment_viewer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/game3_batch_viewer.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/game2_batch_viewer.py",
+      "line": 28,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/experiment_viewer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/game2_batch_viewer.py",
+      "line": 28,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/experiment_viewer.py",
+      "line": 50,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/components.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/experiment_viewer.py",
+      "line": 50,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/ui/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_04/scripts/recreate.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_04/scripts/data_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_04/scripts/recreate.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_04/scripts/render_figure.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds_partial.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_five_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds_partial.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds_partial.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_five_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_ten_seeds.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_three_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_five_seeds.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_five_seeds.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_three_seeds.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_three_seeds.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_ttc_seed_replication.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/scripts/recreate.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_26/scripts/plot_source.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/plot_full_games123_clean_subset.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_n2_plus_multiagent_comparison.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_nash_lindahl_fairness.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/prompt_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "line": 3,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "line": 4,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py",
+      "line": 17,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/full_games123_multiagent_batch.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/recreate.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/recreate.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/analysis/figure_recreation_20260905/figure_19/recreate.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_appendix_llama33_baseline_500.py",
+      "line": 32,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_appendix_llama33_baseline_500.py",
+      "line": 32,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/analyze_appendix_llama33_baseline_500.py",
+      "line": 32,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py",
+      "line": 829,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 44,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 645,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 2969,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/model_clients.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 2969,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 2975,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py",
+      "line": 2975,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/model_config.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py",
+      "line": 217,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/random_vector_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py",
+      "line": 149,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/multi_agent_vector_generator.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "line": 13,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/preferences.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/agent_factory.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py",
+      "line": 55,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/json_repair.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py",
+      "line": 14,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/item_allocation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "line": 28,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/diplomatic_treaty.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "line": 29,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/co_funding.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py",
+      "line": 30,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/analyzer.py",
+      "line": 5,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/experiment_utils.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/context_compaction.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 11,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 18,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 19,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/base.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 26,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/prompts/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/phase_handlers.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 7,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 8,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/openrouter_client.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 20,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 490,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/agent_factory.py",
+      "line": 490,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/llm_agents.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 21,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/data_models.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 22,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 23,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/agents/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 24,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/phases/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 25,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 26,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_metrics.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 26,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/qualitative_schema.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 27,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 31,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/utils/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 34,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/game_environments/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 295,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/active_model_roster.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/experiment.py",
+      "line": 295,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/analysis/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "line": 37,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "line": 38,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/provider_key_rotation.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/run_strong_models_experiment.py",
+      "line": 39,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/negotiation/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_appendix_llama33_baseline_configs.py",
+      "line": 196,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/__init__.py"
+    },
+    {
+      "source": "/scratch/gpfs/DANQIC/jz4391/bargain/scripts/generate_appendix_llama33_baseline_configs.py",
+      "line": 196,
+      "dependency": "/scratch/gpfs/DANQIC/jz4391/bargain/strong_models_experiment/configs.py"
+    }
+  ]
+}
