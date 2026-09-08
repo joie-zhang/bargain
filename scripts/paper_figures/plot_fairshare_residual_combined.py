@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import sys
@@ -64,13 +65,17 @@ GAME_LABELS = {
     "game2": "Game 2: Diplomacy",
     "game3": "Game 3: Co-funding",
 }
-GAME_COLORS = {"game1": "#7c3aed", "game2": "#0f766e", "game3": "#f97316"}
+GAME_COLORS = {"game1": "#1f77b4", "game2": "#d62728", "game3": "#2ca02c"}
 SERIES_STYLES = {
-    "heterogeneous_agent": ("Heterogeneous agents", "#0f766e", "o", "-"),
-    "homogeneous_adversary_adversary": ("Homogeneous: adversary", "#7c3aed", "s", "-"),
-    "homogeneous_adversary_baseline": ("Homogeneous: baseline", "#7c3aed", "D", "--"),
-    "homogeneous_control": ("Homogeneous control", "#f97316", "^", ":"),
+    "heterogeneous_agent": ("Heterogeneous", "#17becf", "o", "-"),
+    "homogeneous_adversary_adversary": ("Homogeneous adversary", "#9467bd", "s", "-"),
+    "homogeneous_adversary_baseline": ("Homogeneous: baseline", "#9467bd", "D", "--"),
+    "homogeneous_control": ("Homogeneous control", "#ff7f0e", "^", ":"),
 }
+MAIN_SERIES_KEYS = (
+    "heterogeneous_agent",
+    "homogeneous_adversary_adversary",
+)
 
 
 def sem(values: pd.Series) -> float:
@@ -290,7 +295,8 @@ def draw_figure(bilateral: pd.DataFrame, multiagent: pd.DataFrame) -> plt.Figure
     left.legend(fontsize=9, frameon=True, loc="lower right")
 
     right = axes[1]
-    for series_key, (label, color, marker, linestyle) in SERIES_STYLES.items():
+    for series_key in MAIN_SERIES_KEYS:
+        label, color, marker, linestyle = SERIES_STYLES[series_key]
         sub = multiagent[multiagent["series_key"].eq(series_key)].sort_values("reference_elo")
         if sub.empty:
             continue
@@ -326,6 +332,7 @@ def write_outputs(
     multiagent_rows: pd.DataFrame,
     multiagent_summary: pd.DataFrame,
     provenance: dict[str, Any],
+    out_dirs: tuple[Path, ...] = OUT_DIRS,
 ) -> None:
     combined_summary = pd.concat(
         [
@@ -335,7 +342,7 @@ def write_outputs(
         ignore_index=True,
         sort=False,
     )
-    for out_dir in OUT_DIRS:
+    for out_dir in out_dirs:
         out_dir.mkdir(parents=True, exist_ok=True)
         figure.savefig(out_dir / OUT_NAME, dpi=220, bbox_inches="tight")
         multiagent_rows.to_csv(out_dir / SOURCE_ROWS_NAME, index=False)
@@ -344,7 +351,18 @@ def write_outputs(
         print(f"Wrote {out_dir / OUT_NAME}")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--icml-only",
+        action="store_true",
+        help="Write only the ICML paper asset and its supporting files.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     bilateral_rows = load_bilateral_rows()
     multiagent_agents, provenance = load_multiagent_agent_rows()
     multiagent_rows = build_multiagent_series(multiagent_agents)
@@ -374,7 +392,15 @@ def main() -> None:
         }
     )
     figure = draw_figure(bilateral_summary, multiagent_summary)
-    write_outputs(figure, bilateral_summary, multiagent_rows, multiagent_summary, provenance)
+    out_dirs = (OUT_DIRS[0],) if args.icml_only else OUT_DIRS
+    write_outputs(
+        figure,
+        bilateral_summary,
+        multiagent_rows,
+        multiagent_summary,
+        provenance,
+        out_dirs=out_dirs,
+    )
     plt.close(figure)
 
 
