@@ -37,6 +37,8 @@ round. Utilities can be time-discounted by `gamma_discount`.
 
 ## Repository Map
 
+Tracked files and directories:
+
 ```text
 .
 |-- run_strong_models_experiment.py
@@ -52,12 +54,6 @@ round. Utilities can be time-discounted by `gamma_discount`.
 |-- scripts/
 |   Batch generation, Slurm submission, monitoring, plotting, and paper
 |   analysis scripts. Dedicated paper renderers are in scripts/paper_figures/.
-|-- experiments/results/
-|   Large generated result trees. Usually not something to edit by hand.
-|-- analysis/
-|   Derived CSVs, reports, and figure-generation outputs.
-|-- overleaf/
-|   The current paper roots and their paper-facing graphics.
 |-- ui/
 |   Streamlit viewers for individual runs, batches, and multi-game comparison.
 |-- docs/
@@ -98,8 +94,9 @@ Download the saved configurations, results, transcripts, and prompts through the
 python scripts/download_review_transcripts.py --all --download
 ```
 
-Files go into `experiments/results/`. No Hugging Face account or model API key
-is needed. The downloader checks file hashes and skips identical local files.
+Files go into `experiments/results/`, which is created locally and excluded from
+Git. No Hugging Face account or model API key is needed. The downloader checks
+file hashes and skips identical local files.
 Use the UI commands below to inspect the downloaded runs.
 
 ## Credentials and Cluster Networking
@@ -268,7 +265,7 @@ Do not start or stop it from a batch workflow.
 
 ### 2. Run the GPT-5 Nano Bilateral Batches
 
-These dated roots contain the exact paper configs.
+After downloading the released data, these dated roots contain the paper configs.
 
 ```bash
 GAME1_ROOT=experiments/results/scaling_experiment_20260404_064451
@@ -600,16 +597,6 @@ python scripts/analyze_n2_baseline_comparison.py
 python scripts/analyze_n2_plus_multiagent_comparison.py
 python scripts/paper_figures/verify_all.py
 ```
-
-Important derived directories:
-
-- `analysis/neurips_revision_20260504/`: normalized payoff tables, regressions,
-  bootstrap intervals, TTC summaries, and paper-facing copied plots.
-- `analysis/nash_lindahl_fairness_20260505/`: NBS/Lindahl recomputation and
-  benchmark-relative exploitation summaries.
-- `analysis/full_games123_*`: multi-agent aggregate CSVs and plots.
-- `scripts/paper_figures/`: dedicated renderers and small fixed rendering assets.
-- `overleaf/*/graphics/`: paper-root-specific figure exports.
 
 The active model roster and Elo helpers live in:
 

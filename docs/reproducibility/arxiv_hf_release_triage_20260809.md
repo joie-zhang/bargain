@@ -22,7 +22,6 @@ effect on any paper figure, table, or number.
 | `strong_models_experiment/` | Orchestrator + phase handlers |
 | `game_environments/` | Games 1/2/3 + metrics |
 | `negotiation/` | LLM agents, OpenRouter client, context compaction |
-| `utils/` | Shared helpers |
 | `tests/` (40 files) | Behavioral tests for the engine |
 | `requirements.txt`, `pytest.ini`, `LICENSE`, `README.md`, `CLAUDE.md` | Release metadata |
 
