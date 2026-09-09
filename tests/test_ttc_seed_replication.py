@@ -4,10 +4,12 @@ import copy
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from scripts.analyze_ttc_five_seeds import (
+from scripts.ttc_analysis_common import (
     endpoint_across_seed_ci,
     seed_level_ci_table,
+    write_report,
 )
 from scripts.generate_ttc_seed_replication_jobs import (
     ARCHIVED_CAP,
@@ -37,12 +39,13 @@ def test_legacy_default_still_migrates() -> None:
     assert resolve_max_tokens_per_phase({"max_tokens_per_phase": ARCHIVED_CAP}) == 16_384
 
 
-def test_all_216_configs_change_only_seed_path_and_metadata(tmp_path: Path) -> None:
+@pytest.mark.parametrize("seed", [42, 526])
+def test_all_216_configs_change_only_seed_path_and_metadata(tmp_path: Path, seed: int) -> None:
     source_configs = load_source_configs(SOURCE_ROOT)
-    clones = [clone_config(source, tmp_path, 526) for source in source_configs]
-    validate_configs(source_configs, clones, 526)
+    clones = [clone_config(source, tmp_path, seed) for source in source_configs]
+    validate_configs(source_configs, clones, seed)
     assert len(clones) == 216
-    assert {clone["random_seed"] for clone in clones} == {526}
+    assert {clone["random_seed"] for clone in clones} == {seed}
     assert {clone["max_tokens_per_phase"] for clone in clones} == {ARCHIVED_CAP}
     assert len({clone["output_dir"] for clone in clones}) == 216
 
@@ -60,9 +63,10 @@ def test_validation_rejects_scientific_change(tmp_path: Path) -> None:
         raise AssertionError("Validation accepted a changed scientific parameter")
 
 
-def test_five_seed_ci_uses_seed_level_estimates() -> None:
+@pytest.mark.parametrize("seed_count, expected_mean", [(3, 11.0), (5, 12.0), (10, 14.5)])
+def test_seed_ci_uses_seed_level_estimates(seed_count: int, expected_mean: float) -> None:
     rows = []
-    seeds = [42, 984, 526, 423, 1024]
+    seeds = [42, 984, 526, 423, 1024, 128, 256, 612, 2048, 4096][:seed_count]
     families = ["gpt-5", "claude-sonnet-4-6", "gemini-3-flash"]
     providers = ["OpenAI", "Anthropic", "Google"]
     levels = {
@@ -93,10 +97,10 @@ def test_five_seed_ci_uses_seed_level_estimates() -> None:
     first = result[
         result["family"].eq("gpt-5") & result["level_index"].eq(0)
     ].iloc[0]
-    assert first["seed_count"] == 5
-    assert first["target_utility_mean"] == 12.0
-    assert first["target_utility_seed_ci95_low"] < 12.0
-    assert first["target_utility_seed_ci95_high"] > 12.0
+    assert first["seed_count"] == seed_count
+    assert first["target_utility_mean"] == expected_mean
+    assert first["target_utility_seed_ci95_low"] < expected_mean
+    assert first["target_utility_seed_ci95_high"] > expected_mean
 
 
 def test_endpoint_ci_counts_seed_directions() -> None:
@@ -117,3 +121,24 @@ def test_endpoint_ci_counts_seed_directions() -> None:
     assert set(result["positive_target_endpoint_seeds"]) == {4}
     assert set(result["negative_target_endpoint_seeds"]) == {1}
     assert set(result["target_utility_endpoint_delta_mean_across_seeds"]) == {1.8}
+
+
+def test_ten_seed_report_describes_current_sample(tmp_path: Path) -> None:
+    seeds = [42, 984, 526, 423, 1024, 128, 256, 612, 2048, 4096]
+    rows = pd.DataFrame(
+        {"seed": [seed for seed in seeds for _ in range(216)], "consensus": True}
+    )
+    output = tmp_path / "report.md"
+    write_report(
+        output,
+        rows,
+        pd.DataFrame(columns=["seed", "family"]),
+        pd.DataFrame(),
+        {"pairwise_seed_agreement": {}},
+        seeds,
+    )
+    report = output.read_text()
+    assert "df=9" in report
+    assert "all 2,160 runs" in report
+    assert "df=4" not in report
+    assert "1,080" not in report

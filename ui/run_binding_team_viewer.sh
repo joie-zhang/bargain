@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="/scratch/gpfs/DANQIC/jz4391/bargain"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESULTS_ROOT="${RESULTS_ROOT:-$PROJECT_ROOT/experiments/results/game1_gpt54_binding_team_v3_20260816_093310}"
 PORT="${PORT:-8002}"
 

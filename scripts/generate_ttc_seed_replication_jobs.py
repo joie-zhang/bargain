@@ -114,7 +114,9 @@ def validate_configs(
     if len(source_list) != EXPECTED_CONFIGS or len(clone_list) != EXPECTED_CONFIGS:
         raise RuntimeError("Replication must contain exactly 216 configs")
 
-    allowed_changed = {"random_seed", "seed_label", "output_dir"}
+    allowed_changed = {"output_dir"}
+    if seed != ARCHIVED_SEED:
+        allowed_changed.update({"random_seed", "seed_label"})
     allowed_added = {
         "preserve_config_max_tokens_per_phase",
         "replication_source_seed",

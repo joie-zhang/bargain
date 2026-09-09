@@ -13,7 +13,7 @@ const path = require("node:path");
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
     const base = process.env.BARGAIN_README_TEST_URL || "http://127.0.0.1:8005";
-    const source = fs.readFileSync(path.resolve(__dirname,"../README2.md"),"utf8");
+    const source = fs.readFileSync(path.resolve(__dirname,"../README-old.md"),"utf8");
     await page.goto(base);
     await page.locator('#document[aria-busy="false"]').waitFor();
     assert.equal(await page.locator("#error").isHidden(),true);

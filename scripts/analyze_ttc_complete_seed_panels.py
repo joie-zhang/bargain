@@ -18,7 +18,7 @@ from scipy.stats import ttest_1samp
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import analyze_ttc_seed_replication as base  # noqa: E402
+from scripts import ttc_analysis_common as ttc  # noqa: E402
 
 
 SEEDS = [42, 984, 526, 423, 1024, 128, 256, 612, 2048, 4096]
@@ -74,9 +74,9 @@ def holm_adjust(values: list[float]) -> list[float]:
 
 
 def collect_root(run_root: Path, seed: int) -> pd.DataFrame:
-    rows = base.collect_run_rows(run_root, seed)
+    rows = ttc.collect_run_rows(run_root, seed)
     lineage: list[dict[str, Any]] = []
-    for config_path in base.config_paths(run_root):
+    for config_path in ttc.config_paths(run_root):
         config = json.loads(config_path.read_text(encoding="utf-8"))
         output_dir = resolve_output_dir(config["output_dir"])
         result_path = output_dir / "run_1_experiment_results.json"
@@ -161,9 +161,9 @@ def retain_complete_panels(
                 retained["family"].eq(family), "seed"
             ].unique()
         )
-        for family in base.FAMILY_ORDER
+        for family in ttc.FAMILY_ORDER
     }
-    expected = {family: sorted(SEEDS) for family in base.FAMILY_ORDER}
+    expected = {family: sorted(SEEDS) for family in ttc.FAMILY_ORDER}
     if seeds_by_family != expected or len(retained) != 2160:
         raise RuntimeError(
             f"Unexpected complete panels: seeds={seeds_by_family}, rows={len(retained)}"
@@ -220,8 +220,8 @@ def summarize_by_seed(rows: pd.DataFrame) -> pd.DataFrame:
 def add_interval(row: dict[str, Any], metric: str, values: pd.Series) -> None:
     values = values.astype(float)
     mean = float(values.mean())
-    standard_error = base.sem(values)
-    low, high = base.ci95(mean, standard_error, len(values))
+    standard_error = ttc.sem(values)
+    low, high = ttc.ci95(mean, standard_error, len(values))
     row[f"{metric}_mean"] = mean
     row[f"{metric}_seed_sem"] = standard_error
     row[f"{metric}_seed_ci95_low"] = low
@@ -265,7 +265,7 @@ def endpoint_summary(by_seed: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
     }
     per_seed_rows: list[dict[str, Any]] = []
     summary_rows: list[dict[str, Any]] = []
-    for family in base.FAMILY_ORDER:
+    for family in ttc.FAMILY_ORDER:
         group = by_seed[by_seed["family"].eq(family)]
         low = int(group["level_index"].min())
         high = int(group["level_index"].max())
@@ -292,8 +292,8 @@ def endpoint_summary(by_seed: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
         for metric in metrics:
             values = seed_frame[f"{metric}_endpoint_delta"].astype(float)
             mean = float(values.mean())
-            standard_error = base.sem(values)
-            low_ci, high_ci = base.ci95(mean, standard_error, len(values))
+            standard_error = ttc.sem(values)
+            low_ci, high_ci = ttc.ci95(mean, standard_error, len(values))
             result[f"{metric}_endpoint_delta_mean"] = mean
             result[f"{metric}_endpoint_delta_seed_sem"] = standard_error
             result[f"{metric}_endpoint_delta_seed_ci95_low"] = low_ci
@@ -317,7 +317,7 @@ def main() -> int:
     roots = {seed: getattr(args, f"seed{seed}_root").resolve() for seed in SEEDS}
     data = {seed: collect_root(roots[seed], seed) for seed in SEEDS}
     all_rows = pd.concat([data[seed] for seed in SEEDS], ignore_index=True)
-    base.validate_grid(all_rows, SEEDS, allow_incomplete=False)
+    ttc.validate_grid(all_rows, SEEDS, allow_incomplete=False)
     if len(all_rows) != 2160:
         raise RuntimeError(f"Expected 2,160 terminal TTC results, found {len(all_rows)}")
 

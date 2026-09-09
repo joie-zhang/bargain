@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from scripts import context_compaction_pilot as pilot
+from scripts.rebuttal_ablations import context_compaction_pilot as pilot
 
 
 def test_pilot_grid_has_25_exact_pairs(tmp_path: Path) -> None:

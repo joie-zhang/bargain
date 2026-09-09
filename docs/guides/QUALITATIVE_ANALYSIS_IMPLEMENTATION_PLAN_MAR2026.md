@@ -157,14 +157,14 @@ Acceptance criteria:
 For existing co-funding runs (without rerunning experiments):
 
 ```bash
-python scripts/retained_analysis/backfill_qualitative_metrics.py \
+python scripts/historical_support/backfill_qualitative_metrics.py \
   --results-dir experiments/results/cofunding_latest
 ```
 
 Optional with event payloads:
 
 ```bash
-python scripts/retained_analysis/backfill_qualitative_metrics.py \
+python scripts/historical_support/backfill_qualitative_metrics.py \
   --results-dir experiments/results/cofunding_latest \
   --include-events
 ```

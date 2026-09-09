@@ -26,8 +26,9 @@ python scripts/analyze_n2_plus_multiagent_comparison.py
 python scripts/paper_figures/verify_all.py
 ```
 
-Temporary qualitative and exploratory analyses are in
-`scripts/retained_analysis/`. Read its README before you run those scripts.
+Annotation and coalition reproduction scripts are in
+`scripts/reproduction_scripts/`. Older preparation, repair, and report scripts
+are in `scripts/historical_support/`. Read each directory’s README before use.
 
 Inspect these output directories:
 

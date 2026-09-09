@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.analyze_reviewer_item8_n_slope import (
+from scripts.rebuttal_ablations.analyze_reviewer_item8_n_slope import (
     linear_slope_per_100,
     model_mean_slope,
     within_run_slope,

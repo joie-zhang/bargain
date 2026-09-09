@@ -15,9 +15,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts import analyze_ttc_five_seeds as shared
-from scripts import analyze_ttc_seed_replication as base
-from scripts import analyze_ttc_three_seeds as three
+from scripts import ttc_analysis_common as ttc
 
 
 HISTORICAL_ROOTS = {
@@ -54,30 +52,6 @@ HISTORICAL_ROOTS = {
 }
 NEW_SEEDS = [128, 256, 612, 2048, 4096]
 SEEDS = [42, 984, 526, 423, 1024, *NEW_SEEDS]
-SEED_COLORS = {
-    42: "#64748b",
-    984: "#2563eb",
-    526: "#dc2626",
-    423: "#059669",
-    1024: "#9333ea",
-    128: "#ea580c",
-    256: "#0891b2",
-    612: "#92400e",
-    2048: "#db2777",
-    4096: "#65a30d",
-}
-SEED_MARKERS = {
-    42: "s",
-    984: "o",
-    526: "^",
-    423: "D",
-    1024: "P",
-    128: "v",
-    256: "X",
-    612: "*",
-    2048: "h",
-    4096: "<",
-}
 
 
 def sha256(path: Path) -> str:
@@ -108,21 +82,16 @@ def main() -> int:
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    shared.SEED_COLORS.clear()
-    shared.SEED_COLORS.update(SEED_COLORS)
-    shared.SEED_MARKERS.clear()
-    shared.SEED_MARKERS.update(SEED_MARKERS)
-
     data = {
-        seed: base.collect_run_rows(root, seed) for seed, root in roots.items()
+        seed: ttc.collect_run_rows(root, seed) for seed, root in roots.items()
     }
     rows = pd.concat([data[seed] for seed in SEEDS], ignore_index=True)
-    base.validate_grid(rows, SEEDS, allow_incomplete=False)
-    cell, by_seed, combined = base.summarize(rows)
-    endpoints = three.endpoint_table(cell, SEEDS)
-    agreement = three.agreement_summary(by_seed, endpoints, SEEDS)
-    seed_ci = shared.seed_level_ci_table(by_seed, SEEDS)
-    endpoint_seed_ci = shared.endpoint_across_seed_ci(endpoints, SEEDS)
+    ttc.validate_grid(rows, SEEDS, allow_incomplete=False)
+    cell, by_seed, combined = ttc.summarize(rows)
+    endpoints = ttc.endpoint_table(cell, SEEDS)
+    agreement = ttc.agreement_summary(by_seed, endpoints, SEEDS)
+    seed_ci = ttc.seed_level_ci_table(by_seed, SEEDS)
+    endpoint_seed_ci = ttc.endpoint_across_seed_ci(endpoints, SEEDS)
 
     rows.to_csv(output_dir / "run_level_results_all_ten.csv", index=False)
     cell.to_csv(output_dir / "game_cell_seed_summary_all_ten.csv", index=False)
@@ -141,21 +110,21 @@ def main() -> int:
         json.dumps(agreement, indent=2) + "\n", encoding="utf-8"
     )
 
-    shared.plot_individual_seeds(
+    ttc.plot_individual_seeds(
         by_seed,
         output_dir / "target_payoff_ten_seed_comparison.png",
         "target_utility",
         "Mean target payoff",
         SEEDS,
     )
-    shared.plot_individual_seeds(
+    ttc.plot_individual_seeds(
         by_seed,
         output_dir / "utility_gap_ten_seed_comparison.png",
         "utility_gap",
         "Mean target − baseline payoff",
         SEEDS,
     )
-    shared.plot_across_seed_ci(
+    ttc.plot_across_seed_ci(
         by_seed,
         seed_ci,
         output_dir / "target_payoff_across_seed_mean_ci95_ten.png",
@@ -163,7 +132,7 @@ def main() -> int:
         "Mean target payoff",
         SEEDS,
     )
-    shared.plot_across_seed_ci(
+    ttc.plot_across_seed_ci(
         by_seed,
         seed_ci,
         output_dir / "utility_gap_across_seed_mean_ci95_ten.png",
@@ -171,34 +140,34 @@ def main() -> int:
         "Mean target − baseline payoff",
         SEEDS,
     )
-    shared.plot_endpoint_ci(
+    ttc.plot_endpoint_ci(
         endpoints,
         endpoint_seed_ci,
         output_dir / "target_payoff_endpoint_delta_across_ten_seeds.png",
         SEEDS,
     )
-    base.plot_combined(
+    ttc.plot_combined(
         combined,
         output_dir / "target_payoff_all_ten_seeds_pooled.png",
         "10 seeds (2,160 runs)",
     )
     for seed in NEW_SEEDS:
-        base.plot_target_and_baseline(
+        ttc.plot_target_and_baseline(
             by_seed[by_seed["seed"].eq(seed)],
             output_dir / f"seed{seed}_target_and_baseline_by_effort.png",
             f"Seed {seed} (216 runs)",
         )
-    base.plot_target_and_baseline(
+    ttc.plot_target_and_baseline(
         combined,
         output_dir / "combined_target_and_baseline_all_ten.png",
         "10 seeds (2,160 runs)",
     )
-    shared.plot_game_stratified(
+    ttc.plot_game_stratified(
         cell,
         output_dir / "target_payoff_by_game_ten_seeds.png",
         SEEDS,
     )
-    shared.write_report(
+    ttc.write_report(
         output_dir / "comparison_report_all_ten.md",
         rows,
         endpoints,
@@ -227,8 +196,8 @@ def main() -> int:
                 str(key): int(value)
                 for key, value in seed_df.groupby("order").size().to_dict().items()
             },
-            "saved_result_cap_counts": base.saved_result_caps(roots[seed]),
-            "cap_recovery_config_ids": shared.recovery_ids(roots[seed]),
+            "saved_result_cap_counts": ttc.saved_result_caps(roots[seed]),
+            "cap_recovery_config_ids": ttc.recovery_ids(roots[seed]),
         }
     final_audit = {
         "expected_seeds": SEEDS,
