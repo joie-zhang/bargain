@@ -1,4 +1,4 @@
-# Scaling Laws for Strategic Interactions
+# Scaling Capabilities and Competition in Strategic Interactions
 
 This repository studies how LLM agent capability, group size, and strategic
 competition shape bargaining outcomes. The current codebase supports three
