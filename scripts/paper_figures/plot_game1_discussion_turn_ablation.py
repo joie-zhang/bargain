@@ -25,7 +25,7 @@ from matplotlib.ticker import MultipleLocator
 
 ROOT = Path(__file__).resolve().parents[2]
 INPUT_CSV = ROOT / "experiments/results/n2_baseline_comparison_analysis_20260505/all_runs_with_metrics.csv"
-OUTPUT_DIR = ROOT / "overleaf/icml_aiwild_template/graphics/n2_gpt5_nano"
+OUTPUT_DIR = ROOT / "overleaf/archived/icml_aiwild_template/graphics/n2_gpt5_nano"
 OUTPUT_PNG = OUTPUT_DIR / "game1_discussion_turn_ablation.png"
 OUTPUT_SUMMARY = OUTPUT_DIR / "game1_discussion_turn_ablation_summary.csv"
 PROVENANCE_PATH = OUTPUT_PNG.with_name("game1_discussion_turn_ablation_provenance.json")
@@ -169,7 +169,7 @@ def draw_plot(ax: plt.Axes, means: pd.DataFrame) -> dict[int, float]:
             zorder=4,
         )
 
-    ax.set_xlabel("Adversary Elo", fontsize=18, labelpad=6)
+    ax.set_xlabel("Elo", fontsize=18, labelpad=6)
     ax.set_ylabel("Adversary payoff", fontsize=18, labelpad=8)
     ax.tick_params(axis="both", labelsize=14, length=4.5, width=0.8)
     ax.grid(True, color="#d1d5db", alpha=0.52, linewidth=0.75)
