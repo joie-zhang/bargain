@@ -1,8 +1,10 @@
 # Negotiation transcript viewer
 
 The public transcript explorer covers all three games in one interface.
-The game-specific viewers also provide allocation, voting, and funding displays;
-see the UI commands in [the README](../../README2.md#ui-viewers).
+It reads the released paper results downloaded with the
+[README instructions](../../README.md#inspect-released-results).
+For new experiments, use the [historical runner](../../README.md#run-an-experiment)
+and inspect its [saved result files](../reproduction.md#read-result-files).
 
 ## Install and start
 
@@ -61,3 +63,35 @@ transcript JSON and the visible run index as CSV.
 
 The separate human annotation review interface remains available for the
 inter-rater agreement workflow.
+
+## Game-specific viewers
+
+These viewers provide allocation, voting, and funding displays for paper-format
+results. Activate the environment with the viewer dependencies installed.
+
+For Game 2 and Game 3 trajectories:
+
+```bash
+python -m streamlit run "$BARGAIN_ROOT/ui/experiment_viewer.py" \
+  --server.address 127.0.0.1 --server.port 8501 --server.headless true
+```
+
+For coordinated-team transcripts:
+
+```bash
+bash "$BARGAIN_ROOT/ui/run_binding_team_viewer.sh"
+```
+
+The Game 2 and Game 3 command uses port `8501`.
+The team launcher uses the checkout's `.venv`, the saved team batch, and port
+`8002` by default; set `RESULTS_ROOT` or `PORT` to select another collection or port.
+Use the selected port in the browser address and SSH tunnel.
+Run one viewer per port.
+
+Other viewers are available for specific collections:
+
+- [Multi-game samples](../../ui/multi_game_sample_viewer.py)
+- [Game 1 samples](../../ui/game1_sample_viewer.py)
+- [Game 2 batches](../../ui/game2_batch_viewer.py)
+- [Game 3 batches](../../ui/game3_batch_viewer.py)
+- [Random-monoculture samples](../../ui/random_monoculture_sample_viewer.py)

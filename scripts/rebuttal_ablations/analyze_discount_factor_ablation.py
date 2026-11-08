@@ -600,20 +600,22 @@ def scaling_summary(frame: pd.DataFrame, previous: pd.DataFrame) -> pd.DataFrame
     return pd.DataFrame(records)
 
 
-def plot_scaling(frame: pd.DataFrame, previous: pd.DataFrame, output: Path) -> None:
-    specs = [
-        ("adversary_utility", "Adversary realized utility"),
-        ("allocation_adversary_utility", "Adversary allocation utility"),
-    ]
-    series = [
-        ("New γ=0.5", frame[frame.gamma_discount == 0.5], GAMMA_COLORS[0.5], "-"),
-        ("New γ=0.9", frame[frame.gamma_discount == 0.9], GAMMA_COLORS[0.9], "-"),
-        ("New γ=1.0", frame[frame.gamma_discount == 1.0], GAMMA_COLORS[1.0], "-"),
-        ("Previous γ=0.9", previous, "#6b7280", "--"),
-    ]
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.8))
-    for ax, (metric, title) in zip(axes, specs, strict=True):
-        for label, subset, color, linestyle in series:
+def plot_scaling(frame: pd.DataFrame, output: Path) -> None:
+    metric = "adversary_utility"
+    with plt.rc_context({
+        "font.family": "DejaVu Sans",
+        "axes.labelsize": 20,
+        "xtick.labelsize": 16,
+        "ytick.labelsize": 16,
+        "legend.fontsize": 14,
+        "axes.linewidth": 1.1,
+        "xtick.major.width": 1.1,
+        "ytick.major.width": 1.1,
+    }):
+        fig, ax = plt.subplots(figsize=(7.4, 5.1))
+        for gamma in GAMMAS:
+            subset = frame[frame.gamma_discount == gamma]
+            color = GAMMA_COLORS[gamma]
             means = (
                 subset.groupby("adversary_model", as_index=False)[metric]
                 .mean()
@@ -624,24 +626,24 @@ def plot_scaling(frame: pd.DataFrame, previous: pd.DataFrame, output: Path) -> N
             x = means.elo.to_numpy(dtype=float)
             y = means[metric].to_numpy(dtype=float)
             slope, intercept = np.polyfit(x, y, 1)
-            ax.scatter(x, y, color=color, alpha=0.82, s=35)
+            ax.scatter(x, y, color=color, alpha=0.16, s=35, edgecolors="none", zorder=2)
             ax.plot(
                 x,
                 slope * x + intercept,
                 color=color,
-                linestyle=linestyle,
-                linewidth=2,
-                label=f"{label} ({slope * 100:+.1f}/100 Elo)",
+                linewidth=2.6,
+                label=f"γ={gamma:.1f} ({slope * 100:+.1f}/100 Elo)",
+                zorder=3,
             )
-        ax.set_title(title)
-        ax.set_xlabel("Target-model Arena Elo")
-        ax.set_ylabel("Mean utility")
-        ax.grid(alpha=0.25)
-        ax.legend(fontsize=9)
-    fig.suptitle("Strategic-performance scaling with and without time discount", fontsize=15)
-    fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(output, dpi=220, bbox_inches="tight")
-    plt.close(fig)
+        ax.set_xlabel("Elo")
+        ax.set_ylabel("Adversary payoff")
+        ax.set_axisbelow(True)
+        ax.grid(color="#D1D5DB", alpha=0.52, linewidth=0.75)
+        ax.legend(loc="upper left", frameon=False)
+        fig.tight_layout(pad=0.3)
+        fig.savefig(output, dpi=300, bbox_inches="tight", pad_inches=0.04)
+        fig.savefig(output.with_suffix(".pdf"), bbox_inches="tight", pad_inches=0.04)
+        plt.close(fig)
 
 
 def fmt(value: float, digits: int = 2) -> str:
@@ -790,7 +792,7 @@ def write_report(
             "- `gamma_by_competition.png`: effects across competition levels.",
             "- `gamma_round_distribution.png`: negotiation timing.",
             "- `replication_vs_previous.png`: matched new versus previous γ=0.9 controls.",
-            "- `gamma_scaling_vs_elo.png`: scaling slopes for all three conditions and previous controls.",
+            "- `gamma_scaling_vs_elo.png` and `.pdf`: adversary utility versus Elo for the three discount factors.",
             "",
             "## Machine-readable outputs",
             "",
@@ -852,7 +854,7 @@ def main() -> int:
     plot_by_competition(frame, output_dir / "gamma_by_competition.png")
     plot_round_distribution(frame, output_dir / "gamma_round_distribution.png")
     plot_replication(replication, output_dir / "replication_vs_previous.png")
-    plot_scaling(frame, previous, output_dir / "gamma_scaling_vs_elo.png")
+    plot_scaling(frame, output_dir / "gamma_scaling_vs_elo.png")
     if not paired.empty:
         paired.to_csv(output_dir / "paired_gamma_differences.csv", index=False)
         plot_model_effects(paired, output_dir / "gamma_effect_by_model.png")
