@@ -36,6 +36,59 @@ only when you intend to replace the saved files.
 | `plot_icml_homogeneous_adversary_main_panels.py` | ICML homogeneous-adversary panels (`F035`) |
 | `plot_homogeneous_adversary_baseline_vs_all_gini.py` | NeurIPS homogeneous-adversary Gini panel (`N009`) |
 | `plot_role_payoff_with_within_run_variance_bars.py` | NeurIPS role-payoff panel (`N010`) |
+| `plot_figure9_absolute_payoffs.py` | Matched team payoffs and continuous percentage of maximum payoff |
+| `plot_figure9_actual_optimality.py` | Observed frequency of maximum Nano-team payoff in both conditions |
+
+## Matched team payoff and optimality figures
+
+These two scripts recompute metrics from the 100 saved matched pairs, including
+the original results, configurations, interactions, control lineage, and batch
+manifest.
+They verify utilities against allocations and preferences, check control hashes,
+and record hashes for all inputs.
+Neither script needs an old analysis CSV, an earlier plotting script, a paper
+PDF, or an Overleaf checkout.
+
+From an activated environment with the analysis dependencies installed, run:
+
+```bash
+TEAM_ROOT="$BARGAIN_ROOT/experiments/results/game1_gpt54_binding_team_v3_20260816_093310"
+python "$BARGAIN_ROOT/scripts/paper_figures/plot_figure9_absolute_payoffs.py" \
+  --results-root "$TEAM_ROOT" --data-root "$BARGAIN_ROOT/experiments/results" \
+  --maximum-original-style \
+  --output-dir "$BARGAIN_ROOT/analysis/figure9_payoff_recomputed"
+python "$BARGAIN_ROOT/scripts/paper_figures/plot_figure9_actual_optimality.py" \
+  --results-root "$TEAM_ROOT" --data-root "$BARGAIN_ROOT/experiments/results" \
+  --output-dir "$BARGAIN_ROOT/analysis/figure9_optimality_recomputed"
+```
+
+Set `BARGAIN_ROOT` to the absolute checkout path as in the main README.
+Use a new output directory for each analysis.
+The saved configurations also reference historical control batches; all these
+inputs must be present, with the released directory structure retained.
+`--data-root` explicitly relocates the part of each saved path after
+`experiments/results/` to that directory without changing the saved configuration.
+Without this option, the scripts use the paths in the saved configurations.
+Missing inputs or failed checks stop the analysis; no saved plot or table is
+substituted.
+
+The two metrics answer different questions:
+
+- Payoff percentage measures how much of the maximum each outcome attains.
+- Exact optimality counts runs whose discounted team payoff equals the maximum
+  round-one team payoff, within an absolute tolerance of `1e-8`.
+
+Both optimality curves use observed outcomes.
+The older optimality renderer drew the uncoordinated curve at zero, but the
+saved cohort attains the maximum in 4 of 20 runs at each group size (20%).
+The coordinated counts are 4, 19, 11, 10, and 9 of 20 for group sizes 2, 4, 6, 8,
+and 10.
+The current paper's continuous payoff figure is a different metric and is not
+replaced by either command.
+
+The scripts write PDF and PNG plots, run-level CSVs, summaries, captions, and
+provenance JSON files to the selected analysis directory.
+They are not yet included in the older `verify_all.py` manifest.
 
 ## Canonical Inputs
 

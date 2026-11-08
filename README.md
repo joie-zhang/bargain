@@ -11,13 +11,13 @@ take a larger share, or both.
 | I want to... | Start here | Requirements |
 | --- | --- | --- |
 | Read saved negotiations | [Inspect released results](#inspect-released-results) | Python and internet access for the download; no model API key |
-| Run a small new experiment | [Run an experiment](#run-an-experiment) | Python, a model API key, and direct internet access |
+| Run a new experiment with the paper runner | [Run an experiment](#run-an-experiment) | Python and access to the selected model providers |
 | Analyze or reproduce the paper | [Reproduce the paper](#reproduce-the-paper) | Released data for analysis; provider access and Slurm for the documented batches |
 | Change or test the code | [Development](#development) | A checkout and the test dependencies |
 
 ## Set up Python
 
-Use **Python 3.12 or later**. The experiment launcher supports Linux and macOS.
+Use **Python 3.12 or later**.
 Replace the path below with the absolute path to your checkout.
 Run the remaining commands in the same terminal.
 
@@ -87,81 +87,57 @@ connection checks, and game-specific viewers.
 
 ## Run an experiment
 
-Use the `bargain` launcher for a small new experiment.
-It needs direct internet access to the selected providers and no GPU or Slurm
-account. For restricted cluster nodes, use the
-[cluster procedures](docs/reproduction.md).
+Use [run_strong_models_experiment.py](run_strong_models_experiment.py), the
+historical single-run and bilateral batch entry point.
+Use the original batch scripts below for the other experiment families.
+These commands use the existing agents, prompts, parsers, and context handling.
 
-Install the launcher with its reference dependency versions:
+Install the experiment dependencies:
 
 ```bash
-python -m pip install -c "$BARGAIN_ROOT/constraints-public.txt" -e "$BARGAIN_ROOT"
-bargain --help
+python -m pip install -r "$BARGAIN_ROOT/requirements.txt"
+python -m pip install -e "${BARGAIN_ROOT}[analysis]"
+python "$BARGAIN_ROOT/run_strong_models_experiment.py" --help
 ```
 
-### Check the setup
-
-This example runs GPT-5 Nano against GPT-4o Mini through OpenAI.
-It needs only `OPENAI_API_KEY`.
-Set your key in the terminal, or use the
-[private credential file option](docs/guides/public_quickstart.md#set-up-credentials).
-Do not put keys in the repository.
+This example makes paid OpenAI calls for one Game 1 negotiation with ten rounds,
+two discussion turns per round, and a 0.9 round discount.
+Use a new output directory and keep accepted paper results separate.
 
 ```bash
 export OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
-bargain models
-bargain doctor two-player --adversary gpt-4o-mini-2024-07-18 --rounds 2
-bargain plan two-player --adversary gpt-4o-mini-2024-07-18 --rounds 2
+RUN_DIR="$BARGAIN_ROOT/experiments/results/my_game1_run"
+python "$BARGAIN_ROOT/run_strong_models_experiment.py" \
+  --game-type item_allocation \
+  --models gpt-5-nano gpt-4o-mini-2024-07-18 \
+  --competition-level 0.5 --num-items 5 \
+  --max-rounds 10 --discussion-turns 2 --gamma-discount 0.9 \
+  --max-tokens-per-phase 16384 --model-order weak_first \
+  --random-seed 42 --batch --num-runs 1 --output-dir "$RUN_DIR"
 ```
 
-`models` lists accepted model names and their providers.
-`doctor` checks installed dependencies and key presence.
-`plan` prints the resolved experiment settings.
-These commands make no model calls; `doctor` does not test authentication.
+Inspect the saved result and interaction JSON files using the
+[result-file guide](docs/reproduction.md#read-result-files).
+Confirm that both files belong to the same experiment and that the run completed
+before using its outcome.
+The [paper-runner examples](docs/reproduction.md#run-one-experiment-with-the-paper-runner)
+also cover diplomacy and co-funding.
+Provider credentials and restricted-node transport are described in the
+[operations guide](docs/operations.md).
 
-### Run and inspect
+### Use the original batch scripts
 
-The next command makes paid model calls.
-It runs one item-allocation negotiation with at most two rounds.
-Use a new output directory for each new run.
-
-```bash
-RUN_DIR="$BARGAIN_ROOT/bargain-runs/first-run"
-bargain run two-player --adversary gpt-4o-mini-2024-07-18 \
-  --rounds 2 --output "$RUN_DIR"
-bargain status "$RUN_DIR"
-bargain summarize "$RUN_DIR"
-```
-
-A complete run ends with `agreement` or `disagreement`.
-The summary includes utilities and the final round.
-A failed or interrupted run is incomplete; inspect its saved status before
-using the [resume procedure](docs/guides/public_quickstart.md#resume-without-hiding-failures).
-
-The output directory contains the resolved plan and a `runs/` directory with
-attempt records, prompts, responses, results, and status files.
-Use `bargain status` and `bargain summarize` for these outputs.
-The transcript viewer above reads the released paper format.
-
-### Choose another game or group
-
-| Game | Launcher option | Agents negotiate over |
+| Experiment family | Existing scripts | Procedure |
 | --- | --- | --- |
-| Item allocation | `--game game1` (default) | Indivisible items with private values |
-| Diplomacy | `--game game2` | Treaty issues with private preferred positions and weights |
-| Co-funding | `--game game3` | Contributions to projects that need a funding threshold |
+| GPT-5 Nano bilateral | [generate_configs_both_orders.sh](scripts/generate_configs_both_orders.sh), [generate_diplomacy_configs.sh](scripts/generate_diplomacy_configs.sh), [generate_cofunding_configs.sh](scripts/generate_cofunding_configs.sh) | [Bilateral batches](docs/reproduction.md#2-run-the-gpt-5-nano-bilateral-batches) |
+| Llama bilateral | [generate_appendix_llama33_baseline_configs.py](scripts/generate_appendix_llama33_baseline_configs.py) | [Llama batches](docs/reproduction.md#3-run-the-llama-33-bilateral-batches) |
+| Homogeneous adversary and heterogeneous groups | [full_games123_multiagent_batch.py](scripts/full_games123_multiagent_batch.py) | [Multi-agent batch](docs/reproduction.md#4-run-the-multi-agent-batch) |
+| Homogeneous groups | [random_monoculture_control_batch.py](scripts/random_monoculture_control_batch.py) | [Homogeneous batch](docs/reproduction.md#5-run-the-random-monoculture-batch) |
+| Native test-time compute | [generate_ttc_seed_replication_jobs.py](scripts/generate_ttc_seed_replication_jobs.py) | [Saved seed design](docs/reproduction.md#6-run-the-native-test-time-compute-batch) |
+| Coordinated teams | [generate_game1_gpt54_binding_team.py](scripts/generate_game1_gpt54_binding_team.py) | [Matched team batch](docs/reproduction.md#7-run-the-coordinated-team-batch) |
 
-The launcher also supports Llama-baseline pairs, groups with identical or
-mixed models, one adversary model among baseline agents, coordinated teams,
-and test-time compute, which varies a model's reasoning effort.
-See the [experiment examples](docs/guides/public_quickstart.md#choose-an-experiment)
-for commands and the [game guide](docs/game_architecture.md) for the rules.
-
-**New launcher runs use the `public-hosted-v1` protocol.**
-Its provider routes, context handling, and failure handling differ from the
-historical paper runners.
-Read the [protocol differences](docs/guides/public_quickstart.md#defaults-and-protocol-differences)
-before comparing new runs with paper results.
+For historical reproduction, use the released configurations, seeds, model
+routes, and exclusions in the [reproduction guide](docs/reproduction.md).
 
 ## Reproduce the paper
 
@@ -192,7 +168,7 @@ python -m pip install -e "${BARGAIN_ROOT}[test,analysis]"
 Start with the tests for the workflow you change:
 
 ```bash
-python -m pytest "$BARGAIN_ROOT/tests/test_public_launch.py" \
+python -m pytest "$BARGAIN_ROOT/tests/test_context_compaction.py" \
   "$BARGAIN_ROOT/tests/test_transcript_review.py"
 ```
 
@@ -202,14 +178,12 @@ Run the full suite when a change affects shared behavior:
 python -m pytest "$BARGAIN_ROOT/tests/"
 ```
 
-The launcher tests replace paid providers at the test boundary.
-They do not establish live provider access.
+Offline tests do not establish live provider access.
 Validate provider changes with a small real run before a research batch.
 
 | Code or documentation | Purpose |
 | --- | --- |
-| [Public launcher](strong_models_experiment/cli.py) and [launch modules](strong_models_experiment/launch/) | Plan, run, inspect, and resume new experiments |
-| [Paper runner](run_strong_models_experiment.py) | Historical single-run and batch entry point |
+| [Paper runner](run_strong_models_experiment.py) | Historical single-run and bilateral batch entry point |
 | [Game environments](game_environments/) | Game state, prompts, action validation, and utility calculations |
 | [Experiment controller](strong_models_experiment/experiment.py) | Shared negotiation flow |
 | [Provider clients](negotiation/) | API clients, proxy transport, and context handling for the paper runners |

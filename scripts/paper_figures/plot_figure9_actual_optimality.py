@@ -11,9 +11,14 @@ import shlex
 import subprocess
 import sys
 
-from plot_figure9_absolute_payoffs import (
-    COLORS, CONDITIONS, LABELS, NS, ROOT, digest, load_cohort, require,
-)
+if __package__:
+    from .plot_figure9_absolute_payoffs import (
+        COLORS, CONDITIONS, LABELS, NS, ROOT, add_input_arguments, digest, load_cohort, require,
+    )
+else:
+    from plot_figure9_absolute_payoffs import (
+        COLORS, CONDITIONS, LABELS, NS, ROOT, add_input_arguments, digest, load_cohort, require,
+    )
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,28 +37,12 @@ def wilson_interval(successes: int, total: int) -> tuple[float, float]:
     return 100 * (center - half_width), 100 * (center + half_width)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output-dir", type=Path, required=True)
-    args = parser.parse_args()
-    out = args.output_dir.resolve()
-    out.mkdir(parents=True, exist_ok=True)
-
-    frame, audit = load_cohort()
-    prior_path = ROOT / "analysis/figure9_maximum_original_style_20261002/run_level.csv"
-    prior = pd.read_csv(prior_path)
-    columns = [
-        "config_id", "condition", "n_agents", "competition_level",
-        "nano_total_payoff", "nano_round_one_maximum", "nano_exact_maximum",
-    ]
-    order = ["n_agents", "config_id", "condition"]
-    pd.testing.assert_frame_equal(
-        frame.sort_values(order)[columns].reset_index(drop=True),
-        prior.sort_values(order)[columns].reset_index(drop=True),
-        check_dtype=False, check_exact=False, rtol=0, atol=1e-8,
-    )
-    frame.to_csv(out / "run_level.csv", index=False)
-
+def summarize_optimality(frame: pd.DataFrame) -> pd.DataFrame:
+    """Count observed exact optima independently in each condition."""
+    require(set(frame.condition) == set(CONDITIONS), "Expected both coordination conditions")
+    require(set(frame.n_agents) == set(NS), "Unexpected group sizes")
+    require(frame.nano_exact_maximum.notna().all() and
+            pd.api.types.is_bool_dtype(frame.nano_exact_maximum), "Optimality values must be booleans")
     rows = []
     for condition in CONDITIONS:
         for n in NS:
@@ -67,7 +56,21 @@ def main() -> None:
                 "optimal_percent": 100 * successes / len(cell),
                 "ci95_low": low, "ci95_high": high,
             })
-    summary = pd.DataFrame(rows)
+    return pd.DataFrame(rows)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_input_arguments(parser)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+    out = args.output_dir.resolve()
+    require(not out.is_relative_to(ROOT / "overleaf"), "Use an output directory outside the paper folder")
+
+    frame, audit = load_cohort(args.results_root, data_root=args.data_root)
+    summary = summarize_optimality(frame)
+    out.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(out / "run_level.csv", index=False)
     summary.to_csv(out / "optimality_summary.csv", index=False)
     breakdown = frame.groupby(
         ["condition", "n_agents", "competition_level"], as_index=False,
@@ -126,9 +129,13 @@ def main() -> None:
         "Error bars are pointwise 95% Wilson intervals, matching the original "
         "optimality panel's method; these summarize the pooled design descriptively. "
         "Each point pools five competition levels, two adversary positions, "
-        "and two seeds. At n=2 neither condition adds team coordination and "
-        "the two curves coincide. The original figure assigned zero to the "
-        "no-coordination curve; this plot uses observed outcomes instead.\n"
+        "and two seeds. At n=2 neither condition adds team coordination; "
+        "the two conditions are separate historical and later runs. "
+        "Historical controls use mixed model routes, while the coordinated arm "
+        "uses direct OpenAI. Increasing n also changes the number of items. "
+        "The older optimality renderer assigned zero to the no-coordination "
+        "curve; this plot computes both curves from observed outcomes. "
+        "It does not replace the current paper's continuous payoff-percentage figure.\n"
     )
     (out / "caption.txt").write_text(caption)
     script = Path(__file__).resolve()
@@ -140,9 +147,10 @@ def main() -> None:
         ).strip(),
         "script_sha256": digest(script),
         "cohort_loader_sha256": digest(script.with_name("plot_figure9_absolute_payoffs.py")),
-        "prior_run_table": {"path": str(prior_path), "sha256": digest(prior_path)},
+        "results_root": audit["results_root"],
+        "relocated_data_root": audit["relocated_data_root"],
         "input_sha256": audit["input_sha256"],
-        "validation": audit["checks"] + " Exact-optimality data match the previous Figure 9 run table.",
+        "validation": audit["checks"] + " Both optimality curves are computed from the verified outcomes.",
         "observed_adversary_routes": audit["observed_adversary_routes"],
         "definition_and_methods": caption,
         "outputs_sha256": {

@@ -1,15 +1,15 @@
 # Public-release script scope
 
-Updated September 9, 2026.
+Updated November 8, 2026.
 
-The release retains the game implementation, public launcher, experiment batch
+The release retains the game implementation, historical runners, experiment batch
 generation, result validation, and the calculations needed to reproduce final
 paper results. Intermediate reports and display experiments are outside this
 scope.
 
 ## Retained code
 
-- The public command-line launcher and game runtime remain in their existing packages.
+- The historical command-line runners and game runtime remain available.
 - Experiment generators, workers, preference locks, and recorded recovery tools remain available.
 - Final figure renderers and their data producers remain available.
 - Final TTC analyses share calculations through `scripts/ttc_analysis_common.py`.

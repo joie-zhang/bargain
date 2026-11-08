@@ -156,8 +156,6 @@ def resolve_context_limit(model_names: Iterable[str]) -> Optional[int]:
 
 @lru_cache(maxsize=1)
 def _token_encoder():
-    if os.getenv("NEGOTIATION_TOKEN_ESTIMATOR") == "chars-v1":
-        return None
     try:
         import tiktoken  # type: ignore
 

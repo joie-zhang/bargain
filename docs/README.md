@@ -5,8 +5,7 @@ This directory contains the project documentation.
 Use the documents in this section for current instructions:
 
 - [Project README](../README.md) helps you choose between inspecting results, running a new experiment, and reproducing the paper.
-- [Public launcher guide](guides/public_quickstart.md) gives small experiment commands, provider requirements, protocol defaults, and resume procedures.
-- [Paper reproduction guide](reproduction.md) gives the saved batch inventory, Slurm procedures, and analysis sequence.
+- [Paper reproduction guide](reproduction.md) gives historical single-run commands, the saved batch inventory, Slurm procedures, and the analysis sequence.
 - [`game_architecture.md`](game_architecture.md) explains the three games and the shared code.
 - [`operations.md`](operations.md) explains API keys, OpenRouter transport, and logs.
 - [`guides/VISUALIZATION_GUIDE.md`](guides/VISUALIZATION_GUIDE.md) gives figure procedures.

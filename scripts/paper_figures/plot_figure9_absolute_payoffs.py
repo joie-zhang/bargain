@@ -30,7 +30,6 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "experiments/results/game1_gpt54_binding_team_v3_20260816_093310"
-PAPER_FIGURE = ROOT / "overleaf/graphics/n_gt_2_report/gpt54_payoff_ratio_plus_optimal_nano_team.pdf"
 NS = (2, 4, 6, 8, 10)
 CONDITIONS = ("uncoordinated", "coordinated")
 METRICS = ("gpt54_payoff", "nano_total_payoff", "nano_mean_payoff", "nano_maximum_percent", "gpt54_maximum_percent")
@@ -59,7 +58,30 @@ def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def load_cohort() -> tuple[pd.DataFrame, dict]:
+def resolve_saved_path(value: str, data_root: Path | None) -> Path:
+    """Relocate saved result paths only when the caller explicitly requests it."""
+    path = Path(value)
+    if data_root is None:
+        return path if path.is_absolute() else ROOT / path
+    parts = path.parts
+    markers = [i for i in range(len(parts) - 1) if parts[i:i + 2] == ("experiments", "results")]
+    require(len(markers) == 1, f"Cannot relocate saved path without one experiments/results prefix: {value}")
+    suffix = Path(*parts[markers[0] + 2:])
+    root = data_root.resolve()
+    resolved = (root / suffix).resolve()
+    require(resolved.is_relative_to(root), f"Relocated path leaves the data root: {value}")
+    return resolved
+
+
+def add_input_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--results-root", type=Path, default=RESULTS,
+                        help="Saved 100-configuration matched team batch (default: the Figure 9 batch).")
+    parser.add_argument("--data-root", type=Path,
+                        help="Explicitly relocate saved experiments/results paths under this directory.")
+
+
+def load_cohort(results_root: Path = RESULTS, *, data_root: Path | None = None) -> tuple[pd.DataFrame, dict]:
+    results_root = results_root.resolve()
     inputs = {}
 
     def read_json(path: Path):
@@ -67,12 +89,12 @@ def load_cohort() -> tuple[pd.DataFrame, dict]:
         inputs[str(path.resolve())] = hashlib.sha256(raw).hexdigest()
         return json.loads(raw)
 
-    configs = sorted((RESULTS / "configs").glob("config_*.json"))
+    configs = sorted((results_root / "configs").glob("config_*.json"))
     require(len(configs) == 100, f"Expected 100 configurations, found {len(configs)}")
-    lineage_path = RESULTS / "control_lineage.csv"
+    lineage_path = results_root / "control_lineage.csv"
     inputs[str(lineage_path)] = digest(lineage_path)
     lineage = pd.read_csv(lineage_path).set_index("config_id")
-    manifest = read_json(RESULTS / "manifest.json")
+    manifest = read_json(results_root / "manifest.json")
     rows, config_provenance = [], []
     for config_path in configs:
         config = read_json(config_path)
@@ -84,11 +106,11 @@ def load_cohort() -> tuple[pd.DataFrame, dict]:
         require(len(adversaries) == 1 and len(nanos) == n - 1, f"Invalid roles: {config_id}")
         require(set(roles.values()) == {"adversary", "baseline"}, f"Unknown role: {config_id}")
         paths = {
-            "uncoordinated": Path(config["control_result_path"]),
-            "coordinated": Path(config["output_dir"]) / "experiment_results.json",
+            "uncoordinated": resolve_saved_path(config["control_result_path"], data_root),
+            "coordinated": resolve_saved_path(config["output_dir"], data_root) / "experiment_results.json",
         }
         details = {"config_path": str(config_path), "submitted_configuration": config, "runs": {}}
-        details["control_submitted_configuration"] = read_json(Path(config["control_config_path"]))
+        details["control_submitted_configuration"] = read_json(resolve_saved_path(config["control_config_path"], data_root))
         for condition, result_path in paths.items():
             result = read_json(result_path)
             rc = result["config"]
@@ -167,6 +189,8 @@ def load_cohort() -> tuple[pd.DataFrame, dict]:
         require(len(subset) == 100 and set(subset[grid_fields].itertuples(index=False, name=None)) == expected, f"Incomplete design: {condition}")
         require(subset.config_id.nunique() == 100, f"Duplicate configuration IDs: {condition}")
     return frame, {
+        "results_root": str(results_root),
+        "relocated_data_root": str(data_root.resolve()) if data_root is not None else None,
         "input_sha256": inputs, "configurations": config_provenance,
         "experiment_generation_manifest": manifest,
         "checks": "All 200 utilities recomputed; complete matched grid, preferences, control hashes, team activation, vote integrity, and observed model identifiers verified.",
@@ -391,6 +415,7 @@ def render_maximum_original_style(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    add_input_arguments(parser)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--bootstrap-seed", type=int, default=20261002)
     parser.add_argument("--bootstrap-repetitions", type=int, default=20000)
@@ -411,8 +436,7 @@ def main() -> None:
     out = args.output_dir.resolve()
     require(not out.is_relative_to(ROOT / "overleaf"), "Use an output directory outside the paper folder")
     require(args.bootstrap_repetitions >= 1000, "At least 1,000 bootstrap repetitions are required")
-    paper_hash = digest(PAPER_FIGURE)
-    frame, provenance = load_cohort()
+    frame, provenance = load_cohort(args.results_root, data_root=args.data_root)
     summary, differences = summarize(frame, args.bootstrap_seed, args.bootstrap_repetitions)
     out.mkdir(parents=True, exist_ok=True)
     frame.to_csv(out / "run_level.csv", index=False)
@@ -429,33 +453,17 @@ def main() -> None:
         render_maximum_original_style(summary, out / f"figure9_{variant}",
                                       four_panels=args.four_panels_original_style,
                                       absolute_totals=args.absolute_totals_original_style)
-        reference_source = ROOT / "lh_review_20260829/12_homogeneous_analog/plot_payoff_ratio_with_optimal_rate.py"
-        provenance["formatting_reference"] = {
-            "paper_figure": str(PAPER_FIGURE),
-            "source": str(reference_source), "source_sha256": digest(reference_source),
+        provenance["formatting"] = {
+            "implementation": "render_maximum_original_style in this script",
             "preserved": "Figure height, fonts, colors, solid lines, filled markers, error-bar style, grid, spines, tick style, legend placement, and relative subplot spacing",
             "layout": "One row of four panels; width and left margin adapted" if args.four_panels_original_style else "Original two-panel size and margins",
             "metric_changes": "Selected continuous payoff metrics and matched-run bootstrap intervals; no ratio parity reference is plotted",
         }
         if args.absolute_totals_original_style:
-            reference_summary = ROOT / "analysis/figure9_scores_and_efficiency_20261002/summary.csv"
-            prior = pd.read_csv(reference_summary)
-            metrics = ("gpt54_payoff", "nano_total_payoff")
-            order = ["n_agents", "condition", "metric"]
-            pd.testing.assert_frame_equal(
-                summary[summary.metric.isin(metrics)].sort_values(order).reset_index(drop=True),
-                prior[prior.metric.isin(metrics)].sort_values(order).reset_index(drop=True),
-                check_exact=False, rtol=0, atol=1e-10,
-            )
-            provenance["split_panel_reference"] = {
-                "summary_path": str(reference_summary),
-                "summary_sha256": digest(reference_summary),
-                "validation": "All plotted means and interval endpoints match the referenced left panel.",
-            }
             captions = """GPT-5.4 payoff and Nano team total in separate panels
 Left: mean discounted GPT-5.4 High payoff. Right: mean total discounted payoff across all n-1 GPT-5-nano agents. Both panels show coordination not allowed (gray circles) and coordination allowed (blue squares). The horizontal axis n is total agents, comprising one GPT-5.4 adversary model and n-1 Nano agents.
 
-The values and pointwise 95% bootstrap intervals match the left panel of the scores-and-efficiency draft. The panels use separate vertical scales to make each model's response to coordination visible. The Nano total is a sum across agents, with no division by team size or normalization by maximum payoff. The number of Nano agents increases with n, so increases in total payoff do not imply increases in payoff per Nano agent.
+The values and pointwise 95% bootstrap intervals are computed from the saved matched runs. The panels use separate vertical scales to make each model's response to coordination visible. The Nano total is a sum across agents, with no division by team size or normalization by maximum payoff. The number of Nano agents increases with n, so increases in total payoff do not imply increases in payoff per Nano agent.
 
 Fonts, colors, solid lines, filled markers, capped error bars, grid, and legend placement follow the original Figure 9 style.
 """
@@ -529,8 +537,6 @@ All plots use the same 100 matched pairs as Figure 9, with 20 runs per condition
         "script_path": str(Path(__file__).resolve()), "script_sha256": digest(Path(__file__)),
         "repository_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "repository_status": subprocess.check_output(["git", "status", "--short"], cwd=ROOT, text=True),
-        "paper_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT / "overleaf", text=True).strip(),
-        "paper_figure_path": str(PAPER_FIGURE), "paper_figure_sha256": paper_hash,
         "bootstrap_seed": args.bootstrap_seed, "bootstrap_repetitions": args.bootstrap_repetitions,
         "figure_variant": variant,
         "payoff_definitions": {
@@ -545,7 +551,6 @@ All plots use the same 100 matched pairs as Figure 9, with 20 runs per condition
         "captions_and_limits": captions,
         "outputs_sha256": {str(p): digest(p) for p in sorted(out.iterdir()) if p.is_file() and p.name != "provenance.json"},
     })
-    require(digest(PAPER_FIGURE) == paper_hash, "Active paper figure changed during rendering")
     (out / "provenance.json").write_text(json.dumps(provenance, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(summary.pivot(index=["n_agents", "condition"], columns="metric", values="mean").round(3).to_string())
     print(f"Saved outputs to {out}")

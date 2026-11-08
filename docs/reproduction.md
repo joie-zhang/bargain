@@ -1,9 +1,10 @@
 # Paper reproduction and cluster batches
 
 Use this guide for the paper's saved configurations, analyses, and Slurm jobs.
-For a new small experiment on a machine with internet access, use the
-[public launcher](guides/public_quickstart.md).
-The public launcher uses a separate protocol and result format.
+For a new small experiment, use the
+[historical paper runner](#run-one-experiment-with-the-paper-runner).
+The original runners and saved batch configurations are the reproduction entry
+points.
 
 - [Prepare the environment](#prepare-the-environment)
 - [Inspect and analyze released results](#inspect-and-analyze-released-results)

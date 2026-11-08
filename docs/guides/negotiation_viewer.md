@@ -3,8 +3,8 @@
 The public transcript explorer covers all three games in one interface.
 It reads the released paper results downloaded with the
 [README instructions](../../README.md#inspect-released-results).
-For new public-launcher outputs, use `bargain status` and `bargain summarize`
-as described in the [launcher guide](public_quickstart.md#inspect-a-plan-and-results).
+For new experiments, use the [historical runner](../../README.md#run-an-experiment)
+and inspect its [saved result files](../reproduction.md#read-result-files).
 
 ## Install and start
 
